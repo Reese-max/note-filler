@@ -81,3 +81,70 @@ def test_search_law_sources_uses_single_llm_call_and_empty_on_no_hit():
     assert out == []
     assert len(llm.calls) == 1
     assert law.calls == [("不存在關鍵詞", 4, None)]
+
+
+# --- 多關鍵詞 union（B）------------------------------------------------------
+
+class _RecordingLaw:
+    """依 keyword 回不同 rows,並記錄每次呼叫參數。"""
+
+    def __init__(self, table: dict[str, list[dict]]):
+        self.table = table
+        self.calls: list[tuple[str, int, str | None]] = []
+
+    def search_articles(self, keyword, limit=5, law_name=None):
+        self.calls.append((keyword, limit, law_name))
+        return list(self.table.get(keyword, []))
+
+
+def _r(pcode: str, no: str) -> dict:
+    return {"pcode": pcode, "law_name": "行政程序法", "article_no": no,
+            "article_text": f"第{no}條全文"}
+
+
+def test_search_law_sources_unions_multiple_keywords_dedup_and_order():
+    law = _RecordingLaw({
+        "聽證": [_r("A", "102"), _r("A", "107")],
+        "陳述意見": [_r("A", "107"), _r("A", "109")],  # 107 與聽證重複
+    })
+    llm = FakeLLM(['{"keywords": ["聽證", "陳述意見"], "law_name": "行政程序法"}'])
+
+    out = search_law_sources(_gap(), llm, law)
+
+    # union、去重(107 只一次)、保序(聽證命中在前)
+    assert [s.title for s in out] == [
+        "《行政程序法》第102條", "《行政程序法》第107條", "《行政程序法》第109條",
+    ]
+    assert all(s.level == "A" for s in out)
+    # 每個 keyword 都以預設 limit=25 呼叫
+    assert law.calls == [("聽證", 25, "行政程序法"), ("陳述意見", 25, "行政程序法")]
+
+
+def test_search_law_sources_backward_compat_single_keyword():
+    law = _RecordingLaw({"附款": [_r("A", "93")]})
+    llm = FakeLLM(['{"keyword": "附款", "law_name": "行政程序法"}'])
+
+    out = search_law_sources(_gap(), llm, law)
+
+    assert [s.title for s in out] == ["《行政程序法》第93條"]
+    assert law.calls == [("附款", 25, "行政程序法")]
+
+
+def test_search_law_sources_non_json_treated_as_single_keyword():
+    law = _RecordingLaw({"附款": [_r("A", "93")]})
+    llm = FakeLLM(["附款"])
+
+    out = search_law_sources(_gap(), llm, law)
+
+    assert [s.title for s in out] == ["《行政程序法》第93條"]
+    assert law.calls == [("附款", 25, None)]
+
+
+def test_search_law_sources_empty_keywords_returns_empty():
+    law = _RecordingLaw({})
+    llm = FakeLLM(['{"keywords": [], "law_name": null}'])
+
+    out = search_law_sources(_gap(), llm, law)
+
+    assert out == []
+    assert law.calls == []  # 無關鍵詞不查

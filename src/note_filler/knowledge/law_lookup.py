@@ -170,7 +170,7 @@ class LawLookup:
         if law_name is not None:
             sql += " AND law_name = ?"
             params.append(law_name)
-        sql += " LIMIT ?"
+        sql += " ORDER BY CAST(article_no AS INTEGER) LIMIT ?"
         params.append(limit)
         with sqlite3.connect(self.db_path) as conn:
             rows = conn.execute(sql, params).fetchall()

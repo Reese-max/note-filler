@@ -59,7 +59,7 @@ def test_retrieve_for_gap_law_domain_puts_level_A_before_B():
     assert [s.level for s in out] == ["A", "A", "B", "B"]
     assert [s.id for s in out] == ["law:A0030055:93", "law:A0030055:94", "b2", "b1"]
     # 法條與 twinkle 各呼叫一次,query/keyword 正確
-    assert law.calls == [("附款", 4, "行政程序法")]
+    assert law.calls == [("附款", 25, "行政程序法")]
     assert twinkle.calls[0][0] == gap.question
     assert len(llm.calls) == 1
 
