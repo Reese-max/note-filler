@@ -10,6 +10,7 @@ if TYPE_CHECKING:                      # 僅型別提示,執行期零硬耦合(�
     from note_filler.gap import Gap
     from note_filler.retrieve.models import Source
     from note_filler.verify import Validation
+    from note_filler.write import WrittenSupplement
 
 
 @dataclass
@@ -50,16 +51,17 @@ def _best_anchor(question: str, paragraphs) -> int | None:
     return best_idx
 
 
-def _supplement_text(gap, sources) -> str:
-    """組 supplement 段本文;無源時退回 gap.reason/question(段仍保留待補)。"""
-    if sources:
-        body = "；".join(s.content for s in sources)
-    else:
-        body = gap.reason or gap.question
-    return f"針對「{gap.question}」補充:{body}"
+def _has_two_independent_ab(sources) -> bool:
+    """used 的 A/B 來源中,存在一對 url 不同且 title 不同者 → 視為 ≥2 個獨立。"""
+    ab = [s for s in sources if s.level in ("A", "B")]
+    return any(
+        a.url != b.url and a.title != b.title
+        for i, a in enumerate(ab)
+        for b in ab[i + 1:]
+    )
 
 
-def assemble_correction(doc, gaps, retrieved, validations) -> CorrectionDoc:
+def assemble_correction(doc, gaps, retrieved, written, validations) -> CorrectionDoc:
     segments: list[Segment] = []
 
     # 1) 原文段:逐字保留(immutable),絕不改一字;overlay 不刪原文
@@ -74,19 +76,31 @@ def assemble_correction(doc, gaps, retrieved, validations) -> CorrectionDoc:
             )
         )
 
-    # 2) 每個 gap 一個 supplement 段(overlay 疊加)
+    # 2) 每個 gap 一個 supplement 段(overlay 疊加):text 取寫作結果,
+    #    sources 只掛實際引用到(used_source_ids)的 Source。
     for gap in gaps:
-        sources = list(retrieved.get(gap.question, []))
-        val = validations.get(gap.question)
-        verified = bool(val and val.verified)
-        # C6 不變式:無源 或 未 verified → pending_evidence(保留該段不刪)
-        confidence = "verified" if (sources and verified) else "pending_evidence"
+        q = gap.question
+        w = written.get(q)
+        text = w.text if w else ""
+        # 由 id 從 retrieved 找回 Source 物件,只保留 used 且找得到者(依 used 序)
+        by_id = {s.id: s for s in retrieved.get(q, [])}
+        used_ids = w.used_source_ids if w else []
+        used_sources = [by_id[sid] for sid in used_ids if sid in by_id]
+
+        # confidence:【待補證】→ pending;否則 used A/B 有 ≥2 獨立 → verified
+        if text.startswith("【待補證】"):
+            confidence: Literal["verified", "pending_evidence"] = "pending_evidence"
+        elif _has_two_independent_ab(used_sources):
+            confidence = "verified"
+        else:
+            confidence = "pending_evidence"
+
         segments.append(
             Segment(
                 type="supplement",
-                text=_supplement_text(gap, sources),
-                anchor_idx=_best_anchor(gap.question, doc.paragraphs),
-                sources=sources,
+                text=text,
+                anchor_idx=_best_anchor(q, doc.paragraphs),
+                sources=used_sources,
                 confidence=confidence,
             )
         )
