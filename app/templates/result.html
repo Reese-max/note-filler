@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <title>訂正稿</title>
+  <style>
+    body { font-family: system-ui, "Microsoft JhengHei", sans-serif; }
+    .cols { display: flex; gap: 1rem; align-items: flex-start; }
+    .col { flex: 1; border: 1px solid #ccc; padding: 1rem; border-radius: 6px; }
+    .col h2 { margin-top: 0; }
+    .seg { white-space: pre-wrap; margin: .4rem 0; }
+    .supplement {
+      background: #fff7d6;
+      border-left: 4px solid #e0a800;
+      padding: .5rem .75rem;
+      margin: .5rem 0;
+      border-radius: 4px;
+    }
+    .pending {
+      color: #b00020;
+      font-weight: bold;
+      margin-left: .5rem;
+    }
+    details.sources { margin-top: .35rem; font-size: .9em; }
+    details.sources ul { margin: .3rem 0 0; padding-left: 1.2rem; }
+  </style>
+</head>
+<body>
+  <h1>訂正結果</h1>
+  <p><a href="/export">下載 Markdown 訂正稿</a></p>
+  <div class="cols">
+    <div class="col" id="original">
+      <h2>原稿(不可變)</h2>
+      {% for p in doc.original.paragraphs %}
+      <p class="seg">{{ p.text }}</p>
+      {% endfor %}
+    </div>
+    <div class="col" id="correction">
+      <h2>訂正稿</h2>
+      {% for seg in doc.segments %}
+        {% if seg.type == "supplement" %}
+        <div class="supplement">
+          <span class="seg">{{ seg.text }}</span>
+          {% if seg.confidence == "pending_evidence" %}
+          <span class="pending">[待補依據]</span>
+          {% endif %}
+          {% if seg.sources %}
+          <details class="sources">
+            <summary>來源({{ seg.sources|length }})</summary>
+            <ul>
+            {% for s in seg.sources %}
+              <li>
+                [Level {{ s.level }}] {{ s.title }}
+                {% if s.url %} — <a href="{{ s.url }}" target="_blank" rel="noopener">{{ s.url }}</a>{% endif %}
+                <br><small>擷取日:{{ s.fetched_date }}{% if s.doc_date %} / 文件日:{{ s.doc_date }}{% endif %}</small>
+              </li>
+            {% endfor %}
+            </ul>
+          </details>
+          {% endif %}
+        </div>
+        {% else %}
+        <p class="seg">{{ seg.text }}</p>
+        {% endif %}
+      {% endfor %}
+    </div>
+  </div>
+</body>
+</html>
