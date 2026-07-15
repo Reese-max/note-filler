@@ -64,16 +64,26 @@ def test_retrieve_for_gap_law_domain_puts_level_A_before_B():
     assert len(llm.calls) == 1
 
 
-def test_retrieve_for_gap_non_mvp_domain_only_twinkle():
-    gap = Gap(question="這題超綱", status="missing", reason="")
-    twinkle = FakeTwinkle([_src("a1", "A", 0.1)])
+def test_retrieve_for_gap_other_domain_uses_web_not_twinkle(monkeypatch):
+    gap = Gap(question="OWASP Top 10 是什麼?", status="missing", reason="")
+    twinkle = FakeTwinkle([_src("b1", "B", 0.1)])
     law = FakeLaw([_row("X", "1")])
-    # 無 llm:other 不加掛法條、也不加掛開放網路來源,只打 twinkle
-    out = retrieve_for_gap(gap, "other", twinkle, law, llm=None)
+    llm = FakeLLM([])  # search_web_sources 被 fake 掉,不會真的 pop
 
-    assert [s.id for s in out] == ["a1"]   # 仍打 twinkle
-    assert law.calls == []                 # 非 MVP 領域不查法條
-    assert twinkle.calls[0][0] == gap.question
+    web_calls: list = []
+
+    def fake_web(g, l):
+        web_calls.append((g, l))
+        return [_src("web1", "C", 0.2)]
+
+    # other 領域:只加掛開放網路來源(web),不打 twinkle(立法院議案為噪音)
+    monkeypatch.setattr("note_filler.retrieve.search_web_sources", fake_web)
+    out = retrieve_for_gap(gap, "other", twinkle, law, llm)
+
+    assert web_calls == [(gap, llm)]       # 有打 web
+    assert twinkle.calls == []             # 不打 twinkle
+    assert law.calls == []                 # 非法制領域不查法條
+    assert [s.id for s in out] == ["web1"]
 
 
 @pytest.mark.integration
