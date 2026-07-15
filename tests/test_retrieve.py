@@ -4,12 +4,13 @@ import os
 import pytest
 
 from note_filler.gap import Gap
+from note_filler.llm import FakeLLM
 from note_filler.retrieve.models import Source
-from note_filler.retrieve import retrieve_for_gap
+from note_filler.retrieve import retrieve_for_gap, _LEVEL_RANK
 
 
 class FakeTwinkle:
-    """模擬 TwinkleClient.search;記錄呼叫參數,回傳 canned Source。"""
+    """模擬 TwinkleClient.search;記錄呼叫參數,回傳 canned Source(Level B 為主)。"""
     def __init__(self, responses: list[Source]):
         self.responses = responses
         self.calls: list[tuple[str, int]] = []
@@ -17,6 +18,17 @@ class FakeTwinkle:
     def search(self, query: str, n: int = 3) -> list[Source]:
         self.calls.append((query, n))
         return list(self.responses)  # 回副本,避免被排序就地改動
+
+
+class FakeLaw:
+    """模擬 LawLookup.search_articles;記錄呼叫參數,回固定條文列。"""
+    def __init__(self, rows: list[dict]):
+        self.rows = rows
+        self.calls: list[tuple[str, int, str | None]] = []
+
+    def search_articles(self, keyword: str, limit: int = 5, law_name: str | None = None):
+        self.calls.append((keyword, limit, law_name))
+        return list(self.rows)
 
 
 def _src(sid: str, level: str, distance: float) -> Source:
@@ -27,35 +39,43 @@ def _src(sid: str, level: str, distance: float) -> Source:
     )
 
 
-def test_retrieve_for_gap_sorts_A_before_B_then_distance():
-    gap = Gap(question="勞動基準法第84條之1責任制範圍為何?", status="missing", reason="原稿未涵蓋")
-    # 刻意亂序;注意 b2 distance=0.1 比所有 A 都小,用來證明「級別壓過 distance」
-    twinkle = FakeTwinkle([
-        _src("b1", "B", 0.3),
-        _src("a1", "A", 0.7),
-        _src("a2", "A", 0.2),
-        _src("b2", "B", 0.1),
-    ])
+def _row(pcode: str, article_no: str) -> dict:
+    return {
+        "pcode": pcode, "law_name": "行政程序法",
+        "article_no": article_no, "article_text": f"第{article_no}條全文",
+    }
 
-    out = retrieve_for_gap(gap, "law", twinkle)
 
-    # A 先(級內 distance 升序):a2(0.2)→a1(0.7);再 B:b2(0.1)→b1(0.3)
-    assert [s.id for s in out] == ["a2", "a1", "b2", "b1"]
-    # query 必須用 gap.question
+def test_retrieve_for_gap_law_domain_puts_level_A_before_B():
+    gap = Gap(question="行政處分附款的容許界限為何?", status="missing", reason="原稿未涵蓋")
+    # twinkle 回 Level B(其中 b2 distance=0.1 比法條 A 還小,用來證明「級別壓過 distance」)
+    twinkle = FakeTwinkle([_src("b1", "B", 0.3), _src("b2", "B", 0.1)])
+    law = FakeLaw([_row("A0030055", "93"), _row("A0030055", "94")])
+    llm = FakeLLM(['{"keyword": "附款", "law_name": "行政程序法"}'])
+
+    out = retrieve_for_gap(gap, "law", twinkle, law, llm)
+
+    # 法條(A,distance 0.1/0.2)整批在 twinkle(B)之前;級內 distance 升序
+    assert [s.level for s in out] == ["A", "A", "B", "B"]
+    assert [s.id for s in out] == ["law:A0030055:93", "law:A0030055:94", "b2", "b1"]
+    # 法條與 twinkle 各呼叫一次,query/keyword 正確
+    assert law.calls == [("附款", 4, "行政程序法")]
     assert twinkle.calls[0][0] == gap.question
+    assert len(llm.calls) == 1
 
 
-def test_retrieve_for_gap_skips_non_mvp_domain():
+def test_retrieve_for_gap_non_mvp_domain_only_twinkle():
     gap = Gap(question="這題超綱", status="missing", reason="")
     twinkle = FakeTwinkle([_src("a1", "A", 0.1)])
+    law = FakeLaw([_row("X", "1")])
+    llm = FakeLLM([])  # 不應被呼叫;若被呼叫會 IndexError
 
-    out = retrieve_for_gap(gap, "other", twinkle)
+    out = retrieve_for_gap(gap, "other", twinkle, law, llm)
 
-    assert out == []
-    assert twinkle.calls == []  # 非 MVP 領域完全不打 twinkle
-
-
-from note_filler.retrieve import _LEVEL_RANK  # 排序權重,重用以驗不變式
+    assert [s.id for s in out] == ["a1"]   # 仍打 twinkle
+    assert law.calls == []                 # 非 MVP 領域不查法條
+    assert llm.calls == []                 # 也不呼叫 llm
+    assert twinkle.calls[0][0] == gap.question
 
 
 @pytest.mark.integration
@@ -64,12 +84,19 @@ def test_retrieve_for_gap_real_twinkle_smoke():
     if os.environ.get("GOV_AI_ENABLE_TWINKLE_MCP") != "1" or not token:
         pytest.skip("需 GOV_AI_ENABLE_TWINKLE_MCP=1 且設 TWINKLE_HUB_TOKEN")
 
+    from pathlib import Path
+
+    from note_filler.knowledge.law_lookup import LawLookup
+    from note_filler.llm import GrokClient
     from note_filler.retrieve.twinkle import TwinkleClient
 
-    gap = Gap(question="勞動基準法 責任制 工時", status="missing", reason="")
+    law_db = Path(__file__).resolve().parents[1] / "data" / "law_index.db"
+    gap = Gap(question="行政處分附款的容許界限為何?", status="missing", reason="")
     twinkle = TwinkleClient(token=token)
+    law = LawLookup(str(law_db)) if law_db.exists() else None
+    llm = GrokClient() if law is not None else None
 
-    out = retrieve_for_gap(gap, "law", twinkle)
+    out = retrieve_for_gap(gap, "law", twinkle, law, llm)
 
     assert all(isinstance(s, Source) for s in out)
     assert all(s.level in ("A", "B") for s in out)  # MVP 只產 A/B
