@@ -68,13 +68,11 @@ def test_retrieve_for_gap_non_mvp_domain_only_twinkle():
     gap = Gap(question="這題超綱", status="missing", reason="")
     twinkle = FakeTwinkle([_src("a1", "A", 0.1)])
     law = FakeLaw([_row("X", "1")])
-    llm = FakeLLM([])  # 不應被呼叫;若被呼叫會 IndexError
-
-    out = retrieve_for_gap(gap, "other", twinkle, law, llm)
+    # 無 llm:other 不加掛法條、也不加掛開放網路來源,只打 twinkle
+    out = retrieve_for_gap(gap, "other", twinkle, law, llm=None)
 
     assert [s.id for s in out] == ["a1"]   # 仍打 twinkle
     assert law.calls == []                 # 非 MVP 領域不查法條
-    assert llm.calls == []                 # 也不呼叫 llm
     assert twinkle.calls[0][0] == gap.question
 
 

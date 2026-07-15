@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 from ..gap import Gap
 from .law_search import search_law_sources
 from .models import Source
+from .web import search_web_sources
 
 if TYPE_CHECKING:  # 僅型別檢查用,避免執行期循環匯入
     from ..domain import Domain
@@ -35,5 +36,8 @@ def retrieve_for_gap(
     sources: list[Source] = []
     if domain in _LAW_DOMAINS and law is not None and llm is not None:
         sources.extend(search_law_sources(gap, llm, law))
+    elif domain == "other" and llm is not None:
+        # 資安/IT/一般領域:加掛開放網路來源(Level C/D)
+        sources.extend(search_web_sources(gap, llm))
     sources.extend(twinkle.search(gap.question))
     return sorted(sources, key=lambda s: (_LEVEL_RANK.get(s.level, 99), s.distance))
