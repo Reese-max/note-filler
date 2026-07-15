@@ -130,7 +130,9 @@ class _StubTwinkle:
 def test_e2e_structural_invariants():
     note_text = FIXTURE.read_text(encoding="utf-8")
     law = LawLookup(str(LAW_DB))
-    # C1:FakeLLM 恰 3 canned,依序 domain 標籤字串 / 換行問題字串 / gaps JSON 陣列字串
+    # law 領域每 gap 呼叫序=(keyword 抽取 + writer)。canned 依序:domain / questions /
+    # gaps / gap(keyword 抽取 JSON, writer 撰寫)。writer text 不含「法第N條」樣式,
+    # 避免誤觸法條引用檢查。
     fake = FakeLLM([
         "law",
         "什麼是行政處分?\n行政程序法第92條的定義為何?\n訴願前置程序為何?",
@@ -139,6 +141,8 @@ def test_e2e_structural_invariants():
               "status": "missing", "reason": "筆記未展開條文定義"}],
             ensure_ascii=False,
         ),
+        '{"keyword": "行政處分", "law_name": "行政程序法"}',
+        "行政處分係指行政機關就公法上具體事件所為之對外發生法律效果之單方行政行為[^1][^2]。",
     ])
     doc = run_pipeline(str(FIXTURE), fake, _StubTwinkle(), law)
 

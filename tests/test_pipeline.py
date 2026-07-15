@@ -33,6 +33,7 @@ class FakeLaw:
     def lookup_article(self, law_name, article_no): return None
     def law_exists(self, name): return True
     def fuzzy_find_law(self, name): return None
+    def search_articles(self, keyword, limit=5, law_name=None): return []
 
 
 def _src(sid, title, url, level):
@@ -44,7 +45,8 @@ def _src(sid, title, url, level):
 
 
 def test_run_pipeline_invariant(note_path):
-    # C1:FakeLLM 恰餵 3 個 canned,依序=domain 標籤字串、換行問題字串、gaps JSON 陣列字串
+    # admin 為法條領域:每 gap 呼叫序=(keyword 抽取 JSON + writer)。canned 依序:
+    # domain / questions / gaps / gap1(keyword,writer) / gap2(keyword,writer) 共 7 個。
     llm = FakeLLM([
         "admin",                                              # detect_domain 取單一標籤
         "正當程序的要件為何?\n聽證程序如何進行?",              # generate_questions 逐行解析
@@ -52,6 +54,10 @@ def test_run_pipeline_invariant(note_path):
             {"question": "正當程序的要件為何?", "status": "missing", "reason": "筆記未展開"},
             {"question": "聽證程序如何進行?", "status": "missing", "reason": "筆記未提及"},
         ], ensure_ascii=False),
+        '{"keyword": "正當程序", "law_name": null}',           # gap1 法條關鍵詞抽取(FakeLaw 回 [])
+        "【待補證】此問題缺乏可用來源,尚待補充。",              # gap1 無源 → writer 待補證
+        '{"keyword": "聽證", "law_name": null}',               # gap2 法條關鍵詞抽取(FakeLaw 回 [])
+        "聽證程序應保障當事人陳述意見[^1],並依法定程序進行[^2]。",  # gap2 引用兩獨立源
     ])
     twinkle = FakeTwinkle([
         [],                                                   # gap1 無來源 → pending_evidence
@@ -72,7 +78,11 @@ def test_run_pipeline_invariant(note_path):
         elif len(seg.sources) >= 2:
             assert seg.confidence == "verified"
 
-    # 每個 gap 恰觸發一次 retrieve;若 LLM 被呼叫第 4 次,FakeLLM 會 IndexError 使測試自然失敗
+    # supplement text 是寫出來的句子(非空);gap2 引用兩獨立 A/B 源 → verified 且掛 2 來源
+    gap2 = [s for s in supplements if s.sources]
+    assert gap2 and gap2[0].confidence == "verified"
+    assert len(gap2[0].sources) == 2 and "聽證程序" in gap2[0].text
+    # 每個 gap 恰觸發一次 twinkle retrieve
     assert len(twinkle.queries) == 2
 
 
@@ -90,6 +100,8 @@ def test_run_pipeline_law_domain_runs_citation_check(note_path, monkeypatch):
         "民法第184條的構成要件為何?",                             # 換行問題(單行)
         json.dumps([{"question": "民法第184條的構成要件為何?",
                      "status": "missing", "reason": "缺"}], ensure_ascii=False),
+        '{"keyword": "侵權行為", "law_name": null}',              # gap 法條關鍵詞抽取(FakeLaw 回 [])
+        "侵權行為以故意或過失不法侵害他人權利為要件[^1][^2]。",    # writer 撰寫補充
     ])
     twinkle = FakeTwinkle([[_src("s1", "法規原文A", "https://a", "A"),
                            _src("s2", "立法院議案B", "https://b", "B")]])

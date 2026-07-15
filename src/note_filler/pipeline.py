@@ -5,14 +5,16 @@ from .domain import detect_domain              # T3
 from .questions import generate_questions      # T4
 from .gap import detect_gaps                   # T5
 from .retrieve import retrieve_for_gap          # T9
+from .write import write_supplement            # Q3
 from .verify import cross_validate            # T10
 from .knowledge.law_citation_check import check_law_citations   # T8
 from .correction import assemble_correction       # T12
 
 
 def run_pipeline(path, llm, twinkle, law):
-    """串 parse→domain→questions→gaps→(每 gap)retrieve→cross_validate→assemble。
-    law 領域對補充段再跑 check_law_citations(C2 簽名 text=)。
+    """串 parse→domain→questions→gaps→(每 gap)retrieve→write→cross_validate→assemble。
+    每個 gap:傳 law+llm 給 retrieve_for_gap 啟用法條 Level A;寫作產 written;
+    validations 只跑實際引用(used)之來源。law 領域對補充段再跑 check_law_citations。
     回傳 CorrectionDoc。
     """
     doc = parse_note(path)                                  # T2
@@ -21,13 +23,17 @@ def run_pipeline(path, llm, twinkle, law):
     gaps = detect_gaps(questions, doc.full_text, llm)      # T5(1 次 llm.complete)
 
     retrieved: dict[str, list] = {}
+    written: dict = {}
     validations: dict = {}
     for gap in gaps:                                       # 只對 partial/missing gap(T5 已過濾)
-        sources = retrieve_for_gap(gap, domain, twinkle)   # T9
+        sources = retrieve_for_gap(gap, domain, twinkle, law, llm)  # T9(law+llm 啟用 Level A)
+        w = write_supplement(gap, sources, llm)            # Q3(寫出補充,解析 [^n])
+        used = [s for s in sources if s.id in w.used_source_ids]
         retrieved[gap.question] = sources
-        validations[gap.question] = cross_validate(gap.question, sources)  # T10
+        written[gap.question] = w
+        validations[gap.question] = cross_validate(gap.question, used)  # T10(只驗 used)
 
-    correction = assemble_correction(doc, gaps, retrieved, validations)    # T12
+    correction = assemble_correction(doc, gaps, retrieved, written, validations)  # T12
 
     if domain == "law":
         _verify_law_citations(correction, law)
