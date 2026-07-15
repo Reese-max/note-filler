@@ -148,6 +148,49 @@ def test_single_b_no_a_pending():
     assert [s.id for s in sup.sources] == ["1"]
 
 
+def test_single_c_used_source_verified():
+    """引 1 個 level C(官方/標準組織一手,如 owasp.org/NIST/CVE)→ verified。"""
+    doc = _doc(["資安筆記。"])
+    q = "XSS 防護?"
+    gap = Gap(question=q, status="missing", reason="")
+    s1 = _src("1", "OWASP Top 10", "https://owasp.org/x", level="C")
+    retrieved = {q: [s1]}
+    written = {q: WrittenSupplement(text="應做輸出編碼[^1]。", used_source_ids=["1"])}
+    cd = assemble_correction(doc, gaps=[gap], retrieved=retrieved,
+                             written=written, validations={})
+    sup = next(s for s in cd.segments if s.type == "supplement")
+    assert sup.confidence == "verified"
+
+
+def test_single_d_used_source_pending():
+    """引 1 個 level D、無其他 → pending_evidence(單一二手不算定論)。"""
+    doc = _doc(["資安筆記。"])
+    q = "XSS 防護?"
+    gap = Gap(question=q, status="partial", reason="僅片段")
+    s1 = _src("1", "部落格摘要", "https://blog.example/d", level="D")
+    retrieved = {q: [s1]}
+    written = {q: WrittenSupplement(text="某部落格主張[^1]。", used_source_ids=["1"])}
+    cd = assemble_correction(doc, gaps=[gap], retrieved=retrieved,
+                             written=written, validations={})
+    sup = next(s for s in cd.segments if s.type == "supplement")
+    assert sup.confidence == "pending_evidence"
+
+
+def test_two_distinct_d_verified():
+    """引 2 個相異 level D(id 不同)→ verified(多源佐證,規則三不限 level)。"""
+    doc = _doc(["資安筆記。"])
+    q = "XSS 防護?"
+    gap = Gap(question=q, status="missing", reason="")
+    s1 = _src("1", "部落格甲", "https://blog.example/1", level="D")
+    s2 = _src("2", "論壇乙", "https://forum.example/2", level="D")
+    retrieved = {q: [s1, s2]}
+    written = {q: WrittenSupplement(text="甲[^1],乙[^2]。", used_source_ids=["1", "2"])}
+    cd = assemble_correction(doc, gaps=[gap], retrieved=retrieved,
+                             written=written, validations={})
+    sup = next(s for s in cd.segments if s.type == "supplement")
+    assert sup.confidence == "verified"
+
+
 def test_anchor_picks_keyword_overlap():
     doc = _doc(["訴願程序相關規定。", "完全無關的天氣內容。"])
     q = "訴願期間多久?"

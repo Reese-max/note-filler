@@ -64,15 +64,28 @@ def test_single_b_no_a_pending():
     assert v.verified is False
 
 
-def test_cd_level_not_counted():
-    # 1 個 B + 1 個 C + 1 個 D:C/D 不計入、無 A → 相異 A/B 僅 1 → not verified
-    sources = [
-        mk("s1", "學說甲", "https://gov.example/a", "B", content="主張成立。"),
-        mk("s2", "部落格摘要", "https://blog.example/c", "C", content="主張成立。"),
-        mk("s3", "論壇貼文", "https://forum.example/d", "D", content="主張成立。"),
-    ]
-    v = cross_validate("主張成立", sources)
+def test_single_c_verified():
+    # 1 個 level C(官方/標準組織一手,如 owasp.org/NIST/CVE)→ verified
+    sources = [mk("s1", "OWASP Top 10", "https://owasp.org/x", "C", content="說明。")]
+    v = cross_validate("說明", sources)
+    assert v.verified is True
+
+
+def test_single_d_pending():
+    # 1 個 level D、無其他 → not verified(單一二手不算定論)
+    sources = [mk("s1", "部落格摘要", "https://blog.example/d", "D", content="說明。")]
+    v = cross_validate("說明", sources)
     assert v.verified is False
+
+
+def test_two_distinct_d_verified():
+    # 2 個相異 level D(id 不同)→ verified(多源佐證,規則三不限 level)
+    sources = [
+        mk("s1", "部落格甲", "https://blog.example/1", "D", content="說明。"),
+        mk("s2", "論壇乙", "https://forum.example/2", "D", content="說明。"),
+    ]
+    v = cross_validate("說明", sources)
+    assert v.verified is True
 
 
 def test_conflict_detected_and_no_side_taken():

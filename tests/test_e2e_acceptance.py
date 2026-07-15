@@ -70,8 +70,8 @@ def _assert_no_source_gate(doc) -> None:
                 "sources 空的 supplement 必須 pending_evidence(不得刪除)"
         if seg.confidence == "verified":
             assert seg.sources, "verified supplement 不得無來源"
-            assert all(s.level in ("A", "B") for s in seg.sources), \
-                "verified 來源必須皆為 A/B 級"
+            assert all(s.level in ("A", "B", "C", "D") for s in seg.sources), \
+                "verified 來源 level 必須為 A/B/C/D"
 
 
 def _assert_law_citations_ok(doc, law: LawLookup) -> None:
@@ -218,13 +218,15 @@ def test_e2e_acceptance_real():
     _assert_supplement_quality(doc)
 
     # 網路類斷言:真跑應偵測 gap 產生補充;verified 判準須與正本 _grounded 一致——
-    # 一手源即定論:(1) 含 >=1 個 Level A;或 (2) 含 >=2 個 id/title 相異的 A/B(C4)。
+    # 一手源即定論:(1) 含 >=1 個 Level A;或 (2) 含 >=1 個 Level C;或
+    # (3) 含 >=2 個 id/title 相異的來源(level 不限 A/B/C/D)。
     supplements = [s for s in doc.segments if s.type == "supplement"]
     assert supplements, "真跑應偵測到 gap 並產生補充段"
     for seg in supplements:
         if seg.confidence == "verified":
-            assert all(s.level in ("A", "B") for s in seg.sources)
+            assert all(s.level in ("A", "B", "C", "D") for s in seg.sources)
             has_a = any(s.level == "A" for s in seg.sources)
+            has_c = any(s.level == "C" for s in seg.sources)
             distinct = {(s.id, s.title) for s in seg.sources}  # 相異以 id/title 判,非 url
-            assert has_a or len(distinct) >= 2, \
-                "verified 需 >=1 個 Level A 一手源,或 >=2 個 id/title 相異的 A/B 來源"
+            assert has_a or has_c or len(distinct) >= 2, \
+                "verified 需 >=1 個 Level A/C 一手源,或 >=2 個 id/title 相異來源"

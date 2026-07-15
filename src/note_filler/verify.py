@@ -39,6 +39,15 @@ def _independent_ab(sources: list[Source]) -> list[Source]:
     return kept
 
 
+def _distinct(sources: list[Source]) -> list[Source]:
+    """回傳彼此相異的來源子集(不限 level,涵蓋 A/B/C/D)。相異以 id 或 title 判。"""
+    kept: list[Source] = []
+    for s in sources:
+        if all(_is_independent(s, k) for k in kept):
+            kept.append(s)
+    return kept
+
+
 # 衝突偵測用的正/反關鍵詞對;命中僅標記,絕不自動選邊
 _CONFLICT_PAIRS: list[tuple[str, str]] = [
     ("應", "不應"),
@@ -67,13 +76,14 @@ def _detect_conflict(sources: list[Source]) -> tuple[bool, str | None]:
 
 def cross_validate(claim: str, sources: list) -> Validation:
     """grounded/verified:一手源即定論。verified 若滿足其一:
-    (1) 引用來源含 >=1 個 level A(一手法條原文即定論);或
-    (2) 含 >=2 個相異 A/B 來源(相異以 id 或 title 判)。
+    (1) 引用來源含 >=1 個 level A(法規一手);或
+    (2) 引用來源含 >=1 個 level C(官方/標準組織一手,如 owasp.org/NIST/CVE);或
+    (3) 含 >=2 個相異來源(相異以 id 或 title 判,level 不限 A/B/C/D)。
     衝突僅標記不選邊(見 _detect_conflict)。
     """
     has_a = any(s.level == "A" for s in sources)
-    independent = _independent_ab(sources)
-    verified = has_a or len(independent) >= 2
+    has_c = any(s.level == "C" for s in sources)
+    verified = has_a or has_c or len(_distinct(sources)) >= 2
     conflict, note = _detect_conflict(sources)
     return Validation(
         claim=claim,

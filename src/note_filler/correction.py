@@ -53,14 +53,16 @@ def _best_anchor(question: str, paragraphs) -> int | None:
 
 def _grounded(sources) -> bool:
     """grounded/verified 若滿足其一(一手源即定論):
-    (1) 引用來源含 >=1 個 level A;或
-    (2) 含 >=2 個相異 A/B 來源(相異以 id 或 title 判,不再用 url)。
+    (1) 引用來源含 >=1 個 level A(法規一手);或
+    (2) 引用來源含 >=1 個 level C(官方/標準組織一手,如 owasp.org/NIST/CVE);或
+    (3) 含 >=2 個相異來源(相異以 id 或 title 判,level 不限 A/B/C/D)。
     """
     if any(s.level == "A" for s in sources):
         return True
-    ab = [s for s in sources if s.level in ("A", "B")]
+    if any(s.level == "C" for s in sources):
+        return True
     kept: list = []
-    for s in ab:
+    for s in sources:
         if all(s.id != k.id or s.title != k.title for k in kept):
             kept.append(s)
     return len(kept) >= 2
