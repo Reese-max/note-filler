@@ -68,3 +68,38 @@ def to_markdown(doc: CorrectionDoc) -> str:
         md = f"{md}\n\n{ref_block}"
 
     return md
+
+
+def to_docx(doc: CorrectionDoc, path: str) -> None:
+    """輸出 .docx 訂正稿,結構鏡射 to_markdown(原文 immutable、補充段標【補充】)。
+
+    python-docx 原生 footnote 支援不佳,故 [^n] 以 inline 文字呈現、文末列參考來源。
+    """
+    from docx import Document as DocxDocument  # 延遲 import,不用 docx 輸出時免裝
+
+    out = DocxDocument()
+    cited: list[Source] = []
+    counter = 0
+
+    for seg in doc.segments:
+        if seg.type == "original":
+            out.add_paragraph(seg.text)
+            continue
+        marks = ""
+        for src in seg.sources:
+            counter += 1
+            cited.append(src)
+            marks += f"[^{counter}]"
+        prefix = "【補充】" + ("⚠待補證 " if seg.confidence == "pending_evidence" else "")
+        p = out.add_paragraph()
+        run = p.add_run(f"{prefix}{seg.text}{marks}")
+        run.italic = True  # 補充段視覺區隔於原文
+
+    ref_lines = build_reference_lines(cited).splitlines()
+    if ref_lines:
+        out.add_paragraph()
+        for line in ref_lines:
+            if line.strip():
+                out.add_paragraph(line)
+
+    out.save(path)

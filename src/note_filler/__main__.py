@@ -15,7 +15,7 @@ import os
 import sys
 from pathlib import Path
 
-from .export import to_json, to_markdown
+from .export import to_docx, to_json, to_markdown
 from .knowledge.law_lookup import LawLookup
 from .llm import GrokClient
 from .pipeline import run_pipeline
@@ -48,12 +48,14 @@ def process_file(path: Path, llm, twinkle, law, out_dir: Path | None, fmt: str) 
     supp = [s for s in doc.segments if s.type == "supplement"]
     ver = sum(1 for s in supp if s.confidence == "verified")
 
-    ext = "json" if fmt == "json" else "md"
-    body = json.dumps(to_json(doc), ensure_ascii=False, indent=2) if fmt == "json" else to_markdown(doc)
     dest_dir = out_dir if out_dir is not None else path.parent
     dest_dir.mkdir(parents=True, exist_ok=True)
-    dest = dest_dir / f"{path.stem}.訂正稿.{ext}"
-    dest.write_text(body, encoding="utf-8", newline="\n")
+    dest = dest_dir / f"{path.stem}.訂正稿.{fmt}"
+    if fmt == "docx":
+        to_docx(doc, str(dest))
+    else:
+        body = json.dumps(to_json(doc), ensure_ascii=False, indent=2) if fmt == "json" else to_markdown(doc)
+        dest.write_text(body, encoding="utf-8", newline="\n")
     return {"input": str(path), "output": str(dest), "supplements": len(supp), "verified": ver}
 
 
@@ -62,7 +64,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("inputs", nargs="+", help=".txt/.docx 筆記檔,或含這些檔的資料夾(可多個)")
     ap.add_argument("-o", "--outdir", default=None, help="輸出夾(預設寫在各輸入檔旁)")
     ap.add_argument("--db", default="data/law_index.db", help="法條索引 DB 路徑(預設 data/law_index.db)")
-    ap.add_argument("--format", choices=["md", "json"], default="md", help="輸出格式(預設 md)")
+    ap.add_argument("--format", choices=["md", "json", "docx"], default="md", help="輸出格式(預設 md)")
     ap.add_argument("--token", default=os.environ.get("TWINKLE_HUB_TOKEN", ""), help="twinkle-hub token(預設讀環境變數)")
     args = ap.parse_args(argv)
 
