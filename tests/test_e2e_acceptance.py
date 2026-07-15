@@ -217,13 +217,14 @@ def test_e2e_acceptance_real():
     _assert_markdown_contract(doc)
     _assert_supplement_quality(doc)
 
-    # 網路類斷言:真跑應偵測 gap 產生補充;verified 者須 >=2 獨立 A/B(C4)
+    # 網路類斷言:真跑應偵測 gap 產生補充;verified 判準須與正本 _grounded 一致——
+    # 一手源即定論:(1) 含 >=1 個 Level A;或 (2) 含 >=2 個 id/title 相異的 A/B(C4)。
     supplements = [s for s in doc.segments if s.type == "supplement"]
     assert supplements, "真跑應偵測到 gap 並產生補充段"
     for seg in supplements:
         if seg.confidence == "verified":
-            urls = {s.url for s in seg.sources}
-            titles = {s.title for s in seg.sources}  # 機關/文件標題
-            assert len(urls) >= 2 and len(titles) >= 2, \
-                "verified 需 >=2 個 url 不同且 title(機關)不同的獨立 A/B 來源"
             assert all(s.level in ("A", "B") for s in seg.sources)
+            has_a = any(s.level == "A" for s in seg.sources)
+            distinct = {(s.id, s.title) for s in seg.sources}  # 相異以 id/title 判,非 url
+            assert has_a or len(distinct) >= 2, \
+                "verified 需 >=1 個 Level A 一手源,或 >=2 個 id/title 相異的 A/B 來源"
