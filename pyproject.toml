@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "note_filler"
+version = "0.1.0"
+description = "法律/行政/考試筆記自動補齊(研究層用 grok,原稿不可變,無來源不進正文)"
+requires-python = ">=3.11"
+dependencies = [
+    "python-docx>=1.1.0",
+    "fastapi>=0.110.0",
+    "jinja2>=3.1.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0.0"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "integration: 需要真實 grok(:8318)的整合測試;平時用 -m 'not integration' 跳過",
+]
