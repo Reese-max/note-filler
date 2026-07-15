@@ -155,6 +155,35 @@ class LawLookup:
             ).fetchone()
         return row[0] if row else None
 
+    def search_articles(
+        self, keyword: str, limit: int = 5, law_name: str | None = None
+    ) -> list[dict]:
+        """以關鍵詞對條文全文做 LIKE 檢索,可選限定法規名。
+
+        回傳 [{"law_name","article_no","article_text","pcode"}]。(無 FTS,走 LIKE。)
+        """
+        sql = (
+            "SELECT law_name, article_no, article_text, pcode "
+            "FROM law_articles WHERE article_text LIKE ?"
+        )
+        params = [f"%{keyword}%"]
+        if law_name is not None:
+            sql += " AND law_name = ?"
+            params.append(law_name)
+        sql += " LIMIT ?"
+        params.append(limit)
+        with sqlite3.connect(self.db_path) as conn:
+            rows = conn.execute(sql, params).fetchall()
+        return [
+            {
+                "law_name": r[0],
+                "article_no": r[1],
+                "article_text": r[2],
+                "pcode": r[3],
+            }
+            for r in rows
+        ]
+
     def find_law(self, law_name: str):
         """依法規名稱精確查詢法規代碼，查無則回傳 None。"""
         with sqlite3.connect(self.db_path) as conn:

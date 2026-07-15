@@ -41,6 +41,28 @@ def test_unknown_law_not_false_reported(lookup):
     assert issues == []
 
 
+def test_search_articles_keyword_with_law_name(lookup):
+    # 附款 + 行政程序法 → 應含涵蓋第93條的條文,且 article_text 含關鍵詞
+    rows = lookup.search_articles("附款", law_name="行政程序法")
+    assert rows, "預期非空"
+    assert any(r["article_no"] == "93" for r in rows), f"預期含第93條,實得 {[r['article_no'] for r in rows]}"
+    assert all("附款" in r["article_text"] for r in rows)
+    assert all(r["law_name"] == "行政程序法" for r in rows)
+
+
+def test_search_articles_keyword_only(lookup):
+    # 行政處分 → 非空,每筆 4 個 key
+    rows = lookup.search_articles("行政處分")
+    assert rows
+    for r in rows:
+        assert set(r) == {"law_name", "article_no", "article_text", "pcode"}
+
+
+def test_search_articles_limit(lookup):
+    rows = lookup.search_articles("行政", limit=3)
+    assert len(rows) <= 3
+
+
 def test_check_law_citations_first_param_is_text():
     # C2:第一參數名一律 text(防回歸成 draft)
     import inspect
