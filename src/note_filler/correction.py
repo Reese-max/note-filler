@@ -51,14 +51,19 @@ def _best_anchor(question: str, paragraphs) -> int | None:
     return best_idx
 
 
-def _has_two_independent_ab(sources) -> bool:
-    """used 的 A/B 來源中,存在一對 url 不同且 title 不同者 → 視為 ≥2 個獨立。"""
+def _grounded(sources) -> bool:
+    """grounded/verified 若滿足其一(一手源即定論):
+    (1) 引用來源含 >=1 個 level A;或
+    (2) 含 >=2 個相異 A/B 來源(相異以 id 或 title 判,不再用 url)。
+    """
+    if any(s.level == "A" for s in sources):
+        return True
     ab = [s for s in sources if s.level in ("A", "B")]
-    return any(
-        a.url != b.url and a.title != b.title
-        for i, a in enumerate(ab)
-        for b in ab[i + 1:]
-    )
+    kept: list = []
+    for s in ab:
+        if all(s.id != k.id or s.title != k.title for k in kept):
+            kept.append(s)
+    return len(kept) >= 2
 
 
 def assemble_correction(doc, gaps, retrieved, written, validations) -> CorrectionDoc:
@@ -87,10 +92,10 @@ def assemble_correction(doc, gaps, retrieved, written, validations) -> Correctio
         used_ids = w.used_source_ids if w else []
         used_sources = [by_id[sid] for sid in used_ids if sid in by_id]
 
-        # confidence:【待補證】→ pending;否則 used A/B 有 ≥2 獨立 → verified
+        # confidence:【待補證】→ pending;否則一手源即 grounded(見 _grounded)
         if text.startswith("【待補證】"):
             confidence: Literal["verified", "pending_evidence"] = "pending_evidence"
-        elif _has_two_independent_ab(used_sources):
+        elif _grounded(used_sources):
             confidence = "verified"
         else:
             confidence = "pending_evidence"

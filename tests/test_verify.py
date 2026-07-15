@@ -27,26 +27,47 @@ def test_two_independent_ab_sources_verified():
     assert v.sources == sources  # 原始來源保留不刪
 
 
-def test_same_url_not_verified():
-    # 兩筆 url 相同 → 非獨立 → 只算 1 → not verified
+def test_three_articles_same_law_same_url_verified():
+    # 引 3 條同法(url 相同、id/title 不同,level A)→ verified
+    # (先前被誤標 pending 的案例:一手法條原文即定論)
+    url = "https://law.moj.gov.tw/LawClass/LawAll.aspx?pcode=A0030055"
     sources = [
-        mk("s1", "來源甲", "https://same.example/x", "A", content="X 成立。"),
-        mk("s2", "來源乙", "https://same.example/x", "A", content="X 成立。"),
+        mk("s1", "行政程序法第93條", url, "A", content="附款之許可。"),
+        mk("s2", "行政程序法第94條", url, "A", content="附款不得違背目的。"),
+        mk("s3", "行政程序法第96條", url, "A", content="書面行政處分應記載。"),
     ]
-    v = cross_validate("X 成立", sources)
-    assert v.verified is False
+    v = cross_validate("附款相關規定", sources)
+    assert v.verified is True
 
 
-def test_single_source_not_verified():
+def test_single_a_source_verified():
+    # 一手源(1 個 level A)即 grounded → verified
     sources = [mk("s1", "唯一來源", "https://only.example/z", "A", content="Z。")]
     v = cross_validate("Z", sources)
+    assert v.verified is True
+
+
+def test_two_distinct_b_verified():
+    # 引 2 個不同 level B(id 不同、無 A)→ verified
+    sources = [
+        mk("s1", "學說甲", "https://b.example/1", "B", content="主張成立。"),
+        mk("s2", "學說乙", "https://b.example/2", "B", content="主張成立。"),
+    ]
+    v = cross_validate("主張成立", sources)
+    assert v.verified is True
+
+
+def test_single_b_no_a_pending():
+    # 1 個 level B、無 A → not verified(pending_evidence)
+    sources = [mk("s1", "學說甲", "https://b.example/1", "B", content="主張成立。")]
+    v = cross_validate("主張成立", sources)
     assert v.verified is False
 
 
 def test_cd_level_not_counted():
-    # 1 個 A + 1 個 C + 1 個 D:C/D 不計入 → 獨立 A/B 僅 1 → not verified
+    # 1 個 B + 1 個 C + 1 個 D:C/D 不計入、無 A → 相異 A/B 僅 1 → not verified
     sources = [
-        mk("s1", "官方一手", "https://gov.example/a", "A", content="主張成立。"),
+        mk("s1", "學說甲", "https://gov.example/a", "B", content="主張成立。"),
         mk("s2", "部落格摘要", "https://blog.example/c", "C", content="主張成立。"),
         mk("s3", "論壇貼文", "https://forum.example/d", "D", content="主張成立。"),
     ]
@@ -98,12 +119,13 @@ def test_independent_ab_orders_A_before_B_and_by_distance():
     assert [s.id for s in kept] == ["a_near", "a_far", "b_far"]
 
 
-def test_duplicate_title_collapses_to_one():
-    # 同 title(同機關/文件)不同 url → 非獨立,計數仍為 1 → not verified
+def test_distinct_by_id_not_url():
+    # 相異以 id/title 判、不再用 url:同 url 不同 id/title → 各自計數(2 個相異)
+    url = "https://law.example/pcode"
     sources = [
-        mk("s1", "行政程序法第92條", "https://law.example/v1", "A", content="X。"),
-        mk("s2", "行政程序法第92條", "https://law.example/v2", "A", content="X。"),
+        mk("s1", "行政程序法第92條", url, "B", content="X。"),
+        mk("s2", "行政程序法第93條", url, "B", content="X。"),
     ]
+    assert len(_independent_ab(sources)) == 2
     v = cross_validate("X", sources)
-    assert v.verified is False
-    assert len(_independent_ab(sources)) == 1
+    assert v.verified is True  # 2 個相異 B(規則二)

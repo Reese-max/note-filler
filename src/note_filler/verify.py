@@ -20,17 +20,15 @@ class Validation:
 
 
 def _is_independent(a: Source, b: Source) -> bool:
-    """獨立 = url 不同 且 title(機關/文件) 不同。
-    任一 url 為 None 時無法證明「不同 url」,保守視為不獨立。
+    """相異(獨立) = id 不同 或 title(機關/文件) 不同;不再以 url 判。
+    故同一部法的不同條(url 相同、id/title 不同)可各自計數。
     """
-    diff_url = a.url is not None and b.url is not None and a.url != b.url
-    diff_title = a.title != b.title
-    return diff_url and diff_title
+    return a.id != b.id or a.title != b.title
 
 
 def _independent_ab(sources: list[Source]) -> list[Source]:
-    """回傳彼此獨立的 A/B 來源子集(僅計 level A/B)。
-    C5 排序:Level A 先於 B、distance 小者先;再貪婪挑選互相獨立者。
+    """回傳彼此相異的 A/B 來源子集(僅計 level A/B)。
+    C5 排序:Level A 先於 B、distance 小者先;再貪婪挑選互相相異者。
     """
     ab = [s for s in sources if s.level in ("A", "B")]
     ab.sort(key=lambda s: (0 if s.level == "A" else 1, s.distance))
@@ -68,11 +66,14 @@ def _detect_conflict(sources: list[Source]) -> tuple[bool, str | None]:
 
 
 def cross_validate(claim: str, sources: list) -> Validation:
-    """C4:顯式計數獨立 A/B 來源,count>=2 才 verified。
+    """grounded/verified:一手源即定論。verified 若滿足其一:
+    (1) 引用來源含 >=1 個 level A(一手法條原文即定論);或
+    (2) 含 >=2 個相異 A/B 來源(相異以 id 或 title 判)。
     衝突僅標記不選邊(見 _detect_conflict)。
     """
+    has_a = any(s.level == "A" for s in sources)
     independent = _independent_ab(sources)
-    verified = len(independent) >= 2  # 顯式計數 >=2
+    verified = has_a or len(independent) >= 2
     conflict, note = _detect_conflict(sources)
     return Validation(
         claim=claim,
