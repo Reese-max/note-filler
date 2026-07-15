@@ -1,0 +1,13 @@
+資安重點筆記 — Web 應用常見弱點
+
+一、SQL Injection
+攻擊者把惡意 SQL 片段插入輸入欄位,讓後端資料庫執行非預期查詢,可讀取或竄改資料。
+
+二、XSS 跨站腳本
+把惡意 JavaScript 注入網頁,讓其他使用者的瀏覽器執行,常用於竊取 cookie 或 session。
+
+三、防禦
+使用參數化查詢可防 SQL Injection;對輸出做編碼可防 XSS。
+
+四、OWASP Top 10
+OWASP 每隔幾年會更新一份 Web 應用最重要的十大風險清單,作為業界基準。
