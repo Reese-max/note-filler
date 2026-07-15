@@ -85,6 +85,11 @@ def test_search_returns_empty_without_token(monkeypatch):
     assert TwinkleClient(token="").search("酒駕") == []
 
 
+def test_default_timeout_is_60():
+    # 讀取逾時屬網路問題,預設放寬到 60 秒
+    assert TwinkleClient(token="x").timeout == 60
+
+
 @pytest.mark.integration
 def test_search_real_twinkle_hub():
     import os

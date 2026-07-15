@@ -199,7 +199,7 @@ def _to_source(hit: dict[str, Any]) -> Source | None:
 class TwinkleClient:
     """twinkle-hub 立法院議案查詢;回傳 Level B 的 Source(無 token → 空結果)。"""
 
-    def __init__(self, token: str, url: str = DEFAULT_MCP_URL, timeout: float = 30):
+    def __init__(self, token: str, url: str = DEFAULT_MCP_URL, timeout: float = 60):
         self.token = token or os.environ.get("TWINKLE_HUB_TOKEN", "")  # env 後援
         self.url = url
         self.timeout = timeout
