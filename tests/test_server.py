@@ -1,4 +1,3 @@
-import httpx
 import pytest
 
 import app.server as server
@@ -9,10 +8,8 @@ from note_filler.retrieve.models import Source
 
 
 @pytest.mark.anyio
-async def test_index_returns_upload_form():
-    transport = httpx.ASGITransport(app=server.app)
-    async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
-        r = await client.get("/")
+async def test_index_returns_upload_form(async_client):
+    r = await async_client.get("/")
     assert r.status_code == 200
     body = r.text
     assert 'action="/run"' in body
@@ -66,18 +63,16 @@ def _fixed_doc() -> CorrectionDoc:
 
 
 @pytest.mark.anyio
-async def test_run_renders_two_columns(monkeypatch):
+async def test_run_renders_two_columns(async_client, monkeypatch):
     doc = _fixed_doc()
     monkeypatch.setattr(server, "_build_clients", lambda: (None, None, None))
     monkeypatch.setattr(
         server, "run_pipeline", lambda path, llm, twinkle, law: doc
     )
-    transport = httpx.ASGITransport(app=server.app)
-    async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
-        r = await client.post(
-            "/run",
-            files={"file": ("note.txt", b"hello world", "text/plain")},
-        )
+    r = await async_client.post(
+        "/run",
+        files={"file": ("note.txt", b"hello world", "text/plain")},
+    )
     assert r.status_code == 200
     body = r.text
     # 左欄原稿
@@ -94,17 +89,15 @@ async def test_run_renders_two_columns(monkeypatch):
 
 
 @pytest.mark.anyio
-async def test_export_returns_markdown_attachment(monkeypatch):
+async def test_export_returns_markdown_attachment(async_client, monkeypatch):
     doc = _fixed_doc()
     monkeypatch.setattr(server, "_build_clients", lambda: (None, None, None))
     monkeypatch.setattr(
         server, "run_pipeline", lambda path, llm, twinkle, law: doc
     )
-    transport = httpx.ASGITransport(app=server.app)
-    async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
-        # 先跑一次 /run 讓 last_doc 有值
-        await client.post("/run", files={"file": ("note.txt", b"x", "text/plain")})
-        r = await client.get("/export")
+    # 先跑一次 /run 讓 last_doc 有值
+    await async_client.post("/run", files={"file": ("note.txt", b"x", "text/plain")})
+    r = await async_client.get("/export")
     assert r.status_code == 200
     assert r.headers["content-type"].startswith("text/markdown")
     assert "attachment" in r.headers["content-disposition"]
@@ -114,9 +107,7 @@ async def test_export_returns_markdown_attachment(monkeypatch):
 
 
 @pytest.mark.anyio
-async def test_export_without_run_returns_404():
+async def test_export_without_run_returns_404(async_client):
     server.app.state.last_doc = None  # 重置狀態
-    transport = httpx.ASGITransport(app=server.app)
-    async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
-        r = await client.get("/export")
+    r = await async_client.get("/export")
     assert r.status_code == 404
