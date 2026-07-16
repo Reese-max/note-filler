@@ -8,7 +8,7 @@ from note_filler.correction import Segment, CorrectionDoc
 from note_filler.retrieve.models import Source
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_index_returns_upload_form():
     transport = httpx.ASGITransport(app=server.app)
     async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
@@ -65,7 +65,7 @@ def _fixed_doc() -> CorrectionDoc:
     )
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_run_renders_two_columns(monkeypatch):
     doc = _fixed_doc()
     monkeypatch.setattr(server, "_build_clients", lambda: (None, None, None))
@@ -93,7 +93,7 @@ async def test_run_renders_two_columns(monkeypatch):
     assert "待補依據" in body
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_export_returns_markdown_attachment(monkeypatch):
     doc = _fixed_doc()
     monkeypatch.setattr(server, "_build_clients", lambda: (None, None, None))
@@ -113,7 +113,7 @@ async def test_export_returns_markdown_attachment(monkeypatch):
     assert "行政處分" in r.text
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_export_without_run_returns_404():
     server.app.state.last_doc = None  # 重置狀態
     transport = httpx.ASGITransport(app=server.app)
