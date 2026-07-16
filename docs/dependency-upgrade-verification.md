@@ -128,7 +128,7 @@ httpcore==1.0.9
 
 `scripts/dep_upgrade_check.py` 會在隔離臨時 venv 中：
 
-1. 依 constraints-ci.txt 安裝最新相容版本
+1. 依 constraints-pinned.txt 安裝最新相容版本
 2. 驗證安裝版本
 3. 執行完整測試套件（跳過 integration）
 4. 自動清理
@@ -139,10 +139,17 @@ python -X utf8 scripts/dep_upgrade_check.py
 
 ## CI 整合
 
-GitHub Actions CI（`.github/workflows/ci.yml`）每次 push/PR 自動執行相同驗證。
+GitHub Actions CI（`.github/workflows/ci.yml`）每次 push/PR 執行兩組驗證：
+
+| Job | Python | Constraints | 用途 |
+|---|---|---|---|
+| `test-pinned` | 3.11, 3.12 | `constraints-pinned.txt` | 確保特定升級版本可通過 |
+| `test-latest` | 3.11, 3.12, 3.13 | 無（pip 解析最新相容版） | 確保非鎖定環境仍可通過 |
+
+`test-latest` 是防護「只在舊版鎖定依賴下通過」的核心：pyproject.toml 的 `>=` 範圍允許的最新版都必須通過。
 
 ## 更新 Constraints
 
-1. 更新 `constraints-ci.txt` 中的版本號
+1. 更新 `constraints-pinned.txt` 中的版本號
 2. 執行 `python -X utf8 scripts/dep_upgrade_check.py` 驗證
 3. 確認 102 passed + 零 warnings → 提交更新

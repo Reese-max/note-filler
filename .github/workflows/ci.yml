@@ -7,7 +7,8 @@ on:
     branches: [main]
 
 jobs:
-  test:
+  test-pinned:
+    name: test (pinned ${{ matrix.python-version }})
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -20,10 +21,37 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: Install dependencies with pinned versions
+      - name: Install dependencies with pinned constraints
         run: |
           python -m pip install --upgrade pip
-          python -m pip install -e ".[dev]" -c constraints-ci.txt
+          python -m pip install -e ".[dev]" -c constraints-pinned.txt
+
+      - name: Verify installed versions
+        run: |
+          python -m pip show fastapi starlette httpx | grep -E "^(Name|Version):"
+
+      - name: Run tests (skip integration)
+        run: |
+          python -m pytest tests/ -m "not integration" -v
+
+  test-latest:
+    name: test (latest ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies (latest compatible)
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev]"
 
       - name: Verify installed versions
         run: |

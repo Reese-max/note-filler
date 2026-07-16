@@ -40,7 +40,7 @@ def run_command(cmd, cwd=None, check=True, capture_output=True):
 def main():
     """主函數"""
     script_dir = Path(__file__).parent.parent
-    constraints_file = script_dir / "constraints-ci.txt"
+    constraints_file = script_dir / "constraints-pinned.txt"
     
     if not constraints_file.exists():
         print(f"錯誤: 找不到 constraints 檔案: {constraints_file}")
@@ -72,7 +72,7 @@ def main():
         print(f"升級 pip")
         run_command([str(venv_python), "-m", "pip", "install", "--upgrade", "pip"])
         
-        print(f"\n安裝專案依賴（使用 constraints-ci.txt）")
+        print(f"\n安裝專案依賴（使用 constraints-pinned.txt）")
         run_command([
             str(venv_pip),
             "install",
