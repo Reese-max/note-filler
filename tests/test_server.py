@@ -1,4 +1,5 @@
-from fastapi.testclient import TestClient
+import httpx
+import pytest
 
 import app.server as server
 
@@ -7,9 +8,11 @@ from note_filler.correction import Segment, CorrectionDoc
 from note_filler.retrieve.models import Source
 
 
-def test_index_returns_upload_form():
-    client = TestClient(server.app)
-    r = client.get("/")
+@pytest.mark.asyncio
+async def test_index_returns_upload_form():
+    transport = httpx.ASGITransport(app=server.app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
+        r = await client.get("/")
     assert r.status_code == 200
     body = r.text
     assert 'action="/run"' in body
@@ -62,17 +65,19 @@ def _fixed_doc() -> CorrectionDoc:
     )
 
 
-def test_run_renders_two_columns(monkeypatch):
+@pytest.mark.asyncio
+async def test_run_renders_two_columns(monkeypatch):
     doc = _fixed_doc()
     monkeypatch.setattr(server, "_build_clients", lambda: (None, None, None))
     monkeypatch.setattr(
         server, "run_pipeline", lambda path, llm, twinkle, law: doc
     )
-    client = TestClient(server.app)
-    r = client.post(
-        "/run",
-        files={"file": ("note.txt", b"hello world", "text/plain")},
-    )
+    transport = httpx.ASGITransport(app=server.app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
+        r = await client.post(
+            "/run",
+            files={"file": ("note.txt", b"hello world", "text/plain")},
+        )
     assert r.status_code == 200
     body = r.text
     # 左欄原稿
@@ -88,16 +93,18 @@ def test_run_renders_two_columns(monkeypatch):
     assert "待補依據" in body
 
 
-def test_export_returns_markdown_attachment(monkeypatch):
+@pytest.mark.asyncio
+async def test_export_returns_markdown_attachment(monkeypatch):
     doc = _fixed_doc()
     monkeypatch.setattr(server, "_build_clients", lambda: (None, None, None))
     monkeypatch.setattr(
         server, "run_pipeline", lambda path, llm, twinkle, law: doc
     )
-    client = TestClient(server.app)
-    # 先跑一次 /run 讓 last_doc 有值
-    client.post("/run", files={"file": ("note.txt", b"x", "text/plain")})
-    r = client.get("/export")
+    transport = httpx.ASGITransport(app=server.app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
+        # 先跑一次 /run 讓 last_doc 有值
+        await client.post("/run", files={"file": ("note.txt", b"x", "text/plain")})
+        r = await client.get("/export")
     assert r.status_code == 200
     assert r.headers["content-type"].startswith("text/markdown")
     assert "attachment" in r.headers["content-disposition"]
@@ -106,8 +113,10 @@ def test_export_returns_markdown_attachment(monkeypatch):
     assert "行政處分" in r.text
 
 
-def test_export_without_run_returns_404():
+@pytest.mark.asyncio
+async def test_export_without_run_returns_404():
     server.app.state.last_doc = None  # 重置狀態
-    client = TestClient(server.app)
-    r = client.get("/export")
+    transport = httpx.ASGITransport(app=server.app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
+        r = await client.get("/export")
     assert r.status_code == 404
