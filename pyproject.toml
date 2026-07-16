@@ -24,9 +24,10 @@ where = ["src"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-# 讓 pytest 把本 checkout 的 src 插到 sys.path 最前——worktree/多 checkout 驗證時
-# 壓過共用 venv 裡指向主專案的 editable install,確保驗到的是當前 checkout 的碼
 pythonpath = ["src"]
+# 專案用 anyio (pytest.mark.anyio),不需要 pytest-asyncio 的 asyncio plugin；
+# 它會自動載入並觸發 PytestDeprecationWarning (asyncio_default_fixture_loop_scope 未設)
+addopts = "-p no:asyncio"
 markers = [
     "integration: 需要真實 grok(:8318)的整合測試;平時用 -m 'not integration' 跳過",
 ]
