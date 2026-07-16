@@ -24,7 +24,7 @@ pytest 的 `-W error::DeprecationWarning` 會將 warning 視為 exception。
 若有任何 deprecated API 被呼叫，pytest 會立即報錯並導致對應測試 FAIL。
 因此「102 passed, 0 failed」本身即為「零 deprecation warning」的直接證據。
 
-## 佐證輸出（2026-07-17 實測）
+## 佐證輸出（2026-07-17 再次實測）
 
 ### 環境
 
@@ -86,7 +86,7 @@ tests\test_verify.py .............                                       [ 88%]
 tests\test_web.py .........                                              [ 97%]
 tests\test_write.py ...                                                  [100%]
 
-====================== 102 passed, 8 deselected in 0.66s ======================
+====================== 102 passed, 8 deselected in 0.98s ======================
 ```
 
 結論：error 模式下零 fail → 零 deprecation warning。
