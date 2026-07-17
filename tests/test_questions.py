@@ -59,6 +59,7 @@ def test_generate_questions_calls_llm_exactly_once():
         llm.complete([{"role": "user", "content": "probe"}])
 
 
+@pytest.mark.integration
 @pytest.mark.skipif(not _grok_reachable(), reason="grok proxy(127.0.0.1:8318)未上線,條件式略過")
 def test_generate_questions_real_grok():
     from note_filler.llm import GrokClient

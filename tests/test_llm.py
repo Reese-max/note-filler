@@ -63,6 +63,7 @@ def test_grokclient_builds_request_body(monkeypatch):
     assert captured["timeout"] == 42
 
 
+@pytest.mark.integration
 @pytest.mark.skipif(not _grok_reachable(), reason="grok proxy(127.0.0.1:8318)未上線,條件式略過")
 def test_grok_pong_integration():
     client = GrokClient()

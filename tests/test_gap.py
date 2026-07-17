@@ -68,6 +68,7 @@ def test_detect_gaps_empty_questions_short_circuits():
     assert detect_gaps([], "筆記", llm) == []
 
 
+@pytest.mark.integration
 @pytest.mark.skipif(not _grok_reachable(), reason="grok proxy(127.0.0.1:8318)未上線,條件式略過")
 def test_detect_gaps_real_grok():
     """真打 grok(http://127.0.0.1:8318/v1, grok-4.3):

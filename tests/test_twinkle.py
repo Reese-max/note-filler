@@ -90,6 +90,7 @@ def test_default_timeout_is_60():
     assert TwinkleClient(token="x").timeout == 60
 
 
+@pytest.mark.integration
 def test_search_real_twinkle_hub():
     import os
 
