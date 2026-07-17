@@ -1,7 +1,17 @@
+import socket
+
 import pytest
 
 from note_filler.domain import detect_domain
 from note_filler.llm import FakeLLM
+
+
+def _grok_reachable(host: str = "127.0.0.1", port: int = 8318) -> bool:
+    try:
+        with socket.create_connection((host, port), timeout=1.0):
+            return True
+    except OSError:
+        return False
 
 
 def test_detect_domain_law():
@@ -37,7 +47,7 @@ def test_detect_domain_uppercase_and_whitespace():
     assert detect_domain("機關內部差勤與請假作業規範。", llm) == "admin"
 
 
-@pytest.mark.integration
+@pytest.mark.skipif(not _grok_reachable(), reason="grok proxy(127.0.0.1:8318)未上線,條件式略過")
 def test_detect_domain_real_grok_returns_law():
     # 真打 grok(http://127.0.0.1:8318/v1, grok-4.3);明顯法律文字須回 law
     from note_filler.llm import GrokClient

@@ -1,9 +1,18 @@
 import json
+import socket
 import urllib.request
 
 import pytest
 
 from note_filler.llm import FakeLLM, GrokClient
+
+
+def _grok_reachable(host: str = "127.0.0.1", port: int = 8318) -> bool:
+    try:
+        with socket.create_connection((host, port), timeout=1.0):
+            return True
+    except OSError:
+        return False
 
 
 def test_fakellm_returns_canned_in_order():
@@ -54,7 +63,7 @@ def test_grokclient_builds_request_body(monkeypatch):
     assert captured["timeout"] == 42
 
 
-@pytest.mark.integration
+@pytest.mark.skipif(not _grok_reachable(), reason="grok proxy(127.0.0.1:8318)未上線,條件式略過")
 def test_grok_pong_integration():
     client = GrokClient()
     out = client.complete(

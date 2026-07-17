@@ -1,7 +1,17 @@
+import socket
+
 import pytest
 
 from note_filler.gap import Gap, detect_gaps
 from note_filler.llm import FakeLLM
+
+
+def _grok_reachable(host: str = "127.0.0.1", port: int = 8318) -> bool:
+    try:
+        with socket.create_connection((host, port), timeout=1.0):
+            return True
+    except OSError:
+        return False
 
 
 def test_detect_gaps_keeps_only_partial_and_missing():
@@ -58,7 +68,7 @@ def test_detect_gaps_empty_questions_short_circuits():
     assert detect_gaps([], "筆記", llm) == []
 
 
-@pytest.mark.integration
+@pytest.mark.skipif(not _grok_reachable(), reason="grok proxy(127.0.0.1:8318)未上線,條件式略過")
 def test_detect_gaps_real_grok():
     """真打 grok(http://127.0.0.1:8318/v1, grok-4.3):
     給一段只談行政處分定義的筆記 + 一題明顯未涵蓋的問題,
