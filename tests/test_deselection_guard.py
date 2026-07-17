@@ -52,6 +52,33 @@ def _collect_tests(*pytest_args: str) -> list[str]:
     )
 
 
+def _run_tests(*test_ids: str) -> set[str]:
+    """Run the mapped tests once and return the node ids that passed."""
+    command = [
+        _PYTHON,
+        "-X",
+        "utf8",
+        "-m",
+        "pytest",
+        "-vv",
+        "--tb=short",
+        *test_ids,
+    ]
+    result = subprocess.run(
+        command,
+        cwd=str(_REPO_ROOT),
+        capture_output=True,
+        text=True,
+        timeout=120,
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+    return {
+        line.split(" PASSED", 1)[0].strip()
+        for line in result.stdout.splitlines()
+        if " PASSED" in line
+    }
+
+
 def test_integration_allowlist_is_stable() -> None:
     """The current default deselection must exactly match the audited eight."""
     all_tests = _collect_tests("-o", "addopts=")
@@ -71,7 +98,23 @@ def test_integration_allowlist_is_stable() -> None:
 
 
 def test_substitute_mapping_is_complete_and_collectable() -> None:
-    """Every excluded test maps to existing tests in the default test set."""
+    """Every excluded test maps to default tests that pass in one targeted run."""
     unmapped = [item["test_id"] for item in _AUDIT if not item["substitute_tests"]]
     assert not unmapped, f"Integration tests without substitute coverage: {unmapped}"
     assert _collect_tests(*MAPPED_NON_INTEGRATION_TESTS) == MAPPED_NON_INTEGRATION_TESTS
+
+    passed = _run_tests(*MAPPED_NON_INTEGRATION_TESTS)
+    assert passed == set(MAPPED_NON_INTEGRATION_TESTS)
+
+    print(f"\nDESELECTED_AUDIT={len(_AUDIT)} MAPPED_TESTS={len(passed)}")
+    for index, item in enumerate(_AUDIT, start=1):
+        covered = item["substitute_tests"]
+        assert item["exclusion_reason"].strip()
+        assert item["coverage_gap"].strip()
+        assert set(covered) <= passed
+        evidence = ", ".join(f"PASS {test_id}" for test_id in covered)
+        print(f"[{index}/{_EXPECTED_DESELECTED_COUNT}] 未納入: {item['test_id']}")
+        print(f"  原因: {item['exclusion_reason']}")
+        print(f"  覆蓋證據: {evidence}")
+        print(f"  整合邊界: {item['coverage_gap']}")
+    print("TARGETED_VERIFICATION=PASS")
