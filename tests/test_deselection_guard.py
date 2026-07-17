@@ -17,6 +17,7 @@ _REPO_ROOT = Path(__file__).resolve().parent.parent
 _AUDIT = json.loads(
     (_REPO_ROOT / "tests" / "deselected_allowlist.json").read_text(encoding="utf-8")
 )
+_EXPECTED_DESELECTED_COUNT = 8
 ALLOWED_INTEGRATION_TESTS = sorted(item["test_id"] for item in _AUDIT)
 MAPPED_NON_INTEGRATION_TESTS = sorted(
     {test_id for item in _AUDIT for test_id in item["substitute_tests"]}
@@ -24,8 +25,8 @@ MAPPED_NON_INTEGRATION_TESTS = sorted(
 _TEST_ID_RE = re.compile(r"^tests/[^:]+::\S+$")
 
 
-def _collect_tests(marker: str, test_ids: list[str] | None = None) -> list[str]:
-    """Collect matching test ids, optionally limited to an explicit mapping."""
+def _collect_tests(*pytest_args: str) -> list[str]:
+    """Collect test node ids with the supplied pytest arguments."""
     command = [
         _PYTHON,
         "-X",
@@ -33,12 +34,9 @@ def _collect_tests(marker: str, test_ids: list[str] | None = None) -> list[str]:
         "-m",
         "pytest",
         "--collect-only",
-        "-m",
-        marker,
         "-q",
+        *pytest_args,
     ]
-    if test_ids:
-        command.extend(test_ids)
     result = subprocess.run(
         command,
         cwd=str(_REPO_ROOT),
@@ -55,15 +53,20 @@ def _collect_tests(marker: str, test_ids: list[str] | None = None) -> list[str]:
 
 
 def test_integration_allowlist_is_stable() -> None:
-    """The integration-marked set must exactly match the audited list."""
-    actual = _collect_tests("integration")
+    """The current default deselection must exactly match the audited eight."""
+    all_tests = _collect_tests("-o", "addopts=")
+    selected_tests = _collect_tests()
+    actual = sorted(set(all_tests) - set(selected_tests))
     added = sorted(set(actual) - set(ALLOWED_INTEGRATION_TESTS))
     removed = sorted(set(ALLOWED_INTEGRATION_TESTS) - set(actual))
-    assert actual == ALLOWED_INTEGRATION_TESTS, (
-        f"Integration test allowlist mismatch "
-        f"(expected {len(ALLOWED_INTEGRATION_TESTS)}, got {len(actual)}).\n"
-        f"  Newly marked integration (add to allowlist): {added}\n"
-        f"  No longer integration (remove from allowlist): {removed}"
+    assert (
+        len(actual) == _EXPECTED_DESELECTED_COUNT
+        and actual == ALLOWED_INTEGRATION_TESTS
+    ), (
+        f"Deselected test allowlist mismatch "
+        f"(expected {_EXPECTED_DESELECTED_COUNT}, got {len(actual)}).\n"
+        f"  Newly deselected (add to allowlist): {added}\n"
+        f"  No longer deselected (remove from allowlist): {removed}"
     )
 
 
@@ -71,6 +74,4 @@ def test_substitute_mapping_is_complete_and_collectable() -> None:
     """Every excluded test maps to existing tests in the default test set."""
     unmapped = [item["test_id"] for item in _AUDIT if not item["substitute_tests"]]
     assert not unmapped, f"Integration tests without substitute coverage: {unmapped}"
-    assert _collect_tests(
-        "not integration", MAPPED_NON_INTEGRATION_TESTS
-    ) == MAPPED_NON_INTEGRATION_TESTS
+    assert _collect_tests(*MAPPED_NON_INTEGRATION_TESTS) == MAPPED_NON_INTEGRATION_TESTS
