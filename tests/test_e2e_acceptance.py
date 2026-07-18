@@ -204,6 +204,42 @@ def test_e2e_offline_supplement_quality_boundary():
     _assert_supplement_quality(doc)
 
 
+# ---- 最小品質閘回歸:四項硬閘 + 只掛實際引用(離線最小前置) ----------------
+# 對應 docs/deselected-minimal-repro-2026-07-18.md 最小條件,以及任務硬約束:
+#   原稿逐字不可變 / 無來源→pending_evidence / 只掛實際引用 / 法條離線查核。
+# 為 failing-regression 候選:現況應通過;任一閘回歸則紅。不改主程式。
+@pytest.mark.skipif(not LAW_DB.exists(), reason="缺 data/law_index.db,無法驗最小品質閘回歸")
+def test_e2e_minimal_quality_gates_offline_regression():
+    """最小化 failing regression:離線最小前置下四項品質閘是否可穩定失敗。
+
+    前置 = FakeLLM + _StubTwinkle + LawLookup(data/law_index.db)。
+    若穩定 PASS → 判定 NOT-REPRODUCIBLE
+    (見 docs/minimal-quality-gates-regression-2026-07-19.md)。
+    """
+    note_text = FIXTURE.read_text(encoding="utf-8")
+    doc, law = _offline_structural_doc()
+
+    # (1) 原稿逐字不可變
+    _assert_immutable_original(doc, note_text)
+    # (2) 無來源 / 【待補證】→ pending_evidence
+    _assert_no_source_gate(doc)
+    # (3) 法條引用須通過離線查核
+    _assert_law_citations_ok(doc, law)
+    # (4) 只掛實際引用來源:verified 補充的 sources 必須非空且 text 含 [^n]
+    for seg in doc.segments:
+        if seg.type != "supplement" or seg.confidence != "verified":
+            continue
+        assert seg.sources, "verified 補充必須掛實際引用來源"
+        assert "[^" in seg.text, f"verified 補充應以 [^n] 標引用: {seg.text!r}"
+        # sources 不得塞入未引用 id(離線 stub 僅兩源,writer 標 [^1][^2] 全引用;
+        # 至少保證每筆 source 都有合法 level,且 id 可對應註腳序號範圍)
+        assert all(s.level in ("A", "B", "C", "D") for s in seg.sources)
+        assert len(seg.sources) >= 1
+
+    _assert_supplement_quality(doc)
+    _assert_markdown_contract(doc)
+
+
 # ---- 網路類:真 grok+真 twinkle+真 law;無 token/未上線則 skip --------------
 @pytest.mark.integration
 def test_e2e_acceptance_real():

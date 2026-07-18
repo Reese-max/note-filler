@@ -17,7 +17,7 @@ _REPO_ROOT = Path(__file__).resolve().parent.parent
 _AUDIT = json.loads(
     (_REPO_ROOT / "tests" / "deselected_allowlist.json").read_text(encoding="utf-8")
 )
-_EXPECTED_COUNTS = (117, 109, 8)
+_EXPECTED_COUNTS = (118, 110, 8)
 _EXPECTED_DESELECTED_COUNT = _EXPECTED_COUNTS[2]
 ALLOWED_INTEGRATION_TESTS = sorted(item["test_id"] for item in _AUDIT)
 MAPPED_NON_INTEGRATION_TESTS = sorted(
