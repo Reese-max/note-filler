@@ -16,6 +16,7 @@
     "covered_function": "§12 端到端驗收: parse→domain→questions→gaps→retrieve→assemble→export; 5 個硬不變式",
     "substitute_tests": [
       "tests/test_e2e_acceptance.py::test_e2e_structural_invariants",
+      "tests/test_e2e_acceptance.py::test_e2e_offline_supplement_quality_boundary",
       "tests/test_pipeline.py::test_run_pipeline_invariant",
       "tests/test_pipeline.py::test_run_pipeline_law_domain_runs_citation_check",
       "tests/test_correction.py::test_retrieved_five_but_only_two_cited"

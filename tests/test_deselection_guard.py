@@ -17,7 +17,7 @@ _REPO_ROOT = Path(__file__).resolve().parent.parent
 _AUDIT = json.loads(
     (_REPO_ROOT / "tests" / "deselected_allowlist.json").read_text(encoding="utf-8")
 )
-_EXPECTED_COUNTS = (112, 104, 8)
+_EXPECTED_COUNTS = (113, 105, 8)
 _EXPECTED_DESELECTED_COUNT = _EXPECTED_COUNTS[2]
 ALLOWED_INTEGRATION_TESTS = sorted(item["test_id"] for item in _AUDIT)
 MAPPED_NON_INTEGRATION_TESTS = sorted(
@@ -36,6 +36,7 @@ def _collect_tests(*pytest_args: str) -> list[str]:
         "pytest",
         "--collect-only",
         "-q",
+        "--color=no",
         *pytest_args,
     ]
     result = subprocess.run(
@@ -63,6 +64,7 @@ def _run_tests(*test_ids: str) -> set[str]:
         "pytest",
         "-vv",
         "--tb=short",
+        "--color=no",
         *test_ids,
     ]
     result = subprocess.run(
@@ -73,9 +75,11 @@ def _run_tests(*test_ids: str) -> set[str]:
         timeout=120,
     )
     assert result.returncode == 0, result.stdout + result.stderr
+    # 去 ANSI，避免 color-on 時 " PASSED" 字面比對落空（回歸：passed=set()）
+    plain = re.sub(r"\x1b\[[0-9;]*m", "", result.stdout)
     return {
         line.split(" PASSED", 1)[0].strip()
-        for line in result.stdout.splitlines()
+        for line in plain.splitlines()
         if " PASSED" in line
     }
 

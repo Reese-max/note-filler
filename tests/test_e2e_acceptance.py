@@ -173,6 +173,37 @@ def test_e2e_structural_invariants():
     _assert_markdown_contract(doc)
 
 
+def _offline_structural_doc():
+    """與 test_e2e_structural_invariants 相同的最小離線前置(FakeLLM+_StubTwinkle+LawLookup)。"""
+    law = LawLookup(str(LAW_DB))
+    fake = FakeLLM([
+        "law",
+        "什麼是行政處分?\n行政程序法第92條的定義為何?\n訴願前置程序為何?",
+        json.dumps(
+            [{"question": "行政程序法第92條的定義為何?",
+              "status": "missing", "reason": "筆記未展開條文定義"}],
+            ensure_ascii=False,
+        ),
+        '{"keyword": "行政處分", "law_name": "行政程序法"}',
+        "行政處分係指行政機關就公法上具體事件所為之對外發生法律效果之單方行政行為[^1][^2]。",
+    ])
+    return run_pipeline(str(FIXTURE), fake, _StubTwinkle(), law), law
+
+
+# ---- 邊界回歸:離線重現 e2e_acceptance_real 的 _assert_supplement_quality ----
+# 對應 docs/deselected-minimal-repro-2026-07-18.md 之覆蓋缺口。
+# 僅鎖確定性路徑(Level A 路由 / 非原始記錄倒出 / [^n] 註腳);不改主程式。
+@pytest.mark.skipif(not LAW_DB.exists(), reason="缺 data/law_index.db,無法驗離線品質邊界")
+def test_e2e_offline_supplement_quality_boundary():
+    """最小 failing-regression 候選:離線路徑是否觸發 _assert_supplement_quality 失敗。
+
+    若現況穩定通過 → 代表該整合邊界無法在非-integration 下以失敗形式重現
+    (判定 NOT-REPRODUCIBLE,見 docs/e2e-offline-quality-boundary-2026-07-18.md)。
+    """
+    doc, _law = _offline_structural_doc()
+    _assert_supplement_quality(doc)
+
+
 # ---- 網路類:真 grok+真 twinkle+真 law;無 token/未上線則 skip --------------
 @pytest.mark.integration
 def test_e2e_acceptance_real():
