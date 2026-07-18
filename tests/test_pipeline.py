@@ -1,10 +1,19 @@
 import json
+import socket
 import pytest
 from docx import Document as DocxDocument
 
 from note_filler.llm import FakeLLM
 from note_filler.retrieve.models import Source          # Source 定義處(T6/型別鎖定)
 from note_filler.pipeline import run_pipeline
+
+
+def _grok_reachable(host: str = "127.0.0.1", port: int = 8318) -> bool:
+    try:
+        with socket.create_connection((host, port), timeout=1.0):
+            return True
+    except OSError:
+        return False
 
 
 @pytest.fixture
@@ -115,6 +124,7 @@ def test_run_pipeline_law_domain_runs_citation_check(note_path, monkeypatch):
 
 
 @pytest.mark.integration
+@pytest.mark.skipif(not _grok_reachable(), reason="grok proxy(127.0.0.1:8318)未上線,條件式略過")
 def test_run_pipeline_real_grok(note_path):
     """打真 grok(http://127.0.0.1:8318/v1, grok-4.3);twinkle/law 用 fake 隔離,
     驗 parse→domain→questions→gaps→assemble 整條在真模型輸出下不炸。

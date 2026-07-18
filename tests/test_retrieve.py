@@ -1,5 +1,7 @@
 # tests/test_retrieve.py
 import os
+import socket
+from pathlib import Path
 
 import pytest
 
@@ -7,6 +9,17 @@ from note_filler.gap import Gap
 from note_filler.llm import FakeLLM
 from note_filler.retrieve.models import Source
 from note_filler.retrieve import retrieve_for_gap, _LEVEL_RANK
+
+
+LAW_DB = Path(__file__).resolve().parents[1] / "data" / "law_index.db"
+
+
+def _grok_reachable(host: str = "127.0.0.1", port: int = 8318) -> bool:
+    try:
+        with socket.create_connection((host, port), timeout=1.0):
+            return True
+    except OSError:
+        return False
 
 
 class FakeTwinkle:
@@ -87,22 +100,21 @@ def test_retrieve_for_gap_other_domain_uses_web_not_twinkle(monkeypatch):
 
 
 @pytest.mark.integration
+@pytest.mark.skipif(not LAW_DB.exists(), reason="缺 data/law_index.db")
+@pytest.mark.skipif(not _grok_reachable(), reason="grok proxy(127.0.0.1:8318)未上線,條件式略過")
 def test_retrieve_for_gap_real_twinkle_smoke():
     token = os.environ.get("TWINKLE_HUB_TOKEN")
     if os.environ.get("GOV_AI_ENABLE_TWINKLE_MCP") != "1" or not token:
         pytest.skip("需 GOV_AI_ENABLE_TWINKLE_MCP=1 且設 TWINKLE_HUB_TOKEN")
 
-    from pathlib import Path
-
     from note_filler.knowledge.law_lookup import LawLookup
     from note_filler.llm import GrokClient
     from note_filler.retrieve.twinkle import TwinkleClient
 
-    law_db = Path(__file__).resolve().parents[1] / "data" / "law_index.db"
     gap = Gap(question="行政處分附款的容許界限為何?", status="missing", reason="")
     twinkle = TwinkleClient(token=token)
-    law = LawLookup(str(law_db)) if law_db.exists() else None
-    llm = GrokClient() if law is not None else None
+    law = LawLookup(str(LAW_DB))
+    llm = GrokClient()
 
     out = retrieve_for_gap(gap, "law", twinkle, law, llm)
 
