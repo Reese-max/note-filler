@@ -1,0 +1,20 @@
+============================= test session starts =============================
+platform win32 -- Python 3.11.9, pytest-9.1.1, pluggy-1.6.0 -- D:\Users\Administrator\Desktop\蝑?鋆?\.venv\Scripts\python.exe
+cachedir: .pytest_cache
+rootdir: D:\Users\Administrator\Desktop\autodev-ng\data\note-filler\worktrees\d0eb01ba
+configfile: pyproject.toml
+plugins: anyio-4.14.2
+collecting ... collected 3 items
+
+tests/test_pipeline.py::test_run_pipeline_real_grok PASSED               [ 33%]
+tests/test_twinkle.py::test_search_real_twinkle_hub PASSED               [ 66%]
+tests/test_retrieve.py::test_retrieve_for_gap_real_twinkle_smoke PASSED  [100%]
+
+============================== slowest durations ==============================
+65.18s call     tests/test_pipeline.py::test_run_pipeline_real_grok
+13.22s call     tests/test_retrieve.py::test_retrieve_for_gap_real_twinkle_smoke
+6.91s call     tests/test_twinkle.py::test_search_real_twinkle_hub
+0.03s setup    tests/test_pipeline.py::test_run_pipeline_real_grok
+
+(5 durations < 0.005s hidden.  Use -vv to show these durations.)
+======================== 3 passed in 85.45s (0:01:25) =========================

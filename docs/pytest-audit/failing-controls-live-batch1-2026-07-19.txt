@@ -1,0 +1,14 @@
+============================= test session starts =============================
+platform win32 -- Python 3.11.9, pytest-9.1.1, pluggy-1.6.0 -- D:\Users\Administrator\Desktop\蝑?鋆?\.venv\Scripts\python.exe
+cachedir: .pytest_cache
+rootdir: D:\Users\Administrator\Desktop\autodev-ng\data\note-filler\worktrees\d0eb01ba
+configfile: pyproject.toml
+plugins: anyio-4.14.2
+collecting ... collected 4 items
+
+tests/test_domain.py::test_detect_domain_real_grok_returns_law PASSED    [ 25%]
+tests/test_llm.py::test_grok_pong_integration PASSED                     [ 50%]
+tests/test_gap.py::test_detect_gaps_real_grok PASSED                     [ 75%]
+tests/test_questions.py::test_generate_questions_real_grok PASSED        [100%]
+
+============================= 4 passed in 17.09s ==============================

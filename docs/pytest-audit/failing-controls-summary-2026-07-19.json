@@ -1,0 +1,99 @@
+{
+  "schema": "note-filler.excluded-failing-controls/v1",
+  "date": "2026-07-19",
+  "python": "D:/Users/Administrator/Desktop/筆記補齊/.venv/Scripts/python.exe -X utf8",
+  "counts": {"collected": 131, "selected": 123, "deselected": 8},
+  "offline_controls": {
+    "module": "tests/test_excluded_failing_controls.py",
+    "result": "10 passed",
+    "exit_code": 0
+  },
+  "default_gate": {
+    "result": "123 passed, 8 deselected",
+    "exit_code": 0
+  },
+  "guard": {
+    "result": "4 passed",
+    "exit_code": 0,
+    "targeted_verification": "PASS"
+  },
+  "per_node": [
+    {
+      "node_id": "tests/test_domain.py::test_detect_domain_real_grok_returns_law",
+      "control": "tests/test_excluded_failing_controls.py::test_control_01_domain_legal_label_contract",
+      "control_result": "passed",
+      "live_result": "passed",
+      "product_defect_path": "NOT-REPRODUCIBLE",
+      "limitation": "真模型 borderline 語意品質"
+    },
+    {
+      "node_id": "tests/test_e2e_acceptance.py::test_e2e_acceptance_real",
+      "control": "tests/test_excluded_failing_controls.py::test_control_02_e2e_offline_quality_gates",
+      "control_result": "passed",
+      "live_result": "passed",
+      "product_defect_path": "NOT-REPRODUCIBLE",
+      "limitation": "真 Grok+Twinkle 複合品質 / [^n] flaky 邊界"
+    },
+    {
+      "node_id": "tests/test_gap.py::test_detect_gaps_real_grok",
+      "control": "tests/test_excluded_failing_controls.py::test_control_03_gap_uncovered_question_must_surface",
+      "control_result": "passed",
+      "live_result": "passed",
+      "product_defect_path": "NOT-REPRODUCIBLE",
+      "limitation": "真模型缺口判斷品質"
+    },
+    {
+      "node_id": "tests/test_llm.py::test_grok_pong_integration",
+      "control": "tests/test_excluded_failing_controls.py::test_control_04_grok_client_parse_and_endpoint_contract",
+      "control_result": "passed",
+      "live_result": "passed",
+      "product_defect_path": "NOT-REPRODUCIBLE",
+      "limitation": "TCP 連通屬運維；parse 契約已鎖"
+    },
+    {
+      "node_id": "tests/test_pipeline.py::test_run_pipeline_real_grok",
+      "control": "tests/test_excluded_failing_controls.py::test_control_05_pipeline_c6_pending_when_no_sources",
+      "control_result": "passed",
+      "live_result": "passed",
+      "product_defect_path": "NOT-REPRODUCIBLE",
+      "limitation": "真模型 domain/questions/gaps 輸出品質"
+    },
+    {
+      "node_id": "tests/test_questions.py::test_generate_questions_real_grok",
+      "control": "tests/test_excluded_failing_controls.py::test_control_06_questions_clean_list_contract",
+      "control_result": "passed",
+      "live_result": "passed",
+      "product_defect_path": "NOT-REPRODUCIBLE",
+      "limitation": "真模型出題品質"
+    },
+    {
+      "node_id": "tests/test_retrieve.py::test_retrieve_for_gap_real_twinkle_smoke",
+      "control": [
+        "tests/test_excluded_failing_controls.py::test_control_07_retrieve_smoke_vacuous_empty_is_blind_spot",
+        "tests/test_excluded_failing_controls.py::test_control_07b_retrieve_law_level_a_not_vacuous"
+      ],
+      "control_result": "passed",
+      "live_result": "passed",
+      "product_defect_path": "NOT-REPRODUCIBLE",
+      "verification_layer_blind_spot": "vacuous empty smoke 已證實並鎖定",
+      "limitation": "真 Twinkle I/O + keyword；smoke 本體仍弱"
+    },
+    {
+      "node_id": "tests/test_twinkle.py::test_search_real_twinkle_hub",
+      "control": "tests/test_excluded_failing_controls.py::test_control_08_twinkle_parsed_source_contract",
+      "control_result": "passed",
+      "live_result": "passed",
+      "product_defect_path": "NOT-REPRODUCIBLE",
+      "limitation": "真 Hub 可用性 / session 相容"
+    }
+  ],
+  "evidence_files": [
+    "docs/excluded-failing-controls-2026-07-19.md",
+    "docs/pytest-audit/failing-controls-live-batch1-2026-07-19.txt",
+    "docs/pytest-audit/failing-controls-live-batch2-2026-07-19.txt",
+    "docs/pytest-audit/failing-controls-live-batch3-e2e-2026-07-19.txt",
+    "docs/pytest-audit/failing-controls-guard-2026-07-19.txt",
+    "tests/test_excluded_failing_controls.py",
+    "tests/deselected_allowlist.json"
+  ]
+}

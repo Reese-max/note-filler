@@ -21,7 +21,7 @@ _REPO_ROOT = Path(__file__).resolve().parent.parent
 _AUDIT = json.loads(
     (_REPO_ROOT / "tests" / "deselected_allowlist.json").read_text(encoding="utf-8")
 )
-_EXPECTED_COUNTS = (121, 113, 8)
+_EXPECTED_COUNTS = (131, 123, 8)
 _EXPECTED_DESELECTED_COUNT = _EXPECTED_COUNTS[2]
 ALLOWED_INTEGRATION_TESTS = sorted(item["test_id"] for item in _AUDIT)
 MAPPED_NON_INTEGRATION_TESTS = sorted(
@@ -31,11 +31,24 @@ _TEST_ID_RE = re.compile(r"^tests/[^:]+::\S+$")
 _SOURCE_REF_RE = re.compile(r"^(?P<path>[^:]+):(?P<line>[1-9]\d*)$")
 
 # 產品 correctness 失敗無法穩定重現時的追溯（非彙總數字）
+# 主證據：docs/excluded-failing-controls-2026-07-19.md（8 項 failing-first 對照）
 _NOT_REPRODUCIBLE_EVIDENCE: dict[str, list[dict[str, str]]] = {
+    "tests/test_domain.py::test_detect_domain_real_grok_returns_law": [
+        {
+            "status": "NOT-REPRODUCIBLE",
+            "claim": "domain 標籤 determinism 對照 PASS；真模型語意品質缺口無法以產品失敗重現",
+            "evidence": "docs/excluded-failing-controls-2026-07-19.md",
+        },
+    ],
     "tests/test_e2e_acceptance.py::test_e2e_acceptance_real": [
         {
             "status": "NOT-REPRODUCIBLE",
-            "claim": "離線最小品質閘與 supplement 品質邊界皆穩定 PASS，無法以產品失敗重現",
+            "claim": "離線四硬閘 failing-first 對照穩定 PASS，無法以產品失敗重現",
+            "evidence": "docs/excluded-failing-controls-2026-07-19.md",
+        },
+        {
+            "status": "NOT-REPRODUCIBLE",
+            "claim": "離線最小品質閘與 supplement 品質邊界皆穩定 PASS",
             "evidence": "docs/minimal-quality-gates-regression-2026-07-19.md",
         },
         {
@@ -44,11 +57,51 @@ _NOT_REPRODUCIBLE_EVIDENCE: dict[str, list[dict[str, str]]] = {
             "evidence": "docs/e2e-offline-quality-boundary-2026-07-18.md",
         },
     ],
+    "tests/test_gap.py::test_detect_gaps_real_grok": [
+        {
+            "status": "NOT-REPRODUCIBLE",
+            "claim": "缺口過濾 determinism 對照 PASS；真模型缺口判斷品質無法以產品失敗重現",
+            "evidence": "docs/excluded-failing-controls-2026-07-19.md",
+        },
+    ],
+    "tests/test_llm.py::test_grok_pong_integration": [
+        {
+            "status": "NOT-REPRODUCIBLE",
+            "claim": "GrokClient parse/endpoint 對照 PASS；純 TCP 連通性屬運維非產品邏輯缺陷",
+            "evidence": "docs/excluded-failing-controls-2026-07-19.md",
+        },
+    ],
+    "tests/test_pipeline.py::test_run_pipeline_real_grok": [
+        {
+            "status": "NOT-REPRODUCIBLE",
+            "claim": "C6 pending_evidence 對照 PASS；真模型輸出品質缺口無法以產品失敗重現",
+            "evidence": "docs/excluded-failing-controls-2026-07-19.md",
+        },
+    ],
+    "tests/test_questions.py::test_generate_questions_real_grok": [
+        {
+            "status": "NOT-REPRODUCIBLE",
+            "claim": "問題清單契約對照 PASS；真模型出題品質無法以產品失敗重現",
+            "evidence": "docs/excluded-failing-controls-2026-07-19.md",
+        },
+    ],
     "tests/test_retrieve.py::test_retrieve_for_gap_real_twinkle_smoke": [
         {
             "status": "NOT-REPRODUCIBLE",
-            "claim": "產品 law+LawLookup 路徑穩定回 Level A 非空；產品缺陷路徑不可重現",
+            "claim": "law Level A 非空對照 PASS；產品缺陷路徑不可重現（vacuous smoke 為驗證層盲區已鎖定）",
+            "evidence": "docs/excluded-failing-controls-2026-07-19.md",
+        },
+        {
+            "status": "NOT-REPRODUCIBLE",
+            "claim": "產品 law+LawLookup 路徑穩定回 Level A 非空",
             "evidence": "docs/exclusion-correctness-blind-spot-2026-07-19.md",
+        },
+    ],
+    "tests/test_twinkle.py::test_search_real_twinkle_hub": [
+        {
+            "status": "NOT-REPRODUCIBLE",
+            "claim": "Twinkle Source 解析契約對照 PASS；真 Hub 可用性屬外部 I/O 非 determinism 產品缺陷",
+            "evidence": "docs/excluded-failing-controls-2026-07-19.md",
         },
     ],
 }

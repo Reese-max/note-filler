@@ -1,0 +1,114 @@
+..
+===== ACCEPTANCE_PACKAGE_BEGIN =====
+SCHEMA: note-filler.deselected-acceptance/v1
+RULE: 蝳迫?誑 collected/selected/deselected 敶蜇?詨?撽嚗??????雿?
+INVOCATIONS:
+  collect_all: D:\Users\Administrator\Desktop\蝑?鋆?\.venv\Scripts\python.exe -X utf8 -m pytest --collect-only -q --color=no -o addopts=
+  collect_default: D:\Users\Administrator\Desktop\蝑?鋆?\.venv\Scripts\python.exe -X utf8 -m pytest --collect-only -q --color=no
+  deselected_details: D:\Users\Administrator\Desktop\蝑?鋆?\.venv\Scripts\python.exe -X utf8 -m pytest --collect-only -q --deselected-details --color=no
+COUNTS (context only, not acceptance): collected=131 selected=123 deselected=8
+NODE_ID_COUNT: 8
+[1/8] node_id: tests/test_domain.py::test_detect_domain_real_grok_returns_law
+  exclusion_reason: ?身 -m 'not integration' ??collection ?挾?嚗?閬?撖?grok proxy (127.0.0.1:8318)嚗roxy 銝????skipif ?仿?
+  collection_reason: deselected by -m 'not integration'
+  substitute_individual_results:
+    - PASSED tests/test_domain.py::test_detect_domain_law | ============================== 1 passed in 0.03s ============================== | inv: D:\Users\Administrator\Desktop\蝑?鋆?\.venv\Scripts\python.exe -X utf8 -m pytest tests/test_domain.py::test_detect_domain_law -vv --tb=line --color=no
+    - PASSED tests/test_excluded_failing_controls.py::test_control_01_domain_legal_label_contract | ============================== 1 passed in 0.06s ============================== | inv: D:\Users\Administrator\Desktop\蝑?鋆?\.venv\Scripts\python.exe -X utf8 -m pytest tests/test_excluded_failing_controls.py::test_control_01_domain_legal_label_contract -vv --tb=line --color=no
+  live_individual_result: status=pass exit=0 wall_s=5.44 source=docs/pytest-audit/deselected-individual-results-2026-07-19.json
+  failure_or_not_reproducible: NOT-REPRODUCIBLE | domain 璅惜 determinism 撠 PASS嚗?璅∪?隤??釭蝻箏?⊥?隞亦?仃????| docs/excluded-failing-controls-2026-07-19.md
+[2/8] node_id: tests/test_e2e_acceptance.py::test_e2e_acceptance_real
+  exclusion_reason: ?身 -m 'not integration' ??collection ?挾?嚗?頝?閬?data/law_index.db?rok proxy ??TWINKLE_HUB_TOKEN嚗遙銝?蔭璇辣銝雲??skip
+  collection_reason: deselected by -m 'not integration'
+  substitute_individual_results:
+    - PASSED tests/test_e2e_acceptance.py::test_e2e_structural_invariants | ============================== 1 passed in 0.02s ============================== | inv: D:\Users\Administrator\Desktop\蝑?鋆?\.venv\Scripts\python.exe -X utf8 -m pytest tests/test_e2e_acceptance.py::test_e2e_structural_invariants -vv --tb=line --color=no
+    - PASSED tests/test_e2e_acceptance.py::test_e2e_offline_supplement_quality_boundary | ============================== 1 passed in 0.01s ============================== | inv: D:\Users\Administrator\Desktop\蝑?鋆?\.venv\Scripts\python.exe -X utf8 -m pytest tests/test_e2e_acceptance.py::test_e2e_offline_supplement_quality_boundary -vv --tb=line --color=no
+    - PASSED tests/test_e2e_acceptance.py::test_e2e_minimal_quality_gates_offline_regression | ============================== 1 passed in 0.01s ============================== | inv: D:\Users\Administrator\Desktop\蝑?鋆?\.venv\Scripts\python.exe -X utf8 -m pytest tests/test_e2e_acceptance.py::test_e2e_minimal_quality_gates_offline_regression -vv --tb=line --color=no
+    - PASSED tests/test_pipeline.py::test_run_pipeline_invariant | ============================== 1 passed in 0.14s ============================== | inv: D:\Users\Administrator\Desktop\蝑?鋆?\.venv\Scripts\python.exe -X utf8 -m pytest tests/test_pipeline.py::test_run_pipeline_invariant -vv --tb=line --color=no
+    - PASSED tests/test_pipeline.py::test_run_pipeline_malformed_gap_output_falls_back_to_pending | ============================== 1 passed in 0.15s ============================== | inv: D:\Users\Administrator\Desktop\蝑?鋆?\.venv\Scripts\python.exe -X utf8 -m pytest tests/test_pipeline.py::test_run_pipeline_malformed_gap_output_falls_back_to_pending -vv --tb=line --color=no
+    - PASSED tests/test_pipeline.py::test_run_pipeline_law_domain_runs_citation_check | ============================== 1 passed in 0.13s ============================== | inv: D:\Users\Administrator\Desktop\蝑?鋆?\.venv\Scripts\python.exe -X utf8 -m pytest tests/test_pipeline.py::test_run_pipeline_law_domain_runs_citation_check -vv --tb=line --color=no
+    - PASSED tests/test_correction.py::test_retrieved_five_but_only_two_cited | ============================== 1 passed in 0.01s ============================== | inv: D:\Users\Administrator\Desktop\蝑?鋆?\.venv\Scripts\python.exe -X utf8 -m pytest tests/test_correction.py::test_retrieved_five_but_only_two_cited -vv --tb=line --color=no
+    - PASSED tests/test_excluded_failing_controls.py::test_control_02_e2e_offline_quality_gates | ============================== 1 passed in 0.06s ============================== | inv: D:\Users\Administrator\Desktop\蝑?鋆?\.venv\Scripts\python.exe -X utf8 -m pytest tests/test_excluded_failing_controls.py::test_control_02_e2e_offline_quality_gates -vv --tb=line --color=no
+  live_individual_result: status=pass exit=0 wall_s=118.5 source=docs/pytest-audit/deselected-individual-results-2026-07-19.json
+  failure_or_not_reproducible: NOT-REPRODUCIBLE | ?Ｙ??′??failing-first 撠蝛拙? PASS嚗瘜誑?Ｗ?憭望?? | docs/excluded-failing-controls-2026-07-19.md
+  failure_or_not_reproducible: NOT-REPRODUCIBLE | ?Ｙ??撠?鞈芷???supplement ?釭???帘摰?PASS | docs/minimal-quality-gates-regression-2026-07-19.md
+  failure_or_not_reproducible: NOT-REPRODUCIBLE | e2e offline quality boundary ?⊥?蝛拙?憭望? | docs/e2e-offline-quality-boundary-2026-07-18.md
+[3/8] node_id: tests/test_gap.py::test_detect_gaps_real_grok
+  exclusion_reason: ?身 -m 'not integration' ??collection ?挾?嚗?閬?撖?grok proxy (127.0.0.1:8318)嚗roxy 銝????skipif ?仿?
+  collection_reason: deselected by -m 'not integration'
+  substitute_individual_results:
+    - PASSED tests/test_gap.py::test_detect_gaps_keeps_only_partial_and_missing | ============================== 1 passed in 0.03s ============================== | inv: D:\Users\Administrator\Desktop\蝑?鋆?\.venv\Scripts\python.exe -X utf8 -m pytest tests/test_gap.py::test_detect_gaps_keeps_only_partial_and_missing -vv --tb=line --color=no
+    - PASSED tests/test_excluded_failing_controls.py::test_control_03_gap_uncovered_question_must_surface | ============================== 1 passed in 0.06s ============================== | inv: D:\Users\Administrator\Desktop\蝑?鋆?\.venv\Scripts\python.exe -X utf8 -m pytest tests/test_excluded_failing_controls.py::test_control_03_gap_uncovered_question_must_surface -vv --tb=line --color=no
+  live_individual_result: status=pass exit=0 wall_s=5.74 source=docs/pytest-audit/deselected-individual-results-2026-07-19.json
+  failure_or_not_reproducible: NOT-REPRODUCIBLE | 蝻箏?蕪 determinism 撠 PASS嚗?璅∪?蝻箏?斗?釭?⊥?隞亦?仃????| docs/excluded-failing-controls-2026-07-19.md
+[4/8] node_id: tests/test_llm.py::test_grok_pong_integration
+  exclusion_reason: ?身 -m 'not integration' ??collection ?挾?嚗?閬?撖?grok proxy (127.0.0.1:8318)嚗roxy 銝????skipif ?仿?
+  collection_reason: deselected by -m 'not integration'
+  substitute_individual_results:
+    - PASSED tests/test_llm.py::test_grokclient_builds_request_body | ============================== 1 passed in 0.01s ============================== | inv: D:\Users\Administrator\Desktop\蝑?鋆?\.venv\Scripts\python.exe -X utf8 -m pytest tests/test_llm.py::test_grokclient_builds_request_body -vv --tb=line --color=no
+    - PASSED tests/test_excluded_failing_controls.py::test_control_04_grok_client_parse_and_endpoint_contract | ============================== 1 passed in 0.06s ============================== | inv: D:\Users\Administrator\Desktop\蝑?鋆?\.venv\Scripts\python.exe -X utf8 -m pytest tests/test_excluded_failing_controls.py::test_control_04_grok_client_parse_and_endpoint_contract -vv --tb=line --color=no
+  live_individual_result: status=pass exit=0 wall_s=1.94 source=docs/pytest-audit/deselected-individual-results-2026-07-19.json
+  failure_or_not_reproducible: NOT-REPRODUCIBLE | GrokClient parse/endpoint 撠 PASS嚗? TCP ??批惇?雁???頛舐撩??| docs/excluded-failing-controls-2026-07-19.md
+[5/8] node_id: tests/test_pipeline.py::test_run_pipeline_real_grok
+  exclusion_reason: ?身 -m 'not integration' ??collection ?挾?嚗閬?撖?grok proxy ??瑁?嚗winkle ??law ?誑 fake ?隞???integration ??
+  collection_reason: deselected by -m 'not integration'
+  substitute_individual_results:
+    - PASSED tests/test_pipeline.py::test_run_pipeline_invariant | ============================== 1 passed in 0.14s ============================== | inv: D:\Users\Administrator\Desktop\蝑?鋆?\.venv\Scripts\python.exe -X utf8 -m pytest tests/test_pipeline.py::test_run_pipeline_invariant -vv --tb=line --color=no
+    - PASSED tests/test_pipeline.py::test_run_pipeline_malformed_gap_output_falls_back_to_pending | ============================== 1 passed in 0.15s ============================== | inv: D:\Users\Administrator\Desktop\蝑?鋆?\.venv\Scripts\python.exe -X utf8 -m pytest tests/test_pipeline.py::test_run_pipeline_malformed_gap_output_falls_back_to_pending -vv --tb=line --color=no
+    - PASSED tests/test_pipeline.py::test_run_pipeline_law_domain_runs_citation_check | ============================== 1 passed in 0.13s ============================== | inv: D:\Users\Administrator\Desktop\蝑?鋆?\.venv\Scripts\python.exe -X utf8 -m pytest tests/test_pipeline.py::test_run_pipeline_law_domain_runs_citation_check -vv --tb=line --color=no
+    - PASSED tests/test_correction.py::test_retrieved_five_but_only_two_cited | ============================== 1 passed in 0.01s ============================== | inv: D:\Users\Administrator\Desktop\蝑?鋆?\.venv\Scripts\python.exe -X utf8 -m pytest tests/test_correction.py::test_retrieved_five_but_only_two_cited -vv --tb=line --color=no
+    - PASSED tests/test_excluded_failing_controls.py::test_control_05_pipeline_c6_pending_when_no_sources | ============================== 1 passed in 0.15s ============================== | inv: D:\Users\Administrator\Desktop\蝑?鋆?\.venv\Scripts\python.exe -X utf8 -m pytest tests/test_excluded_failing_controls.py::test_control_05_pipeline_c6_pending_when_no_sources -vv --tb=line --color=no
+  live_individual_result: status=pass exit=0 wall_s=67.3 source=docs/pytest-audit/deselected-individual-results-2026-07-19.json
+  failure_or_not_reproducible: NOT-REPRODUCIBLE | C6 pending_evidence 撠 PASS嚗?璅∪?頛詨?釭蝻箏?⊥?隞亦?仃????| docs/excluded-failing-controls-2026-07-19.md
+[6/8] node_id: tests/test_questions.py::test_generate_questions_real_grok
+  exclusion_reason: ?身 -m 'not integration' ??collection ?挾?嚗?閬?撖?grok proxy (127.0.0.1:8318)嚗roxy 銝????skipif ?仿?
+  collection_reason: deselected by -m 'not integration'
+  substitute_individual_results:
+    - PASSED tests/test_questions.py::test_generate_questions_splits_multiline_string | ============================== 1 passed in 0.02s ============================== | inv: D:\Users\Administrator\Desktop\蝑?鋆?\.venv\Scripts\python.exe -X utf8 -m pytest tests/test_questions.py::test_generate_questions_splits_multiline_string -vv --tb=line --color=no
+    - PASSED tests/test_questions.py::test_generate_questions_strips_and_drops_blank_lines | ============================== 1 passed in 0.01s ============================== | inv: D:\Users\Administrator\Desktop\蝑?鋆?\.venv\Scripts\python.exe -X utf8 -m pytest tests/test_questions.py::test_generate_questions_strips_and_drops_blank_lines -vv --tb=line --color=no
+    - PASSED tests/test_excluded_failing_controls.py::test_control_06_questions_clean_list_contract | ============================== 1 passed in 0.06s ============================== | inv: D:\Users\Administrator\Desktop\蝑?鋆?\.venv\Scripts\python.exe -X utf8 -m pytest tests/test_excluded_failing_controls.py::test_control_06_questions_clean_list_contract -vv --tb=line --color=no
+  live_individual_result: status=pass exit=0 wall_s=6.59 source=docs/pytest-audit/deselected-individual-results-2026-07-19.json
+  failure_or_not_reproducible: NOT-REPRODUCIBLE | ??皜憟?撠 PASS嚗?璅∪??粹??釭?⊥?隞亦?仃????| docs/excluded-failing-controls-2026-07-19.md
+[7/8] node_id: tests/test_retrieve.py::test_retrieve_for_gap_real_twinkle_smoke
+  exclusion_reason: ?身 -m 'not integration' ??collection ?挾?嚗?頝?閬?data/law_index.db?rok proxy?OV_AI_ENABLE_TWINKLE_MCP=1 ??TWINKLE_HUB_TOKEN
+  collection_reason: deselected by -m 'not integration'
+  substitute_individual_results:
+    - PASSED tests/test_retrieve.py::test_retrieve_for_gap_law_domain_puts_level_A_before_B | ============================== 1 passed in 0.02s ============================== | inv: D:\Users\Administrator\Desktop\蝑?鋆?\.venv\Scripts\python.exe -X utf8 -m pytest tests/test_retrieve.py::test_retrieve_for_gap_law_domain_puts_level_A_before_B -vv --tb=line --color=no
+    - PASSED tests/test_law_search.py::test_search_law_sources_returns_level_A_law_articles | ============================== 1 passed in 0.01s ============================== | inv: D:\Users\Administrator\Desktop\蝑?鋆?\.venv\Scripts\python.exe -X utf8 -m pytest tests/test_law_search.py::test_search_law_sources_returns_level_A_law_articles -vv --tb=line --color=no
+    - PASSED tests/test_twinkle.py::test_search_parses_source_with_full_content | ============================== 1 passed in 0.01s ============================== | inv: D:\Users\Administrator\Desktop\蝑?鋆?\.venv\Scripts\python.exe -X utf8 -m pytest tests/test_twinkle.py::test_search_parses_source_with_full_content -vv --tb=line --color=no
+    - PASSED tests/test_twinkle.py::test_search_reuses_mcp_session | ============================== 1 passed in 0.01s ============================== | inv: D:\Users\Administrator\Desktop\蝑?鋆?\.venv\Scripts\python.exe -X utf8 -m pytest tests/test_twinkle.py::test_search_reuses_mcp_session -vv --tb=line --color=no
+    - PASSED tests/test_twinkle.py::test_search_transport_failure_returns_empty | ============================== 1 passed in 0.01s ============================== | inv: D:\Users\Administrator\Desktop\蝑?鋆?\.venv\Scripts\python.exe -X utf8 -m pytest tests/test_twinkle.py::test_search_transport_failure_returns_empty -vv --tb=line --color=no
+    - PASSED tests/test_exclusion_correctness_blind_spot.py::test_deselected_retrieve_smoke_vacuous_pass_on_empty_is_blind_spot | ============================== 1 passed in 0.01s ============================== | inv: D:\Users\Administrator\Desktop\蝑?鋆?\.venv\Scripts\python.exe -X utf8 -m pytest tests/test_exclusion_correctness_blind_spot.py::test_deselected_retrieve_smoke_vacuous_pass_on_empty_is_blind_spot -vv --tb=line --color=no
+    - PASSED tests/test_exclusion_correctness_blind_spot.py::test_law_domain_retrieve_must_yield_level_a_not_vacuous_empty | ============================== 1 passed in 0.01s ============================== | inv: D:\Users\Administrator\Desktop\蝑?鋆?\.venv\Scripts\python.exe -X utf8 -m pytest tests/test_exclusion_correctness_blind_spot.py::test_law_domain_retrieve_must_yield_level_a_not_vacuous_empty -vv --tb=line --color=no
+    - PASSED tests/test_excluded_failing_controls.py::test_control_07_retrieve_smoke_vacuous_empty_is_blind_spot | ============================== 1 passed in 0.06s ============================== | inv: D:\Users\Administrator\Desktop\蝑?鋆?\.venv\Scripts\python.exe -X utf8 -m pytest tests/test_excluded_failing_controls.py::test_control_07_retrieve_smoke_vacuous_empty_is_blind_spot -vv --tb=line --color=no
+    - PASSED tests/test_excluded_failing_controls.py::test_control_07b_retrieve_law_level_a_not_vacuous | ============================== 1 passed in 0.06s ============================== | inv: D:\Users\Administrator\Desktop\蝑?鋆?\.venv\Scripts\python.exe -X utf8 -m pytest tests/test_excluded_failing_controls.py::test_control_07b_retrieve_law_level_a_not_vacuous -vv --tb=line --color=no
+  live_individual_result: status=pass exit=0 wall_s=7.28 source=docs/pytest-audit/deselected-individual-results-2026-07-19.json
+  failure_or_not_reproducible: NOT-REPRODUCIBLE | law Level A ?征撠 PASS嚗?撩?瑁楝敺??舫??橘?vacuous smoke ?粹?霅惜?脣?撌脤?摰? | docs/excluded-failing-controls-2026-07-19.md
+  failure_or_not_reproducible: NOT-REPRODUCIBLE | ?Ｗ? law+LawLookup 頝臬?蝛拙???Level A ?征 | docs/exclusion-correctness-blind-spot-2026-07-19.md
+[8/8] node_id: tests/test_twinkle.py::test_search_real_twinkle_hub
+  exclusion_reason: ?身 -m 'not integration' ??collection ?挾?嚗?頝?閬?TWINKLE_HUB_TOKEN嚗撩 token ??賢???pytest.skip ?仿?
+  collection_reason: deselected by -m 'not integration'
+  substitute_individual_results:
+    - PASSED tests/test_twinkle.py::test_search_parses_source_with_full_content | ============================== 1 passed in 0.01s ============================== | inv: D:\Users\Administrator\Desktop\蝑?鋆?\.venv\Scripts\python.exe -X utf8 -m pytest tests/test_twinkle.py::test_search_parses_source_with_full_content -vv --tb=line --color=no
+    - PASSED tests/test_twinkle.py::test_search_reuses_mcp_session | ============================== 1 passed in 0.01s ============================== | inv: D:\Users\Administrator\Desktop\蝑?鋆?\.venv\Scripts\python.exe -X utf8 -m pytest tests/test_twinkle.py::test_search_reuses_mcp_session -vv --tb=line --color=no
+    - PASSED tests/test_twinkle.py::test_search_transport_failure_returns_empty | ============================== 1 passed in 0.01s ============================== | inv: D:\Users\Administrator\Desktop\蝑?鋆?\.venv\Scripts\python.exe -X utf8 -m pytest tests/test_twinkle.py::test_search_transport_failure_returns_empty -vv --tb=line --color=no
+    - PASSED tests/test_excluded_failing_controls.py::test_control_08_twinkle_parsed_source_contract | ============================== 1 passed in 0.06s ============================== | inv: D:\Users\Administrator\Desktop\蝑?鋆?\.venv\Scripts\python.exe -X utf8 -m pytest tests/test_excluded_failing_controls.py::test_control_08_twinkle_parsed_source_contract -vv --tb=line --color=no
+  live_individual_result: status=pass exit=0 wall_s=4.58 source=docs/pytest-audit/deselected-individual-results-2026-07-19.json
+  failure_or_not_reproducible: NOT-REPRODUCIBLE | Twinkle Source 閫??憟?撠 PASS嚗? Hub ?舐?批惇憭 I/O ??determinism ?Ｗ?蝻粹 | docs/excluded-failing-controls-2026-07-19.md
+FAILED_OR_NOT_REPRODUCIBLE_INDEX:
+  - tests/test_domain.py::test_detect_domain_real_grok_returns_law: NOT-REPRODUCIBLE | domain 璅惜 determinism 撠 PASS嚗?璅∪?隤??釭蝻箏?⊥?隞亦?仃????| docs/excluded-failing-controls-2026-07-19.md
+  - tests/test_e2e_acceptance.py::test_e2e_acceptance_real: NOT-REPRODUCIBLE | ?Ｙ??′??failing-first 撠蝛拙? PASS嚗瘜誑?Ｗ?憭望?? | docs/excluded-failing-controls-2026-07-19.md
+  - tests/test_e2e_acceptance.py::test_e2e_acceptance_real: NOT-REPRODUCIBLE | ?Ｙ??撠?鞈芷???supplement ?釭???帘摰?PASS | docs/minimal-quality-gates-regression-2026-07-19.md
+  - tests/test_e2e_acceptance.py::test_e2e_acceptance_real: NOT-REPRODUCIBLE | e2e offline quality boundary ?⊥?蝛拙?憭望? | docs/e2e-offline-quality-boundary-2026-07-18.md
+  - tests/test_gap.py::test_detect_gaps_real_grok: NOT-REPRODUCIBLE | 蝻箏?蕪 determinism 撠 PASS嚗?璅∪?蝻箏?斗?釭?⊥?隞亦?仃????| docs/excluded-failing-controls-2026-07-19.md
+  - tests/test_llm.py::test_grok_pong_integration: NOT-REPRODUCIBLE | GrokClient parse/endpoint 撠 PASS嚗? TCP ??批惇?雁???頛舐撩??| docs/excluded-failing-controls-2026-07-19.md
+  - tests/test_pipeline.py::test_run_pipeline_real_grok: NOT-REPRODUCIBLE | C6 pending_evidence 撠 PASS嚗?璅∪?頛詨?釭蝻箏?⊥?隞亦?仃????| docs/excluded-failing-controls-2026-07-19.md
+  - tests/test_questions.py::test_generate_questions_real_grok: NOT-REPRODUCIBLE | ??皜憟?撠 PASS嚗?璅∪??粹??釭?⊥?隞亦?仃????| docs/excluded-failing-controls-2026-07-19.md
+  - tests/test_retrieve.py::test_retrieve_for_gap_real_twinkle_smoke: NOT-REPRODUCIBLE | law Level A ?征撠 PASS嚗?撩?瑁楝敺??舫??橘?vacuous smoke ?粹?霅惜?脣?撌脤?摰? | docs/excluded-failing-controls-2026-07-19.md
+  - tests/test_retrieve.py::test_retrieve_for_gap_real_twinkle_smoke: NOT-REPRODUCIBLE | ?Ｗ? law+LawLookup 頝臬?蝛拙???Level A ?征 | docs/exclusion-correctness-blind-spot-2026-07-19.md
+  - tests/test_twinkle.py::test_search_real_twinkle_hub: NOT-REPRODUCIBLE | Twinkle Source 閫??憟?撠 PASS嚗? Hub ?舐?批惇憭 I/O ??determinism ?Ｗ?蝻粹 | docs/excluded-failing-controls-2026-07-19.md
+ACCEPTANCE_MODE: per-node-evidence
+TARGETED_VERIFICATION=PASS
+===== ACCEPTANCE_PACKAGE_END =====
+LEGACY_COUNTERS_CONTEXT_ONLY: DESELECTED_AUDIT=8 MAPPED_TESTS=28 COLLECT_MAP_INV=D:\Users\Administrator\Desktop\蝑?鋆?\.venv\Scripts\python.exe -X utf8 -m pytest --collect-only -q --color=no tests/test_correction.py::test_retrieved_five_but_only_two_cited tests/test_domain.py::test_detect_domain_law tests/test_e2e_acceptance.py::test_e2e_minimal_quality_gates_offline_regression tests/test_e2e_acceptance.py::test_e2e_offline_supplement_quality_boundary tests/test_e2e_acceptance.py::test_e2e_structural_invariants tests/test_excluded_failing_controls.py::test_control_01_domain_legal_label_contract tests/test_excluded_failing_controls.py::test_control_02_e2e_offline_quality_gates tests/test_excluded_failing_controls.py::test_control_03_gap_uncovered_question_must_surface tests/test_excluded_failing_controls.py::test_control_04_grok_client_parse_and_endpoint_contract tests/test_excluded_failing_controls.py::test_control_05_pipeline_c6_pending_when_no_sources tests/test_excluded_failing_controls.py::test_control_06_questions_clean_list_contract tests/test_excluded_failing_controls.py::test_control_07_retrieve_smoke_vacuous_empty_is_blind_spot tests/test_excluded_failing_controls.py::test_control_07b_retrieve_law_level_a_not_vacuous tests/test_excluded_failing_controls.py::test_control_08_twinkle_parsed_source_contract tests/test_exclusion_correctness_blind_spot.py::test_deselected_retrieve_smoke_vacuous_pass_on_empty_is_blind_spot tests/test_exclusion_correctness_blind_spot.py::test_law_domain_retrieve_must_yield_level_a_not_vacuous_empty tests/test_gap.py::test_detect_gaps_keeps_only_partial_and_missing tests/test_law_search.py::test_search_law_sources_returns_level_A_law_articles tests/test_llm.py::test_grokclient_builds_request_body tests/test_pipeline.py::test_run_pipeline_invariant tests/test_pipeline.py::test_run_pipeline_law_domain_runs_citation_check tests/test_pipeline.py::test_run_pipeline_malformed_gap_output_falls_back_to_pending tests/test_questions.py::test_generate_questions_splits_multiline_string tests/test_questions.py::test_generate_questions_strips_and_drops_blank_lines tests/test_retrieve.py::test_retrieve_for_gap_law_domain_puts_level_A_before_B tests/test_twinkle.py::test_search_parses_source_with_full_content tests/test_twinkle.py::test_search_reuses_mcp_session tests/test_twinkle.py::test_search_transport_failure_returns_empty
+..
+4 passed in 29.64s
