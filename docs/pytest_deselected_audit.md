@@ -9,6 +9,39 @@
 
 機器可讀版：`tests/deselected_allowlist.json`
 
+## 本次收集命令與實際選擇結果
+
+下列三個擷取命令只做 pytest collection，不執行測試本體。所有命令均使用主專案 venv，命令列參數如下：
+
+```powershell
+# 全量基線：移除 pyproject.toml 的 addopts，確認總節點數
+& 'D:/Users/Administrator/Desktop/筆記補齊/.venv/Scripts/python.exe' -X utf8 -m pytest --collect-only -q -o addopts=
+# 預設集合：套用 pyproject.toml 的 addopts，觀察 deselected
+& 'D:/Users/Administrator/Desktop/筆記補齊/.venv/Scripts/python.exe' -X utf8 -m pytest --collect-only -q
+# 反向交叉檢查：明確選取 integration marker
+& 'D:/Users/Administrator/Desktop/筆記補齊/.venv/Scripts/python.exe' -X utf8 -m pytest --collect-only -q -m integration
+```
+
+實際輸出摘要：
+
+```text
+112 tests collected in 0.32s
+104/112 tests collected (8 deselected) in 0.35s
+8/112 tests collected (104 deselected) in 0.48s
+```
+
+預設命令的明確參數只有 `--collect-only -q`；其有效選擇條件由
+`pyproject.toml` 的 `addopts` 補上 `-p no:asyncio -m 'not integration'`
+及兩項 `DeprecationWarning`／`PendingDeprecationWarning` error filter。因此下列 8 個節點的
+**實際 collection 排除原因一致**：節點帶有 `@pytest.mark.integration`，而有效 marker 表達式
+`-m 'not integration'` 判定為不選取。各測試的 Grok、Twinkle、資料庫與環境變數需求是它們被標成
+integration 的執行時理由，不是本次 collection 另一次 `skip`。
+
+本次同一工作階段的唯讀環境探測為：`GROK_PROXY_REACHABLE=True`、
+`TWINKLE_HUB_TOKEN_SET=True`、`GOV_AI_ENABLE_TWINKLE_MCP` 未設定、
+`LAW_DB_EXISTS=True`。這表示若改用 `-m integration`，除 retrieve smoke 測試會因
+`GOV_AI_ENABLE_TWINKLE_MCP != 1` 在函式內 `pytest.skip()` 外，其餘節點會進入真實外部依賴路徑；本次未以該命令執行它們。
+
 ## 覆蓋定位映射表
 
 判定原則：只列入與被排除案例共用相同 production 入口、且斷言重疊的非 integration 案例；外部服務可用性與模型品質不假裝為離線可等價驗證，仍由原 integration 案例保留。
@@ -31,12 +64,12 @@
 ```text
 MAPPED_TESTS=12
 ............                                                             [100%]
-12 passed in 0.24s
+12 passed in 0.28s
 ```
 
-永久 guard：`tests/test_deselection_guard.py::test_substitute_mapping_is_complete_and_collectable` 會確認 8 項排除案例均有映射，且映射到的 node ID 實際存在於 `-m "not integration"` 集合。本次實跑該 guard 結果為 `2 passed in 1.75s`。
+永久 guard：`tests/test_deselection_guard.py::test_substitute_mapping_is_complete_and_collectable` 會確認 8 項排除案例均有映射，且映射到的 node ID 實際存在於 `-m "not integration"` 集合。本次實跑該 guard 結果為 `2 passed in 3.00s`。
 
-完整預設品質門 `python -X utf8 -m pytest -m "not integration" -q` 結果為 `104 passed, 8 deselected in 2.02s`。
+完整預設品質門 `python -X utf8 -m pytest -m "not integration" -q` 結果為 `104 passed, 8 deselected in 3.84s`。
 
 ## 逐項清單
 
