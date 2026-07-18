@@ -1,0 +1,187 @@
+{
+  "schema": "note-filler.conclusion-classification/v1",
+  "date": "2026-07-19",
+  "scope": "8 deselected integration tests + verification-layer conclusions from prior audits",
+  "classification_rules": {
+    "非缺陷": "產品 correctness 路徑無法以失敗形式重現；確定性契約有非 integration 替代覆蓋；排除屬可接受策略；殘餘僅外部模型/服務品質或運維連通性（且本輪 live 通過或 NOT-REPRODUCIBLE）",
+    "真實驗證缺口": "驗證設計或斷言本身可造成假綠/看不見；必須附：可重現失敗測試、預期行為、實際行為、修復後驗收命令"
+  },
+  "items": [
+    {
+      "id": "C1",
+      "node_id": "tests/test_domain.py::test_detect_domain_real_grok_returns_law",
+      "classification": "非缺陷",
+      "rationale": "FakeLLM + failing-first control 鎖定標籤契約；產品失敗路徑 NOT-REPRODUCIBLE；真模型語意屬殘餘品質非驗證設計缺陷",
+      "product_defect_reproducible": false,
+      "evidence": [
+        "docs/excluded-failing-controls-2026-07-19.md",
+        "docs/verification-impact-conclusion-2026-07-18.md"
+      ],
+      "substitute_or_control": [
+        "tests/test_domain.py::test_detect_domain_law",
+        "tests/test_excluded_failing_controls.py::test_control_01_domain_legal_label_contract"
+      ],
+      "gap_package": null
+    },
+    {
+      "id": "C2",
+      "node_id": "tests/test_e2e_acceptance.py::test_e2e_acceptance_real",
+      "classification": "非缺陷",
+      "rationale": "四硬閘離線回歸與 failing-first control 穩定 PASS；真 e2e 歷史/本輪 live PASS",
+      "product_defect_reproducible": false,
+      "evidence": [
+        "docs/excluded-failing-controls-2026-07-19.md",
+        "docs/minimal-quality-gates-regression-2026-07-19.md",
+        "docs/e2e-offline-quality-boundary-2026-07-18.md"
+      ],
+      "substitute_or_control": [
+        "tests/test_e2e_acceptance.py::test_e2e_minimal_quality_gates_offline_regression",
+        "tests/test_excluded_failing_controls.py::test_control_02_e2e_offline_quality_gates"
+      ],
+      "gap_package": null
+    },
+    {
+      "id": "C3",
+      "node_id": "tests/test_gap.py::test_detect_gaps_real_grok",
+      "classification": "非缺陷",
+      "rationale": "過濾/fallback 契約與 control 穩定；真模型缺口語意屬殘餘品質",
+      "product_defect_reproducible": false,
+      "evidence": [
+        "docs/excluded-failing-controls-2026-07-19.md"
+      ],
+      "substitute_or_control": [
+        "tests/test_gap.py::test_detect_gaps_keeps_only_partial_and_missing",
+        "tests/test_excluded_failing_controls.py::test_control_03_gap_uncovered_question_must_surface"
+      ],
+      "gap_package": null
+    },
+    {
+      "id": "C4",
+      "node_id": "tests/test_llm.py::test_grok_pong_integration",
+      "classification": "非缺陷",
+      "rationale": "request/parse 契約已單元覆蓋；TCP 連通屬運維，非產品邏輯缺陷",
+      "product_defect_reproducible": false,
+      "evidence": [
+        "docs/excluded-failing-controls-2026-07-19.md"
+      ],
+      "substitute_or_control": [
+        "tests/test_llm.py::test_grokclient_builds_request_body",
+        "tests/test_excluded_failing_controls.py::test_control_04_grok_client_parse_and_endpoint_contract"
+      ],
+      "gap_package": null
+    },
+    {
+      "id": "C5",
+      "node_id": "tests/test_pipeline.py::test_run_pipeline_real_grok",
+      "classification": "非缺陷",
+      "rationale": "C6 pending_evidence / citation / 只掛引用等 determinism 路徑健康",
+      "product_defect_reproducible": false,
+      "evidence": [
+        "docs/excluded-failing-controls-2026-07-19.md"
+      ],
+      "substitute_or_control": [
+        "tests/test_pipeline.py::test_run_pipeline_invariant",
+        "tests/test_excluded_failing_controls.py::test_control_05_pipeline_c6_pending_when_no_sources"
+      ],
+      "gap_package": null
+    },
+    {
+      "id": "C6",
+      "node_id": "tests/test_questions.py::test_generate_questions_real_grok",
+      "classification": "非缺陷",
+      "rationale": "字串切割/淨空契約覆蓋；真模型出題品質屬殘餘",
+      "product_defect_reproducible": false,
+      "evidence": [
+        "docs/excluded-failing-controls-2026-07-19.md"
+      ],
+      "substitute_or_control": [
+        "tests/test_questions.py::test_generate_questions_splits_multiline_string",
+        "tests/test_excluded_failing_controls.py::test_control_06_questions_clean_list_contract"
+      ],
+      "gap_package": null
+    },
+    {
+      "id": "C7-product",
+      "node_id": "tests/test_retrieve.py::test_retrieve_for_gap_real_twinkle_smoke",
+      "classification": "非缺陷",
+      "dimension": "product_correctness",
+      "rationale": "law+LawLookup+empty Twinkle 離線強制非空 Level A 穩定 PASS；產品回空路徑 NOT-REPRODUCIBLE",
+      "product_defect_reproducible": false,
+      "evidence": [
+        "docs/exclusion-correctness-blind-spot-2026-07-19.md",
+        "docs/excluded-failing-controls-2026-07-19.md"
+      ],
+      "substitute_or_control": [
+        "tests/test_exclusion_correctness_blind_spot.py::test_law_domain_retrieve_must_yield_level_a_not_vacuous_empty",
+        "tests/test_excluded_failing_controls.py::test_control_07b_retrieve_law_level_a_not_vacuous"
+      ],
+      "gap_package": null
+    },
+    {
+      "id": "C7-verification",
+      "node_id": "tests/test_retrieve.py::test_retrieve_for_gap_real_twinkle_smoke",
+      "classification": "真實驗證缺口",
+      "dimension": "verification_design",
+      "rationale": "integration smoke 三斷言對 empty list 皆 vacuous True；預設 deselect 後連 smoke 都不跑 → 檢索全滅可假綠",
+      "product_defect_reproducible": false,
+      "evidence": [
+        "docs/exclusion-correctness-blind-spot-2026-07-19.md",
+        "docs/excluded-failing-controls-2026-07-19.md",
+        "docs/conclusion-classification-2026-07-19.md"
+      ],
+      "substitute_or_control": [
+        "tests/test_exclusion_correctness_blind_spot.py::test_deselected_retrieve_smoke_vacuous_pass_on_empty_is_blind_spot",
+        "tests/test_excluded_failing_controls.py::test_control_07_retrieve_smoke_vacuous_empty_is_blind_spot",
+        "tests/test_conclusion_classification.py::test_gap_c7_current_smoke_vacuous_pass_on_empty",
+        "tests/test_conclusion_classification.py::test_gap_c7_strengthened_contract_fails_on_empty"
+      ],
+      "gap_package": {
+        "repro_failing_tests": [
+          "tests/test_conclusion_classification.py::test_gap_c7_strengthened_contract_fails_on_empty",
+          "tests/test_conclusion_classification.py::test_gap_c7_current_smoke_vacuous_pass_on_empty"
+        ],
+        "expected_behavior": "smoke 在 out==[] 時必須失敗（至少 assert out 或等價非空契約），使「檢索全滅」不可假綠",
+        "actual_behavior": "assert all(... for s in out) 與 sort 不變式對 empty 皆 True → smoke 綠燈",
+        "post_fix_acceptance_commands": [
+          "$py = 'D:/Users/Administrator/Desktop/筆記補齊/.venv/Scripts/python.exe'",
+          "& $py -X utf8 -m pytest tests/test_conclusion_classification.py::test_gap_c7_current_smoke_vacuous_pass_on_empty -vv --tb=short --color=no",
+          "# 修復後期望：上列應 FAILED（vacuous 盲區關閉）",
+          "& $py -X utf8 -m pytest tests/test_conclusion_classification.py::test_gap_c7_strengthened_contract_fails_on_empty tests/test_exclusion_correctness_blind_spot.py::test_law_domain_retrieve_must_yield_level_a_not_vacuous_empty -vv --tb=short --color=no",
+          "# 修復後期望：皆 PASSED",
+          "& $py -X utf8 -m pytest -m 'not integration' -q --color=no",
+          "# 修復後期望：非 integration 全集仍綠（計數依當時 collected 更新）"
+        ],
+        "fix_hint": "在 tests/test_retrieve.py::test_retrieve_for_gap_real_twinkle_smoke 於既有三斷言前加入 `assert out, 'retrieve smoke 不得 vacuous empty'`（或等價非空）；同步讓 characterization 測改為 expect raise 或刪除並改 guard"
+      }
+    },
+    {
+      "id": "C8",
+      "node_id": "tests/test_twinkle.py::test_search_real_twinkle_hub",
+      "classification": "非缺陷",
+      "rationale": "MCP 解析/session/transport 有 mock 覆蓋；for 迴圈對 empty 不失敗屬「無 hit 可為空清單」的 API 語意，非產品 correctness 崩壞；Source 契約有 control",
+      "product_defect_reproducible": false,
+      "evidence": [
+        "docs/excluded-failing-controls-2026-07-19.md"
+      ],
+      "substitute_or_control": [
+        "tests/test_twinkle.py::test_search_parses_source_with_full_content",
+        "tests/test_excluded_failing_controls.py::test_control_08_twinkle_parsed_source_contract"
+      ],
+      "gap_package": null,
+      "note": "空 results 仍綠屬服務無 hit 可接受語意；與 #7 retrieve 合成路徑「law 應有 Level A」不同，不列真實驗證缺口"
+    }
+  ],
+  "summary": {
+    "非缺陷": 8,
+    "真實驗證缺口": 1,
+    "note": "C7 拆兩維：產品路徑 非缺陷 + 驗證設計 真實驗證缺口；列計時 C7-product 計入非缺陷、C7-verification 計入真實驗證缺口；其餘 C1–C6、C8 各一非缺陷 → 非缺陷 8、缺口 1"
+  },
+  "acceptance": {
+    "python": "D:/Users/Administrator/Desktop/筆記補齊/.venv/Scripts/python.exe -X utf8",
+    "commands": [
+      "pytest tests/test_conclusion_classification.py -vv --tb=short --color=no",
+      "pytest tests/test_exclusion_correctness_blind_spot.py tests/test_excluded_failing_controls.py -q --color=no",
+      "pytest -m \"not integration\" -q --color=no"
+    ]
+  }
+}
