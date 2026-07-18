@@ -154,16 +154,20 @@
       "tests/test_law_search.py::test_search_law_sources_returns_level_A_law_articles",
       "tests/test_twinkle.py::test_search_parses_source_with_full_content",
       "tests/test_twinkle.py::test_search_reuses_mcp_session",
-      "tests/test_twinkle.py::test_search_transport_failure_returns_empty"
+      "tests/test_twinkle.py::test_search_transport_failure_returns_empty",
+      "tests/test_exclusion_correctness_blind_spot.py::test_deselected_retrieve_smoke_vacuous_pass_on_empty_is_blind_spot",
+      "tests/test_exclusion_correctness_blind_spot.py::test_law_domain_retrieve_must_yield_level_a_not_vacuous_empty"
     ],
     "substitute_evidence": [
       {"test_id": "tests/test_retrieve.py::test_retrieve_for_gap_law_domain_puts_level_A_before_B", "source": "tests/test_retrieve.py:72", "anchor": "assert [s.level for s in out]", "claim": "FakeLaw/FakeTwinkle 驗證 Level A 優先於 B 且級內依 distance 排序"},
       {"test_id": "tests/test_law_search.py::test_search_law_sources_returns_level_A_law_articles", "source": "tests/test_law_search.py:35", "anchor": "assert all(s.level == \"A\"", "claim": "離線 law_index 查詢產生合法 Level A 法條 Source"},
       {"test_id": "tests/test_twinkle.py::test_search_parses_source_with_full_content", "source": "tests/test_twinkle.py:77", "anchor": "assert \"現行條文對累犯之處罰不足\"", "claim": "mock MCP/SSE 驗證全文與 Source metadata 映射"},
       {"test_id": "tests/test_twinkle.py::test_search_reuses_mcp_session", "source": "tests/test_twinkle.py:101", "anchor": "assert requests ==", "claim": "mock MCP 驗證 initialize、initialized、tools/call 共用 session"},
-      {"test_id": "tests/test_twinkle.py::test_search_transport_failure_returns_empty", "source": "tests/test_twinkle.py:114", "anchor": "assert TwinkleClient(token=\"fake-token\").search", "claim": "mock timeout 驗證 transport failure 安全降級為空結果"}
+      {"test_id": "tests/test_twinkle.py::test_search_transport_failure_returns_empty", "source": "tests/test_twinkle.py:114", "anchor": "assert TwinkleClient(token=\"fake-token\").search", "claim": "mock timeout 驗證 transport failure 安全降級為空結果"},
+      {"test_id": "tests/test_exclusion_correctness_blind_spot.py::test_deselected_retrieve_smoke_vacuous_pass_on_empty_is_blind_spot", "source": "tests/test_exclusion_correctness_blind_spot.py:68", "anchor": "_integration_smoke_asserts(empty)", "claim": "證明 deselected smoke 三斷言對 empty 仍 vacuous PASS，屬驗證盲區而非產品路徑通過"},
+      {"test_id": "tests/test_exclusion_correctness_blind_spot.py::test_law_domain_retrieve_must_yield_level_a_not_vacuous_empty", "source": "tests/test_exclusion_correctness_blind_spot.py:87", "anchor": "assert out,", "claim": "離線 law+LawLookup 強制非空 Level A，攔截 smoke vacuous empty 無法看見的 correctness 缺口"}
     ],
-    "coverage_gap": "真實 Twinkle Hub 服務 I/O 與真 Grok 關鍵字抽取品質"
+    "coverage_gap": "真實 Twinkle Hub 服務 I/O 與真 Grok 關鍵字抽取品質；integration smoke 對 empty 的 vacuous pass（已由 exclusion_correctness_blind_spot 離線鎖定 Level A 非空）"
   },
   {
     "test_id": "tests/test_twinkle.py::test_search_real_twinkle_hub",
