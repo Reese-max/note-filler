@@ -1,0 +1,13 @@
+============================= test session starts =============================
+platform win32 -- Python 3.11.9, pytest-9.1.1, pluggy-1.6.0
+rootdir: D:\Users\Administrator\Desktop\autodev-ng\data\note-filler\worktrees\098f866a
+configfile: pyproject.toml
+plugins: anyio-4.14.2, asyncio-1.4.0
+collected 1 item
+
+tests/test_e2e_acceptance.py::test_e2e_acceptance_real PASSED            [100%]
+
+============================== slowest durations ==============================
+130.22s call     tests/test_e2e_acceptance.py::test_e2e_acceptance_real
+
+======================== 1 passed in 130.24s (0:02:10) ========================

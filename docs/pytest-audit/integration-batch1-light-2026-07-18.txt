@@ -1,0 +1,19 @@
+============================= test session starts =============================
+platform win32 -- Python 3.11.9, pytest-9.1.1, pluggy-1.6.0
+rootdir: D:\Users\Administrator\Desktop\autodev-ng\data\note-filler\worktrees\098f866a
+configfile: pyproject.toml
+plugins: anyio-4.14.2, asyncio-1.4.0
+collected 4 items
+
+tests/test_llm.py::test_grok_pong_integration PASSED                     [ 25%]
+tests/test_domain.py::test_detect_domain_real_grok_returns_law PASSED    [ 50%]
+tests/test_gap.py::test_detect_gaps_real_grok PASSED                     [ 75%]
+tests/test_questions.py::test_generate_questions_real_grok PASSED        [100%]
+
+============================== slowest durations ==============================
+7.03s call     tests/test_questions.py::test_generate_questions_real_grok
+4.09s call     tests/test_gap.py::test_detect_gaps_real_grok
+2.36s call     tests/test_domain.py::test_detect_domain_real_grok_returns_law
+1.22s call     tests/test_llm.py::test_grok_pong_integration
+
+============================= 4 passed in 14.84s ==============================
