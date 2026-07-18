@@ -1,0 +1,10 @@
+tests/test_domain.py::test_detect_domain_real_grok_returns_law
+tests/test_e2e_acceptance.py::test_e2e_acceptance_real
+tests/test_gap.py::test_detect_gaps_real_grok
+tests/test_llm.py::test_grok_pong_integration
+tests/test_pipeline.py::test_run_pipeline_real_grok
+tests/test_questions.py::test_generate_questions_real_grok
+tests/test_retrieve.py::test_retrieve_for_gap_real_twinkle_smoke
+tests/test_twinkle.py::test_search_real_twinkle_hub
+
+8/118 tests collected (110 deselected) in 0.17s
