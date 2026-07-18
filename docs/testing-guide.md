@@ -6,7 +6,7 @@
 
 | 模式 | 數量 | 預設行為 | 需要外部服務 |
 |------|------|---------|-------------|
-| **非整合測試**（unit/integration=off） | 102 | 預設執行 | 否（FakeLLM/mocked） |
+| **非整合測試**（unit/integration=off） | 104 | 預設執行 | 否（FakeLLM/mocked） |
 | **整合測試**（integration=on） | 8 | 預設跳過 | 是（grok proxy :8318, Twinkle Hub） |
 
 ### 非整合測試（CI 預設）
@@ -21,11 +21,11 @@ pytest -m "not integration" -v           # 明確寫出排除條件
 ./scripts/run_tests.sh                   # 透過腳本執行
 ```
 
-**102 個測試，全部不需要網路或 grok proxy。**
+**104 個測試，全部不需要網路或 grok proxy。**
 
 ### 完整測試（含整合）
 
-包含上述 102 個 + 8 個整合測試。整合測試**依賴本機 grok proxy**（`http://127.0.0.1:8318`）。
+包含上述 104 個 + 8 個整合測試。整合測試**依賴本機 grok proxy**（`http://127.0.0.1:8318`）。
 若 grok proxy 不在線，整合測試會被 `skipif` 安全跳過（不報失敗）。
 
 ```bash
@@ -67,7 +67,7 @@ CI 只執行**非整合測試**，分兩個矩陣：
 
 1. **所有新測試必須明確標記**：需要外部服務的測試加 `@pytest.mark.integration`；
    純單元測試**不要**加此 marker。
-2. **CI 只跑 `not integration`**：這是防線——CI 永遠跑 102 個非整合測試。
+2. **CI 只跑 `not integration`**：這是防線——CI 永遠跑 104 個非整合測試。
 3. **整合測試雙重防護**：除了 marker，整合測試還有 `@pytest.mark.skipif(not _grok_reachable())`
    在運行時檢查——即使 marker 被誤移除，grok 不在線時仍安全跳過。
 4. **新增整合測試時**：必須同時滿足以下兩項才正確：
@@ -78,8 +78,8 @@ CI 只執行**非整合測試**，分兩個矩陣：
 
 - [ ] 測試是否需要 grok proxy 或網路？→ 是 = 加 `@pytest.mark.integration`
 - [ ] 測試是否純 FakeLLM/mocked？→ 是 = **不加** integration marker
-- [ ] 執行 `pytest --co -q` 確認 `collected` 數量符合預期（110 total）
-- [ ] 執行 `pytest -m "not integration" --co -q` 確認排除數量（102 collected, 8 deselected）
+- [ ] 執行 `pytest --co -q -o addopts=` 確認 `collected` 數量符合預期（112 total）
+- [ ] 執行 `pytest -m "not integration" --co -q` 確認排除數量（104 selected, 8 deselected）
 
 ## 本地快速指令
 
@@ -92,10 +92,14 @@ pytest -v
 
 # 確認測試清單（不執行）：
 ./scripts/run_tests.sh check
+
+# 重建 collection、marker 與逐項測試結果稽核檔：
+python -X utf8 scripts/refresh_pytest_audit.py
 ```
 
 ## 相關文件
 
 - `docs/integration-test-audit.md` — 整合測試排除清單審查（2026-07-16）
 - `docs/integration-exclusion-audit.md` — marker 一致性修正（2026-07-17）
+- `docs/pytest-audit/` — 最新 collection、marker、測試結果與機器可讀清單
 - `pyproject.toml` `[tool.pytest.ini_options]` — pytest 設定與 marker 定義

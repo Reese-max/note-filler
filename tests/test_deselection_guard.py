@@ -17,7 +17,8 @@ _REPO_ROOT = Path(__file__).resolve().parent.parent
 _AUDIT = json.loads(
     (_REPO_ROOT / "tests" / "deselected_allowlist.json").read_text(encoding="utf-8")
 )
-_EXPECTED_DESELECTED_COUNT = 8
+_EXPECTED_COUNTS = (112, 104, 8)
+_EXPECTED_DESELECTED_COUNT = _EXPECTED_COUNTS[2]
 ALLOWED_INTEGRATION_TESTS = sorted(item["test_id"] for item in _AUDIT)
 MAPPED_NON_INTEGRATION_TESTS = sorted(
     {test_id for item in _AUDIT for test_id in item["substitute_tests"]}
@@ -84,14 +85,16 @@ def test_integration_allowlist_is_stable() -> None:
     all_tests = _collect_tests("-o", "addopts=")
     selected_tests = _collect_tests()
     actual = sorted(set(all_tests) - set(selected_tests))
+    counts = (len(all_tests), len(selected_tests), len(actual))
     added = sorted(set(actual) - set(ALLOWED_INTEGRATION_TESTS))
     removed = sorted(set(ALLOWED_INTEGRATION_TESTS) - set(actual))
     assert (
-        len(actual) == _EXPECTED_DESELECTED_COUNT
+        counts == _EXPECTED_COUNTS
         and actual == ALLOWED_INTEGRATION_TESTS
     ), (
         f"Deselected test allowlist mismatch "
-        f"(expected {_EXPECTED_DESELECTED_COUNT}, got {len(actual)}).\n"
+        f"(collected/selected/deselected: expected {_EXPECTED_COUNTS}, "
+        f"got {counts}).\n"
         f"  Newly deselected (add to allowlist): {added}\n"
         f"  No longer deselected (remove from allowlist): {removed}"
     )

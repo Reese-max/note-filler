@@ -29,7 +29,7 @@ testpaths = ["tests"]
 pythonpath = ["src"]
 # 專案用 anyio (pytest.mark.anyio),不需要 pytest-asyncio 的 asyncio plugin；
 # 它會自動載入並觸發 PytestDeprecationWarning (asyncio_default_fixture_loop_scope 未設)
-addopts = "-p no:asyncio -m 'not integration' -W error::DeprecationWarning -W error::PendingDeprecationWarning"
+addopts = "-p no:asyncio --strict-markers -m 'not integration' -W error::DeprecationWarning -W error::PendingDeprecationWarning"
 markers = [
     "integration: 需要真實 grok(:8318)的整合測試;平時用 -m 'not integration' 跳過",
 ]
