@@ -1,0 +1,16 @@
+[1m============================= test session starts =============================[0m
+platform win32 -- Python 3.11.9, pytest-9.1.1, pluggy-1.6.0 -- D:\Users\Administrator\Desktop\蝑?鋆?\.venv\Scripts\python.exe
+cachedir: .pytest_cache
+rootdir: D:\Users\Administrator\Desktop\autodev-ng\data\note-filler\worktrees\8eba824b
+configfile: pyproject.toml
+plugins: anyio-4.14.2, asyncio-1.4.0
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+[1mcollecting ... [0mcollected 1 item
+
+tests/test_e2e_acceptance.py::test_e2e_acceptance_real [32mPASSED[0m[32m            [100%][0m
+
+============================== slowest durations ==============================
+102.91s call     tests/test_e2e_acceptance.py::test_e2e_acceptance_real
+
+(2 durations < 0.005s hidden.  Use -vv to show these durations.)
+[32m======================== [32m[1m1 passed[0m[32m in 102.92s (0:01:42)[0m[32m ========================[0m

@@ -1,0 +1,15 @@
+{
+  "timestamp_local": "2026-07-18T20:36:39",
+  "cwd": "D:\\Users\\Administrator\\Desktop\\autodev-ng\\data\\note-filler\\worktrees\\8eba824b",
+  "python": "D:/Users/Administrator/Desktop/筆記補齊/.venv/Scripts/python.exe",
+  "python_flags": "-X utf8",
+  "grok_proxy_tcp_8318": true,
+  "law_index_db_exists": true,
+  "twinkle_token_present": true,
+  "twinkle_flag_is_1": false,
+  "real_note_exists": true,
+  "worktree_id": "8eba824b",
+  "git_head": "db9aaa2c3d51617a96b2a483ce0ba5bd46952c68",
+  "git_branch": "adng/8eba824b",
+  "pre_rerun_head_note": "report generated against this HEAD before commit of report itself"
+}

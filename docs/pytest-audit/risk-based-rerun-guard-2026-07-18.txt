@@ -1,0 +1,13 @@
+[1m============================= test session starts =============================[0m
+platform win32 -- Python 3.11.9, pytest-9.1.1, pluggy-1.6.0 -- D:\Users\Administrator\Desktop\蝑?鋆?\.venv\Scripts\python.exe
+cachedir: .pytest_cache
+rootdir: D:\Users\Administrator\Desktop\autodev-ng\data\note-filler\worktrees\8eba824b
+configfile: pyproject.toml
+plugins: anyio-4.14.2
+[1mcollecting ... [0mcollected 3 items
+
+tests/test_deselection_guard.py::test_integration_allowlist_is_stable [32mPASSED[0m[32m [ 33%][0m
+tests/test_deselection_guard.py::test_deselected_details_lists_node_ids_and_reasons [32mPASSED[0m[32m [ 66%][0m
+tests/test_deselection_guard.py::test_substitute_mapping_is_complete_and_collectable [32mPASSED[0m[32m [100%][0m
+
+[32m============================== [32m[1m3 passed[0m[32m in 4.16s[0m[32m ==============================[0m

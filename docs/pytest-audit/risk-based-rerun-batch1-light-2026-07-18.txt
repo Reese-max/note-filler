@@ -1,0 +1,22 @@
+[1m============================= test session starts =============================[0m
+platform win32 -- Python 3.11.9, pytest-9.1.1, pluggy-1.6.0 -- D:\Users\Administrator\Desktop\蝑?鋆?\.venv\Scripts\python.exe
+cachedir: .pytest_cache
+rootdir: D:\Users\Administrator\Desktop\autodev-ng\data\note-filler\worktrees\8eba824b
+configfile: pyproject.toml
+plugins: anyio-4.14.2, asyncio-1.4.0
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+[1mcollecting ... [0mcollected 4 items
+
+tests/test_llm.py::test_grok_pong_integration [32mPASSED[0m[32m                     [ 25%][0m
+tests/test_domain.py::test_detect_domain_real_grok_returns_law [32mPASSED[0m[32m    [ 50%][0m
+tests/test_gap.py::test_detect_gaps_real_grok [32mPASSED[0m[32m                     [ 75%][0m
+tests/test_questions.py::test_generate_questions_real_grok [32mPASSED[0m[32m        [100%][0m
+
+============================== slowest durations ==============================
+6.50s call     tests/test_questions.py::test_generate_questions_real_grok
+4.11s call     tests/test_gap.py::test_detect_gaps_real_grok
+2.45s call     tests/test_domain.py::test_detect_domain_real_grok_returns_law
+1.11s call     tests/test_llm.py::test_grok_pong_integration
+
+(8 durations < 0.005s hidden.  Use -vv to show these durations.)
+[32m============================= [32m[1m4 passed[0m[32m in 14.26s[0m[32m ==============================[0m
