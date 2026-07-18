@@ -1,8 +1,15 @@
-"""Refresh committed pytest collection, marker, and test-run evidence."""
+"""Refresh committed pytest collection, marker, and test-run evidence.
+
+Also emits an expanded acceptance package that must include full pytest
+invocations, all eight deselected node ids, per-node exclusion reasons,
+individual substitute results, and fail / NOT-REPRODUCIBLE evidence —
+never aggregate counts alone.
+"""
 
 from __future__ import annotations
 
 import json
+import re
 import subprocess
 import sys
 import tomllib
@@ -14,9 +21,31 @@ ROOT = Path(__file__).resolve().parents[1]
 OUTPUT_DIR = ROOT / "docs" / "pytest-audit"
 PYTEST = [sys.executable, "-X", "utf8", "-m", "pytest"]
 RESULTS = ("PASSED", "SKIPPED", "XFAIL", "XPASS", "FAILED", "ERROR")
+LIVE_INDIVIDUAL = OUTPUT_DIR / "deselected-individual-results-2026-07-19.json"
+NOT_REPRODUCIBLE: dict[str, list[dict[str, str]]] = {
+    "tests/test_e2e_acceptance.py::test_e2e_acceptance_real": [
+        {
+            "status": "NOT-REPRODUCIBLE",
+            "claim": "離線最小品質閘與 supplement 品質邊界皆穩定 PASS，無法以產品失敗重現",
+            "evidence": "docs/minimal-quality-gates-regression-2026-07-19.md",
+        },
+        {
+            "status": "NOT-REPRODUCIBLE",
+            "claim": "e2e offline quality boundary 無法穩定失敗",
+            "evidence": "docs/e2e-offline-quality-boundary-2026-07-18.md",
+        },
+    ],
+    "tests/test_retrieve.py::test_retrieve_for_gap_real_twinkle_smoke": [
+        {
+            "status": "NOT-REPRODUCIBLE",
+            "claim": "產品 law+LawLookup 路徑穩定回 Level A 非空；產品缺陷路徑不可重現",
+            "evidence": "docs/exclusion-correctness-blind-spot-2026-07-19.md",
+        },
+    ],
+}
 
 
-def run_pytest(*args: str) -> tuple[list[str], str]:
+def run_pytest(*args: str, timeout: int = 180) -> tuple[list[str], str]:
     command = [*PYTEST, *args]
     result = subprocess.run(
         command,
@@ -25,7 +54,7 @@ def run_pytest(*args: str) -> tuple[list[str], str]:
         text=True,
         encoding="utf-8",
         errors="replace",
-        timeout=180,
+        timeout=timeout,
     )
     output = result.stdout
     if result.stderr:
@@ -74,6 +103,8 @@ def evidence_report(
     allowlist: list[dict],
     outcomes: dict[str, str],
     result_lines: dict[str, str],
+    invocations: dict[str, str],
+    acceptance_package: dict,
 ) -> str:
     """Render the committed code-to-output chain for every deselected test."""
     allowlist_ids = [item["test_id"] for item in allowlist]
@@ -83,8 +114,19 @@ def evidence_report(
         "",
         "> 本檔由 `scripts/refresh_pytest_audit.py` 產生；每一項都同時列出",
         "> 排除程式碼 anchor、替代測試程式碼 anchor，以及該替代測試在本次測試輸出中的結果。",
+        ">",
+        "> **驗收規則**：禁止僅以 `passed/deselected` 彙總數字驗收。完整套件見",
+        "> [`acceptance-package.json`](acceptance-package.json) 與下方 invocation／逐項結果。",
         "",
-        "## 集合判定",
+        "## 完整 pytest invocation",
+        "",
+        f"- collect all: `{invocations['collect_all']}`",
+        f"- collect default: `{invocations['collect_default']}`",
+        f"- collect integration: `{invocations['collect_integration']}`",
+        f"- deselected details: `{invocations['deselected_details']}`",
+        f"- default test run: `{invocations['default_test_run']}`",
+        "",
+        "## 集合判定（僅上下文，非唯一驗收依據）",
         "",
         f"- 全量 collection：`{len(all_ids)}`",
         f"- 預設 selected：`{len(selected_ids)}`",
@@ -94,14 +136,21 @@ def evidence_report(
         "- collection 原始輸出：[`collection.txt`](collection.txt)",
         "- 預設測試原始輸出：[`test-report.txt`](test-report.txt)",
         "- deselection 詳情原始輸出：[`deselected-details.txt`](deselected-details.txt)",
+        "- 擴充驗收套件：[`acceptance-package.json`](acceptance-package.json)",
         "",
-        "## 逐項證據鏈",
+        "## 8 個 node ID 與排除原因",
         "",
     ]
     for index, item in enumerate(allowlist, start=1):
+        lines.append(
+            f"{index}. `{item['test_id']}` — {item['exclusion_reason']}"
+        )
+    lines.extend(["", "## 逐項證據鏈", ""])
+    for index, item in enumerate(allowlist, start=1):
+        node_id = item["test_id"]
         lines.extend(
             [
-                f"### {index}. `{item['test_id']}`",
+                f"### {index}. `{node_id}`",
                 "",
                 f"- 判定：`{item['decision']}`",
                 f"- 排除理由：{item['exclusion_reason']}",
@@ -113,11 +162,7 @@ def evidence_report(
                 f"  - `{evidence['source']}` — `{evidence['anchor']}`："
                 f"{evidence['claim']}"
             )
-        lines.extend(
-            [
-                "- 替代測試證據：",
-            ]
-        )
+        lines.append("- 替代測試證據（單獨結果，非彙總）：")
         for evidence in item["substitute_evidence"]:
             test_id = evidence["test_id"]
             assert outcomes.get(test_id) == "PASSED", (
@@ -130,6 +175,31 @@ def evidence_report(
                     f"    - 測試輸出：`{result_lines[test_id]}`",
                 ]
             )
+        live = next(
+            (
+                n.get("live_individual_result")
+                for n in acceptance_package["per_node"]
+                if n["node_id"] == node_id
+            ),
+            None,
+        )
+        if live:
+            lines.append(
+                f"- 單獨 live 執行結果：`{live.get('status')}` "
+                f"(exit={live.get('exit_code')}, wall_s={live.get('wall_seconds')}, "
+                f"source=`{live.get('evidence_source')}`)"
+            )
+        nr = NOT_REPRODUCIBLE.get(node_id, [])
+        if nr:
+            lines.append("- 失敗／NOT-REPRODUCIBLE 證據：")
+            for row in nr:
+                lines.append(
+                    f"  - **{row['status']}** — {row['claim']} — `{row['evidence']}`"
+                )
+        else:
+            lines.append(
+                "- 失敗／NOT-REPRODUCIBLE 證據：（無；替代測試 PASSED，剩餘為外部依賴邊界）"
+            )
         lines.extend(
             [
                 f"- 未覆蓋邊界：{item['coverage_gap']}",
@@ -137,6 +207,194 @@ def evidence_report(
                 "",
             ]
         )
+    return "\n".join(lines)
+
+
+def build_acceptance_package(
+    *,
+    invocations: dict[str, str],
+    all_ids: list[str],
+    selected_ids: list[str],
+    deselected_ids: list[str],
+    allowlist: list[dict],
+    outcomes: dict[str, str],
+    result_lines: dict[str, str],
+    details: list[dict[str, str]],
+) -> dict:
+    """Machine-readable expanded acceptance package."""
+    live_rows: dict[str, dict] = {}
+    if LIVE_INDIVIDUAL.is_file():
+        for row in json.loads(LIVE_INDIVIDUAL.read_text(encoding="utf-8")):
+            live_rows[row["node_id"]] = row
+
+    per_node = []
+    failed_or_nr: list[dict] = []
+    for item in allowlist:
+        node_id = item["test_id"]
+        sub_results = []
+        for test_id in item["substitute_tests"]:
+            status = outcomes.get(test_id, "MISSING").lower()
+            sub_results.append(
+                {
+                    "test_id": test_id,
+                    "status": status,
+                    "summary": result_lines.get(test_id, ""),
+                    "invocation": (
+                        f"{subprocess.list2cmdline(PYTEST)} {test_id} "
+                        f"-vv --tb=line --color=no"
+                    ),
+                }
+            )
+            if status != "passed":
+                failed_or_nr.append(
+                    {
+                        "node_id": node_id,
+                        "status": status.upper(),
+                        "claim": f"substitute did not pass: {test_id}",
+                        "evidence": result_lines.get(test_id, ""),
+                    }
+                )
+        live = live_rows.get(node_id)
+        live_result = None
+        if live is not None:
+            live_result = {
+                **live,
+                "evidence_source": str(LIVE_INDIVIDUAL.relative_to(ROOT)).replace(
+                    "\\", "/"
+                ),
+                "live_invocation_template": (
+                    f"{subprocess.list2cmdline(PYTEST)} {node_id} "
+                    f'-o "addopts=-p no:asyncio --strict-markers '
+                    f"-W error::DeprecationWarning "
+                    f'-W error::PendingDeprecationWarning" -v --tb=short'
+                ),
+            }
+            if live.get("status") in {"fail", "failed", "error"}:
+                failed_or_nr.append(
+                    {
+                        "node_id": node_id,
+                        "status": str(live["status"]).upper(),
+                        "claim": "live individual deselected run failed",
+                        "evidence": json.dumps(live, ensure_ascii=False),
+                    }
+                )
+        nr_rows = list(NOT_REPRODUCIBLE.get(node_id, []))
+        for row in nr_rows:
+            failed_or_nr.append({"node_id": node_id, **row})
+        per_node.append(
+            {
+                "node_id": node_id,
+                "exclusion_reason": item["exclusion_reason"],
+                "collection_reason": next(
+                    (
+                        d["reason"]
+                        for d in details
+                        if d["test_id"] == node_id
+                    ),
+                    "deselected by -m 'not integration'",
+                ),
+                "substitute_individual_results": sub_results,
+                "live_individual_result": live_result,
+                "failure_or_not_reproducible": nr_rows,
+            }
+        )
+
+    return {
+        "schema": "note-filler.deselected-acceptance/v1",
+        "generated_at": datetime.now().astimezone().isoformat(timespec="seconds"),
+        "rule": "禁止僅以 collected/selected/deselected 彙總數字驗收；必須具備下列欄位",
+        "invocations": invocations,
+        "counts": {
+            "collected": len(all_ids),
+            "selected": len(selected_ids),
+            "deselected": len(deselected_ids),
+        },
+        "node_ids": [item["test_id"] for item in allowlist],
+        "per_node": per_node,
+        "failed_tests_or_not_reproducible": failed_or_nr,
+        "acceptance_mode": "per-node-evidence",
+    }
+
+
+def render_acceptance_markdown(package: dict) -> str:
+    """Human-readable acceptance package companion."""
+    lines = [
+        "# 擴充驗收套件（Acceptance Package）",
+        "",
+        f"> 產生時間：`{package['generated_at']}`",
+        f">",
+        f"> schema：`{package['schema']}`",
+        f">",
+        f"> **{package['rule']}**",
+        "",
+        "## 完整 pytest invocation",
+        "",
+    ]
+    for key, value in package["invocations"].items():
+        lines.append(f"- **{key}**: `{value}`")
+    counts = package["counts"]
+    lines.extend(
+        [
+            "",
+            "## 彙總數字（僅上下文）",
+            "",
+            f"`collected={counts['collected']} selected={counts['selected']} "
+            f"deselected={counts['deselected']}`",
+            "",
+            "上述數字**不可**單獨作為驗收通過依據。",
+            "",
+            "## 8 個 node ID × 排除原因 × 單獨結果 × 失敗/NOT-REPRODUCIBLE",
+            "",
+        ]
+    )
+    for index, node in enumerate(package["per_node"], start=1):
+        lines.extend(
+            [
+                f"### {index}. `{node['node_id']}`",
+                "",
+                f"- 排除原因：{node['exclusion_reason']}",
+                f"- collection 原因：`{node['collection_reason']}`",
+                "- 替代測試單獨結果：",
+            ]
+        )
+        for sub in node["substitute_individual_results"]:
+            lines.append(
+                f"  - **{sub['status'].upper()}** `{sub['test_id']}` — "
+                f"`{sub['summary']}`"
+            )
+            lines.append(f"    - invocation: `{sub['invocation']}`")
+        live = node.get("live_individual_result")
+        if live:
+            lines.append(
+                f"- live 單獨執行：`{live.get('status')}` "
+                f"(exit={live.get('exit_code')}, wall_s={live.get('wall_seconds')})"
+            )
+            lines.append(f"  - source: `{live.get('evidence_source')}`")
+            lines.append(f"  - invocation template: `{live.get('live_invocation_template')}`")
+        if node["failure_or_not_reproducible"]:
+            lines.append("- 失敗／NOT-REPRODUCIBLE：")
+            for row in node["failure_or_not_reproducible"]:
+                lines.append(
+                    f"  - **{row['status']}** — {row['claim']} — `{row['evidence']}`"
+                )
+        else:
+            lines.append("- 失敗／NOT-REPRODUCIBLE：（無）")
+        lines.append("")
+    lines.extend(
+        [
+            "## 失敗測試或 NOT-REPRODUCIBLE 索引",
+            "",
+        ]
+    )
+    if package["failed_tests_or_not_reproducible"]:
+        for row in package["failed_tests_or_not_reproducible"]:
+            lines.append(
+                f"- `{row['node_id']}` — **{row['status']}** — "
+                f"{row['claim']} — `{row.get('evidence', '')}`"
+            )
+    else:
+        lines.append("- （空）")
+    lines.append("")
     return "\n".join(lines)
 
 
@@ -194,21 +452,79 @@ def main() -> None:
     marker_command, marker_output = run_pytest("--markers")
     assert "@pytest.mark.integration:" in marker_output
 
+    # Guard 會對替代測試逐一 subprocess 重跑，預設全集需較長 timeout
     report_command, report_output = run_pytest(
-        "-vv", "--no-header", "--tb=short", "--deselected-details"
+        "-vv",
+        "--no-header",
+        "--tb=short",
+        "--deselected-details",
+        "--color=no",
+        timeout=600,
     )
-    report_lines = report_output.splitlines()
+    # 去 ANSI，避免 color 殘留導致 " PASSED" 字面比對落空
+    report_plain = re.sub(r"\x1b\[[0-9;]*m", "", report_output)
+    report_lines = report_plain.splitlines()
     outcomes = {}
     result_lines = {}
     for test_id in selected_ids:
         line = next(
-            (line for line in report_lines if line.startswith(f"{test_id} ")),
+            (
+                line
+                for line in report_lines
+                if line.startswith(f"{test_id} ")
+                or line.startswith(f"{test_id}\t")
+            ),
             "",
         )
         outcome = next((result for result in RESULTS if f" {result}" in line), "")
-        assert outcome, f"Missing test result for {test_id}"
+        if not outcome and line:
+            # 相容 "PASSED [xx%]" 同一行或尾端空白
+            for result in RESULTS:
+                if result in line:
+                    outcome = result
+                    break
+        assert outcome, (
+            f"Missing test result for {test_id}\n"
+            f"matched_line={line!r}\n"
+            f"report_head=\n" + "\n".join(report_lines[:30])
+        )
         outcomes[test_id] = outcome
         result_lines[test_id] = line.strip()
+
+    invocations = {
+        "collect_all": subprocess.list2cmdline(collection_runs["ALL"][0]),
+        "collect_default": subprocess.list2cmdline(collection_runs["DEFAULT"][0]),
+        "collect_integration": subprocess.list2cmdline(
+            collection_runs["INTEGRATION"][0]
+        ),
+        "deselected_details": subprocess.list2cmdline(details_command),
+        "default_test_run": subprocess.list2cmdline(report_command),
+        "markers": subprocess.list2cmdline(marker_command),
+    }
+
+    acceptance_package = build_acceptance_package(
+        invocations=invocations,
+        all_ids=all_ids,
+        selected_ids=selected_ids,
+        deselected_ids=deselected_ids,
+        allowlist=allowlist,
+        outcomes=outcomes,
+        result_lines=result_lines,
+        details=details,
+    )
+    # Structural gate: refuse count-only acceptance
+    assert acceptance_package["schema"] == "note-filler.deselected-acceptance/v1"
+    assert len(acceptance_package["node_ids"]) == 8
+    assert all(n["exclusion_reason"].strip() for n in acceptance_package["per_node"])
+    assert all(
+        n["substitute_individual_results"] for n in acceptance_package["per_node"]
+    )
+    for path in {
+        row["evidence"]
+        for rows in NOT_REPRODUCIBLE.values()
+        for row in rows
+    }:
+        assert (ROOT / path).is_file(), f"Missing NOT-REPRODUCIBLE evidence: {path}"
 
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     evidence_path = OUTPUT_DIR / "deselected-evidence.md"
@@ -221,7 +537,17 @@ def main() -> None:
             allowlist=allowlist,
             outcomes=outcomes,
             result_lines=result_lines,
+            invocations=invocations,
+            acceptance_package=acceptance_package,
         ),
+        encoding="utf-8",
+    )
+    (OUTPUT_DIR / "acceptance-package.json").write_text(
+        json.dumps(acceptance_package, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    (OUTPUT_DIR / "acceptance-package.md").write_text(
+        render_acceptance_markdown(acceptance_package),
         encoding="utf-8",
     )
 
@@ -257,10 +583,13 @@ def main() -> None:
             "selected": len(selected_ids),
             "deselected": len(deselected_ids),
         },
+        "acceptance_mode": "per-node-evidence",
+        "acceptance_schema": acceptance_package["schema"],
         "collected": all_ids,
         "selected": selected_ids,
         "deselected": deselected_ids,
         "deselection_details": details,
+        "invocations": invocations,
         "outcomes": [
             {"test_id": test_id, "result": outcomes[test_id]}
             for test_id in selected_ids
@@ -271,6 +600,8 @@ def main() -> None:
             "docs/pytest-audit/test-report.txt",
             "docs/pytest-audit/deselected-details.txt",
             "docs/pytest-audit/deselected-evidence.md",
+            "docs/pytest-audit/acceptance-package.json",
+            "docs/pytest-audit/acceptance-package.md",
         ],
     }
     (OUTPUT_DIR / "summary.json").write_text(
@@ -279,6 +610,12 @@ def main() -> None:
     print(
         f"COLLECTED={len(all_ids)} SELECTED={len(selected_ids)} "
         f"DESELECTED={len(deselected_ids)}"
+    )
+    print("ACCEPTANCE_MODE=per-node-evidence")
+    print(f"ACCEPTANCE_NODES={len(acceptance_package['node_ids'])}")
+    print(
+        "FAILED_OR_NR="
+        f"{len(acceptance_package['failed_tests_or_not_reproducible'])}"
     )
     print("PYTEST_AUDIT=PASS")
 

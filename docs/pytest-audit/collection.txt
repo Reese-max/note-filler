@@ -22,6 +22,7 @@ tests/test_correction.py::test_anchor_none_when_no_overlap
 tests/test_deselection_guard.py::test_integration_allowlist_is_stable
 tests/test_deselection_guard.py::test_deselected_details_lists_node_ids_and_reasons
 tests/test_deselection_guard.py::test_substitute_mapping_is_complete_and_collectable
+tests/test_deselection_guard.py::test_acceptance_package_rejects_count_only_summary
 tests/test_domain.py::test_detect_domain_law
 tests/test_domain.py::test_detect_domain_admin
 tests/test_domain.py::test_detect_domain_exam
@@ -31,7 +32,10 @@ tests/test_domain.py::test_detect_domain_uppercase_and_whitespace
 tests/test_domain.py::test_detect_domain_real_grok_returns_law
 tests/test_e2e_acceptance.py::test_e2e_structural_invariants
 tests/test_e2e_acceptance.py::test_e2e_offline_supplement_quality_boundary
+tests/test_e2e_acceptance.py::test_e2e_minimal_quality_gates_offline_regression
 tests/test_e2e_acceptance.py::test_e2e_acceptance_real
+tests/test_exclusion_correctness_blind_spot.py::test_deselected_retrieve_smoke_vacuous_pass_on_empty_is_blind_spot
+tests/test_exclusion_correctness_blind_spot.py::test_law_domain_retrieve_must_yield_level_a_not_vacuous_empty
 tests/test_export.py::test_to_json_serializes_segments
 tests/test_export.py::test_to_markdown_format_locked
 tests/test_export.py::test_to_markdown_pending_segment_has_no_footnote
@@ -120,7 +124,7 @@ tests/test_write.py::test_used_source_ids_from_markers
 tests/test_write.py::test_pending_evidence_when_insufficient
 tests/test_write.py::test_out_of_range_marker_removed_and_not_used
 
-117 tests collected in 0.20s
+[32m[32m121 tests collected[0m[32m in 0.20s[0m[0m
 ===== DEFAULT =====
 COMMAND: D:\Users\Administrator\Desktop\筆記補齊\.venv\Scripts\python.exe -X utf8 -m pytest --collect-only -q
 EXIT_CODE: 0
@@ -145,6 +149,7 @@ tests/test_correction.py::test_anchor_none_when_no_overlap
 tests/test_deselection_guard.py::test_integration_allowlist_is_stable
 tests/test_deselection_guard.py::test_deselected_details_lists_node_ids_and_reasons
 tests/test_deselection_guard.py::test_substitute_mapping_is_complete_and_collectable
+tests/test_deselection_guard.py::test_acceptance_package_rejects_count_only_summary
 tests/test_domain.py::test_detect_domain_law
 tests/test_domain.py::test_detect_domain_admin
 tests/test_domain.py::test_detect_domain_exam
@@ -153,6 +158,9 @@ tests/test_domain.py::test_detect_domain_label_with_trailing_punctuation
 tests/test_domain.py::test_detect_domain_uppercase_and_whitespace
 tests/test_e2e_acceptance.py::test_e2e_structural_invariants
 tests/test_e2e_acceptance.py::test_e2e_offline_supplement_quality_boundary
+tests/test_e2e_acceptance.py::test_e2e_minimal_quality_gates_offline_regression
+tests/test_exclusion_correctness_blind_spot.py::test_deselected_retrieve_smoke_vacuous_pass_on_empty_is_blind_spot
+tests/test_exclusion_correctness_blind_spot.py::test_law_domain_retrieve_must_yield_level_a_not_vacuous_empty
 tests/test_export.py::test_to_json_serializes_segments
 tests/test_export.py::test_to_markdown_format_locked
 tests/test_export.py::test_to_markdown_pending_segment_has_no_footnote
@@ -235,7 +243,7 @@ tests/test_write.py::test_used_source_ids_from_markers
 tests/test_write.py::test_pending_evidence_when_insufficient
 tests/test_write.py::test_out_of_range_marker_removed_and_not_used
 
-109/117 tests collected (8 deselected) in 0.18s
+[32m[32m113/121 tests collected (8 deselected)[0m[32m in 0.16s[0m[0m
 ===== INTEGRATION =====
 COMMAND: D:\Users\Administrator\Desktop\筆記補齊\.venv\Scripts\python.exe -X utf8 -m pytest --collect-only -q -o addopts= --strict-markers -m integration
 EXIT_CODE: 0
@@ -249,4 +257,4 @@ tests/test_questions.py::test_generate_questions_real_grok
 tests/test_retrieve.py::test_retrieve_for_gap_real_twinkle_smoke
 tests/test_twinkle.py::test_search_real_twinkle_hub
 
-8/117 tests collected (109 deselected) in 0.17s
+[32m[32m8/121 tests collected (113 deselected)[0m[32m in 0.14s[0m[0m
