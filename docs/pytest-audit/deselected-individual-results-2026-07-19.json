@@ -1,0 +1,74 @@
+[
+  {
+    "index": 1,
+    "node_id": "tests/test_domain.py::test_detect_domain_real_grok_returns_law",
+    "status": "pass",
+    "exit_code": 0,
+    "wall_seconds": 5.44,
+    "skip_reason": null,
+    "fail_hint": null
+  },
+  {
+    "index": 2,
+    "node_id": "tests/test_e2e_acceptance.py::test_e2e_acceptance_real",
+    "status": "pass",
+    "exit_code": 0,
+    "wall_seconds": 118.5,
+    "skip_reason": null,
+    "fail_hint": null
+  },
+  {
+    "index": 3,
+    "node_id": "tests/test_gap.py::test_detect_gaps_real_grok",
+    "status": "pass",
+    "exit_code": 0,
+    "wall_seconds": 5.74,
+    "skip_reason": null,
+    "fail_hint": null
+  },
+  {
+    "index": 4,
+    "node_id": "tests/test_llm.py::test_grok_pong_integration",
+    "status": "pass",
+    "exit_code": 0,
+    "wall_seconds": 1.94,
+    "skip_reason": null,
+    "fail_hint": null
+  },
+  {
+    "index": 5,
+    "node_id": "tests/test_pipeline.py::test_run_pipeline_real_grok",
+    "status": "pass",
+    "exit_code": 0,
+    "wall_seconds": 67.3,
+    "skip_reason": null,
+    "fail_hint": null
+  },
+  {
+    "index": 6,
+    "node_id": "tests/test_questions.py::test_generate_questions_real_grok",
+    "status": "pass",
+    "exit_code": 0,
+    "wall_seconds": 6.59,
+    "skip_reason": null,
+    "fail_hint": null
+  },
+  {
+    "index": 7,
+    "node_id": "tests/test_retrieve.py::test_retrieve_for_gap_real_twinkle_smoke",
+    "status": "pass",
+    "exit_code": 0,
+    "wall_seconds": 7.28,
+    "skip_reason": null,
+    "fail_hint": null
+  },
+  {
+    "index": 8,
+    "node_id": "tests/test_twinkle.py::test_search_real_twinkle_hub",
+    "status": "pass",
+    "exit_code": 0,
+    "wall_seconds": 4.58,
+    "skip_reason": null,
+    "fail_hint": null
+  }
+]

@@ -1,0 +1,158 @@
+deselected individual runs — 2026-07-19 01:24:44 +08:00
+python: D:\Users\Administrator\Desktop\筆記補齊\.venv\Scripts\python.exe
+addopts override (NO -m 'not integration'): -p no:asyncio --strict-markers -W error::DeprecationWarning -W error::PendingDeprecationWarning
+note: each node id run alone; correctness NOT inferred from default 110 passed
+
+==== [1/8] tests/test_domain.py::test_detect_domain_real_grok_returns_law ====
+started: 2026-07-19 01:24:44
+[1m============================= test session starts =============================[0m
+platform win32 -- Python 3.11.9, pytest-9.1.1, pluggy-1.6.0 -- D:\Users\Administrator\Desktop\蝑?鋆?\.venv\Scripts\python.exe
+cachedir: .pytest_cache
+rootdir: D:\Users\Administrator\Desktop\autodev-ng\data\note-filler\worktrees\6115a8f9
+configfile: pyproject.toml
+plugins: anyio-4.14.2
+[1mcollecting ... [0mcollected 1 item
+
+tests/test_domain.py::test_detect_domain_real_grok_returns_law [32mPASSED[0m[32m    [100%][0m
+
+[32m============================== [32m[1m1 passed[0m[32m in 4.16s[0m[32m ==============================[0m
+
+exit_code: 0
+wall_seconds: 5.44
+classified_status: pass
+
+==== [2/8] tests/test_e2e_acceptance.py::test_e2e_acceptance_real ====
+started: 2026-07-19 01:24:49
+[1m============================= test session starts =============================[0m
+platform win32 -- Python 3.11.9, pytest-9.1.1, pluggy-1.6.0 -- D:\Users\Administrator\Desktop\蝑?鋆?\.venv\Scripts\python.exe
+cachedir: .pytest_cache
+rootdir: D:\Users\Administrator\Desktop\autodev-ng\data\note-filler\worktrees\6115a8f9
+configfile: pyproject.toml
+plugins: anyio-4.14.2
+[1mcollecting ... [0mcollected 1 item
+
+tests/test_e2e_acceptance.py::test_e2e_acceptance_real [32mPASSED[0m[32m            [100%][0m
+
+[32m======================== [32m[1m1 passed[0m[32m in 117.59s (0:01:57)[0m[32m ========================[0m
+
+exit_code: 0
+wall_seconds: 118.5
+classified_status: pass
+
+==== [3/8] tests/test_gap.py::test_detect_gaps_real_grok ====
+started: 2026-07-19 01:26:48
+[1m============================= test session starts =============================[0m
+platform win32 -- Python 3.11.9, pytest-9.1.1, pluggy-1.6.0 -- D:\Users\Administrator\Desktop\蝑?鋆?\.venv\Scripts\python.exe
+cachedir: .pytest_cache
+rootdir: D:\Users\Administrator\Desktop\autodev-ng\data\note-filler\worktrees\6115a8f9
+configfile: pyproject.toml
+plugins: anyio-4.14.2
+[1mcollecting ... [0mcollected 1 item
+
+tests/test_gap.py::test_detect_gaps_real_grok [32mPASSED[0m[32m                     [100%][0m
+
+[32m============================== [32m[1m1 passed[0m[32m in 4.90s[0m[32m ==============================[0m
+
+exit_code: 0
+wall_seconds: 5.74
+classified_status: pass
+
+==== [4/8] tests/test_llm.py::test_grok_pong_integration ====
+started: 2026-07-19 01:26:54
+[1m============================= test session starts =============================[0m
+platform win32 -- Python 3.11.9, pytest-9.1.1, pluggy-1.6.0 -- D:\Users\Administrator\Desktop\蝑?鋆?\.venv\Scripts\python.exe
+cachedir: .pytest_cache
+rootdir: D:\Users\Administrator\Desktop\autodev-ng\data\note-filler\worktrees\6115a8f9
+configfile: pyproject.toml
+plugins: anyio-4.14.2
+[1mcollecting ... [0mcollected 1 item
+
+tests/test_llm.py::test_grok_pong_integration [32mPASSED[0m[32m                     [100%][0m
+
+[32m============================== [32m[1m1 passed[0m[32m in 1.10s[0m[32m ==============================[0m
+
+exit_code: 0
+wall_seconds: 1.94
+classified_status: pass
+
+==== [5/8] tests/test_pipeline.py::test_run_pipeline_real_grok ====
+started: 2026-07-19 01:26:56
+[1m============================= test session starts =============================[0m
+platform win32 -- Python 3.11.9, pytest-9.1.1, pluggy-1.6.0 -- D:\Users\Administrator\Desktop\蝑?鋆?\.venv\Scripts\python.exe
+cachedir: .pytest_cache
+rootdir: D:\Users\Administrator\Desktop\autodev-ng\data\note-filler\worktrees\6115a8f9
+configfile: pyproject.toml
+plugins: anyio-4.14.2
+[1mcollecting ... [0mcollected 1 item
+
+tests/test_pipeline.py::test_run_pipeline_real_grok [32mPASSED[0m[32m               [100%][0m
+
+[32m======================== [32m[1m1 passed[0m[32m in 66.31s (0:01:06)[0m[32m =========================[0m
+
+exit_code: 0
+wall_seconds: 67.3
+classified_status: pass
+
+==== [6/8] tests/test_questions.py::test_generate_questions_real_grok ====
+started: 2026-07-19 01:28:03
+[1m============================= test session starts =============================[0m
+platform win32 -- Python 3.11.9, pytest-9.1.1, pluggy-1.6.0 -- D:\Users\Administrator\Desktop\蝑?鋆?\.venv\Scripts\python.exe
+cachedir: .pytest_cache
+rootdir: D:\Users\Administrator\Desktop\autodev-ng\data\note-filler\worktrees\6115a8f9
+configfile: pyproject.toml
+plugins: anyio-4.14.2
+[1mcollecting ... [0mcollected 1 item
+
+tests/test_questions.py::test_generate_questions_real_grok [32mPASSED[0m[32m        [100%][0m
+
+[32m============================== [32m[1m1 passed[0m[32m in 5.81s[0m[32m ==============================[0m
+
+exit_code: 0
+wall_seconds: 6.59
+classified_status: pass
+
+==== [7/8] tests/test_retrieve.py::test_retrieve_for_gap_real_twinkle_smoke ====
+started: 2026-07-19 01:28:10
+[1m============================= test session starts =============================[0m
+platform win32 -- Python 3.11.9, pytest-9.1.1, pluggy-1.6.0 -- D:\Users\Administrator\Desktop\蝑?鋆?\.venv\Scripts\python.exe
+cachedir: .pytest_cache
+rootdir: D:\Users\Administrator\Desktop\autodev-ng\data\note-filler\worktrees\6115a8f9
+configfile: pyproject.toml
+plugins: anyio-4.14.2
+[1mcollecting ... [0mcollected 1 item
+
+tests/test_retrieve.py::test_retrieve_for_gap_real_twinkle_smoke [32mPASSED[0m[32m  [100%][0m
+
+[32m============================== [32m[1m1 passed[0m[32m in 6.53s[0m[32m ==============================[0m
+
+exit_code: 0
+wall_seconds: 7.28
+classified_status: pass
+
+==== [8/8] tests/test_twinkle.py::test_search_real_twinkle_hub ====
+started: 2026-07-19 01:28:18
+[1m============================= test session starts =============================[0m
+platform win32 -- Python 3.11.9, pytest-9.1.1, pluggy-1.6.0 -- D:\Users\Administrator\Desktop\蝑?鋆?\.venv\Scripts\python.exe
+cachedir: .pytest_cache
+rootdir: D:\Users\Administrator\Desktop\autodev-ng\data\note-filler\worktrees\6115a8f9
+configfile: pyproject.toml
+plugins: anyio-4.14.2
+[1mcollecting ... [0mcollected 1 item
+
+tests/test_twinkle.py::test_search_real_twinkle_hub [32mPASSED[0m[32m               [100%][0m
+
+[32m============================== [32m[1m1 passed[0m[32m in 3.85s[0m[32m ==============================[0m
+
+exit_code: 0
+wall_seconds: 4.58
+classified_status: pass
+
+===== SUMMARY =====
+1. pass | 5.44s | tests/test_domain.py::test_detect_domain_real_grok_returns_law
+2. pass | 118.5s | tests/test_e2e_acceptance.py::test_e2e_acceptance_real
+3. pass | 5.74s | tests/test_gap.py::test_detect_gaps_real_grok
+4. pass | 1.94s | tests/test_llm.py::test_grok_pong_integration
+5. pass | 67.3s | tests/test_pipeline.py::test_run_pipeline_real_grok
+6. pass | 6.59s | tests/test_questions.py::test_generate_questions_real_grok
+7. pass | 7.28s | tests/test_retrieve.py::test_retrieve_for_gap_real_twinkle_smoke
+8. pass | 4.58s | tests/test_twinkle.py::test_search_real_twinkle_hub
