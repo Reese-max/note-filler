@@ -5,13 +5,14 @@
 
 ## 集合判定
 
-- 全量 collection：`116`
-- 預設 selected：`108`
+- 全量 collection：`117`
+- 預設 selected：`109`
 - `deselected`：`8`
 - `integration` 集合：`8`
 - allowlist 與實際 `deselected` 完全相等：`True`
 - collection 原始輸出：[`collection.txt`](collection.txt)
 - 預設測試原始輸出：[`test-report.txt`](test-report.txt)
+- deselection 詳情原始輸出：[`deselected-details.txt`](deselected-details.txt)
 
 ## 逐項證據鏈
 
@@ -25,7 +26,7 @@
   - `tests/test_domain.py:51` — `@pytest.mark.skipif`：grok proxy 不可達時 runtime skip
 - 替代測試證據：
   - `tests/test_domain.py::test_detect_domain_law` — `tests/test_domain.py:19` — `assert detect_domain`：FakeLLM 回 law 並驗證 detect_domain 的 law 回傳契約 — **PASSED**
-    - 測試輸出：`tests/test_domain.py::test_detect_domain_law PASSED                      [ 18%]`
+    - 測試輸出：`tests/test_domain.py::test_detect_domain_law PASSED                      [ 19%]`
 - 未覆蓋邊界：真 grok 對法律文字的實際回應正確性
 - 結論：替代測試已保護確定性程式契約；剩餘邊界屬真實模型／外部服務，故可接受未執行。
 
@@ -47,7 +48,7 @@
   - `tests/test_pipeline.py::test_run_pipeline_invariant` — `tests/test_pipeline.py:85` — `if not seg.sources`：pipeline C6：無來源補充必為 pending_evidence，雙來源補充為 verified — **PASSED**
     - 測試輸出：`tests/test_pipeline.py::test_run_pipeline_invariant PASSED               [ 61%]`
   - `tests/test_pipeline.py::test_run_pipeline_malformed_gap_output_falls_back_to_pending` — `tests/test_pipeline.py:145` — `assert supplements[0].text.startswith`：畸形 gap 輸出保守降級為待補證且不掛來源 — **PASSED**
-    - 測試輸出：`tests/test_pipeline.py::test_run_pipeline_malformed_gap_output_falls_back_to_pending PASSED [ 62%]`
+    - 測試輸出：`tests/test_pipeline.py::test_run_pipeline_malformed_gap_output_falls_back_to_pending PASSED [ 63%]`
   - `tests/test_pipeline.py::test_run_pipeline_law_domain_runs_citation_check` — `tests/test_pipeline.py:122` — `assert len(calls)`：law 領域每個補充段都觸發法規引用查核 — **PASSED**
     - 測試輸出：`tests/test_pipeline.py::test_run_pipeline_law_domain_runs_citation_check PASSED [ 62%]`
   - `tests/test_correction.py::test_retrieved_five_but_only_two_cited` — `tests/test_correction.py:82` — `assert [s.id for s in sup.sources]`：只掛實際引用來源，不把未引用的 retrieved source 帶入正文 — **PASSED**
@@ -65,7 +66,7 @@
   - `tests/test_gap.py:72` — `@pytest.mark.skipif`：grok proxy 不可達時 runtime skip
 - 替代測試證據：
   - `tests/test_gap.py::test_detect_gaps_keeps_only_partial_and_missing` — `tests/test_gap.py:26` — `assert [g.status for g in gaps]`：FakeLLM 驗證 covered 過濾，只保留 partial/missing 並建立 Gap — **PASSED**
-    - 測試輸出：`tests/test_gap.py::test_detect_gaps_keeps_only_partial_and_missing PASSED [ 29%]`
+    - 測試輸出：`tests/test_gap.py::test_detect_gaps_keeps_only_partial_and_missing PASSED [ 30%]`
 - 未覆蓋邊界：真 grok 對法律文本的缺口判斷品質
 - 結論：替代測試已保護確定性程式契約；剩餘邊界屬真實模型／外部服務，故可接受未執行。
 
@@ -95,7 +96,7 @@
   - `tests/test_pipeline.py::test_run_pipeline_invariant` — `tests/test_pipeline.py:85` — `if not seg.sources`：FakeLLM/FakeTwinkle 驗證 pipeline 的 C6 與 verified 路徑 — **PASSED**
     - 測試輸出：`tests/test_pipeline.py::test_run_pipeline_invariant PASSED               [ 61%]`
   - `tests/test_pipeline.py::test_run_pipeline_malformed_gap_output_falls_back_to_pending` — `tests/test_pipeline.py:145` — `assert supplements[0].text.startswith`：畸形模型輸出會保守降級為 pending_evidence — **PASSED**
-    - 測試輸出：`tests/test_pipeline.py::test_run_pipeline_malformed_gap_output_falls_back_to_pending PASSED [ 62%]`
+    - 測試輸出：`tests/test_pipeline.py::test_run_pipeline_malformed_gap_output_falls_back_to_pending PASSED [ 63%]`
   - `tests/test_pipeline.py::test_run_pipeline_law_domain_runs_citation_check` — `tests/test_pipeline.py:122` — `assert len(calls)`：law pipeline 會逐段執行 citation check — **PASSED**
     - 測試輸出：`tests/test_pipeline.py::test_run_pipeline_law_domain_runs_citation_check PASSED [ 62%]`
   - `tests/test_correction.py::test_retrieved_five_but_only_two_cited` — `tests/test_correction.py:82` — `assert [s.id for s in sup.sources]`：組裝層只保留 writer 實際引用的來源 — **PASSED**
@@ -113,9 +114,9 @@
   - `tests/test_questions.py:63` — `@pytest.mark.skipif`：grok proxy 不可達時 runtime skip
 - 替代測試證據：
   - `tests/test_questions.py::test_generate_questions_splits_multiline_string` — `tests/test_questions.py:25` — `assert result ==`：FakeLLM 驗證多行回應切成乾淨問題清單 — **PASSED**
-    - 測試輸出：`tests/test_questions.py::test_generate_questions_splits_multiline_string PASSED [ 63%]`
+    - 測試輸出：`tests/test_questions.py::test_generate_questions_splits_multiline_string PASSED [ 64%]`
   - `tests/test_questions.py::test_generate_questions_strips_and_drops_blank_lines` — `tests/test_questions.py:38` — `assert result ==`：FakeLLM 驗證 strip 與空行移除契約 — **PASSED**
-    - 測試輸出：`tests/test_questions.py::test_generate_questions_strips_and_drops_blank_lines PASSED [ 64%]`
+    - 測試輸出：`tests/test_questions.py::test_generate_questions_strips_and_drops_blank_lines PASSED [ 65%]`
 - 未覆蓋邊界：真 Grok 對法律文本的問題生成品質
 - 結論：替代測試已保護確定性程式契約；剩餘邊界屬真實模型／外部服務，故可接受未執行。
 
@@ -140,7 +141,7 @@
   - `tests/test_twinkle.py::test_search_reuses_mcp_session` — `tests/test_twinkle.py:101` — `assert requests ==`：mock MCP 驗證 initialize、initialized、tools/call 共用 session — **PASSED**
     - 測試輸出：`tests/test_twinkle.py::test_search_reuses_mcp_session PASSED             [ 75%]`
   - `tests/test_twinkle.py::test_search_transport_failure_returns_empty` — `tests/test_twinkle.py:114` — `assert TwinkleClient(token="fake-token").search`：mock timeout 驗證 transport failure 安全降級為空結果 — **PASSED**
-    - 測試輸出：`tests/test_twinkle.py::test_search_transport_failure_returns_empty PASSED [ 75%]`
+    - 測試輸出：`tests/test_twinkle.py::test_search_transport_failure_returns_empty PASSED [ 76%]`
 - 未覆蓋邊界：真實 Twinkle Hub 服務 I/O 與真 Grok 關鍵字抽取品質
 - 結論：替代測試已保護確定性程式契約；剩餘邊界屬真實模型／外部服務，故可接受未執行。
 
@@ -159,6 +160,6 @@
   - `tests/test_twinkle.py::test_search_reuses_mcp_session` — `tests/test_twinkle.py:101` — `assert requests ==`：mock MCP 驗證 session header 在三次 RPC 間傳遞 — **PASSED**
     - 測試輸出：`tests/test_twinkle.py::test_search_reuses_mcp_session PASSED             [ 75%]`
   - `tests/test_twinkle.py::test_search_transport_failure_returns_empty` — `tests/test_twinkle.py:114` — `assert TwinkleClient(token="fake-token").search`：mock timeout 驗證網路失敗安全降級 — **PASSED**
-    - 測試輸出：`tests/test_twinkle.py::test_search_transport_failure_returns_empty PASSED [ 75%]`
+    - 測試輸出：`tests/test_twinkle.py::test_search_transport_failure_returns_empty PASSED [ 76%]`
 - 未覆蓋邊界：真實 Twinkle Hub 服務可用性、服務端 session 相容性與網路逾時
 - 結論：替代測試已保護確定性程式契約；剩餘邊界屬真實模型／外部服務，故可接受未執行。

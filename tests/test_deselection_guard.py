@@ -17,7 +17,7 @@ _REPO_ROOT = Path(__file__).resolve().parent.parent
 _AUDIT = json.loads(
     (_REPO_ROOT / "tests" / "deselected_allowlist.json").read_text(encoding="utf-8")
 )
-_EXPECTED_COUNTS = (116, 108, 8)
+_EXPECTED_COUNTS = (117, 109, 8)
 _EXPECTED_DESELECTED_COUNT = _EXPECTED_COUNTS[2]
 ALLOWED_INTEGRATION_TESTS = sorted(item["test_id"] for item in _AUDIT)
 MAPPED_NON_INTEGRATION_TESTS = sorted(
@@ -145,6 +145,38 @@ def test_integration_allowlist_is_stable() -> None:
         f"  Newly deselected (add to allowlist): {added}\n"
         f"  No longer deselected (remove from allowlist): {removed}"
     )
+
+
+def test_deselected_details_lists_node_ids_and_reasons() -> None:
+    """The opt-in report must expose every deselected node and its filter."""
+    command = [
+        _PYTHON,
+        "-X",
+        "utf8",
+        "-m",
+        "pytest",
+        "--collect-only",
+        "-q",
+        "--deselected-details",
+    ]
+    result = subprocess.run(
+        command,
+        cwd=str(_REPO_ROOT),
+        capture_output=True,
+        text=True,
+        timeout=120,
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+    detail_lines = {
+        line.strip()
+        for line in result.stdout.splitlines()
+        if line.startswith("tests/") and " | reason: " in line
+    }
+    expected = {
+        f"{test_id} | reason: deselected by -m 'not integration'"
+        for test_id in ALLOWED_INTEGRATION_TESTS
+    }
+    assert detail_lines == expected
 
 
 def test_substitute_mapping_is_complete_and_collectable() -> None:

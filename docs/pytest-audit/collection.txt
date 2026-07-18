@@ -20,6 +20,7 @@ tests/test_correction.py::test_two_distinct_d_verified
 tests/test_correction.py::test_anchor_picks_keyword_overlap
 tests/test_correction.py::test_anchor_none_when_no_overlap
 tests/test_deselection_guard.py::test_integration_allowlist_is_stable
+tests/test_deselection_guard.py::test_deselected_details_lists_node_ids_and_reasons
 tests/test_deselection_guard.py::test_substitute_mapping_is_complete_and_collectable
 tests/test_domain.py::test_detect_domain_law
 tests/test_domain.py::test_detect_domain_admin
@@ -119,7 +120,7 @@ tests/test_write.py::test_used_source_ids_from_markers
 tests/test_write.py::test_pending_evidence_when_insufficient
 tests/test_write.py::test_out_of_range_marker_removed_and_not_used
 
-116 tests collected in 0.13s
+117 tests collected in 0.20s
 ===== DEFAULT =====
 COMMAND: D:\Users\Administrator\Desktop\筆記補齊\.venv\Scripts\python.exe -X utf8 -m pytest --collect-only -q
 EXIT_CODE: 0
@@ -142,6 +143,7 @@ tests/test_correction.py::test_two_distinct_d_verified
 tests/test_correction.py::test_anchor_picks_keyword_overlap
 tests/test_correction.py::test_anchor_none_when_no_overlap
 tests/test_deselection_guard.py::test_integration_allowlist_is_stable
+tests/test_deselection_guard.py::test_deselected_details_lists_node_ids_and_reasons
 tests/test_deselection_guard.py::test_substitute_mapping_is_complete_and_collectable
 tests/test_domain.py::test_detect_domain_law
 tests/test_domain.py::test_detect_domain_admin
@@ -233,7 +235,7 @@ tests/test_write.py::test_used_source_ids_from_markers
 tests/test_write.py::test_pending_evidence_when_insufficient
 tests/test_write.py::test_out_of_range_marker_removed_and_not_used
 
-108/116 tests collected (8 deselected) in 0.16s
+109/117 tests collected (8 deselected) in 0.18s
 ===== INTEGRATION =====
 COMMAND: D:\Users\Administrator\Desktop\筆記補齊\.venv\Scripts\python.exe -X utf8 -m pytest --collect-only -q -o addopts= --strict-markers -m integration
 EXIT_CODE: 0
@@ -247,4 +249,4 @@ tests/test_questions.py::test_generate_questions_real_grok
 tests/test_retrieve.py::test_retrieve_for_gap_real_twinkle_smoke
 tests/test_twinkle.py::test_search_real_twinkle_hub
 
-8/116 tests collected (108 deselected) in 0.18s
+8/117 tests collected (109 deselected) in 0.17s

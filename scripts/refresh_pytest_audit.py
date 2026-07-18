@@ -46,6 +46,16 @@ def node_ids(output: str) -> list[str]:
     ]
 
 
+def deselection_details(output: str) -> list[dict[str, str]]:
+    marker = " | reason: "
+    details = []
+    for line in output.splitlines():
+        if line.startswith("tests/") and marker in line:
+            test_id, reason = line.split(marker, 1)
+            details.append({"test_id": test_id, "reason": reason})
+    return details
+
+
 def command_block(label: str, command: list[str], output: str) -> str:
     return (
         f"===== {label} =====\n"
@@ -83,6 +93,7 @@ def evidence_report(
         f"- allowlist 與實際 `deselected` 完全相等：`{sorted(allowlist_ids) == sorted(deselected_ids)}`",
         "- collection 原始輸出：[`collection.txt`](collection.txt)",
         "- 預設測試原始輸出：[`test-report.txt`](test-report.txt)",
+        "- deselection 詳情原始輸出：[`deselected-details.txt`](deselected-details.txt)",
         "",
         "## 逐項證據鏈",
         "",
@@ -165,6 +176,16 @@ def main() -> None:
     assert selected | set(deselected_ids) == set(all_ids)
     assert integration_ids == deselected_ids
 
+    details_command, details_output = run_pytest(
+        "--collect-only", "-q", "--deselected-details"
+    )
+    details = deselection_details(details_output)
+    assert sorted(detail["test_id"] for detail in details) == sorted(deselected_ids)
+    assert all(
+        detail["reason"] == "deselected by -m 'not integration'"
+        for detail in details
+    )
+
     allowlist = json.loads(
         (ROOT / "tests" / "deselected_allowlist.json").read_text(encoding="utf-8")
     )
@@ -174,7 +195,7 @@ def main() -> None:
     assert "@pytest.mark.integration:" in marker_output
 
     report_command, report_output = run_pytest(
-        "-vv", "--no-header", "--tb=short"
+        "-vv", "--no-header", "--tb=short", "--deselected-details"
     )
     report_lines = report_output.splitlines()
     outcomes = {}
@@ -219,6 +240,10 @@ def main() -> None:
         command_block("DEFAULT TEST RUN", report_command, report_output),
         encoding="utf-8",
     )
+    (OUTPUT_DIR / "deselected-details.txt").write_text(
+        command_block("DESELECTED DETAILS", details_command, details_output),
+        encoding="utf-8",
+    )
 
     summary = {
         "generated_at": datetime.now().astimezone().isoformat(timespec="seconds"),
@@ -235,6 +260,7 @@ def main() -> None:
         "collected": all_ids,
         "selected": selected_ids,
         "deselected": deselected_ids,
+        "deselection_details": details,
         "outcomes": [
             {"test_id": test_id, "result": outcomes[test_id]}
             for test_id in selected_ids
@@ -243,6 +269,7 @@ def main() -> None:
             "docs/pytest-audit/collection.txt",
             "docs/pytest-audit/markers.txt",
             "docs/pytest-audit/test-report.txt",
+            "docs/pytest-audit/deselected-details.txt",
             "docs/pytest-audit/deselected-evidence.md",
         ],
     }
