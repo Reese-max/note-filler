@@ -68,7 +68,7 @@
   {
     "test_id": "tests/test_retrieve.py::test_retrieve_for_gap_real_twinkle_smoke",
     "marker": "integration",
-    "exclusion_reason": "需要 GOV_AI_ENABLE_TWINKLE_MCP=1 + TWINKLE_HUB_TOKEN + law_index.db + Grok",
+    "exclusion_reason": "需要 TWINKLE_HUB_TOKEN + law_index.db + Grok",
     "covered_function": "note_filler.retrieve.retrieve_for_gap — 真實 Twinkle Hub MCP + LawLookup + Grok keyword + 排序不變式",
     "substitute_tests": [
       "tests/test_retrieve.py::test_retrieve_for_gap_law_domain_puts_level_A_before_B",

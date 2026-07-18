@@ -104,8 +104,8 @@ def test_retrieve_for_gap_other_domain_uses_web_not_twinkle(monkeypatch):
 @pytest.mark.skipif(not _grok_reachable(), reason="grok proxy(127.0.0.1:8318)未上線,條件式略過")
 def test_retrieve_for_gap_real_twinkle_smoke():
     token = os.environ.get("TWINKLE_HUB_TOKEN")
-    if os.environ.get("GOV_AI_ENABLE_TWINKLE_MCP") != "1" or not token:
-        pytest.skip("需 GOV_AI_ENABLE_TWINKLE_MCP=1 且設 TWINKLE_HUB_TOKEN")
+    if not token:
+        pytest.skip("需設定 TWINKLE_HUB_TOKEN")
 
     from note_filler.knowledge.law_lookup import LawLookup
     from note_filler.llm import GrokClient
