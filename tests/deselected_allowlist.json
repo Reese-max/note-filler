@@ -18,6 +18,7 @@
       "tests/test_e2e_acceptance.py::test_e2e_structural_invariants",
       "tests/test_e2e_acceptance.py::test_e2e_offline_supplement_quality_boundary",
       "tests/test_pipeline.py::test_run_pipeline_invariant",
+      "tests/test_pipeline.py::test_run_pipeline_malformed_gap_output_falls_back_to_pending",
       "tests/test_pipeline.py::test_run_pipeline_law_domain_runs_citation_check",
       "tests/test_correction.py::test_retrieved_five_but_only_two_cited"
     ],
@@ -50,6 +51,7 @@
     "covered_function": "note_filler.pipeline.run_pipeline — 完整 pipeline 在真 Grok 輸出下不炸 + C6 不變式",
     "substitute_tests": [
       "tests/test_pipeline.py::test_run_pipeline_invariant",
+      "tests/test_pipeline.py::test_run_pipeline_malformed_gap_output_falls_back_to_pending",
       "tests/test_pipeline.py::test_run_pipeline_law_domain_runs_citation_check",
       "tests/test_correction.py::test_retrieved_five_but_only_two_cited"
     ],
@@ -74,7 +76,9 @@
     "substitute_tests": [
       "tests/test_retrieve.py::test_retrieve_for_gap_law_domain_puts_level_A_before_B",
       "tests/test_law_search.py::test_search_law_sources_returns_level_A_law_articles",
-      "tests/test_twinkle.py::test_search_parses_source_with_full_content"
+      "tests/test_twinkle.py::test_search_parses_source_with_full_content",
+      "tests/test_twinkle.py::test_search_reuses_mcp_session",
+      "tests/test_twinkle.py::test_search_transport_failure_returns_empty"
     ],
     "coverage_gap": "真實 Twinkle Hub 服務 I/O 與真 Grok 關鍵字抽取品質"
   },
@@ -84,7 +88,9 @@
     "exclusion_reason": "需要 TWINKLE_HUB_TOKEN 環境變數",
     "covered_function": "note_filler.retrieve.twinkle.TwinkleClient.search — 真實 Twinkle Hub MCP 搜尋",
     "substitute_tests": [
-      "tests/test_twinkle.py::test_search_parses_source_with_full_content"
+      "tests/test_twinkle.py::test_search_parses_source_with_full_content",
+      "tests/test_twinkle.py::test_search_reuses_mcp_session",
+      "tests/test_twinkle.py::test_search_transport_failure_returns_empty"
     ],
     "coverage_gap": "真實 Twinkle Hub 服務可用性、服務端 session 相容性與網路逾時"
   }

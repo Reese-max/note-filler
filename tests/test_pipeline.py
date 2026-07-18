@@ -123,6 +123,31 @@ def test_run_pipeline_law_domain_runs_citation_check(note_path, monkeypatch):
     assert calls, "law 領域至少應跑一次法規引用檢查"
 
 
+def test_run_pipeline_malformed_gap_output_falls_back_to_pending(note_path):
+    llm = FakeLLM([
+        "law",
+        "正當程序的要件為何?",
+        "這不是 JSON",
+        '{"keyword": "不存在", "law_name": null}',
+        "【待補證】模型回應無法解析,尚待補充。",
+    ])
+    twinkle = FakeTwinkle([[]])
+
+    doc = run_pipeline(note_path, llm, twinkle, FakeLaw())
+
+    originals = [s.text for s in doc.segments if s.type == "original"]
+    supplements = [s for s in doc.segments if s.type == "supplement"]
+    assert originals == [
+        "行政程序法要求行政行為應遵守正當程序。",
+        "本筆記僅記錄部分重點,尚未展開。",
+    ]
+    assert len(supplements) == 1
+    assert supplements[0].text.startswith("【待補證】")
+    assert supplements[0].confidence == "pending_evidence"
+    assert supplements[0].sources == []
+    assert twinkle.queries == ["正當程序的要件為何?"]
+
+
 @pytest.mark.integration
 @pytest.mark.skipif(not _grok_reachable(), reason="grok proxy(127.0.0.1:8318)未上線,條件式略過")
 def test_run_pipeline_real_grok(note_path):

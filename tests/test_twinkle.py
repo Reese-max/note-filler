@@ -85,6 +85,35 @@ def test_search_returns_empty_without_token(monkeypatch):
     assert TwinkleClient(token="").search("酒駕") == []
 
 
+def test_search_reuses_mcp_session(monkeypatch):
+    requests = []
+    fake_urlopen = _make_fake_urlopen([_BILL])
+
+    def recording_urlopen(request, timeout=None):
+        body = json.loads(request.data.decode("utf-8"))
+        headers = {key.lower(): value for key, value in request.header_items()}
+        requests.append((body["method"], headers.get("mcp-session-id")))
+        return fake_urlopen(request, timeout)
+
+    monkeypatch.setattr(twinkle.urllib.request, "urlopen", recording_urlopen)
+
+    assert TwinkleClient(token="fake-token").search("酒駕")
+    assert requests == [
+        ("initialize", None),
+        ("notifications/initialized", "sess-1"),
+        ("tools/call", "sess-1"),
+    ]
+
+
+def test_search_transport_failure_returns_empty(monkeypatch):
+    def fail_urlopen(request, timeout=None):
+        raise TimeoutError("twinkle timeout")
+
+    monkeypatch.setattr(twinkle.urllib.request, "urlopen", fail_urlopen)
+
+    assert TwinkleClient(token="fake-token").search("酒駕") == []
+
+
 def test_default_timeout_is_60():
     # 讀取逾時屬網路問題,預設放寬到 60 秒
     assert TwinkleClient(token="x").timeout == 60
