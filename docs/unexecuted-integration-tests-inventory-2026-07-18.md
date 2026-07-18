@@ -8,6 +8,8 @@
 
 本次盤點只執行離線回歸、collection 與 guard，沒有因為盤點而啟動或執行真實外部整合測試。每項的「未覆蓋」主要是：真 Grok 的語意品質、真 Twinkle Hub 的網路 I/O，以及外部資料／服務漂移；原稿不可變、`pending_evidence`、只掛實際引用來源、法條離線查核等品質閘已有離線替代測試保護。
 
+本次逐一核對 8 個 integration 測試函式本體及其呼叫的 repo 實作：7 項直接使用 Grok（#1、#2、#3、#4、#5、#6、#7），3 項使用 Twinkle Hub（#2、#7、#8），2 項使用 `data/law_index.db`（#2、#7）。各項下方分別記錄測試情境、實際依賴、離線替代與失敗所代表的風險；不把替代測試的通過誤稱為真服務已驗證。
+
 ## 關聯需求基線
 
 需求規格 `docs/specs/2026-07-15-note-filler-design.md` 定義了：
@@ -31,7 +33,7 @@
 ### 2. `tests/test_e2e_acceptance.py::test_e2e_acceptance_real`
 
 - **覆蓋功能**：`tests/test_e2e_acceptance.py:208–262` 以真 Grok、真 Twinkle Hub、真 `LawLookup` 執行 parse→domain→questions→gaps→retrieve→write→assemble，並檢查原稿 immutable、無來源閘、法條引用、Markdown 格式、Level A 路由、非原始記錄倒出及註腳品質。這是對應規格第 12 節 MVP 驗收的複合 smoke test。
-- **風險**：同時承擔真模型輸出品質、Twinkle Hub MCP I/O、法規索引內容及網路服務漂移；模型是否產生 `[^n]` 註腳及 Level A 來源具有不穩定性，測試還以最多 5 次重跑尋找 Level A 路徑（第 238–243 行），因此結果可能受外部服務與資料狀態影響。離線替代不能證明真模型的 gap／寫作品質或真 Twinkle 服務相容性。
+- **風險**：同時承擔真模型輸出品質、Twinkle Hub MCP I/O、法規索引內容及網路服務漂移；模型是否產生 `[^n]` 註腳及 Level A 來源具有不穩定性，測試在初次執行後最多再重跑 5 次尋找 Level A 路徑（第 238–243 行，總計最多 6 次），因此結果可能受外部服務與資料狀態影響。離線替代不能證明真模型的 gap／寫作品質或真 Twinkle 服務相容性。
 - **跳過條件**：預設因第 208 行 integration marker 被排除；選擇執行時，`data/law_index.db` 不存在（第 211–212 行）、Grok proxy 不可達，或 `TWINKLE_HUB_TOKEN` 未設定（第 42、215–217 行）任一條件成立即 `pytest.skip`。
 - **依賴環境**：`tests/fixtures/real_note.txt`、可讀的 `data/law_index.db`、Grok proxy `127.0.0.1:8318`／`grok-4.3`、有效 `TWINKLE_HUB_TOKEN`、可連線的 Twinkle Hub `https://api.twinkleai.tw/mcp/`（`src/note_filler/retrieve/twinkle.py:20、202`）。現行測試碼沒有檢查 `GOV_AI_ENABLE_TWINKLE_MCP`。
 - **離線替代**：`test_e2e_structural_invariants`、`test_e2e_offline_supplement_quality_boundary`、3 個 pipeline 回歸，以及 `test_retrieved_five_but_only_two_cited`；本次 6 個映射均通過。
@@ -89,7 +91,7 @@
 | 依賴 | 需要的測試 | 現行碼中的用途 |
 |---|---|---|
 | Python 3.11+ venv、pytest 與專案依賴 | 全部 8 項 | 收集／執行測試與載入 repo 程式碼；本次固定使用指定 venv |
-| Grok proxy `127.0.0.1:8318`、`grok-4.3` | #1、#3、#4、#5、#6、#2、#7 | 真 LLM 呼叫；測試以 TCP 探測作 runtime skip，實際 client endpoint 為 `/v1/chat/completions` |
+| Grok proxy `127.0.0.1:8318`、`grok-4.3` | #1、#2、#3、#4、#5、#6、#7 | 真 LLM 呼叫；測試以 TCP 探測作 runtime skip，實際 client endpoint 為 `/v1/chat/completions` |
 | `TWINKLE_HUB_TOKEN` | #2、#7、#8 | 真 Twinkle Hub 驗證與搜尋授權 |
 | Twinkle Hub 網路 `https://api.twinkleai.tw/mcp/` | #2、#7、#8 | 真 MCP initialize／tools/call／來源轉換 |
 | `data/law_index.db` | #2、#7 | LawLookup Level A 查詢與法條引用查核 |
@@ -120,12 +122,12 @@ D:/Users/Administrator/Desktop/筆記補齊/.venv/Scripts/python.exe -X utf8 -m 
 8/117 tests collected (109 deselected)
 
 D:/Users/Administrator/Desktop/筆記補齊/.venv/Scripts/python.exe -X utf8 -m pytest -q
-109 passed, 8 deselected in 4.36s
+109 passed, 8 deselected in 4.42s
 
 D:/Users/Administrator/Desktop/筆記補齊/.venv/Scripts/python.exe -X utf8 -m pytest tests/test_deselection_guard.py -q -s
 DESELECTED_AUDIT=8 MAPPED_TESTS=16
 TARGETED_VERIFICATION=PASS
-3 passed in 4.27s
+3 passed in 3.82s
 ```
 
 ## 最終判讀
