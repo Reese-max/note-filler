@@ -55,6 +55,80 @@ def command_block(label: str, command: list[str], output: str) -> str:
     )
 
 
+def evidence_report(
+    *,
+    all_ids: list[str],
+    selected_ids: list[str],
+    deselected_ids: list[str],
+    integration_ids: list[str],
+    allowlist: list[dict],
+    outcomes: dict[str, str],
+    result_lines: dict[str, str],
+) -> str:
+    """Render the committed code-to-output chain for every deselected test."""
+    allowlist_ids = [item["test_id"] for item in allowlist]
+    assert sorted(allowlist_ids) == sorted(deselected_ids)
+    lines = [
+        "# Deselected 可接受未執行追溯證據",
+        "",
+        "> 本檔由 `scripts/refresh_pytest_audit.py` 產生；每一項都同時列出",
+        "> 排除程式碼 anchor、替代測試程式碼 anchor，以及該替代測試在本次測試輸出中的結果。",
+        "",
+        "## 集合判定",
+        "",
+        f"- 全量 collection：`{len(all_ids)}`",
+        f"- 預設 selected：`{len(selected_ids)}`",
+        f"- `deselected`：`{len(deselected_ids)}`",
+        f"- `integration` 集合：`{len(integration_ids)}`",
+        f"- allowlist 與實際 `deselected` 完全相等：`{sorted(allowlist_ids) == sorted(deselected_ids)}`",
+        "- collection 原始輸出：[`collection.txt`](collection.txt)",
+        "- 預設測試原始輸出：[`test-report.txt`](test-report.txt)",
+        "",
+        "## 逐項證據鏈",
+        "",
+    ]
+    for index, item in enumerate(allowlist, start=1):
+        lines.extend(
+            [
+                f"### {index}. `{item['test_id']}`",
+                "",
+                f"- 判定：`{item['decision']}`",
+                f"- 排除理由：{item['exclusion_reason']}",
+                "- 排除程式碼證據：",
+            ]
+        )
+        for evidence in item["exclusion_evidence"]:
+            lines.append(
+                f"  - `{evidence['source']}` — `{evidence['anchor']}`："
+                f"{evidence['claim']}"
+            )
+        lines.extend(
+            [
+                "- 替代測試證據：",
+            ]
+        )
+        for evidence in item["substitute_evidence"]:
+            test_id = evidence["test_id"]
+            assert outcomes.get(test_id) == "PASSED", (
+                f"Substitute did not pass: {test_id} ({outcomes.get(test_id)})"
+            )
+            lines.extend(
+                [
+                    f"  - `{test_id}` — `{evidence['source']}` — "
+                    f"`{evidence['anchor']}`：{evidence['claim']} — **PASSED**",
+                    f"    - 測試輸出：`{result_lines[test_id]}`",
+                ]
+            )
+        lines.extend(
+            [
+                f"- 未覆蓋邊界：{item['coverage_gap']}",
+                "- 結論：替代測試已保護確定性程式契約；剩餘邊界屬真實模型／外部服務，故可接受未執行。",
+                "",
+            ]
+        )
+    return "\n".join(lines)
+
+
 def main() -> None:
     config = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))[
         "tool"
@@ -104,6 +178,7 @@ def main() -> None:
     )
     report_lines = report_output.splitlines()
     outcomes = {}
+    result_lines = {}
     for test_id in selected_ids:
         line = next(
             (line for line in report_lines if line.startswith(f"{test_id} ")),
@@ -112,8 +187,23 @@ def main() -> None:
         outcome = next((result for result in RESULTS if f" {result}" in line), "")
         assert outcome, f"Missing test result for {test_id}"
         outcomes[test_id] = outcome
+        result_lines[test_id] = line.strip()
 
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    evidence_path = OUTPUT_DIR / "deselected-evidence.md"
+    evidence_path.write_text(
+        evidence_report(
+            all_ids=all_ids,
+            selected_ids=selected_ids,
+            deselected_ids=deselected_ids,
+            integration_ids=integration_ids,
+            allowlist=allowlist,
+            outcomes=outcomes,
+            result_lines=result_lines,
+        ),
+        encoding="utf-8",
+    )
+
     (OUTPUT_DIR / "collection.txt").write_text(
         "\n".join(
             command_block(label, command, output).rstrip()
@@ -153,6 +243,7 @@ def main() -> None:
             "docs/pytest-audit/collection.txt",
             "docs/pytest-audit/markers.txt",
             "docs/pytest-audit/test-report.txt",
+            "docs/pytest-audit/deselected-evidence.md",
         ],
     }
     (OUTPUT_DIR / "summary.json").write_text(

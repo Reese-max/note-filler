@@ -24,6 +24,49 @@ MAPPED_NON_INTEGRATION_TESTS = sorted(
     {test_id for item in _AUDIT for test_id in item["substitute_tests"]}
 )
 _TEST_ID_RE = re.compile(r"^tests/[^:]+::\S+$")
+_SOURCE_REF_RE = re.compile(r"^(?P<path>[^:]+):(?P<line>[1-9]\d*)$")
+
+
+def _assert_source_evidence(source_ref: str, anchor: str) -> None:
+    """Ensure an evidence reference still points at the claimed source line."""
+    match = _SOURCE_REF_RE.fullmatch(source_ref)
+    assert match, f"Invalid source reference: {source_ref!r}"
+    relative = Path(match["path"])
+    assert not relative.is_absolute() and ".." not in relative.parts, (
+        f"Source reference must stay inside repo: {source_ref!r}"
+    )
+    source = _REPO_ROOT / relative
+    assert source.is_file(), f"Missing source evidence file: {source_ref!r}"
+    lines = source.read_text(encoding="utf-8").splitlines()
+    line_number = int(match["line"])
+    assert line_number <= len(lines), f"Source evidence line out of range: {source_ref!r}"
+    assert anchor in lines[line_number - 1], (
+        f"Source evidence anchor missing at {source_ref}: {anchor!r}"
+    )
+
+
+def _assert_allowlist_evidence() -> None:
+    """Validate the code-to-substitute evidence chain for every deselected test."""
+    for item in _AUDIT:
+        assert item["marker"] == "integration"
+        assert item["decision"] == "acceptable_unexecuted"
+        assert item["exclusion_reason"].strip()
+
+        exclusion_evidence = item["exclusion_evidence"]
+        assert exclusion_evidence, f"Missing exclusion evidence: {item['test_id']}"
+        for evidence in exclusion_evidence:
+            assert evidence["claim"].strip()
+            _assert_source_evidence(evidence["source"], evidence["anchor"])
+
+        substitute_ids = item["substitute_tests"]
+        evidence_ids = [evidence["test_id"] for evidence in item["substitute_evidence"]]
+        assert evidence_ids == substitute_ids, (
+            f"Substitute evidence order mismatch for {item['test_id']}: "
+            f"expected {substitute_ids}, got {evidence_ids}"
+        )
+        for evidence in item["substitute_evidence"]:
+            assert evidence["claim"].strip()
+            _assert_source_evidence(evidence["source"], evidence["anchor"])
 
 
 def _collect_tests(*pytest_args: str) -> list[str]:
@@ -106,6 +149,7 @@ def test_integration_allowlist_is_stable() -> None:
 
 def test_substitute_mapping_is_complete_and_collectable() -> None:
     """Every excluded test maps to default tests that pass in one targeted run."""
+    _assert_allowlist_evidence()
     unmapped = [item["test_id"] for item in _AUDIT if not item["substitute_tests"]]
     assert not unmapped, f"Integration tests without substitute coverage: {unmapped}"
     assert _collect_tests(*MAPPED_NON_INTEGRATION_TESTS) == MAPPED_NON_INTEGRATION_TESTS
@@ -119,9 +163,18 @@ def test_substitute_mapping_is_complete_and_collectable() -> None:
         assert item["exclusion_reason"].strip()
         assert item["coverage_gap"].strip()
         assert set(covered) <= passed
-        evidence = ", ".join(f"PASS {test_id}" for test_id in covered)
         print(f"[{index}/{_EXPECTED_DESELECTED_COUNT}] 未納入: {item['test_id']}")
         print(f"  原因: {item['exclusion_reason']}")
-        print(f"  覆蓋證據: {evidence}")
+        for exclusion in item["exclusion_evidence"]:
+            print(
+                f"  程式碼排除證據: {exclusion['source']} "
+                f"({exclusion['anchor']}) — {exclusion['claim']}"
+            )
+        for substitute in item["substitute_evidence"]:
+            print(
+                f"  覆蓋證據: PASS {substitute['test_id']} "
+                f"({substitute['source']}, {substitute['anchor']}) — "
+                f"{substitute['claim']}"
+            )
         print(f"  整合邊界: {item['coverage_gap']}")
     print("TARGETED_VERIFICATION=PASS")

@@ -3,6 +3,7 @@
 > 本表追蹤 8 個因 `-m 'not integration'` 而 deselected 的整合測試，逐一標明
 > 被驗證的功能、測試情境、具體斷言、替代測試 node ID 與覆蓋缺口。
 > 機器可讀版：`tests/deselected_allowlist.json`。
+> 最新程式碼 anchor 與替代測試輸出：`docs/pytest-audit/deselected-evidence.md`。
 
 ---
 
