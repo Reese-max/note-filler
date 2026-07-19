@@ -151,7 +151,7 @@
     "test_id": "tests/test_retrieve.py::test_retrieve_for_gap_real_twinkle_smoke",
     "marker": "integration",
     "decision": "acceptable_unexecuted",
-    "exclusion_reason": "預設 -m 'not integration' 在 collection 階段排除；真跑需要 data/law_index.db、grok proxy、GOV_AI_ENABLE_TWINKLE_MCP=1 與 TWINKLE_HUB_TOKEN",
+    "exclusion_reason": "預設 -m 'not integration' 在 collection 階段排除；真跑需要 data/law_index.db、grok proxy 與 TWINKLE_HUB_TOKEN",
     "exclusion_evidence": [
       {"source": "pyproject.toml:32", "anchor": "-m 'not integration'", "claim": "預設集合排除 integration marker"},
       {"source": "tests/test_retrieve.py:102", "anchor": "@pytest.mark.integration", "claim": "目標測試標記為 integration"},
