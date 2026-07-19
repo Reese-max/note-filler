@@ -1,0 +1,391 @@
+{
+  "schema": "note-filler.requirements-test-coverage/v1",
+  "date": "2026-07-19",
+  "scope": "8 個預設 pytest 會排除的 integration 測試，以及排除後仍必須保留的可決定性契約覆蓋",
+  "equivalence_rule": "等價覆蓋只計入不需外部服務、可重現且驗證相同產品契約或安全閘的預設測試；真模型語意、TCP、真 Twinkle 服務可用性列為殘餘外部風險，不宣稱已覆蓋。",
+  "default_gate": {
+    "marker": "integration",
+    "selector": "-m 'not integration'",
+    "command": "D:/Users/Administrator/Desktop/筆記補齊/.venv/Scripts/python.exe -X utf8 -m pytest -m 'not integration' -q --color=no",
+    "collection_command": "D:/Users/Administrator/Desktop/筆記補齊/.venv/Scripts/python.exe -X utf8 -m pytest --collect-only -q --deselected-details --color=no",
+    "expected_collection": {
+      "collected": 145,
+      "default_selected": 137,
+      "deselected": 8
+    }
+  },
+  "verification": {
+    "commands": [
+      "D:/Users/Administrator/Desktop/筆記補齊/.venv/Scripts/python.exe -X utf8 -m pytest tests/test_requirements_test_coverage.py -vv --tb=short --color=no",
+      "D:/Users/Administrator/Desktop/筆記補齊/.venv/Scripts/python.exe -X utf8 -m pytest tests/test_exclusion_correctness_blind_spot.py tests/test_excluded_failing_controls.py -q --tb=short --color=no",
+      "D:/Users/Administrator/Desktop/筆記補齊/.venv/Scripts/python.exe -X utf8 -m pytest -m 'not integration' -q --tb=short --color=no",
+      "D:/Users/Administrator/Desktop/筆記補齊/.venv/Scripts/python.exe -X utf8 -m pytest tests/test_deselection_guard.py -q --tb=short --color=no"
+    ],
+    "observed": {
+      "coverage_matrix": "2 passed",
+      "blind_spot_and_controls": "12 passed",
+      "default_suite": "137 passed, 8 deselected",
+      "deselection_guard": "4 passed"
+    }
+  },
+  "paths": [
+    {
+      "id": "P1",
+      "name": "輸入→領域→問題→缺口",
+      "security_focus": "避免模型輸出把法規筆記錯誤路由或靜默漏掉待補缺口"
+    },
+    {
+      "id": "P2",
+      "name": "缺口→檢索→寫作→驗證→組裝",
+      "security_focus": "避免無來源、未引用來源或未通過法條查核的內容進入正文"
+    },
+    {
+      "id": "P3",
+      "name": "LLM HTTP 信任邊界",
+      "security_focus": "固定 endpoint、model、Authorization、請求體與回應解析"
+    },
+    {
+      "id": "P4",
+      "name": "Twinkle MCP→Source",
+      "security_focus": "保留來源全文與 metadata，外部失敗時安全降級"
+    },
+    {
+      "id": "P5",
+      "name": "端到端品質閘",
+      "security_focus": "原稿不可變、證據狀態與法條離線查核不可繞過"
+    }
+  ],
+  "tests": [
+    {
+      "id": "T1",
+      "node_id": "tests/test_domain.py::test_detect_domain_real_grok_returns_law",
+      "function_area": "領域路由",
+      "covered_function": "note_filler.domain.detect_domain",
+      "critical_path": "P1",
+      "security_risk": "中",
+      "risk_basis": "錯誤領域可能繞過法規檢索與法條查核，將後續問題導向錯誤來源類型。",
+      "requirements": ["REQ-DOMAIN-CANONICAL"],
+      "equivalent_default_tests": [
+        "tests/test_domain.py::test_detect_domain_law",
+        "tests/test_excluded_failing_controls.py::test_control_01_domain_legal_label_contract"
+      ],
+      "verification_gap_tests": [],
+      "residual_external_risk": "真 Grok 對邊界法律文字的語意分類品質。",
+      "coverage_status": "等價覆蓋"
+    },
+    {
+      "id": "T2",
+      "node_id": "tests/test_e2e_acceptance.py::test_e2e_acceptance_real",
+      "function_area": "端到端品質閘",
+      "covered_function": "parse→domain→questions→gaps→retrieve→write→verify→assemble→law citation",
+      "critical_path": "P5",
+      "security_risk": "高",
+      "risk_basis": "此路徑若失守，原稿竄改、無來源內容、未實際引用來源或不存在法條都可能進入輸出。",
+      "requirements": [
+        "REQ-ORIGINAL-IMMUTABLE",
+        "REQ-NO-SOURCE-PENDING",
+        "REQ-USED-SOURCES-ONLY",
+        "REQ-LAW-CITATION-OFFLINE"
+      ],
+      "equivalent_default_tests": [
+        "tests/test_e2e_acceptance.py::test_e2e_structural_invariants",
+        "tests/test_e2e_acceptance.py::test_e2e_offline_supplement_quality_boundary",
+        "tests/test_e2e_acceptance.py::test_e2e_minimal_quality_gates_offline_regression",
+        "tests/test_pipeline.py::test_run_pipeline_invariant",
+        "tests/test_pipeline.py::test_run_pipeline_malformed_gap_output_falls_back_to_pending",
+        "tests/test_pipeline.py::test_run_pipeline_law_domain_runs_citation_check",
+        "tests/test_correction.py::test_retrieved_five_but_only_two_cited",
+        "tests/test_excluded_failing_controls.py::test_control_02_e2e_offline_quality_gates"
+      ],
+      "verification_gap_tests": [],
+      "residual_external_risk": "真模型與真檢索組合下的 gap 語意、補充寫作品質與 Level A 路由穩定性。",
+      "coverage_status": "等價覆蓋"
+    },
+    {
+      "id": "T3",
+      "node_id": "tests/test_gap.py::test_detect_gaps_real_grok",
+      "function_area": "缺口偵測",
+      "covered_function": "note_filler.gap.detect_gaps",
+      "critical_path": "P1",
+      "security_risk": "高",
+      "risk_basis": "把未涵蓋問題誤判為 covered 會靜默漏補，降低後續證據閘的觸發機會。",
+      "requirements": ["REQ-GAP-FILTER"],
+      "equivalent_default_tests": [
+        "tests/test_gap.py::test_detect_gaps_keeps_only_partial_and_missing",
+        "tests/test_excluded_failing_controls.py::test_control_03_gap_uncovered_question_must_surface"
+      ],
+      "verification_gap_tests": [],
+      "residual_external_risk": "真 Grok 對法律文本 partial／missing 的語意判斷品質。",
+      "coverage_status": "等價覆蓋"
+    },
+    {
+      "id": "T4",
+      "node_id": "tests/test_llm.py::test_grok_pong_integration",
+      "function_area": "LLM 傳輸介面",
+      "covered_function": "note_filler.llm.GrokClient.complete",
+      "critical_path": "P3",
+      "security_risk": "高",
+      "risk_basis": "Authorization、endpoint、model 或回應解析錯誤會造成憑證邊界與模型信任邊界失效。",
+      "requirements": ["REQ-GROK-BOUNDARY"],
+      "equivalent_default_tests": [
+        "tests/test_llm.py::test_grokclient_builds_request_body",
+        "tests/test_excluded_failing_controls.py::test_control_04_grok_client_parse_and_endpoint_contract"
+      ],
+      "verification_gap_tests": [],
+      "residual_external_risk": "127.0.0.1:8318 的真實 TCP 連通性與 proxy 端部署狀態。",
+      "coverage_status": "等價覆蓋"
+    },
+    {
+      "id": "T5",
+      "node_id": "tests/test_pipeline.py::test_run_pipeline_real_grok",
+      "function_area": "pipeline 編排",
+      "covered_function": "note_filler.pipeline.run_pipeline",
+      "critical_path": "P2",
+      "security_risk": "高",
+      "risk_basis": "編排錯誤可能跳過 C6 pending、實際引用過濾或法條查核，讓不受信內容升格。",
+      "requirements": [
+        "REQ-NO-SOURCE-PENDING",
+        "REQ-USED-SOURCES-ONLY",
+        "REQ-LAW-CITATION-OFFLINE",
+        "REQ-PIPELINE-ORCHESTRATION"
+      ],
+      "equivalent_default_tests": [
+        "tests/test_pipeline.py::test_run_pipeline_invariant",
+        "tests/test_pipeline.py::test_run_pipeline_malformed_gap_output_falls_back_to_pending",
+        "tests/test_pipeline.py::test_run_pipeline_law_domain_runs_citation_check",
+        "tests/test_correction.py::test_retrieved_five_but_only_two_cited",
+        "tests/test_excluded_failing_controls.py::test_control_05_pipeline_c6_pending_when_no_sources"
+      ],
+      "verification_gap_tests": [],
+      "residual_external_risk": "真 Grok 輸出在完整 pipeline 中的穩定性與語意品質。",
+      "coverage_status": "等價覆蓋"
+    },
+    {
+      "id": "T6",
+      "node_id": "tests/test_questions.py::test_generate_questions_real_grok",
+      "function_area": "問題生成",
+      "covered_function": "note_filler.questions.generate_questions",
+      "critical_path": "P1",
+      "security_risk": "中",
+      "risk_basis": "畸形或含結構符號的模型回應若未清理，會污染缺口清單並改變後續檢索範圍。",
+      "requirements": ["REQ-QUESTION-CLEAN"],
+      "equivalent_default_tests": [
+        "tests/test_questions.py::test_generate_questions_splits_multiline_string",
+        "tests/test_questions.py::test_generate_questions_strips_and_drops_blank_lines",
+        "tests/test_excluded_failing_controls.py::test_control_06_questions_clean_list_contract"
+      ],
+      "verification_gap_tests": [],
+      "residual_external_risk": "真 Grok 對法律文本的問題涵蓋品質。",
+      "coverage_status": "等價覆蓋"
+    },
+    {
+      "id": "T7",
+      "node_id": "tests/test_retrieve.py::test_retrieve_for_gap_real_twinkle_smoke",
+      "function_area": "法規／議案檢索",
+      "covered_function": "note_filler.retrieve.retrieve_for_gap",
+      "critical_path": "P2",
+      "security_risk": "高",
+      "risk_basis": "法規補充若沒有 Level A、排序錯誤或檢索全滅仍假綠，可能以弱來源支撐法律結論。",
+      "requirements": ["REQ-LEVEL-A-PRIORITY", "REQ-LEVEL-A-NONEMPTY"],
+      "equivalent_default_tests": [
+        "tests/test_retrieve.py::test_retrieve_for_gap_law_domain_puts_level_A_before_B",
+        "tests/test_law_search.py::test_search_law_sources_returns_level_A_law_articles",
+        "tests/test_twinkle.py::test_search_parses_source_with_full_content",
+        "tests/test_twinkle.py::test_search_reuses_mcp_session",
+        "tests/test_twinkle.py::test_search_transport_failure_returns_empty",
+        "tests/test_exclusion_correctness_blind_spot.py::test_law_domain_retrieve_must_yield_level_a_not_vacuous_empty",
+        "tests/test_excluded_failing_controls.py::test_control_07b_retrieve_law_level_a_not_vacuous"
+      ],
+      "verification_gap_tests": [
+        "tests/test_exclusion_correctness_blind_spot.py::test_deselected_retrieve_smoke_vacuous_pass_on_empty_is_blind_spot",
+        "tests/test_excluded_failing_controls.py::test_control_07_retrieve_smoke_vacuous_empty_is_blind_spot"
+      ],
+      "residual_external_risk": "真 Twinkle I/O 與真 Grok keyword 抽取；integration smoke 原本對空清單 vacuous pass 的驗證設計缺口由 verification_gap_tests 明示。",
+      "coverage_status": "等價覆蓋；另有已鎖定的驗證設計缺口"
+    },
+    {
+      "id": "T8",
+      "node_id": "tests/test_twinkle.py::test_search_real_twinkle_hub",
+      "function_area": "Twinkle MCP 來源解析",
+      "covered_function": "note_filler.retrieve.twinkle.TwinkleClient.search",
+      "critical_path": "P4",
+      "security_risk": "高",
+      "risk_basis": "外部來源 metadata、全文或日期錯誤會破壞來源可追溯性；網路失敗必須安全降級而不能偽造來源。",
+      "requirements": ["REQ-TWINKLE-SOURCE", "REQ-TWINKLE-SAFE-DEGRADE"],
+      "equivalent_default_tests": [
+        "tests/test_twinkle.py::test_search_parses_source_with_full_content",
+        "tests/test_twinkle.py::test_search_reuses_mcp_session",
+        "tests/test_twinkle.py::test_search_transport_failure_returns_empty",
+        "tests/test_excluded_failing_controls.py::test_control_08_twinkle_parsed_source_contract"
+      ],
+      "verification_gap_tests": [],
+      "residual_external_risk": "真 Twinkle Hub 可用性、服務端 session 相容性與真實網路逾時。",
+      "coverage_status": "等價覆蓋"
+    }
+  ],
+  "requirements": [
+    {
+      "id": "REQ-DOMAIN-CANONICAL",
+      "statement": "領域判定只接受規定的 canonical label；不合法模型輸出安全 fallback 至 other。",
+      "risk": "中",
+      "critical_path": "P1",
+      "covered_by": [
+        "tests/test_domain.py::test_detect_domain_law",
+        "tests/test_excluded_failing_controls.py::test_control_01_domain_legal_label_contract"
+      ],
+      "status": "covered_by_default"
+    },
+    {
+      "id": "REQ-ORIGINAL-IMMUTABLE",
+      "statement": "原稿段落逐字保留，不因補充流程而改寫或刪除。",
+      "risk": "高",
+      "critical_path": "P5",
+      "covered_by": [
+        "tests/test_correction.py::test_original_segments_verbatim_and_immutable",
+        "tests/test_e2e_acceptance.py::test_e2e_structural_invariants",
+        "tests/test_excluded_failing_controls.py::test_control_02_e2e_offline_quality_gates"
+      ],
+      "status": "covered_by_default"
+    },
+    {
+      "id": "REQ-NO-SOURCE-PENDING",
+      "statement": "無來源或模型回應為待補證時，補充段必須是 pending_evidence，不得假裝 verified。",
+      "risk": "高",
+      "critical_path": "P2",
+      "covered_by": [
+        "tests/test_pipeline.py::test_run_pipeline_invariant",
+        "tests/test_pipeline.py::test_run_pipeline_malformed_gap_output_falls_back_to_pending",
+        "tests/test_correction.py::test_pending_evidence_written_empty_sources",
+        "tests/test_excluded_failing_controls.py::test_control_05_pipeline_c6_pending_when_no_sources"
+      ],
+      "status": "covered_by_default"
+    },
+    {
+      "id": "REQ-USED-SOURCES-ONLY",
+      "statement": "正文只掛 writer 實際引用的來源，不把未引用的 retrieved source 帶入輸出。",
+      "risk": "高",
+      "critical_path": "P2",
+      "covered_by": [
+        "tests/test_write.py::test_used_source_ids_from_markers",
+        "tests/test_correction.py::test_retrieved_five_but_only_two_cited",
+        "tests/test_e2e_acceptance.py::test_e2e_minimal_quality_gates_offline_regression"
+      ],
+      "status": "covered_by_default"
+    },
+    {
+      "id": "REQ-LAW-CITATION-OFFLINE",
+      "statement": "law 領域補充必通過離線法條查核；找不到引用法條時保守降級。",
+      "risk": "高",
+      "critical_path": "P2",
+      "covered_by": [
+        "tests/test_pipeline.py::test_run_pipeline_law_domain_runs_citation_check",
+        "tests/test_e2e_acceptance.py::test_e2e_structural_invariants",
+        "tests/test_e2e_acceptance.py::test_e2e_minimal_quality_gates_offline_regression",
+        "tests/test_law_check.py::test_real_law_article_exists"
+      ],
+      "status": "covered_by_default"
+    },
+    {
+      "id": "REQ-GAP-FILTER",
+      "statement": "缺口偵測只保留 partial／missing，且明顯未涵蓋問題必須出現在缺口清單。",
+      "risk": "高",
+      "critical_path": "P1",
+      "covered_by": [
+        "tests/test_gap.py::test_detect_gaps_keeps_only_partial_and_missing",
+        "tests/test_excluded_failing_controls.py::test_control_03_gap_uncovered_question_must_surface"
+      ],
+      "status": "covered_by_default"
+    },
+    {
+      "id": "REQ-GROK-BOUNDARY",
+      "statement": "GrokClient 固定 POST endpoint、model、Bearer Authorization、請求體、timeout，並解析 choices[0].message.content。",
+      "risk": "高",
+      "critical_path": "P3",
+      "covered_by": [
+        "tests/test_llm.py::test_grokclient_builds_request_body",
+        "tests/test_excluded_failing_controls.py::test_control_04_grok_client_parse_and_endpoint_contract"
+      ],
+      "status": "covered_by_default"
+    },
+    {
+      "id": "REQ-PIPELINE-ORCHESTRATION",
+      "statement": "pipeline 依序執行 retrieve、write、只驗證實際引用來源，並在 law domain 執行 citation check。",
+      "risk": "高",
+      "critical_path": "P2",
+      "covered_by": [
+        "tests/test_pipeline.py::test_run_pipeline_invariant",
+        "tests/test_pipeline.py::test_run_pipeline_malformed_gap_output_falls_back_to_pending",
+        "tests/test_pipeline.py::test_run_pipeline_law_domain_runs_citation_check",
+        "tests/test_correction.py::test_retrieved_five_but_only_two_cited"
+      ],
+      "status": "covered_by_default"
+    },
+    {
+      "id": "REQ-QUESTION-CLEAN",
+      "statement": "問題回應切成非空、去除前後空白與空行的字串清單，不殘留 JSON 結構符號。",
+      "risk": "中",
+      "critical_path": "P1",
+      "covered_by": [
+        "tests/test_questions.py::test_generate_questions_splits_multiline_string",
+        "tests/test_questions.py::test_generate_questions_strips_and_drops_blank_lines",
+        "tests/test_excluded_failing_controls.py::test_control_06_questions_clean_list_contract"
+      ],
+      "status": "covered_by_default"
+    },
+    {
+      "id": "REQ-LEVEL-A-PRIORITY",
+      "statement": "law／admin／exam 檢索時，Level A 法條優先於 Level B，且同級依 distance 排序。",
+      "risk": "高",
+      "critical_path": "P2",
+      "covered_by": [
+        "tests/test_retrieve.py::test_retrieve_for_gap_law_domain_puts_level_A_before_B",
+        "tests/test_law_search.py::test_search_law_sources_returns_level_A_law_articles"
+      ],
+      "status": "covered_by_default"
+    },
+    {
+      "id": "REQ-LEVEL-A-NONEMPTY",
+      "statement": "law + LawLookup 的離線路徑不得以空結果假綠，至少要產出 Level A 來源。",
+      "risk": "高",
+      "critical_path": "P2",
+      "covered_by": [
+        "tests/test_exclusion_correctness_blind_spot.py::test_law_domain_retrieve_must_yield_level_a_not_vacuous_empty",
+        "tests/test_excluded_failing_controls.py::test_control_07b_retrieve_law_level_a_not_vacuous"
+      ],
+      "status": "covered_by_default"
+    },
+    {
+      "id": "REQ-TWINKLE-SOURCE",
+      "statement": "Twinkle MCP 回應正確映射為 Source，保留全文、title、url、level、日期與 distance，並重用 session。",
+      "risk": "高",
+      "critical_path": "P4",
+      "covered_by": [
+        "tests/test_twinkle.py::test_search_parses_source_with_full_content",
+        "tests/test_twinkle.py::test_search_reuses_mcp_session",
+        "tests/test_excluded_failing_controls.py::test_control_08_twinkle_parsed_source_contract"
+      ],
+      "status": "covered_by_default"
+    },
+    {
+      "id": "REQ-TWINKLE-SAFE-DEGRADE",
+      "statement": "缺 token 或 transport failure 時回傳空結果，不偽造來源、不拋出未處理外部錯誤。",
+      "risk": "高",
+      "critical_path": "P4",
+      "covered_by": [
+        "tests/test_twinkle.py::test_search_returns_empty_without_token",
+        "tests/test_twinkle.py::test_search_transport_failure_returns_empty"
+      ],
+      "status": "covered_by_default"
+    }
+  ],
+  "summary": {
+    "excluded_tests": 8,
+    "classified_tests": 8,
+    "requirements": 13,
+    "requirements_covered_by_default": 13,
+    "requirements_missing": 0,
+    "equivalent_coverage_complete": true,
+    "verification_design_gaps_explicitly_tracked": 1
+  },
+  "missing_requirements": []
+}
