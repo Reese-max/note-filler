@@ -22,6 +22,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 NODE_ID_RE = re.compile(r"^tests/[^:]+::\S+$")
 DETAILS_RE = re.compile(r"^(tests/[^:|]+::\S+)\s+\| reason: (.*)$")
+AUTHORIZED_REASON = "deselected by -m 'not integration'"
 
 
 def _run_collect(*args: str) -> str:
@@ -199,12 +200,19 @@ def main() -> None:
     for node_id, detail in details.items():
         if node_id not in all_ids:
             failures.append(f"deselected-details 含不存在的 node id：{node_id}")
+        if node_id not in deselected_ids:
+            failures.append(f"deselected-details 含非 deselected node id：{node_id}")
         if not detail.strip():
             failures.append(f"deselected node 無原因摘要：{node_id}")
 
     for node_id in deselected_ids:
-        if node_id not in details:
+        detail = details.get(node_id)
+        if detail is None:
             failures.append(f"缺少 deselected reason：{node_id}")
+        elif detail != AUTHORIZED_REASON:
+            failures.append(
+                f"deselected reason 未授權：{node_id} (reason={detail!r})"
+            )
 
     # 同步輸出，作為 CI log，非僅彙總數字
     print(f"[gate] total={len(all_ids)} selected={len(selected_ids)} deselected={len(deselected_ids)}")
