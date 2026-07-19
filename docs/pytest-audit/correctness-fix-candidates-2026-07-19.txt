@@ -1,0 +1,23 @@
+============================= test session starts =============================
+platform win32 -- Python 3.11.9, pytest-9.1.1, pluggy-1.6.0 -- D:\Users\Administrator\Desktop\蝑?鋆?\.venv\Scripts\python.exe
+cachedir: .pytest_cache
+rootdir: D:\Users\Administrator\Desktop\autodev-ng\data\note-filler\worktrees\63adf14f
+configfile: pyproject.toml
+plugins: anyio-4.14.2
+collecting ... collected 13 items
+
+tests/test_exclusion_correctness_blind_spot.py::test_deselected_retrieve_smoke_vacuous_pass_on_empty_is_blind_spot PASSED [  7%]
+tests/test_exclusion_correctness_blind_spot.py::test_law_domain_retrieve_must_yield_level_a_not_vacuous_empty PASSED [ 15%]
+tests/test_excluded_failing_controls.py::test_control_map_covers_all_eight_excluded PASSED [ 23%]
+tests/test_excluded_failing_controls.py::test_control_01_domain_legal_label_contract PASSED [ 30%]
+tests/test_excluded_failing_controls.py::test_control_02_e2e_offline_quality_gates PASSED [ 38%]
+tests/test_excluded_failing_controls.py::test_control_03_gap_uncovered_question_must_surface PASSED [ 46%]
+tests/test_excluded_failing_controls.py::test_control_04_grok_client_parse_and_endpoint_contract PASSED [ 53%]
+tests/test_excluded_failing_controls.py::test_control_05_pipeline_c6_pending_when_no_sources PASSED [ 61%]
+tests/test_excluded_failing_controls.py::test_control_06_questions_clean_list_contract PASSED [ 69%]
+tests/test_excluded_failing_controls.py::test_control_07_retrieve_smoke_vacuous_empty_is_blind_spot PASSED [ 76%]
+tests/test_excluded_failing_controls.py::test_control_07b_retrieve_law_level_a_not_vacuous PASSED [ 84%]
+tests/test_excluded_failing_controls.py::test_control_08_twinkle_parsed_source_contract PASSED [ 92%]
+tests/test_e2e_acceptance.py::test_e2e_minimal_quality_gates_offline_regression PASSED [100%]
+
+============================= 13 passed in 0.21s ==============================
