@@ -1,0 +1,257 @@
+{
+  "schema": "note-filler.design-acceptance-claims/v1",
+  "title": "設計驗收主張索引（機器可查）",
+  "rule": "每一項主張必須同時具備：規格檔、實作錨點檔、測試錨點；禁止只靠敘述或彙總數字驗收。",
+  "quality_gates_immutable": [
+    "原稿逐字不可變",
+    "無來源/【待補證】→pending_evidence",
+    "只掛實際引用來源",
+    "法條引用須通過離線查核"
+  ],
+  "claims": [
+    {
+      "id": "D-01",
+      "title": "介面規格（路由／表單／匯出契約）",
+      "spec_file": "docs/specs/note-filler-interface-contract.md",
+      "manifest_ref": "docs/specs/evidence/note-filler-design-evidence-manifest.md",
+      "gap_map_ref": "docs/design-evidence-gap-map-2026-07-19.md",
+      "impl_anchors": [
+        {
+          "path": "app/server.py",
+          "must_contain": [
+            "@app.get(\"/\", response_class=HTMLResponse)",
+            "@app.post(\"/run\", response_class=HTMLResponse)",
+            "@app.get(\"/export\")",
+            "last_doc",
+            "run_pipeline"
+          ]
+        },
+        {
+          "path": "app/templates/index.html",
+          "must_contain": [
+            "action=\"/run\"",
+            "enctype=\"multipart/form-data\"",
+            "name=\"file\"",
+            "accept=\".txt,.docx\""
+          ]
+        },
+        {
+          "path": "app/templates/result.html",
+          "must_contain": [
+            "class=\"cols\"",
+            "id=\"original\"",
+            "id=\"correction\"",
+            "class=\"supplement\"",
+            "class=\"pending\"",
+            "details class=\"sources\"",
+            "href=\"/export\""
+          ]
+        }
+      ],
+      "test_anchors": [
+        "tests/test_server.py::test_index_returns_upload_form",
+        "tests/test_server.py::test_run_renders_two_columns",
+        "tests/test_server.py::test_export_returns_markdown_attachment",
+        "tests/test_server.py::test_export_without_run_returns_404"
+      ],
+      "status_note": "文件型契約已落地；路由與模板可交叉驗證"
+    },
+    {
+      "id": "D-02",
+      "title": "UI／資料狀態轉移（last_doc／confidence）",
+      "spec_file": "docs/specs/note-filler-state-machine.md",
+      "manifest_ref": "docs/specs/evidence/note-filler-design-evidence-manifest.md",
+      "gap_map_ref": "docs/design-evidence-gap-map-2026-07-19.md",
+      "impl_anchors": [
+        {
+          "path": "app/server.py",
+          "must_contain": [
+            "app.state.last_doc",
+            "if doc is None",
+            "status_code=404"
+          ]
+        },
+        {
+          "path": "src/note_filler/correction.py",
+          "must_contain": [
+            "pending_evidence",
+            "verified",
+            "assemble_correction"
+          ]
+        },
+        {
+          "path": "src/note_filler/pipeline.py",
+          "must_contain": [
+            "_verify_law_citations"
+          ]
+        }
+      ],
+      "test_anchors": [
+        "tests/test_server.py::test_export_without_run_returns_404",
+        "tests/test_server.py::test_export_returns_markdown_attachment",
+        "tests/test_pipeline.py::test_run_pipeline_invariant",
+        "tests/test_e2e_acceptance.py::test_e2e_minimal_quality_gates_offline_regression"
+      ],
+      "status_note": "S0/S2/S3/S4 與 confidence 轉移有程式與測試錨點；S1 失敗邊仍屬框架預設"
+    },
+    {
+      "id": "D-03",
+      "title": "使用者與系統流程（上傳→pipeline→結果→匯出）",
+      "spec_file": "docs/specs/note-filler-user-flow.md",
+      "manifest_ref": "docs/specs/evidence/note-filler-design-evidence-manifest.md",
+      "gap_map_ref": "docs/design-evidence-gap-map-2026-07-19.md",
+      "impl_anchors": [
+        {
+          "path": "app/server.py",
+          "must_contain": [
+            "def run(",
+            "_build_clients",
+            "run_pipeline",
+            "result.html",
+            "def export("
+          ]
+        },
+        {
+          "path": "src/note_filler/pipeline.py",
+          "must_contain": [
+            "def run_pipeline",
+            "detect_domain",
+            "detect_gaps",
+            "assemble_correction"
+          ]
+        },
+        {
+          "path": "src/note_filler/export.py",
+          "must_contain": [
+            "def to_markdown"
+          ]
+        }
+      ],
+      "test_anchors": [
+        "tests/test_server.py::test_run_renders_two_columns",
+        "tests/test_server.py::test_export_returns_markdown_attachment",
+        "tests/test_pipeline.py::test_run_pipeline_invariant",
+        "tests/test_e2e_acceptance.py::test_e2e_structural_invariants"
+      ],
+      "status_note": "正常流程與 export 分流可核實；上傳失敗頁／pipeline 例外頁仍未定義"
+    },
+    {
+      "id": "D-04",
+      "title": "元件責任清單（入口／管線／匯出）",
+      "spec_file": "docs/specs/note-filler-component-responsibilities.md",
+      "manifest_ref": "docs/specs/evidence/note-filler-design-evidence-manifest.md",
+      "gap_map_ref": "docs/design-evidence-gap-map-2026-07-19.md",
+      "impl_anchors": [
+        {
+          "path": "app/server.py",
+          "must_contain": [
+            "FastAPI",
+            "last_doc"
+          ]
+        },
+        {
+          "path": "src/note_filler/parse.py",
+          "must_contain": [
+            "def parse_note"
+          ]
+        },
+        {
+          "path": "src/note_filler/domain.py",
+          "must_contain": [
+            "def detect_domain"
+          ]
+        },
+        {
+          "path": "src/note_filler/gap.py",
+          "must_contain": [
+            "def detect_gaps"
+          ]
+        },
+        {
+          "path": "src/note_filler/write.py",
+          "must_contain": [
+            "def write_supplement"
+          ]
+        },
+        {
+          "path": "src/note_filler/correction.py",
+          "must_contain": [
+            "def assemble_correction"
+          ]
+        },
+        {
+          "path": "src/note_filler/export.py",
+          "must_contain": [
+            "def to_markdown"
+          ]
+        },
+        {
+          "path": "src/note_filler/knowledge/law_citation_check.py",
+          "must_contain": [
+            "def check_law_citations"
+          ]
+        }
+      ],
+      "test_anchors": [
+        "tests/test_server.py::test_index_returns_upload_form",
+        "tests/test_pipeline.py::test_run_pipeline_invariant",
+        "tests/test_e2e_acceptance.py::test_e2e_minimal_quality_gates_offline_regression",
+        "tests/test_correction.py::test_retrieved_five_but_only_two_cited"
+      ],
+      "status_note": "責任邊界以既有模組為準，不新增 controller/service 抽象"
+    },
+    {
+      "id": "D-05",
+      "title": "可重現畫面佐證與索引",
+      "spec_file": "docs/specs/evidence/ui/index.md",
+      "manifest_ref": "docs/specs/evidence/note-filler-design-evidence-manifest.md",
+      "gap_map_ref": "docs/design-evidence-gap-map-2026-07-19.md",
+      "impl_anchors": [
+        {
+          "path": "docs/specs/evidence/ui/index.md",
+          "must_contain": [
+            "test_index_returns_upload_form",
+            "test_run_renders_two_columns",
+            "test_export_returns_markdown_attachment",
+            "app/templates/index.html",
+            "app/templates/result.html"
+          ]
+        },
+        {
+          "path": "docs/specs/evidence/note-filler-design-evidence-manifest.md",
+          "must_contain": [
+            "E-01",
+            "note-filler-interface-contract.md",
+            "note-filler-state-machine.md",
+            "note-filler-user-flow.md",
+            "note-filler-component-responsibilities.md",
+            "evidence/ui/index.md"
+          ]
+        },
+        {
+          "path": "app/templates/index.html",
+          "must_contain": [
+            "筆記補齊",
+            "form"
+          ]
+        },
+        {
+          "path": "app/templates/result.html",
+          "must_contain": [
+            "訂正結果",
+            "原稿(不可變)"
+          ]
+        }
+      ],
+      "test_anchors": [
+        "tests/test_server.py::test_index_returns_upload_form",
+        "tests/test_server.py::test_run_renders_two_columns",
+        "tests/test_server.py::test_export_returns_markdown_attachment",
+        "tests/test_server.py::test_export_without_run_returns_404"
+      ],
+      "screenshot_status": "absent",
+      "screenshot_note": "目前無 .png/.jpg 畫面截圖；以文件索引 + 模板 + 測試錨點作為最小可核實證據",
+      "status_note": "文件型 UI 索引已落地；實體截圖列為已知缺口（非本輪必須）"
+    }
+  ]
+}
