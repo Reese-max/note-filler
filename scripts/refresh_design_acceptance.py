@@ -20,6 +20,15 @@ OUT_MD = ROOT / "docs" / "specs" / "evidence" / "design-acceptance-package.md"
 OUT_REPORT = ROOT / "docs" / "design-acceptance-2026-07-19.md"
 PY = [sys.executable, "-X", "utf8"]
 SCHEMA = "note-filler.design-acceptance/v1"
+_CONFIRMATION_FIELDS = (
+    "event_id",
+    "confirmed_by",
+    "confirmed_at",
+    "method",
+    "resolution_status",
+    "todo",
+)
+_CONFIRMATION_STATUSES = {"已結案", "待辦"}
 
 
 def _run(cmd: list[str], timeout: int = 180) -> subprocess.CompletedProcess[str]:
@@ -62,6 +71,33 @@ def _check_impl_anchor(anchor: dict) -> dict:
     row["missing_tokens"] = missing
     row["ok"] = not missing
     return row
+
+
+def _check_confirmation_record(record: object) -> tuple[dict, list[str]]:
+    if not isinstance(record, dict):
+        return {}, ["confirmation_record 必須是物件"]
+
+    errors: list[str] = []
+    for field in _CONFIRMATION_FIELDS:
+        value = record.get(field)
+        if not isinstance(value, str):
+            errors.append(f"缺少或非文字欄位：{field}")
+        elif field != "todo" and not value.strip():
+            errors.append(f"缺少或空白欄位：{field}")
+    status = record.get("resolution_status")
+    if status not in _CONFIRMATION_STATUSES:
+        errors.append("resolution_status 必須為已結案或待辦")
+    if status == "待辦" and not record.get("todo", "").strip():
+        errors.append("待辦確認紀錄必須提供 todo")
+    timestamp = record.get("confirmed_at")
+    if isinstance(timestamp, str) and timestamp.strip():
+        try:
+            parsed = datetime.fromisoformat(timestamp)
+            if parsed.tzinfo is None or parsed.utcoffset() is None:
+                errors.append("confirmed_at 必須含時區")
+        except ValueError:
+            errors.append("confirmed_at 必須是 ISO 8601 時間")
+    return record, errors
 
 
 def _collect_tests(node_ids: list[str]) -> tuple[list[str], list[str], str, int]:
@@ -152,6 +188,9 @@ def build_package() -> dict:
         spec_ok = (ROOT / spec_path).is_file()
         impl_results = [_check_impl_anchor(a) for a in claim["impl_anchors"]]
         test_ids = list(claim["test_anchors"])
+        confirmation_record, confirmation_errors = _check_confirmation_record(
+            claim.get("confirmation_record")
+        )
         all_test_ids.extend(test_ids)
 
         if not spec_ok:
@@ -175,6 +214,14 @@ def build_package() -> dict:
                         ),
                     }
                 )
+        if confirmation_errors:
+            failures.append(
+                {
+                    "claim_id": claim["id"],
+                    "status": "CONFIRMATION_RECORD_FAIL",
+                    "detail": "; ".join(confirmation_errors),
+                }
+            )
 
         collected, missing_tests, collect_inv, collect_rc = _collect_tests(test_ids)
         if collect_rc != 0 or missing_tests:
@@ -200,6 +247,7 @@ def build_package() -> dict:
         claim_ok = (
             spec_ok
             and all(r["ok"] for r in impl_results)
+            and not confirmation_errors
             and not missing_tests
             and all(r["status"] == "passed" and r["exit_code"] == 0 for r in individual)
         )
@@ -221,6 +269,9 @@ def build_package() -> dict:
             "test_individual_results": individual,
             "screenshot_status": claim.get("screenshot_status"),
             "screenshot_note": claim.get("screenshot_note"),
+            "confirmation_record": confirmation_record,
+            "confirmation_record_ok": not confirmation_errors,
+            "confirmation_record_errors": confirmation_errors,
             "status_note": claim.get("status_note"),
             "claim_ok": claim_ok,
         }
@@ -236,7 +287,10 @@ def build_package() -> dict:
                     f"per_claim[{claim['id']}].spec_file",
                     f"per_claim[{claim['id']}].impl_anchors",
                     f"per_claim[{claim['id']}].test_individual_results",
+                    f"per_claim[{claim['id']}].confirmation_record",
                 ],
+                "confirmation_event_id": confirmation_record.get("event_id"),
+                "confirmation_status": confirmation_record.get("resolution_status"),
                 "ok": claim_ok,
             }
         )
@@ -297,6 +351,23 @@ def render_package_md(package: dict) -> str:
             f"{len(row['impl_files'])} | {len(row['test_ids'])} | "
             f"{'YES' if row['ok'] else 'NO'} |"
         )
+    lines.extend(
+        [
+            "",
+            "## 確認紀錄",
+            "",
+            "| ID | 確認事件 | 確認人 | 確認時間 | 確認方式 | 待辦／結案狀態 | 待辦 |",
+            "|----|----------|--------|----------|----------|-----------------|------|",
+        ]
+    )
+    for claim in package["per_claim"]:
+        record = claim["confirmation_record"]
+        lines.append(
+            f"| {claim['id']} | `{record.get('event_id', '')}` | "
+            f"{record.get('confirmed_by', '')} | `{record.get('confirmed_at', '')}` | "
+            f"{record.get('method', '')} | {record.get('resolution_status', '')} | "
+            f"{record.get('todo') or '—'} |"
+        )
     lines.extend(["", "## per-claim 細節", ""])
     for claim in package["per_claim"]:
         lines.extend(
@@ -306,6 +377,7 @@ def render_package_md(package: dict) -> str:
                 f"- claim_ok: **{claim['claim_ok']}**",
                 f"- spec_file: `{claim['spec_file']}` (exists={claim['spec_exists']})",
                 f"- status_note: {claim.get('status_note') or ''}",
+                f"- confirmation_record_ok: **{claim['confirmation_record_ok']}**",
                 "",
                 "實作錨點：",
                 "",
@@ -388,6 +460,7 @@ def render_report(package: dict) -> str:
         f"schema = {package['schema']}",
         "claim_ids[5] = D-01..D-05",
         "per_claim[].{spec_file, impl_anchors[], test_individual_results[]}",
+        "per_claim[].confirmation_record{event_id, confirmed_by, confirmed_at, method, resolution_status, todo}",
         "claim_to_artifact_map[]",
         "failures[]",
         "git.head / working_tree_clean_before_refresh",
@@ -421,6 +494,26 @@ def render_report(package: dict) -> str:
     lines.extend(
         [
             "",
+            "## 4. 確認紀錄",
+            "",
+            "每一筆確認事件均保留確認人、時間、方式與待辦／結案狀態；"
+            "`claim_ok` 只表示現有證據錨點通過，不會覆寫待辦。",
+            "",
+            "| ID | 確認事件 | 確認人 | 確認時間 | 確認方式 | 待辦／結案狀態 | 待辦 |",
+            "|----|----------|--------|----------|----------|-----------------|------|",
+        ]
+    )
+    for claim in package["per_claim"]:
+        record = claim["confirmation_record"]
+        lines.append(
+            f"| {claim['id']} | `{record.get('event_id', '')}` | "
+            f"{record.get('confirmed_by', '')} | `{record.get('confirmed_at', '')}` | "
+            f"{record.get('method', '')} | {record.get('resolution_status', '')} | "
+            f"{record.get('todo') or '—'} |"
+        )
+    lines.extend(
+        [
+            "",
             "### 重現指令",
             "",
             "```powershell",
@@ -431,7 +524,7 @@ def render_report(package: dict) -> str:
             "git status --porcelain   # 提交後應為空",
             "```",
             "",
-            "## 4. 品質閘未弱化",
+            "## 5. 品質閘未弱化",
             "",
             "| 硬約束 | 狀態 |",
             "|--------|------|",
@@ -443,13 +536,13 @@ def render_report(package: dict) -> str:
         [
             "| integration 平時跳過 | 維持；本套件只跑非 integration 錨點 |",
             "",
-            "## 5. 已知限制",
+            "## 6. 已知限制",
             "",
             "- D-05 實體截圖（png/jpg）仍缺；套件以 `screenshot_status=absent` 明示，",
             "  不以截圖存在作為本輪通過條件。",
             "- 刷新完成後工作樹會含新產物，必須 `git add -A && git commit` 後再驗 `git status --porcelain` 為空。",
             "",
-            "## 6. 結論",
+            "## 7. 結論",
             "",
             f"1. 設計驗收輸出 schema=`{package['schema']}`，mode=`{package['acceptance_mode']}`。",
             "2. D-01..D-05 每一項皆對到規格檔、實作錨點與單獨測試結果。",

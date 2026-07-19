@@ -1,6 +1,6 @@
 # 設計驗收套件（Design Acceptance Package）
 
-> 產生時間：`2026-07-19T08:12:54+08:00`
+> 產生時間：`2026-07-19T15:34:02+08:00`
 >
 > schema：`note-filler.design-acceptance/v1`
 >
@@ -8,15 +8,11 @@
 
 ## Git / 落盤狀態（刷新前）
 
-- HEAD：`6a22a0de9d88772c5dc92f4a9b2c6afd609df1de`
+- HEAD：`16361a56a0b0f965bbab9ae976a65e950a955499`
 - working_tree_clean_before_refresh：`False`
-- status_porcelain_before_refresh：`M tests/test_deselection_guard.py
-?? docs/design-acceptance-2026-07-19.md
-?? docs/specs/evidence/design-acceptance-claims.json
-?? docs/specs/evidence/design-acceptance-package.json
-?? docs/specs/evidence/design-acceptance-package.md
-?? scripts/refresh_design_acceptance.py
-?? tests/test_design_acceptance.py`
+- status_porcelain_before_refresh：`M docs/specs/evidence/design-acceptance-claims.json
+ M scripts/refresh_design_acceptance.py
+ M tests/test_design_acceptance.py`
 
 ## 主張 ↔ 產物對照
 
@@ -28,6 +24,16 @@
 | D-04 | 元件責任清單（入口／管線／匯出） | `docs/specs/note-filler-component-responsibilities.md` | 8 | 4 | YES |
 | D-05 | 可重現畫面佐證與索引 | `docs/specs/evidence/ui/index.md` | 4 | 4 | YES |
 
+## 確認紀錄
+
+| ID | 確認事件 | 確認人 | 確認時間 | 確認方式 | 待辦／結案狀態 | 待辦 |
+|----|----------|--------|----------|----------|-----------------|------|
+| D-01 | `DAC-20260719-D01` | Codex 自動開發工人 | `2026-07-19T15:31:01+08:00` | 實作錨點掃描與各測試錨點離線單獨 pytest 驗證 | 已結案 | — |
+| D-02 | `DAC-20260719-D02` | Codex 自動開發工人 | `2026-07-19T15:31:01+08:00` | 實作錨點掃描與各測試錨點離線單獨 pytest 驗證 | 待辦 | 定義 S1 失敗邊（上傳／pipeline 例外）後補齊規格與測試。 |
+| D-03 | `DAC-20260719-D03` | Codex 自動開發工人 | `2026-07-19T15:31:01+08:00` | 實作錨點掃描與各測試錨點離線單獨 pytest 驗證 | 待辦 | 定義上傳失敗頁與 pipeline 例外頁後補齊流程與測試。 |
+| D-04 | `DAC-20260719-D04` | Codex 自動開發工人 | `2026-07-19T15:31:01+08:00` | 實作錨點掃描與各測試錨點離線單獨 pytest 驗證 | 已結案 | — |
+| D-05 | `DAC-20260719-D05` | Codex 自動開發工人 | `2026-07-19T15:31:01+08:00` | 文件 UI 索引、模板錨點與各測試錨點離線單獨 pytest 驗證 | 待辦 | 補入可重現 PNG/JPG 畫面截圖後，更新 UI 索引與本確認紀錄。 |
+
 ## per-claim 細節
 
 ### D-01 — 介面規格（路由／表單／匯出契約）
@@ -35,6 +41,7 @@
 - claim_ok: **True**
 - spec_file: `docs/specs/note-filler-interface-contract.md` (exists=True)
 - status_note: 文件型契約已落地；路由與模板可交叉驗證
+- confirmation_record_ok: **True**
 
 實作錨點：
 
@@ -58,6 +65,7 @@
 - claim_ok: **True**
 - spec_file: `docs/specs/note-filler-state-machine.md` (exists=True)
 - status_note: S0/S2/S3/S4 與 confidence 轉移有程式與測試錨點；S1 失敗邊仍屬框架預設
+- confirmation_record_ok: **True**
 
 實作錨點：
 
@@ -81,6 +89,7 @@
 - claim_ok: **True**
 - spec_file: `docs/specs/note-filler-user-flow.md` (exists=True)
 - status_note: 正常流程與 export 分流可核實；上傳失敗頁／pipeline 例外頁仍未定義
+- confirmation_record_ok: **True**
 
 實作錨點：
 
@@ -104,6 +113,7 @@
 - claim_ok: **True**
 - spec_file: `docs/specs/note-filler-component-responsibilities.md` (exists=True)
 - status_note: 責任邊界以既有模組為準，不新增 controller/service 抽象
+- confirmation_record_ok: **True**
 
 實作錨點：
 
@@ -132,6 +142,7 @@
 - claim_ok: **True**
 - spec_file: `docs/specs/evidence/ui/index.md` (exists=True)
 - status_note: 文件型 UI 索引已落地；實體截圖列為已知缺口（非本輪必須）
+- confirmation_record_ok: **True**
 
 實作錨點：
 

@@ -26,6 +26,7 @@
 schema = note-filler.design-acceptance/v1
 claim_ids[5] = D-01..D-05
 per_claim[].{spec_file, impl_anchors[], test_individual_results[]}
+per_claim[].confirmation_record{event_id, confirmed_by, confirmed_at, method, resolution_status, todo}
 claim_to_artifact_map[]
 failures[]
 git.head / working_tree_clean_before_refresh
@@ -36,8 +37,8 @@ acceptance_mode = per-claim-evidence
 
 ## 3. 本輪實測
 
-- generated_at: `2026-07-19T08:12:54+08:00`
-- HEAD（刷新前）: `6a22a0de9d88772c5dc92f4a9b2c6afd609df1de`
+- generated_at: `2026-07-19T15:34:02+08:00`
+- HEAD（刷新前）: `16361a56a0b0f965bbab9ae976a65e950a955499`
 - working_tree_clean_before_refresh: `False`
 - acceptance_pass: **True**
 - unique offline test anchors: 8
@@ -53,6 +54,18 @@ acceptance_mode = per-claim-evidence
 | D-04 | True | `docs/specs/note-filler-component-responsibilities.md` | True |
 | D-05 | True | `docs/specs/evidence/ui/index.md` | True |
 
+## 4. 確認紀錄
+
+每一筆確認事件均保留確認人、時間、方式與待辦／結案狀態；`claim_ok` 只表示現有證據錨點通過，不會覆寫待辦。
+
+| ID | 確認事件 | 確認人 | 確認時間 | 確認方式 | 待辦／結案狀態 | 待辦 |
+|----|----------|--------|----------|----------|-----------------|------|
+| D-01 | `DAC-20260719-D01` | Codex 自動開發工人 | `2026-07-19T15:31:01+08:00` | 實作錨點掃描與各測試錨點離線單獨 pytest 驗證 | 已結案 | — |
+| D-02 | `DAC-20260719-D02` | Codex 自動開發工人 | `2026-07-19T15:31:01+08:00` | 實作錨點掃描與各測試錨點離線單獨 pytest 驗證 | 待辦 | 定義 S1 失敗邊（上傳／pipeline 例外）後補齊規格與測試。 |
+| D-03 | `DAC-20260719-D03` | Codex 自動開發工人 | `2026-07-19T15:31:01+08:00` | 實作錨點掃描與各測試錨點離線單獨 pytest 驗證 | 待辦 | 定義上傳失敗頁與 pipeline 例外頁後補齊流程與測試。 |
+| D-04 | `DAC-20260719-D04` | Codex 自動開發工人 | `2026-07-19T15:31:01+08:00` | 實作錨點掃描與各測試錨點離線單獨 pytest 驗證 | 已結案 | — |
+| D-05 | `DAC-20260719-D05` | Codex 自動開發工人 | `2026-07-19T15:31:01+08:00` | 文件 UI 索引、模板錨點與各測試錨點離線單獨 pytest 驗證 | 待辦 | 補入可重現 PNG/JPG 畫面截圖後，更新 UI 索引與本確認紀錄。 |
+
 ### 重現指令
 
 ```powershell
@@ -63,7 +76,7 @@ $py = "D:/Users/Administrator/Desktop/筆記補齊/.venv/Scripts/python.exe"
 git status --porcelain   # 提交後應為空
 ```
 
-## 4. 品質閘未弱化
+## 5. 品質閘未弱化
 
 | 硬約束 | 狀態 |
 |--------|------|
@@ -73,26 +86,14 @@ git status --porcelain   # 提交後應為空
 | 法條引用須通過離線查核 | 未改主程式語意；由 e2e/pipeline 錨點鎖定 |
 | integration 平時跳過 | 維持；本套件只跑非 integration 錨點 |
 
-## 5. 已知限制
+## 6. 已知限制
 
 - D-05 實體截圖（png/jpg）仍缺；套件以 `screenshot_status=absent` 明示，
   不以截圖存在作為本輪通過條件。
 - 刷新完成後工作樹會含新產物，必須 `git add -A && git commit` 後再驗 `git status --porcelain` 為空。
 
-## 6. 本輪閘門實跑（提交前）
-
-| 命令 | 結果 |
-|------|------|
-| `scripts/refresh_design_acceptance.py` | `ACCEPTANCE_PASS=True` `FAILURES=0` `CLAIM_IDS=D-01..D-05` |
-| `pytest tests/test_design_acceptance.py -vv` | `4 passed` |
-| `pytest tests/test_deselection_guard.py::test_integration_allowlist_is_stable` | `1 passed`（counts 更新為 143/135/8） |
-| `pytest -m "not integration" -q` | `135 passed, 8 deselected` |
-
-> 彙總 `135 passed, 8 deselected` 僅作上下文；設計驗收以 `design-acceptance-package.json` 的 per-claim 欄位為準。
-
 ## 7. 結論
 
 1. 設計驗收輸出 schema=`note-filler.design-acceptance/v1`，mode=`per-claim-evidence`。
-2. D-01..D-05 每一項皆對到規格檔、實作錨點與單獨測試結果（見 package `claim_to_artifact_map`）。
+2. D-01..D-05 每一項皆對到規格檔、實作錨點與單獨測試結果。
 3. ACCEPTANCE_PASS=True（以 package JSON 為準）。
-4. 提交後以 `git status --porcelain` 必須為空，證明變更已落盤且工作樹乾淨。

@@ -11,6 +11,7 @@ import json
 import re
 import subprocess
 import sys
+from datetime import datetime
 from pathlib import Path
 
 _REPO = Path(__file__).resolve().parents[1]
@@ -21,6 +22,14 @@ _REPORT = _REPO / "docs" / "design-acceptance-2026-07-19.md"
 _EXPECTED_IDS = ["D-01", "D-02", "D-03", "D-04", "D-05"]
 _SCHEMA = "note-filler.design-acceptance/v1"
 _CLAIMS_SCHEMA = "note-filler.design-acceptance-claims/v1"
+_CONFIRMATION_FIELDS = {
+    "event_id",
+    "confirmed_by",
+    "confirmed_at",
+    "method",
+    "resolution_status",
+    "todo",
+}
 
 
 def _load_json(path: Path) -> dict:
@@ -38,6 +47,13 @@ def test_design_claims_index_is_complete() -> None:
         assert ( _REPO / claim["spec_file"]).is_file(), claim["spec_file"]
         assert claim["impl_anchors"], claim["id"]
         assert claim["test_anchors"], claim["id"]
+        record = claim["confirmation_record"]
+        assert set(record) == _CONFIRMATION_FIELDS, claim["id"]
+        assert all(record[field].strip() for field in _CONFIRMATION_FIELDS - {"todo"})
+        assert datetime.fromisoformat(record["confirmed_at"]).tzinfo is not None
+        assert record["resolution_status"] in {"已結案", "待辦"}
+        if record["resolution_status"] == "待辦":
+            assert record["todo"].strip(), claim["id"]
         for anchor in claim["impl_anchors"]:
             path = _REPO / anchor["path"]
             assert path.is_file(), f"{claim['id']}: missing {anchor['path']}"
@@ -85,6 +101,8 @@ def test_design_acceptance_package_is_machine_checkable() -> None:
         cid = src["id"]
         entry = by_id[cid]
         assert entry["claim_ok"] is True, cid
+        assert entry["confirmation_record_ok"] is True, cid
+        assert entry["confirmation_record"] == src["confirmation_record"]
         assert entry["spec_exists"] is True
         assert entry["spec_file"] == src["spec_file"]
         assert all(a["ok"] for a in entry["impl_anchors"]), cid
@@ -97,12 +115,17 @@ def test_design_acceptance_package_is_machine_checkable() -> None:
         assert mapped["ok"] is True
         assert mapped["spec_file"] == src["spec_file"]
         assert set(mapped["test_ids"]) == set(src["test_anchors"])
+        assert mapped["confirmation_event_id"] == src["confirmation_record"]["event_id"]
+        assert mapped["confirmation_status"] == src["confirmation_record"]["resolution_status"]
+        assert f"per_claim[{cid}].confirmation_record" in mapped["package_fields"]
 
     # Markdown companions must reference schema and each claim id
     md = _PACKAGE_MD.read_text(encoding="utf-8")
     report = _REPORT.read_text(encoding="utf-8")
     assert _SCHEMA in md
     assert "ACCEPTANCE_PASS" in md
+    assert "確認紀錄" in md
+    assert "確認紀錄" in report
     for cid in _EXPECTED_IDS:
         assert cid in md
         assert cid in report

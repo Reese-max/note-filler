@@ -1,12 +1,12 @@
 {
   "schema": "note-filler.design-acceptance/v1",
-  "generated_at": "2026-07-19T08:12:54+08:00",
+  "generated_at": "2026-07-19T15:34:02+08:00",
   "rule": "每一項主張必須同時具備：規格檔、實作錨點檔、測試錨點；禁止只靠敘述或彙總數字驗收。",
   "source_claims": "docs/specs/evidence/design-acceptance-claims.json",
   "git": {
-    "head": "6a22a0de9d88772c5dc92f4a9b2c6afd609df1de",
+    "head": "16361a56a0b0f965bbab9ae976a65e950a955499",
     "working_tree_clean_before_refresh": false,
-    "status_porcelain_before_refresh": "M tests/test_deselection_guard.py\n?? docs/design-acceptance-2026-07-19.md\n?? docs/specs/evidence/design-acceptance-claims.json\n?? docs/specs/evidence/design-acceptance-package.json\n?? docs/specs/evidence/design-acceptance-package.md\n?? scripts/refresh_design_acceptance.py\n?? tests/test_design_acceptance.py"
+    "status_porcelain_before_refresh": "M docs/specs/evidence/design-acceptance-claims.json\n M scripts/refresh_design_acceptance.py\n M tests/test_design_acceptance.py"
   },
   "quality_gates_immutable": [
     "原稿逐字不可變",
@@ -15,7 +15,7 @@
     "法條引用須通過離線查核"
   ],
   "invocations": {
-    "refresh_script": "D:\\Users\\Administrator\\Desktop\\筆記補齊\\.venv\\Scripts\\python.exe -X utf8 D:\\Users\\Administrator\\Desktop\\autodev-ng\\data\\note-filler\\worktrees\\813fdb80\\scripts\\refresh_design_acceptance.py",
+    "refresh_script": "D:\\Users\\Administrator\\Desktop\\筆記補齊\\.venv\\Scripts\\python.exe -X utf8 D:\\Users\\Administrator\\Desktop\\autodev-ng\\data\\note-filler\\worktrees\\5d3a1041\\scripts\\refresh_design_acceptance.py",
     "claims_path": "docs/specs/evidence/design-acceptance-claims.json"
   },
   "claim_ids": [
@@ -102,6 +102,16 @@
       ],
       "screenshot_status": null,
       "screenshot_note": null,
+      "confirmation_record": {
+        "event_id": "DAC-20260719-D01",
+        "confirmed_by": "Codex 自動開發工人",
+        "confirmed_at": "2026-07-19T15:31:01+08:00",
+        "method": "實作錨點掃描與各測試錨點離線單獨 pytest 驗證",
+        "resolution_status": "已結案",
+        "todo": ""
+      },
+      "confirmation_record_ok": true,
+      "confirmation_record_errors": [],
       "status_note": "文件型契約已落地；路由與模板可交叉驗證",
       "claim_ok": true
     },
@@ -181,6 +191,16 @@
       ],
       "screenshot_status": null,
       "screenshot_note": null,
+      "confirmation_record": {
+        "event_id": "DAC-20260719-D02",
+        "confirmed_by": "Codex 自動開發工人",
+        "confirmed_at": "2026-07-19T15:31:01+08:00",
+        "method": "實作錨點掃描與各測試錨點離線單獨 pytest 驗證",
+        "resolution_status": "待辦",
+        "todo": "定義 S1 失敗邊（上傳／pipeline 例外）後補齊規格與測試。"
+      },
+      "confirmation_record_ok": true,
+      "confirmation_record_errors": [],
       "status_note": "S0/S2/S3/S4 與 confidence 轉移有程式與測試錨點；S1 失敗邊仍屬框架預設",
       "claim_ok": true
     },
@@ -260,6 +280,16 @@
       ],
       "screenshot_status": null,
       "screenshot_note": null,
+      "confirmation_record": {
+        "event_id": "DAC-20260719-D03",
+        "confirmed_by": "Codex 自動開發工人",
+        "confirmed_at": "2026-07-19T15:31:01+08:00",
+        "method": "實作錨點掃描與各測試錨點離線單獨 pytest 驗證",
+        "resolution_status": "待辦",
+        "todo": "定義上傳失敗頁與 pipeline 例外頁後補齊流程與測試。"
+      },
+      "confirmation_record_ok": true,
+      "confirmation_record_errors": [],
       "status_note": "正常流程與 export 分流可核實；上傳失敗頁／pipeline 例外頁仍未定義",
       "claim_ok": true
     },
@@ -369,6 +399,16 @@
       ],
       "screenshot_status": null,
       "screenshot_note": null,
+      "confirmation_record": {
+        "event_id": "DAC-20260719-D04",
+        "confirmed_by": "Codex 自動開發工人",
+        "confirmed_at": "2026-07-19T15:31:01+08:00",
+        "method": "實作錨點掃描與各測試錨點離線單獨 pytest 驗證",
+        "resolution_status": "已結案",
+        "todo": ""
+      },
+      "confirmation_record_ok": true,
+      "confirmation_record_errors": [],
       "status_note": "責任邊界以既有模組為準，不新增 controller/service 抽象",
       "claim_ok": true
     },
@@ -454,6 +494,16 @@
       ],
       "screenshot_status": "absent",
       "screenshot_note": "目前無 .png/.jpg 畫面截圖；以文件索引 + 模板 + 測試錨點作為最小可核實證據",
+      "confirmation_record": {
+        "event_id": "DAC-20260719-D05",
+        "confirmed_by": "Codex 自動開發工人",
+        "confirmed_at": "2026-07-19T15:31:01+08:00",
+        "method": "文件 UI 索引、模板錨點與各測試錨點離線單獨 pytest 驗證",
+        "resolution_status": "待辦",
+        "todo": "補入可重現 PNG/JPG 畫面截圖後，更新 UI 索引與本確認紀錄。"
+      },
+      "confirmation_record_ok": true,
+      "confirmation_record_errors": [],
       "status_note": "文件型 UI 索引已落地；實體截圖列為已知缺口（非本輪必須）",
       "claim_ok": true
     }
@@ -477,8 +527,11 @@
       "package_fields": [
         "per_claim[D-01].spec_file",
         "per_claim[D-01].impl_anchors",
-        "per_claim[D-01].test_individual_results"
+        "per_claim[D-01].test_individual_results",
+        "per_claim[D-01].confirmation_record"
       ],
+      "confirmation_event_id": "DAC-20260719-D01",
+      "confirmation_status": "已結案",
       "ok": true
     },
     {
@@ -499,8 +552,11 @@
       "package_fields": [
         "per_claim[D-02].spec_file",
         "per_claim[D-02].impl_anchors",
-        "per_claim[D-02].test_individual_results"
+        "per_claim[D-02].test_individual_results",
+        "per_claim[D-02].confirmation_record"
       ],
+      "confirmation_event_id": "DAC-20260719-D02",
+      "confirmation_status": "待辦",
       "ok": true
     },
     {
@@ -521,8 +577,11 @@
       "package_fields": [
         "per_claim[D-03].spec_file",
         "per_claim[D-03].impl_anchors",
-        "per_claim[D-03].test_individual_results"
+        "per_claim[D-03].test_individual_results",
+        "per_claim[D-03].confirmation_record"
       ],
+      "confirmation_event_id": "DAC-20260719-D03",
+      "confirmation_status": "待辦",
       "ok": true
     },
     {
@@ -548,8 +607,11 @@
       "package_fields": [
         "per_claim[D-04].spec_file",
         "per_claim[D-04].impl_anchors",
-        "per_claim[D-04].test_individual_results"
+        "per_claim[D-04].test_individual_results",
+        "per_claim[D-04].confirmation_record"
       ],
+      "confirmation_event_id": "DAC-20260719-D04",
+      "confirmation_status": "已結案",
       "ok": true
     },
     {
@@ -571,8 +633,11 @@
       "package_fields": [
         "per_claim[D-05].spec_file",
         "per_claim[D-05].impl_anchors",
-        "per_claim[D-05].test_individual_results"
+        "per_claim[D-05].test_individual_results",
+        "per_claim[D-05].confirmation_record"
       ],
+      "confirmation_event_id": "DAC-20260719-D05",
+      "confirmation_status": "待辦",
       "ok": true
     }
   ],
