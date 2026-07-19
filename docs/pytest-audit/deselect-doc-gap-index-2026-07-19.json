@@ -1,0 +1,131 @@
+{
+  "schema": "note-filler.deselect-doc-gap-audit/v1",
+  "verified_at": "2026-07-19T11:32:38Z",
+  "python": "D:\\Users\\Administrator\\Desktop\\筆記補齊\\.venv\\Scripts\\python.exe",
+  "commands": {
+    "A": "pytest -m \"not integration\" -q --collect-only --deselected-details",
+    "B": "pytest --collect-only -q -o addopts=(no mark filter)",
+    "C": "pytest -m integration --collect-only -q -o addopts=(no default mark)"
+  },
+  "counts": {
+    "A_collected": 145,
+    "A_selected": 137,
+    "A_deselected": 8,
+    "B_collected": 145,
+    "C_selected_integration": 8
+  },
+  "equalities": {
+    "deselected_A_eq_integration_C": true,
+    "deselected_A_eq_allowlist": true,
+    "integration_marks_count_eq_8": true,
+    "selected_plus_deselected_eq_full": true,
+    "all_reasons_are_not_integration": true
+  },
+  "deselected_nodeids": [
+    "tests/test_domain.py::test_detect_domain_real_grok_returns_law",
+    "tests/test_e2e_acceptance.py::test_e2e_acceptance_real",
+    "tests/test_gap.py::test_detect_gaps_real_grok",
+    "tests/test_llm.py::test_grok_pong_integration",
+    "tests/test_pipeline.py::test_run_pipeline_real_grok",
+    "tests/test_questions.py::test_generate_questions_real_grok",
+    "tests/test_retrieve.py::test_retrieve_for_gap_real_twinkle_smoke",
+    "tests/test_twinkle.py::test_search_real_twinkle_hub"
+  ],
+  "deselection_details": [
+    {
+      "test_id": "tests/test_domain.py::test_detect_domain_real_grok_returns_law",
+      "reason": "deselected by -m 'not integration'"
+    },
+    {
+      "test_id": "tests/test_e2e_acceptance.py::test_e2e_acceptance_real",
+      "reason": "deselected by -m 'not integration'"
+    },
+    {
+      "test_id": "tests/test_gap.py::test_detect_gaps_real_grok",
+      "reason": "deselected by -m 'not integration'"
+    },
+    {
+      "test_id": "tests/test_llm.py::test_grok_pong_integration",
+      "reason": "deselected by -m 'not integration'"
+    },
+    {
+      "test_id": "tests/test_pipeline.py::test_run_pipeline_real_grok",
+      "reason": "deselected by -m 'not integration'"
+    },
+    {
+      "test_id": "tests/test_questions.py::test_generate_questions_real_grok",
+      "reason": "deselected by -m 'not integration'"
+    },
+    {
+      "test_id": "tests/test_retrieve.py::test_retrieve_for_gap_real_twinkle_smoke",
+      "reason": "deselected by -m 'not integration'"
+    },
+    {
+      "test_id": "tests/test_twinkle.py::test_search_real_twinkle_hub",
+      "reason": "deselected by -m 'not integration'"
+    }
+  ],
+  "integration_mark_anchors": [
+    {
+      "file": "tests/test_domain.py",
+      "line": 50
+    },
+    {
+      "file": "tests/test_e2e_acceptance.py",
+      "line": 244
+    },
+    {
+      "file": "tests/test_gap.py",
+      "line": 71
+    },
+    {
+      "file": "tests/test_llm.py",
+      "line": 66
+    },
+    {
+      "file": "tests/test_pipeline.py",
+      "line": 151
+    },
+    {
+      "file": "tests/test_questions.py",
+      "line": 62
+    },
+    {
+      "file": "tests/test_retrieve.py",
+      "line": 102
+    },
+    {
+      "file": "tests/test_twinkle.py",
+      "line": 122
+    }
+  ],
+  "config": {
+    "pyproject_addopts_has_not_integration": true,
+    "pyproject_markers_defines_integration": true,
+    "registered_custom_markers": [
+      "integration"
+    ],
+    "collection_modify_hooks_in_tests": [],
+    "env_PYTEST_ADDOPTS": null
+  },
+  "judgment": {
+    "undocumented_collection_exclusions": false,
+    "new_filter_rules_beyond_not_integration": false,
+    "sole_collection_deselect_mechanism": "-m 'not integration' (addopts and/or CLI)",
+    "runtime_skip_is_separate_from_deselect": true,
+    "doc_gap": "none_for_collection_deselect; older reports may show stale total counts (suite grew) but 8-node set stable"
+  },
+  "evidence_files": [
+    "docs/pytest-audit/deselect-doc-gap-collect-A-2026-07-19.txt",
+    "docs/pytest-audit/deselect-doc-gap-collect-B-full-2026-07-19.txt",
+    "docs/pytest-audit/deselect-doc-gap-collect-C-integration-2026-07-19.txt",
+    "docs/pytest-audit/deselect-doc-gap-collect-D-default-2026-07-19.txt",
+    "docs/pytest-audit/deselect-doc-gap-index-2026-07-19.json",
+    "docs/deselect-exclusion-doc-gap-audit-2026-07-19.md"
+  ],
+  "returncodes": {
+    "A": 0,
+    "B": 0,
+    "C": 0
+  }
+}
