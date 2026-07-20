@@ -1,0 +1,1229 @@
+{
+  "generated_at": "2026-07-20T06:34:15.446279+00:00",
+  "command": "pytest -m \"not integration\" -q --durations=0 -vv --junitxml=docs/pytest-audit/per-test-durations-junit-2026-07-20.xml",
+  "python": "D:/Users/Administrator/Desktop/筆記補齊/.venv/Scripts/python.exe -X utf8",
+  "marker_filter": "not integration",
+  "test_count": 140,
+  "passed_count": 140,
+  "sum_of_testcase_times_s": 56.058,
+  "junit_suite_time_s": 56.626,
+  "reference_total_s": 73.31,
+  "source_junit": "docs\\pytest-audit\\per-test-durations-junit-2026-07-20.xml",
+  "top10": [
+    {
+      "rank": 1,
+      "node_id": "tests/test_deselection_guard.py::test_substitute_mapping_is_complete_and_collectable",
+      "wall_time_s": 36.883,
+      "status": "passed"
+    },
+    {
+      "rank": 2,
+      "node_id": "tests/test_deselected_ci_gate_acceptance.py::test_ci_gate_fails_when_deselected_allowlist_count_is_too_small",
+      "wall_time_s": 4.686,
+      "status": "passed"
+    },
+    {
+      "rank": 3,
+      "node_id": "tests/test_deselected_ci_gate_acceptance.py::test_ci_gate_accepts_only_authorized_deselected_nodes_with_reasons",
+      "wall_time_s": 3.997,
+      "status": "passed"
+    },
+    {
+      "rank": 4,
+      "node_id": "tests/test_deselected_ci_gate_acceptance.py::test_ci_gate_fails_when_deselected_allowlist_contains_non_deselected_node",
+      "wall_time_s": 2.914,
+      "status": "passed"
+    },
+    {
+      "rank": 5,
+      "node_id": "tests/test_deselection_guard.py::test_integration_allowlist_is_stable",
+      "wall_time_s": 2.578,
+      "status": "passed"
+    },
+    {
+      "rank": 6,
+      "node_id": "tests/test_deselection_guard.py::test_deselected_details_lists_node_ids_and_reasons",
+      "wall_time_s": 1.186,
+      "status": "passed"
+    },
+    {
+      "rank": 7,
+      "node_id": "tests/test_requirements_test_coverage.py::test_default_gate_collects_every_equivalent_and_safety_regression",
+      "wall_time_s": 0.898,
+      "status": "passed"
+    },
+    {
+      "rank": 8,
+      "node_id": "tests/test_law_check.py::test_search_articles_keyword_only",
+      "wall_time_s": 0.443,
+      "status": "passed"
+    },
+    {
+      "rank": 9,
+      "node_id": "tests/test_excluded_failing_controls.py::test_control_05_pipeline_c6_pending_when_no_sources",
+      "wall_time_s": 0.261,
+      "status": "passed"
+    },
+    {
+      "rank": 10,
+      "node_id": "tests/test_export_docx.py::test_to_docx_roundtrip_preserves_original_and_marks_supplement",
+      "wall_time_s": 0.251,
+      "status": "passed"
+    }
+  ],
+  "concentration": {
+    "top_1": {
+      "sum_s": 36.883,
+      "pct_of_sum": 65.7944
+    },
+    "top_3": {
+      "sum_s": 45.566,
+      "pct_of_sum": 81.2837
+    },
+    "top_5": {
+      "sum_s": 51.058,
+      "pct_of_sum": 91.0807
+    },
+    "top_10": {
+      "sum_s": 54.097,
+      "pct_of_sum": 96.5018
+    },
+    "top_20": {
+      "sum_s": 55.466,
+      "pct_of_sum": 98.944
+    }
+  },
+  "tests": [
+    {
+      "rank": 1,
+      "node_id": "tests/test_deselection_guard.py::test_substitute_mapping_is_complete_and_collectable",
+      "wall_time_s": 36.883,
+      "cumulative_s": 36.883,
+      "cumulative_pct_of_sum": 65.7944,
+      "status": "passed"
+    },
+    {
+      "rank": 2,
+      "node_id": "tests/test_deselected_ci_gate_acceptance.py::test_ci_gate_fails_when_deselected_allowlist_count_is_too_small",
+      "wall_time_s": 4.686,
+      "cumulative_s": 41.569,
+      "cumulative_pct_of_sum": 74.1536,
+      "status": "passed"
+    },
+    {
+      "rank": 3,
+      "node_id": "tests/test_deselected_ci_gate_acceptance.py::test_ci_gate_accepts_only_authorized_deselected_nodes_with_reasons",
+      "wall_time_s": 3.997,
+      "cumulative_s": 45.566,
+      "cumulative_pct_of_sum": 81.2837,
+      "status": "passed"
+    },
+    {
+      "rank": 4,
+      "node_id": "tests/test_deselected_ci_gate_acceptance.py::test_ci_gate_fails_when_deselected_allowlist_contains_non_deselected_node",
+      "wall_time_s": 2.914,
+      "cumulative_s": 48.48,
+      "cumulative_pct_of_sum": 86.4819,
+      "status": "passed"
+    },
+    {
+      "rank": 5,
+      "node_id": "tests/test_deselection_guard.py::test_integration_allowlist_is_stable",
+      "wall_time_s": 2.578,
+      "cumulative_s": 51.058,
+      "cumulative_pct_of_sum": 91.0807,
+      "status": "passed"
+    },
+    {
+      "rank": 6,
+      "node_id": "tests/test_deselection_guard.py::test_deselected_details_lists_node_ids_and_reasons",
+      "wall_time_s": 1.186,
+      "cumulative_s": 52.244,
+      "cumulative_pct_of_sum": 93.1963,
+      "status": "passed"
+    },
+    {
+      "rank": 7,
+      "node_id": "tests/test_requirements_test_coverage.py::test_default_gate_collects_every_equivalent_and_safety_regression",
+      "wall_time_s": 0.898,
+      "cumulative_s": 53.142,
+      "cumulative_pct_of_sum": 94.7982,
+      "status": "passed"
+    },
+    {
+      "rank": 8,
+      "node_id": "tests/test_law_check.py::test_search_articles_keyword_only",
+      "wall_time_s": 0.443,
+      "cumulative_s": 53.585,
+      "cumulative_pct_of_sum": 95.5885,
+      "status": "passed"
+    },
+    {
+      "rank": 9,
+      "node_id": "tests/test_excluded_failing_controls.py::test_control_05_pipeline_c6_pending_when_no_sources",
+      "wall_time_s": 0.261,
+      "cumulative_s": 53.846,
+      "cumulative_pct_of_sum": 96.0541,
+      "status": "passed"
+    },
+    {
+      "rank": 10,
+      "node_id": "tests/test_export_docx.py::test_to_docx_roundtrip_preserves_original_and_marks_supplement",
+      "wall_time_s": 0.251,
+      "cumulative_s": 54.097,
+      "cumulative_pct_of_sum": 96.5018,
+      "status": "passed"
+    },
+    {
+      "rank": 11,
+      "node_id": "tests/test_law_search.py::test_search_law_sources_accepts_plain_keyword_response",
+      "wall_time_s": 0.235,
+      "cumulative_s": 54.332,
+      "cumulative_pct_of_sum": 96.921,
+      "status": "passed"
+    },
+    {
+      "rank": 12,
+      "node_id": "tests/test_pipeline.py::test_run_pipeline_law_domain_runs_citation_check",
+      "wall_time_s": 0.194,
+      "cumulative_s": 54.526,
+      "cumulative_pct_of_sum": 97.2671,
+      "status": "passed"
+    },
+    {
+      "rank": 13,
+      "node_id": "tests/test_parse.py::test_parse_docx_roundtrip",
+      "wall_time_s": 0.188,
+      "cumulative_s": 54.714,
+      "cumulative_pct_of_sum": 97.6025,
+      "status": "passed"
+    },
+    {
+      "rank": 14,
+      "node_id": "tests/test_pipeline.py::test_run_pipeline_invariant",
+      "wall_time_s": 0.171,
+      "cumulative_s": 54.885,
+      "cumulative_pct_of_sum": 97.9075,
+      "status": "passed"
+    },
+    {
+      "rank": 15,
+      "node_id": "tests/test_law_check.py::test_search_articles_limit",
+      "wall_time_s": 0.165,
+      "cumulative_s": 55.05,
+      "cumulative_pct_of_sum": 98.2019,
+      "status": "passed"
+    },
+    {
+      "rank": 16,
+      "node_id": "tests/test_pipeline.py::test_run_pipeline_malformed_gap_output_falls_back_to_pending",
+      "wall_time_s": 0.143,
+      "cumulative_s": 55.193,
+      "cumulative_pct_of_sum": 98.457,
+      "status": "passed"
+    },
+    {
+      "rank": 17,
+      "node_id": "tests/test_design_acceptance.py::test_design_package_head_matches_repo_and_claim_map_printable",
+      "wall_time_s": 0.135,
+      "cumulative_s": 55.328,
+      "cumulative_pct_of_sum": 98.6978,
+      "status": "passed"
+    },
+    {
+      "rank": 18,
+      "node_id": "tests/test_design_acceptance.py::test_design_claims_index_is_complete",
+      "wall_time_s": 0.055,
+      "cumulative_s": 55.383,
+      "cumulative_pct_of_sum": 98.7959,
+      "status": "passed"
+    },
+    {
+      "rank": 19,
+      "node_id": "tests/test_server.py::test_index_returns_upload_form[asyncio]",
+      "wall_time_s": 0.046,
+      "cumulative_s": 55.429,
+      "cumulative_pct_of_sum": 98.8779,
+      "status": "passed"
+    },
+    {
+      "rank": 20,
+      "node_id": "tests/test_server.py::test_run_renders_two_columns[asyncio]",
+      "wall_time_s": 0.037,
+      "cumulative_s": 55.466,
+      "cumulative_pct_of_sum": 98.944,
+      "status": "passed"
+    },
+    {
+      "rank": 21,
+      "node_id": "tests/test_law_lookup.py::test_search_articles_orders_by_numeric_article_no",
+      "wall_time_s": 0.036,
+      "cumulative_s": 55.502,
+      "cumulative_pct_of_sum": 99.0082,
+      "status": "passed"
+    },
+    {
+      "rank": 22,
+      "node_id": "tests/test_law_lookup.py::test_search_articles_limit_after_numeric_sort",
+      "wall_time_s": 0.034,
+      "cumulative_s": 55.536,
+      "cumulative_pct_of_sum": 99.0688,
+      "status": "passed"
+    },
+    {
+      "rank": 23,
+      "node_id": "tests/test_cli.py::test_process_file_json_format_and_outdir",
+      "wall_time_s": 0.031,
+      "cumulative_s": 55.567,
+      "cumulative_pct_of_sum": 99.1241,
+      "status": "passed"
+    },
+    {
+      "rank": 24,
+      "node_id": "tests/test_exclusion_correctness_blind_spot.py::test_law_domain_retrieve_must_yield_level_a_not_vacuous_empty",
+      "wall_time_s": 0.031,
+      "cumulative_s": 55.598,
+      "cumulative_pct_of_sum": 99.1794,
+      "status": "passed"
+    },
+    {
+      "rank": 25,
+      "node_id": "tests/test_server.py::test_export_returns_markdown_attachment[asyncio]",
+      "wall_time_s": 0.024,
+      "cumulative_s": 55.622,
+      "cumulative_pct_of_sum": 99.2222,
+      "status": "passed"
+    },
+    {
+      "rank": 26,
+      "node_id": "tests/test_e2e_acceptance.py::test_e2e_structural_invariants",
+      "wall_time_s": 0.023,
+      "cumulative_s": 55.645,
+      "cumulative_pct_of_sum": 99.2633,
+      "status": "passed"
+    },
+    {
+      "rank": 27,
+      "node_id": "tests/test_grading.py::test_is_stale_under_max_age_is_not_stale",
+      "wall_time_s": 0.02,
+      "cumulative_s": 55.665,
+      "cumulative_pct_of_sum": 99.2989,
+      "status": "passed"
+    },
+    {
+      "rank": 28,
+      "node_id": "tests/test_design_acceptance.py::test_design_acceptance_package_is_machine_checkable",
+      "wall_time_s": 0.018,
+      "cumulative_s": 55.683,
+      "cumulative_pct_of_sum": 99.331,
+      "status": "passed"
+    },
+    {
+      "rank": 29,
+      "node_id": "tests/test_e2e_acceptance.py::test_e2e_minimal_quality_gates_offline_regression",
+      "wall_time_s": 0.018,
+      "cumulative_s": 55.701,
+      "cumulative_pct_of_sum": 99.3632,
+      "status": "passed"
+    },
+    {
+      "rank": 30,
+      "node_id": "tests/test_cli.py::test_iter_inputs_expands_dir_filters_suffix_and_dedups",
+      "wall_time_s": 0.016,
+      "cumulative_s": 55.717,
+      "cumulative_pct_of_sum": 99.3917,
+      "status": "passed"
+    },
+    {
+      "rank": 31,
+      "node_id": "tests/test_excluded_failing_controls.py::test_control_02_e2e_offline_quality_gates",
+      "wall_time_s": 0.014,
+      "cumulative_s": 55.731,
+      "cumulative_pct_of_sum": 99.4167,
+      "status": "passed"
+    },
+    {
+      "rank": 32,
+      "node_id": "tests/test_excluded_failing_controls.py::test_control_07b_retrieve_law_level_a_not_vacuous",
+      "wall_time_s": 0.014,
+      "cumulative_s": 55.745,
+      "cumulative_pct_of_sum": 99.4416,
+      "status": "passed"
+    },
+    {
+      "rank": 33,
+      "node_id": "tests/test_e2e_acceptance.py::test_e2e_offline_supplement_quality_boundary",
+      "wall_time_s": 0.011,
+      "cumulative_s": 55.756,
+      "cumulative_pct_of_sum": 99.4613,
+      "status": "passed"
+    },
+    {
+      "rank": 34,
+      "node_id": "tests/test_server.py::test_export_without_run_returns_404[asyncio]",
+      "wall_time_s": 0.011,
+      "cumulative_s": 55.767,
+      "cumulative_pct_of_sum": 99.4809,
+      "status": "passed"
+    },
+    {
+      "rank": 35,
+      "node_id": "tests/test_law_check.py::test_real_law_article_exists",
+      "wall_time_s": 0.009,
+      "cumulative_s": 55.776,
+      "cumulative_pct_of_sum": 99.4969,
+      "status": "passed"
+    },
+    {
+      "rank": 36,
+      "node_id": "tests/test_cli.py::test_process_file_writes_md_and_counts",
+      "wall_time_s": 0.008,
+      "cumulative_s": 55.784,
+      "cumulative_pct_of_sum": 99.5112,
+      "status": "passed"
+    },
+    {
+      "rank": 37,
+      "node_id": "tests/test_design_acceptance.py::test_design_acceptance_rejects_claim_without_artifact",
+      "wall_time_s": 0.007,
+      "cumulative_s": 55.791,
+      "cumulative_pct_of_sum": 99.5237,
+      "status": "passed"
+    },
+    {
+      "rank": 38,
+      "node_id": "tests/test_domain.py::test_detect_domain_noise_falls_back_to_other",
+      "wall_time_s": 0.007,
+      "cumulative_s": 55.798,
+      "cumulative_pct_of_sum": 99.5362,
+      "status": "passed"
+    },
+    {
+      "rank": 39,
+      "node_id": "tests/test_excluded_failing_controls.py::test_control_08_twinkle_parsed_source_contract",
+      "wall_time_s": 0.007,
+      "cumulative_s": 55.805,
+      "cumulative_pct_of_sum": 99.5487,
+      "status": "passed"
+    },
+    {
+      "rank": 40,
+      "node_id": "tests/test_domain.py::test_detect_domain_exam",
+      "wall_time_s": 0.006,
+      "cumulative_s": 55.811,
+      "cumulative_pct_of_sum": 99.5594,
+      "status": "passed"
+    },
+    {
+      "rank": 41,
+      "node_id": "tests/test_domain.py::test_detect_domain_label_with_trailing_punctuation",
+      "wall_time_s": 0.006,
+      "cumulative_s": 55.817,
+      "cumulative_pct_of_sum": 99.5701,
+      "status": "passed"
+    },
+    {
+      "rank": 42,
+      "node_id": "tests/test_excluded_failing_controls.py::test_control_map_covers_all_eight_excluded",
+      "wall_time_s": 0.006,
+      "cumulative_s": 55.823,
+      "cumulative_pct_of_sum": 99.5808,
+      "status": "passed"
+    },
+    {
+      "rank": 43,
+      "node_id": "tests/test_law_check.py::test_unknown_law_not_false_reported",
+      "wall_time_s": 0.006,
+      "cumulative_s": 55.829,
+      "cumulative_pct_of_sum": 99.5915,
+      "status": "passed"
+    },
+    {
+      "rank": 44,
+      "node_id": "tests/test_requirements_test_coverage.py::test_coverage_matrix_classifies_all_eight_and_has_no_missing_requirement",
+      "wall_time_s": 0.006,
+      "cumulative_s": 55.835,
+      "cumulative_pct_of_sum": 99.6022,
+      "status": "passed"
+    },
+    {
+      "rank": 45,
+      "node_id": "tests/test_deselection_guard.py::test_acceptance_package_rejects_count_only_summary",
+      "wall_time_s": 0.005,
+      "cumulative_s": 55.84,
+      "cumulative_pct_of_sum": 99.6111,
+      "status": "passed"
+    },
+    {
+      "rank": 46,
+      "node_id": "tests/test_domain.py::test_detect_domain_law",
+      "wall_time_s": 0.005,
+      "cumulative_s": 55.845,
+      "cumulative_pct_of_sum": 99.62,
+      "status": "passed"
+    },
+    {
+      "rank": 47,
+      "node_id": "tests/test_domain.py::test_detect_domain_uppercase_and_whitespace",
+      "wall_time_s": 0.005,
+      "cumulative_s": 55.85,
+      "cumulative_pct_of_sum": 99.629,
+      "status": "passed"
+    },
+    {
+      "rank": 48,
+      "node_id": "tests/test_export.py::test_to_markdown_format_locked",
+      "wall_time_s": 0.005,
+      "cumulative_s": 55.855,
+      "cumulative_pct_of_sum": 99.6379,
+      "status": "passed"
+    },
+    {
+      "rank": 49,
+      "node_id": "tests/test_law_check.py::test_fake_article_no_flagged_not_found",
+      "wall_time_s": 0.005,
+      "cumulative_s": 55.86,
+      "cumulative_pct_of_sum": 99.6468,
+      "status": "passed"
+    },
+    {
+      "rank": 50,
+      "node_id": "tests/test_law_check.py::test_search_articles_keyword_with_law_name",
+      "wall_time_s": 0.005,
+      "cumulative_s": 55.865,
+      "cumulative_pct_of_sum": 99.6557,
+      "status": "passed"
+    },
+    {
+      "rank": 51,
+      "node_id": "tests/test_llm.py::test_grokclient_builds_request_body",
+      "wall_time_s": 0.005,
+      "cumulative_s": 55.87,
+      "cumulative_pct_of_sum": 99.6646,
+      "status": "passed"
+    },
+    {
+      "rank": 52,
+      "node_id": "tests/test_parse.py::test_paragraph_and_document_are_frozen",
+      "wall_time_s": 0.005,
+      "cumulative_s": 55.875,
+      "cumulative_pct_of_sum": 99.6736,
+      "status": "passed"
+    },
+    {
+      "rank": 53,
+      "node_id": "tests/test_domain.py::test_detect_domain_admin",
+      "wall_time_s": 0.004,
+      "cumulative_s": 55.879,
+      "cumulative_pct_of_sum": 99.6807,
+      "status": "passed"
+    },
+    {
+      "rank": 54,
+      "node_id": "tests/test_excluded_failing_controls.py::test_control_01_domain_legal_label_contract",
+      "wall_time_s": 0.004,
+      "cumulative_s": 55.883,
+      "cumulative_pct_of_sum": 99.6878,
+      "status": "passed"
+    },
+    {
+      "rank": 55,
+      "node_id": "tests/test_gap.py::test_detect_gaps_strips_code_fence",
+      "wall_time_s": 0.004,
+      "cumulative_s": 55.887,
+      "cumulative_pct_of_sum": 99.695,
+      "status": "passed"
+    },
+    {
+      "rank": 56,
+      "node_id": "tests/test_gap.py::test_detect_gaps_empty_questions_short_circuits",
+      "wall_time_s": 0.004,
+      "cumulative_s": 55.891,
+      "cumulative_pct_of_sum": 99.7021,
+      "status": "passed"
+    },
+    {
+      "rank": 57,
+      "node_id": "tests/test_law_search.py::test_search_law_sources_returns_level_A_law_articles",
+      "wall_time_s": 0.004,
+      "cumulative_s": 55.895,
+      "cumulative_pct_of_sum": 99.7092,
+      "status": "passed"
+    },
+    {
+      "rank": 58,
+      "node_id": "tests/test_law_search.py::test_search_law_sources_unions_multiple_keywords_dedup_and_order",
+      "wall_time_s": 0.004,
+      "cumulative_s": 55.899,
+      "cumulative_pct_of_sum": 99.7164,
+      "status": "passed"
+    },
+    {
+      "rank": 59,
+      "node_id": "tests/test_law_search.py::test_search_law_sources_non_json_treated_as_single_keyword",
+      "wall_time_s": 0.004,
+      "cumulative_s": 55.903,
+      "cumulative_pct_of_sum": 99.7235,
+      "status": "passed"
+    },
+    {
+      "rank": 60,
+      "node_id": "tests/test_twinkle.py::test_search_returns_empty_without_token",
+      "wall_time_s": 0.004,
+      "cumulative_s": 55.907,
+      "cumulative_pct_of_sum": 99.7306,
+      "status": "passed"
+    },
+    {
+      "rank": 61,
+      "node_id": "tests/test_excluded_failing_controls.py::test_control_04_grok_client_parse_and_endpoint_contract",
+      "wall_time_s": 0.003,
+      "cumulative_s": 55.91,
+      "cumulative_pct_of_sum": 99.736,
+      "status": "passed"
+    },
+    {
+      "rank": 62,
+      "node_id": "tests/test_export.py::test_to_json_serializes_segments",
+      "wall_time_s": 0.003,
+      "cumulative_s": 55.913,
+      "cumulative_pct_of_sum": 99.7413,
+      "status": "passed"
+    },
+    {
+      "rank": 63,
+      "node_id": "tests/test_export.py::test_to_markdown_pending_segment_has_no_footnote",
+      "wall_time_s": 0.003,
+      "cumulative_s": 55.916,
+      "cumulative_pct_of_sum": 99.7467,
+      "status": "passed"
+    },
+    {
+      "rank": 64,
+      "node_id": "tests/test_gap.py::test_detect_gaps_keeps_only_partial_and_missing",
+      "wall_time_s": 0.003,
+      "cumulative_s": 55.919,
+      "cumulative_pct_of_sum": 99.752,
+      "status": "passed"
+    },
+    {
+      "rank": 65,
+      "node_id": "tests/test_gap.py::test_detect_gaps_parse_failure_marks_all_missing",
+      "wall_time_s": 0.003,
+      "cumulative_s": 55.922,
+      "cumulative_pct_of_sum": 99.7574,
+      "status": "passed"
+    },
+    {
+      "rank": 66,
+      "node_id": "tests/test_gap.py::test_detect_gaps_non_array_json_also_fallbacks",
+      "wall_time_s": 0.003,
+      "cumulative_s": 55.925,
+      "cumulative_pct_of_sum": 99.7627,
+      "status": "passed"
+    },
+    {
+      "rank": 67,
+      "node_id": "tests/test_grading.py::test_grade_law_returns_A",
+      "wall_time_s": 0.003,
+      "cumulative_s": 55.928,
+      "cumulative_pct_of_sum": 99.7681,
+      "status": "passed"
+    },
+    {
+      "rank": 68,
+      "node_id": "tests/test_grading.py::test_is_stale_over_max_age_is_stale",
+      "wall_time_s": 0.003,
+      "cumulative_s": 55.931,
+      "cumulative_pct_of_sum": 99.7734,
+      "status": "passed"
+    },
+    {
+      "rank": 69,
+      "node_id": "tests/test_grading.py::test_is_stale_today_is_not_stale",
+      "wall_time_s": 0.003,
+      "cumulative_s": 55.934,
+      "cumulative_pct_of_sum": 99.7788,
+      "status": "passed"
+    },
+    {
+      "rank": 70,
+      "node_id": "tests/test_twinkle.py::test_search_reuses_mcp_session",
+      "wall_time_s": 0.003,
+      "cumulative_s": 55.937,
+      "cumulative_pct_of_sum": 99.7842,
+      "status": "passed"
+    },
+    {
+      "rank": 71,
+      "node_id": "tests/test_twinkle.py::test_search_transport_failure_returns_empty",
+      "wall_time_s": 0.003,
+      "cumulative_s": 55.94,
+      "cumulative_pct_of_sum": 99.7895,
+      "status": "passed"
+    },
+    {
+      "rank": 72,
+      "node_id": "tests/test_verify.py::test_two_distinct_b_verified",
+      "wall_time_s": 0.003,
+      "cumulative_s": 55.943,
+      "cumulative_pct_of_sum": 99.7949,
+      "status": "passed"
+    },
+    {
+      "rank": 73,
+      "node_id": "tests/test_conclusion_classification.py::test_classification_index_schema_and_labels",
+      "wall_time_s": 0.002,
+      "cumulative_s": 55.945,
+      "cumulative_pct_of_sum": 99.7984,
+      "status": "passed"
+    },
+    {
+      "rank": 74,
+      "node_id": "tests/test_correction.py::test_two_distinct_d_verified",
+      "wall_time_s": 0.002,
+      "cumulative_s": 55.947,
+      "cumulative_pct_of_sum": 99.802,
+      "status": "passed"
+    },
+    {
+      "rank": 75,
+      "node_id": "tests/test_excluded_failing_controls.py::test_control_03_gap_uncovered_question_must_surface",
+      "wall_time_s": 0.002,
+      "cumulative_s": 55.949,
+      "cumulative_pct_of_sum": 99.8056,
+      "status": "passed"
+    },
+    {
+      "rank": 76,
+      "node_id": "tests/test_excluded_failing_controls.py::test_control_06_questions_clean_list_contract",
+      "wall_time_s": 0.002,
+      "cumulative_s": 55.951,
+      "cumulative_pct_of_sum": 99.8091,
+      "status": "passed"
+    },
+    {
+      "rank": 77,
+      "node_id": "tests/test_excluded_failing_controls.py::test_control_07_retrieve_smoke_vacuous_empty_is_blind_spot",
+      "wall_time_s": 0.002,
+      "cumulative_s": 55.953,
+      "cumulative_pct_of_sum": 99.8127,
+      "status": "passed"
+    },
+    {
+      "rank": 78,
+      "node_id": "tests/test_exclusion_correctness_blind_spot.py::test_deselected_retrieve_smoke_vacuous_pass_on_empty_is_blind_spot",
+      "wall_time_s": 0.002,
+      "cumulative_s": 55.955,
+      "cumulative_pct_of_sum": 99.8163,
+      "status": "passed"
+    },
+    {
+      "rank": 79,
+      "node_id": "tests/test_gap.py::test_detect_gaps_calls_llm_exactly_once",
+      "wall_time_s": 0.002,
+      "cumulative_s": 55.957,
+      "cumulative_pct_of_sum": 99.8198,
+      "status": "passed"
+    },
+    {
+      "rank": 80,
+      "node_id": "tests/test_grading.py::test_source_dataclass_has_locked_fields",
+      "wall_time_s": 0.002,
+      "cumulative_s": 55.959,
+      "cumulative_pct_of_sum": 99.8234,
+      "status": "passed"
+    },
+    {
+      "rank": 81,
+      "node_id": "tests/test_grading.py::test_grade_twinkle_returns_B",
+      "wall_time_s": 0.002,
+      "cumulative_s": 55.961,
+      "cumulative_pct_of_sum": 99.827,
+      "status": "passed"
+    },
+    {
+      "rank": 82,
+      "node_id": "tests/test_grading.py::test_is_stale_exactly_max_age_is_not_stale",
+      "wall_time_s": 0.002,
+      "cumulative_s": 55.963,
+      "cumulative_pct_of_sum": 99.8305,
+      "status": "passed"
+    },
+    {
+      "rank": 83,
+      "node_id": "tests/test_law_check.py::test_check_law_citations_first_param_is_text",
+      "wall_time_s": 0.002,
+      "cumulative_s": 55.965,
+      "cumulative_pct_of_sum": 99.8341,
+      "status": "passed"
+    },
+    {
+      "rank": 84,
+      "node_id": "tests/test_law_search.py::test_search_law_sources_uses_single_llm_call_and_empty_on_no_hit",
+      "wall_time_s": 0.002,
+      "cumulative_s": 55.967,
+      "cumulative_pct_of_sum": 99.8377,
+      "status": "passed"
+    },
+    {
+      "rank": 85,
+      "node_id": "tests/test_law_search.py::test_search_law_sources_backward_compat_single_keyword",
+      "wall_time_s": 0.002,
+      "cumulative_s": 55.969,
+      "cumulative_pct_of_sum": 99.8412,
+      "status": "passed"
+    },
+    {
+      "rank": 86,
+      "node_id": "tests/test_law_search.py::test_search_law_sources_empty_keywords_returns_empty",
+      "wall_time_s": 0.002,
+      "cumulative_s": 55.971,
+      "cumulative_pct_of_sum": 99.8448,
+      "status": "passed"
+    },
+    {
+      "rank": 87,
+      "node_id": "tests/test_llm.py::test_fakellm_returns_canned_in_order",
+      "wall_time_s": 0.002,
+      "cumulative_s": 55.973,
+      "cumulative_pct_of_sum": 99.8484,
+      "status": "passed"
+    },
+    {
+      "rank": 88,
+      "node_id": "tests/test_parse.py::test_parse_txt_splits_on_blank_lines",
+      "wall_time_s": 0.002,
+      "cumulative_s": 55.975,
+      "cumulative_pct_of_sum": 99.8519,
+      "status": "passed"
+    },
+    {
+      "rank": 89,
+      "node_id": "tests/test_questions.py::test_generate_questions_splits_multiline_string",
+      "wall_time_s": 0.002,
+      "cumulative_s": 55.977,
+      "cumulative_pct_of_sum": 99.8555,
+      "status": "passed"
+    },
+    {
+      "rank": 90,
+      "node_id": "tests/test_questions.py::test_generate_questions_strips_and_drops_blank_lines",
+      "wall_time_s": 0.002,
+      "cumulative_s": 55.979,
+      "cumulative_pct_of_sum": 99.8591,
+      "status": "passed"
+    },
+    {
+      "rank": 91,
+      "node_id": "tests/test_questions.py::test_generate_questions_empty_response_returns_empty_list",
+      "wall_time_s": 0.002,
+      "cumulative_s": 55.981,
+      "cumulative_pct_of_sum": 99.8626,
+      "status": "passed"
+    },
+    {
+      "rank": 92,
+      "node_id": "tests/test_questions.py::test_generate_questions_calls_llm_exactly_once",
+      "wall_time_s": 0.002,
+      "cumulative_s": 55.983,
+      "cumulative_pct_of_sum": 99.8662,
+      "status": "passed"
+    },
+    {
+      "rank": 93,
+      "node_id": "tests/test_retrieve.py::test_retrieve_for_gap_law_domain_puts_level_A_before_B",
+      "wall_time_s": 0.002,
+      "cumulative_s": 55.985,
+      "cumulative_pct_of_sum": 99.8698,
+      "status": "passed"
+    },
+    {
+      "rank": 94,
+      "node_id": "tests/test_retrieve.py::test_retrieve_for_gap_other_domain_uses_web_not_twinkle",
+      "wall_time_s": 0.002,
+      "cumulative_s": 55.987,
+      "cumulative_pct_of_sum": 99.8733,
+      "status": "passed"
+    },
+    {
+      "rank": 95,
+      "node_id": "tests/test_twinkle.py::test_default_timeout_is_60",
+      "wall_time_s": 0.002,
+      "cumulative_s": 55.989,
+      "cumulative_pct_of_sum": 99.8769,
+      "status": "passed"
+    },
+    {
+      "rank": 96,
+      "node_id": "tests/test_verify.py::test_two_independent_ab_sources_verified",
+      "wall_time_s": 0.002,
+      "cumulative_s": 55.991,
+      "cumulative_pct_of_sum": 99.8805,
+      "status": "passed"
+    },
+    {
+      "rank": 97,
+      "node_id": "tests/test_verify.py::test_three_articles_same_law_same_url_verified",
+      "wall_time_s": 0.002,
+      "cumulative_s": 55.993,
+      "cumulative_pct_of_sum": 99.884,
+      "status": "passed"
+    },
+    {
+      "rank": 98,
+      "node_id": "tests/test_verify.py::test_single_a_source_verified",
+      "wall_time_s": 0.002,
+      "cumulative_s": 55.995,
+      "cumulative_pct_of_sum": 99.8876,
+      "status": "passed"
+    },
+    {
+      "rank": 99,
+      "node_id": "tests/test_verify.py::test_single_b_no_a_pending",
+      "wall_time_s": 0.002,
+      "cumulative_s": 55.997,
+      "cumulative_pct_of_sum": 99.8912,
+      "status": "passed"
+    },
+    {
+      "rank": 100,
+      "node_id": "tests/test_verify.py::test_single_c_verified",
+      "wall_time_s": 0.002,
+      "cumulative_s": 55.999,
+      "cumulative_pct_of_sum": 99.8948,
+      "status": "passed"
+    },
+    {
+      "rank": 101,
+      "node_id": "tests/test_verify.py::test_single_d_pending",
+      "wall_time_s": 0.002,
+      "cumulative_s": 56.001,
+      "cumulative_pct_of_sum": 99.8983,
+      "status": "passed"
+    },
+    {
+      "rank": 102,
+      "node_id": "tests/test_verify.py::test_two_distinct_d_verified",
+      "wall_time_s": 0.002,
+      "cumulative_s": 56.003,
+      "cumulative_pct_of_sum": 99.9019,
+      "status": "passed"
+    },
+    {
+      "rank": 103,
+      "node_id": "tests/test_verify.py::test_conflict_detected_and_no_side_taken",
+      "wall_time_s": 0.002,
+      "cumulative_s": 56.005,
+      "cumulative_pct_of_sum": 99.9055,
+      "status": "passed"
+    },
+    {
+      "rank": 104,
+      "node_id": "tests/test_verify.py::test_no_conflict_when_consistent",
+      "wall_time_s": 0.002,
+      "cumulative_s": 56.007,
+      "cumulative_pct_of_sum": 99.909,
+      "status": "passed"
+    },
+    {
+      "rank": 105,
+      "node_id": "tests/test_verify.py::test_negation_substring_not_false_positive",
+      "wall_time_s": 0.002,
+      "cumulative_s": 56.009,
+      "cumulative_pct_of_sum": 99.9126,
+      "status": "passed"
+    },
+    {
+      "rank": 106,
+      "node_id": "tests/test_verify.py::test_independent_ab_orders_A_before_B_and_by_distance",
+      "wall_time_s": 0.002,
+      "cumulative_s": 56.011,
+      "cumulative_pct_of_sum": 99.9162,
+      "status": "passed"
+    },
+    {
+      "rank": 107,
+      "node_id": "tests/test_verify.py::test_distinct_by_id_not_url",
+      "wall_time_s": 0.002,
+      "cumulative_s": 56.013,
+      "cumulative_pct_of_sum": 99.9197,
+      "status": "passed"
+    },
+    {
+      "rank": 108,
+      "node_id": "tests/test_web.py::test_two_pages_graded_c_and_d",
+      "wall_time_s": 0.002,
+      "cumulative_s": 56.015,
+      "cumulative_pct_of_sum": 99.9233,
+      "status": "passed"
+    },
+    {
+      "rank": 109,
+      "node_id": "tests/test_web.py::test_drop_page_excluded",
+      "wall_time_s": 0.002,
+      "cumulative_s": 56.017,
+      "cumulative_pct_of_sum": 99.9269,
+      "status": "passed"
+    },
+    {
+      "rank": 110,
+      "node_id": "tests/test_web.py::test_fetch_none_skipped",
+      "wall_time_s": 0.002,
+      "cumulative_s": 56.019,
+      "cumulative_pct_of_sum": 99.9304,
+      "status": "passed"
+    },
+    {
+      "rank": 111,
+      "node_id": "tests/test_web.py::test_too_short_fulltext_skipped",
+      "wall_time_s": 0.002,
+      "cumulative_s": 56.021,
+      "cumulative_pct_of_sum": 99.934,
+      "status": "passed"
+    },
+    {
+      "rank": 112,
+      "node_id": "tests/test_web.py::test_search_exception_degrades_to_empty",
+      "wall_time_s": 0.002,
+      "cumulative_s": 56.023,
+      "cumulative_pct_of_sum": 99.9376,
+      "status": "passed"
+    },
+    {
+      "rank": 113,
+      "node_id": "tests/test_web.py::test_content_truncated_with_note",
+      "wall_time_s": 0.002,
+      "cumulative_s": 56.025,
+      "cumulative_pct_of_sum": 99.9411,
+      "status": "passed"
+    },
+    {
+      "rank": 114,
+      "node_id": "tests/test_web.py::test_query_extraction_falls_back_to_question",
+      "wall_time_s": 0.002,
+      "cumulative_s": 56.027,
+      "cumulative_pct_of_sum": 99.9447,
+      "status": "passed"
+    },
+    {
+      "rank": 115,
+      "node_id": "tests/test_web.py::test_retrieve_other_domain_calls_web",
+      "wall_time_s": 0.002,
+      "cumulative_s": 56.029,
+      "cumulative_pct_of_sum": 99.9483,
+      "status": "passed"
+    },
+    {
+      "rank": 116,
+      "node_id": "tests/test_web.py::test_retrieve_law_domain_does_not_call_web",
+      "wall_time_s": 0.002,
+      "cumulative_s": 56.031,
+      "cumulative_pct_of_sum": 99.9518,
+      "status": "passed"
+    },
+    {
+      "rank": 117,
+      "node_id": "tests/test_write.py::test_used_source_ids_from_markers",
+      "wall_time_s": 0.002,
+      "cumulative_s": 56.033,
+      "cumulative_pct_of_sum": 99.9554,
+      "status": "passed"
+    },
+    {
+      "rank": 118,
+      "node_id": "tests/test_write.py::test_pending_evidence_when_insufficient",
+      "wall_time_s": 0.002,
+      "cumulative_s": 56.035,
+      "cumulative_pct_of_sum": 99.959,
+      "status": "passed"
+    },
+    {
+      "rank": 119,
+      "node_id": "tests/test_write.py::test_out_of_range_marker_removed_and_not_used",
+      "wall_time_s": 0.002,
+      "cumulative_s": 56.037,
+      "cumulative_pct_of_sum": 99.9625,
+      "status": "passed"
+    },
+    {
+      "rank": 120,
+      "node_id": "tests/test_citation_formatter.py::test_build_reference_lines_two_sources",
+      "wall_time_s": 0.001,
+      "cumulative_s": 56.038,
+      "cumulative_pct_of_sum": 99.9643,
+      "status": "passed"
+    },
+    {
+      "rank": 121,
+      "node_id": "tests/test_conclusion_classification.py::test_classification_covers_all_eight_allowlist_nodes",
+      "wall_time_s": 0.001,
+      "cumulative_s": 56.039,
+      "cumulative_pct_of_sum": 99.9661,
+      "status": "passed"
+    },
+    {
+      "rank": 122,
+      "node_id": "tests/test_conclusion_classification.py::test_non_defect_items_have_no_gap_package",
+      "wall_time_s": 0.001,
+      "cumulative_s": 56.04,
+      "cumulative_pct_of_sum": 99.9679,
+      "status": "passed"
+    },
+    {
+      "rank": 123,
+      "node_id": "tests/test_conclusion_classification.py::test_true_gap_items_have_full_package",
+      "wall_time_s": 0.001,
+      "cumulative_s": 56.041,
+      "cumulative_pct_of_sum": 99.9697,
+      "status": "passed"
+    },
+    {
+      "rank": 124,
+      "node_id": "tests/test_conclusion_classification.py::test_human_report_exists_and_mentions_both_labels",
+      "wall_time_s": 0.001,
+      "cumulative_s": 56.042,
+      "cumulative_pct_of_sum": 99.9715,
+      "status": "passed"
+    },
+    {
+      "rank": 125,
+      "node_id": "tests/test_conclusion_classification.py::test_gap_c7_current_smoke_vacuous_pass_on_empty",
+      "wall_time_s": 0.001,
+      "cumulative_s": 56.043,
+      "cumulative_pct_of_sum": 99.9732,
+      "status": "passed"
+    },
+    {
+      "rank": 126,
+      "node_id": "tests/test_conclusion_classification.py::test_gap_c7_strengthened_contract_fails_on_empty",
+      "wall_time_s": 0.001,
+      "cumulative_s": 56.044,
+      "cumulative_pct_of_sum": 99.975,
+      "status": "passed"
+    },
+    {
+      "rank": 127,
+      "node_id": "tests/test_conclusion_classification.py::test_gap_c7_package_acceptance_commands_are_non_empty_shell",
+      "wall_time_s": 0.001,
+      "cumulative_s": 56.045,
+      "cumulative_pct_of_sum": 99.9768,
+      "status": "passed"
+    },
+    {
+      "rank": 128,
+      "node_id": "tests/test_correction.py::test_original_segments_verbatim_and_immutable",
+      "wall_time_s": 0.001,
+      "cumulative_s": 56.046,
+      "cumulative_pct_of_sum": 99.9786,
+      "status": "passed"
+    },
+    {
+      "rank": 129,
+      "node_id": "tests/test_correction.py::test_written_two_independent_a_verified_only_used_sources",
+      "wall_time_s": 0.001,
+      "cumulative_s": 56.047,
+      "cumulative_pct_of_sum": 99.9804,
+      "status": "passed"
+    },
+    {
+      "rank": 130,
+      "node_id": "tests/test_correction.py::test_pending_evidence_written_empty_sources",
+      "wall_time_s": 0.001,
+      "cumulative_s": 56.048,
+      "cumulative_pct_of_sum": 99.9822,
+      "status": "passed"
+    },
+    {
+      "rank": 131,
+      "node_id": "tests/test_correction.py::test_retrieved_five_but_only_two_cited",
+      "wall_time_s": 0.001,
+      "cumulative_s": 56.049,
+      "cumulative_pct_of_sum": 99.9839,
+      "status": "passed"
+    },
+    {
+      "rank": 132,
+      "node_id": "tests/test_correction.py::test_single_a_used_source_verified",
+      "wall_time_s": 0.001,
+      "cumulative_s": 56.05,
+      "cumulative_pct_of_sum": 99.9857,
+      "status": "passed"
+    },
+    {
+      "rank": 133,
+      "node_id": "tests/test_correction.py::test_three_articles_same_law_same_url_verified",
+      "wall_time_s": 0.001,
+      "cumulative_s": 56.051,
+      "cumulative_pct_of_sum": 99.9875,
+      "status": "passed"
+    },
+    {
+      "rank": 134,
+      "node_id": "tests/test_correction.py::test_two_distinct_b_verified",
+      "wall_time_s": 0.001,
+      "cumulative_s": 56.052,
+      "cumulative_pct_of_sum": 99.9893,
+      "status": "passed"
+    },
+    {
+      "rank": 135,
+      "node_id": "tests/test_correction.py::test_single_b_no_a_pending",
+      "wall_time_s": 0.001,
+      "cumulative_s": 56.053,
+      "cumulative_pct_of_sum": 99.9911,
+      "status": "passed"
+    },
+    {
+      "rank": 136,
+      "node_id": "tests/test_correction.py::test_single_c_used_source_verified",
+      "wall_time_s": 0.001,
+      "cumulative_s": 56.054,
+      "cumulative_pct_of_sum": 99.9929,
+      "status": "passed"
+    },
+    {
+      "rank": 137,
+      "node_id": "tests/test_correction.py::test_single_d_used_source_pending",
+      "wall_time_s": 0.001,
+      "cumulative_s": 56.055,
+      "cumulative_pct_of_sum": 99.9946,
+      "status": "passed"
+    },
+    {
+      "rank": 138,
+      "node_id": "tests/test_correction.py::test_anchor_picks_keyword_overlap",
+      "wall_time_s": 0.001,
+      "cumulative_s": 56.056,
+      "cumulative_pct_of_sum": 99.9964,
+      "status": "passed"
+    },
+    {
+      "rank": 139,
+      "node_id": "tests/test_correction.py::test_anchor_none_when_no_overlap",
+      "wall_time_s": 0.001,
+      "cumulative_s": 56.057,
+      "cumulative_pct_of_sum": 99.9982,
+      "status": "passed"
+    },
+    {
+      "rank": 140,
+      "node_id": "tests/test_twinkle.py::test_search_parses_source_with_full_content",
+      "wall_time_s": 0.001,
+      "cumulative_s": 56.058,
+      "cumulative_pct_of_sum": 100.0,
+      "status": "passed"
+    }
+  ],
+  "long_tail_verdict": {
+    "dominates": true,
+    "level": "extreme_pareto",
+    "summary_zh": "是：極少數長尾主導。Top1=65.79%, Top3=81.28%, Top10=96.50%。最慢為 test_substitute_mapping_is_complete_and_collectable。",
+    "top1_pct": 65.7944,
+    "top3_pct": 81.2837,
+    "top10_pct": 96.5018,
+    "reference_total_s": 73.31,
+    "measured_suite_s": 56.626,
+    "note": "占比以 testcase time 加總為分母；可比例套用至 73.31s 參考值。"
+  }
+}

@@ -1,0 +1,56 @@
+[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m [ 51%]
+[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m     [100%][0m
+============================== slowest durations ==============================
+32.29s call     tests/test_deselection_guard.py::test_substitute_mapping_is_complete_and_collectable
+6.67s call     tests/test_deselected_ci_gate_acceptance.py::test_ci_gate_accepts_only_authorized_deselected_nodes_with_reasons
+6.02s call     tests/test_deselected_ci_gate_acceptance.py::test_ci_gate_fails_when_deselected_allowlist_contains_non_deselected_node
+4.43s call     tests/test_deselected_ci_gate_acceptance.py::test_ci_gate_fails_when_deselected_allowlist_count_is_too_small
+2.78s call     tests/test_deselection_guard.py::test_integration_allowlist_is_stable
+0.88s call     tests/test_deselection_guard.py::test_deselected_details_lists_node_ids_and_reasons
+0.84s call     tests/test_requirements_test_coverage.py::test_default_gate_collects_every_equivalent_and_safety_regression
+0.53s call     tests/test_law_check.py::test_search_articles_keyword_only
+0.16s call     tests/test_export_docx.py::test_to_docx_roundtrip_preserves_original_and_marks_supplement
+0.16s call     tests/test_law_search.py::test_search_law_sources_accepts_plain_keyword_response
+0.16s call     tests/test_excluded_failing_controls.py::test_control_05_pipeline_c6_pending_when_no_sources
+0.15s call     tests/test_law_check.py::test_search_articles_limit
+0.13s call     tests/test_parse.py::test_parse_docx_roundtrip
+0.12s call     tests/test_design_acceptance.py::test_design_package_head_matches_repo_and_claim_map_printable
+0.11s setup    tests/test_pipeline.py::test_run_pipeline_law_domain_runs_citation_check
+0.09s setup    tests/test_pipeline.py::test_run_pipeline_malformed_gap_output_falls_back_to_pending
+0.09s setup    tests/test_pipeline.py::test_run_pipeline_invariant
+0.07s call     tests/test_pipeline.py::test_run_pipeline_invariant
+0.06s call     tests/test_pipeline.py::test_run_pipeline_law_domain_runs_citation_check
+0.06s call     tests/test_pipeline.py::test_run_pipeline_malformed_gap_output_falls_back_to_pending
+0.05s call     tests/test_server.py::test_index_returns_upload_form[asyncio]
+0.03s call     tests/test_server.py::test_run_renders_two_columns[asyncio]
+0.03s call     tests/test_design_acceptance.py::test_design_claims_index_is_complete
+0.03s call     tests/test_law_lookup.py::test_search_articles_limit_after_numeric_sort
+0.03s call     tests/test_law_lookup.py::test_search_articles_orders_by_numeric_article_no
+0.02s call     tests/test_cli.py::test_process_file_json_format_and_outdir
+0.02s call     tests/test_e2e_acceptance.py::test_e2e_structural_invariants
+0.02s call     tests/test_cli.py::test_iter_inputs_expands_dir_filters_suffix_and_dedups
+0.02s setup    tests/test_cli.py::test_iter_inputs_expands_dir_filters_suffix_and_dedups
+0.02s call     tests/test_server.py::test_export_returns_markdown_attachment[asyncio]
+0.02s setup    tests/test_deselected_ci_gate_acceptance.py::test_ci_gate_fails_when_deselected_allowlist_contains_non_deselected_node
+0.01s setup    tests/test_law_lookup.py::test_search_articles_orders_by_numeric_article_no
+0.01s setup    tests/test_cli.py::test_process_file_json_format_and_outdir
+0.01s setup    tests/test_parse.py::test_parse_docx_roundtrip
+0.01s setup    tests/test_deselected_ci_gate_acceptance.py::test_ci_gate_fails_when_deselected_allowlist_count_is_too_small
+0.01s setup    tests/test_export_docx.py::test_to_docx_roundtrip_preserves_original_and_marks_supplement
+0.01s setup    tests/test_excluded_failing_controls.py::test_control_05_pipeline_c6_pending_when_no_sources
+0.01s setup    tests/test_law_lookup.py::test_search_articles_limit_after_numeric_sort
+0.01s setup    tests/test_deselected_ci_gate_acceptance.py::test_ci_gate_accepts_only_authorized_deselected_nodes_with_reasons
+0.01s call     tests/test_server.py::test_export_without_run_returns_404[asyncio]
+0.01s call     tests/test_cli.py::test_process_file_writes_md_and_counts
+0.01s setup    tests/test_cli.py::test_process_file_writes_md_and_counts
+0.01s call     tests/test_design_acceptance.py::test_design_acceptance_package_is_machine_checkable
+0.01s setup    tests/test_server.py::test_index_returns_upload_form[asyncio]
+0.01s call     tests/test_excluded_failing_controls.py::test_control_02_e2e_offline_quality_gates
+0.01s setup    tests/test_server.py::test_export_returns_markdown_attachment[asyncio]
+0.01s setup    tests/test_server.py::test_export_without_run_returns_404[asyncio]
+0.01s setup    tests/test_server.py::test_run_renders_two_columns[asyncio]
+0.01s call     tests/test_requirements_test_coverage.py::test_coverage_matrix_classifies_all_eight_and_has_no_missing_requirement
+0.01s call     tests/test_e2e_acceptance.py::test_e2e_minimal_quality_gates_offline_regression
+
+(370 durations < 0.005s hidden.  Use -vv to show these durations.)
+[32m[32m[1m140 passed[0m, [33m8 deselected[0m[32m in 57.66s[0m[0m

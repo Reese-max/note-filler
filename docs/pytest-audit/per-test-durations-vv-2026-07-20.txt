@@ -1,0 +1,203 @@
+[1m============================= test session starts =============================[0m
+platform win32 -- Python 3.11.9, pytest-9.1.1, pluggy-1.6.0 -- D:\Users\Administrator\Desktop\蝑?鋆?\.venv\Scripts\python.exe
+cachedir: .pytest_cache
+rootdir: D:\Users\Administrator\Desktop\autodev-ng\data\note-filler\worktrees\d4cf2554
+configfile: pyproject.toml
+testpaths: tests
+plugins: anyio-4.14.2
+[1mcollecting ... [0mcollected 148 items / 8 deselected / 140 selected
+
+tests/test_citation_formatter.py::test_build_reference_lines_two_sources [32mPASSED[0m[32m [  0%][0m
+tests/test_cli.py::test_iter_inputs_expands_dir_filters_suffix_and_dedups [32mPASSED[0m[32m [  1%][0m
+tests/test_cli.py::test_process_file_writes_md_and_counts [32mPASSED[0m[32m         [  2%][0m
+tests/test_cli.py::test_process_file_json_format_and_outdir [32mPASSED[0m[32m       [  2%][0m
+tests/test_conclusion_classification.py::test_classification_index_schema_and_labels [32mPASSED[0m[32m [  3%][0m
+tests/test_conclusion_classification.py::test_classification_covers_all_eight_allowlist_nodes [32mPASSED[0m[32m [  4%][0m
+tests/test_conclusion_classification.py::test_non_defect_items_have_no_gap_package [32mPASSED[0m[32m [  5%][0m
+tests/test_conclusion_classification.py::test_true_gap_items_have_full_package [32mPASSED[0m[32m [  5%][0m
+tests/test_conclusion_classification.py::test_human_report_exists_and_mentions_both_labels [32mPASSED[0m[32m [  6%][0m
+tests/test_conclusion_classification.py::test_gap_c7_current_smoke_vacuous_pass_on_empty [32mPASSED[0m[32m [  7%][0m
+tests/test_conclusion_classification.py::test_gap_c7_strengthened_contract_fails_on_empty [32mPASSED[0m[32m [  7%][0m
+tests/test_conclusion_classification.py::test_gap_c7_package_acceptance_commands_are_non_empty_shell [32mPASSED[0m[32m [  8%][0m
+tests/test_correction.py::test_original_segments_verbatim_and_immutable [32mPASSED[0m[32m [  9%][0m
+tests/test_correction.py::test_written_two_independent_a_verified_only_used_sources [32mPASSED[0m[32m [ 10%][0m
+tests/test_correction.py::test_pending_evidence_written_empty_sources [32mPASSED[0m[32m [ 10%][0m
+tests/test_correction.py::test_retrieved_five_but_only_two_cited [32mPASSED[0m[32m  [ 11%][0m
+tests/test_correction.py::test_single_a_used_source_verified [32mPASSED[0m[32m      [ 12%][0m
+tests/test_correction.py::test_three_articles_same_law_same_url_verified [32mPASSED[0m[32m [ 12%][0m
+tests/test_correction.py::test_two_distinct_b_verified [32mPASSED[0m[32m            [ 13%][0m
+tests/test_correction.py::test_single_b_no_a_pending [32mPASSED[0m[32m              [ 14%][0m
+tests/test_correction.py::test_single_c_used_source_verified [32mPASSED[0m[32m      [ 15%][0m
+tests/test_correction.py::test_single_d_used_source_pending [32mPASSED[0m[32m       [ 15%][0m
+tests/test_correction.py::test_two_distinct_d_verified [32mPASSED[0m[32m            [ 16%][0m
+tests/test_correction.py::test_anchor_picks_keyword_overlap [32mPASSED[0m[32m       [ 17%][0m
+tests/test_correction.py::test_anchor_none_when_no_overlap [32mPASSED[0m[32m        [ 17%][0m
+tests/test_deselected_ci_gate_acceptance.py::test_ci_gate_accepts_only_authorized_deselected_nodes_with_reasons [32mPASSED[0m[32m [ 18%][0m
+tests/test_deselected_ci_gate_acceptance.py::test_ci_gate_fails_when_deselected_allowlist_count_is_too_small [32mPASSED[0m[32m [ 19%][0m
+tests/test_deselected_ci_gate_acceptance.py::test_ci_gate_fails_when_deselected_allowlist_contains_non_deselected_node [32mPASSED[0m[32m [ 20%][0m
+tests/test_deselection_guard.py::test_integration_allowlist_is_stable [32mPASSED[0m[32m [ 20%][0m
+tests/test_deselection_guard.py::test_deselected_details_lists_node_ids_and_reasons [32mPASSED[0m[32m [ 21%][0m
+tests/test_deselection_guard.py::test_substitute_mapping_is_complete_and_collectable [32mPASSED[0m[32m [ 22%][0m
+tests/test_deselection_guard.py::test_acceptance_package_rejects_count_only_summary [32mPASSED[0m[32m [ 22%][0m
+tests/test_design_acceptance.py::test_design_claims_index_is_complete [32mPASSED[0m[32m [ 23%][0m
+tests/test_design_acceptance.py::test_design_acceptance_package_is_machine_checkable [32mPASSED[0m[32m [ 24%][0m
+tests/test_design_acceptance.py::test_design_acceptance_rejects_claim_without_artifact [32mPASSED[0m[32m [ 25%][0m
+tests/test_design_acceptance.py::test_design_package_head_matches_repo_and_claim_map_printable [32mPASSED[0m[32m [ 25%][0m
+tests/test_domain.py::test_detect_domain_law [32mPASSED[0m[32m                      [ 26%][0m
+tests/test_domain.py::test_detect_domain_admin [32mPASSED[0m[32m                    [ 27%][0m
+tests/test_domain.py::test_detect_domain_exam [32mPASSED[0m[32m                     [ 27%][0m
+tests/test_domain.py::test_detect_domain_noise_falls_back_to_other [32mPASSED[0m[32m [ 28%][0m
+tests/test_domain.py::test_detect_domain_label_with_trailing_punctuation [32mPASSED[0m[32m [ 29%][0m
+tests/test_domain.py::test_detect_domain_uppercase_and_whitespace [32mPASSED[0m[32m [ 30%][0m
+tests/test_e2e_acceptance.py::test_e2e_structural_invariants [32mPASSED[0m[32m      [ 30%][0m
+tests/test_e2e_acceptance.py::test_e2e_offline_supplement_quality_boundary [32mPASSED[0m[32m [ 31%][0m
+tests/test_e2e_acceptance.py::test_e2e_minimal_quality_gates_offline_regression [32mPASSED[0m[32m [ 32%][0m
+tests/test_excluded_failing_controls.py::test_control_map_covers_all_eight_excluded [32mPASSED[0m[32m [ 32%][0m
+tests/test_excluded_failing_controls.py::test_control_01_domain_legal_label_contract [32mPASSED[0m[32m [ 33%][0m
+tests/test_excluded_failing_controls.py::test_control_02_e2e_offline_quality_gates [32mPASSED[0m[32m [ 34%][0m
+tests/test_excluded_failing_controls.py::test_control_03_gap_uncovered_question_must_surface [32mPASSED[0m[32m [ 35%][0m
+tests/test_excluded_failing_controls.py::test_control_04_grok_client_parse_and_endpoint_contract [32mPASSED[0m[32m [ 35%][0m
+tests/test_excluded_failing_controls.py::test_control_05_pipeline_c6_pending_when_no_sources [32mPASSED[0m[32m [ 36%][0m
+tests/test_excluded_failing_controls.py::test_control_06_questions_clean_list_contract [32mPASSED[0m[32m [ 37%][0m
+tests/test_excluded_failing_controls.py::test_control_07_retrieve_smoke_vacuous_empty_is_blind_spot [32mPASSED[0m[32m [ 37%][0m
+tests/test_excluded_failing_controls.py::test_control_07b_retrieve_law_level_a_not_vacuous [32mPASSED[0m[32m [ 38%][0m
+tests/test_excluded_failing_controls.py::test_control_08_twinkle_parsed_source_contract [32mPASSED[0m[32m [ 39%][0m
+tests/test_exclusion_correctness_blind_spot.py::test_deselected_retrieve_smoke_vacuous_pass_on_empty_is_blind_spot [32mPASSED[0m[32m [ 40%][0m
+tests/test_exclusion_correctness_blind_spot.py::test_law_domain_retrieve_must_yield_level_a_not_vacuous_empty [32mPASSED[0m[32m [ 40%][0m
+tests/test_export.py::test_to_json_serializes_segments [32mPASSED[0m[32m            [ 41%][0m
+tests/test_export.py::test_to_markdown_format_locked [32mPASSED[0m[32m              [ 42%][0m
+tests/test_export.py::test_to_markdown_pending_segment_has_no_footnote [32mPASSED[0m[32m [ 42%][0m
+tests/test_export_docx.py::test_to_docx_roundtrip_preserves_original_and_marks_supplement [32mPASSED[0m[32m [ 43%][0m
+tests/test_gap.py::test_detect_gaps_keeps_only_partial_and_missing [32mPASSED[0m[32m [ 44%][0m
+tests/test_gap.py::test_detect_gaps_calls_llm_exactly_once [32mPASSED[0m[32m        [ 45%][0m
+tests/test_gap.py::test_detect_gaps_parse_failure_marks_all_missing [32mPASSED[0m[32m [ 45%][0m
+tests/test_gap.py::test_detect_gaps_non_array_json_also_fallbacks [32mPASSED[0m[32m [ 46%][0m
+tests/test_gap.py::test_detect_gaps_strips_code_fence [32mPASSED[0m[32m             [ 47%][0m
+tests/test_gap.py::test_detect_gaps_empty_questions_short_circuits [32mPASSED[0m[32m [ 47%][0m
+tests/test_grading.py::test_source_dataclass_has_locked_fields [32mPASSED[0m[32m    [ 48%][0m
+tests/test_grading.py::test_grade_law_returns_A [32mPASSED[0m[32m                   [ 49%][0m
+tests/test_grading.py::test_grade_twinkle_returns_B [32mPASSED[0m[32m               [ 50%][0m
+tests/test_grading.py::test_is_stale_exactly_max_age_is_not_stale [32mPASSED[0m[32m [ 50%][0m
+tests/test_grading.py::test_is_stale_over_max_age_is_stale [32mPASSED[0m[32m        [ 51%][0m
+tests/test_grading.py::test_is_stale_under_max_age_is_not_stale [32mPASSED[0m[32m   [ 52%][0m
+tests/test_grading.py::test_is_stale_today_is_not_stale [32mPASSED[0m[32m           [ 52%][0m
+tests/test_law_check.py::test_real_law_article_exists [32mPASSED[0m[32m             [ 53%][0m
+tests/test_law_check.py::test_fake_article_no_flagged_not_found [32mPASSED[0m[32m   [ 54%][0m
+tests/test_law_check.py::test_unknown_law_not_false_reported [32mPASSED[0m[32m      [ 55%][0m
+tests/test_law_check.py::test_search_articles_keyword_with_law_name [32mPASSED[0m[32m [ 55%][0m
+tests/test_law_check.py::test_search_articles_keyword_only [32mPASSED[0m[32m        [ 56%][0m
+tests/test_law_check.py::test_search_articles_limit [32mPASSED[0m[32m               [ 57%][0m
+tests/test_law_check.py::test_check_law_citations_first_param_is_text [32mPASSED[0m[32m [ 57%][0m
+tests/test_law_lookup.py::test_search_articles_orders_by_numeric_article_no [32mPASSED[0m[32m [ 58%][0m
+tests/test_law_lookup.py::test_search_articles_limit_after_numeric_sort [32mPASSED[0m[32m [ 59%][0m
+tests/test_law_search.py::test_search_law_sources_returns_level_A_law_articles [32mPASSED[0m[32m [ 60%][0m
+tests/test_law_search.py::test_search_law_sources_accepts_plain_keyword_response [32mPASSED[0m[32m [ 60%][0m
+tests/test_law_search.py::test_search_law_sources_uses_single_llm_call_and_empty_on_no_hit [32mPASSED[0m[32m [ 61%][0m
+tests/test_law_search.py::test_search_law_sources_unions_multiple_keywords_dedup_and_order [32mPASSED[0m[32m [ 62%][0m
+tests/test_law_search.py::test_search_law_sources_backward_compat_single_keyword [32mPASSED[0m[32m [ 62%][0m
+tests/test_law_search.py::test_search_law_sources_non_json_treated_as_single_keyword [32mPASSED[0m[32m [ 63%][0m
+tests/test_law_search.py::test_search_law_sources_empty_keywords_returns_empty [32mPASSED[0m[32m [ 64%][0m
+tests/test_llm.py::test_fakellm_returns_canned_in_order [32mPASSED[0m[32m           [ 65%][0m
+tests/test_llm.py::test_grokclient_builds_request_body [32mPASSED[0m[32m            [ 65%][0m
+tests/test_parse.py::test_parse_txt_splits_on_blank_lines [32mPASSED[0m[32m         [ 66%][0m
+tests/test_parse.py::test_paragraph_and_document_are_frozen [32mPASSED[0m[32m       [ 67%][0m
+tests/test_parse.py::test_parse_docx_roundtrip [32mPASSED[0m[32m                    [ 67%][0m
+tests/test_pipeline.py::test_run_pipeline_invariant [32mPASSED[0m[32m               [ 68%][0m
+tests/test_pipeline.py::test_run_pipeline_law_domain_runs_citation_check [32mPASSED[0m[32m [ 69%][0m
+tests/test_pipeline.py::test_run_pipeline_malformed_gap_output_falls_back_to_pending [32mPASSED[0m[32m [ 70%][0m
+tests/test_questions.py::test_generate_questions_splits_multiline_string [32mPASSED[0m[32m [ 70%][0m
+tests/test_questions.py::test_generate_questions_strips_and_drops_blank_lines [32mPASSED[0m[32m [ 71%][0m
+tests/test_questions.py::test_generate_questions_empty_response_returns_empty_list [32mPASSED[0m[32m [ 72%][0m
+tests/test_questions.py::test_generate_questions_calls_llm_exactly_once [32mPASSED[0m[32m [ 72%][0m
+tests/test_requirements_test_coverage.py::test_coverage_matrix_classifies_all_eight_and_has_no_missing_requirement [32mPASSED[0m[32m [ 73%][0m
+tests/test_requirements_test_coverage.py::test_default_gate_collects_every_equivalent_and_safety_regression [32mPASSED[0m[32m [ 74%][0m
+tests/test_retrieve.py::test_retrieve_for_gap_law_domain_puts_level_A_before_B [32mPASSED[0m[32m [ 75%][0m
+tests/test_retrieve.py::test_retrieve_for_gap_other_domain_uses_web_not_twinkle [32mPASSED[0m[32m [ 75%][0m
+tests/test_server.py::test_index_returns_upload_form[asyncio] [32mPASSED[0m[32m     [ 76%][0m
+tests/test_server.py::test_run_renders_two_columns[asyncio] [32mPASSED[0m[32m       [ 77%][0m
+tests/test_server.py::test_export_returns_markdown_attachment[asyncio] [32mPASSED[0m[32m [ 77%][0m
+tests/test_server.py::test_export_without_run_returns_404[asyncio] [32mPASSED[0m[32m [ 78%][0m
+tests/test_twinkle.py::test_search_parses_source_with_full_content [32mPASSED[0m[32m [ 79%][0m
+tests/test_twinkle.py::test_search_returns_empty_without_token [32mPASSED[0m[32m    [ 80%][0m
+tests/test_twinkle.py::test_search_reuses_mcp_session [32mPASSED[0m[32m             [ 80%][0m
+tests/test_twinkle.py::test_search_transport_failure_returns_empty [32mPASSED[0m[32m [ 81%][0m
+tests/test_twinkle.py::test_default_timeout_is_60 [32mPASSED[0m[32m                 [ 82%][0m
+tests/test_verify.py::test_two_independent_ab_sources_verified [32mPASSED[0m[32m    [ 82%][0m
+tests/test_verify.py::test_three_articles_same_law_same_url_verified [32mPASSED[0m[32m [ 83%][0m
+tests/test_verify.py::test_single_a_source_verified [32mPASSED[0m[32m               [ 84%][0m
+tests/test_verify.py::test_two_distinct_b_verified [32mPASSED[0m[32m                [ 85%][0m
+tests/test_verify.py::test_single_b_no_a_pending [32mPASSED[0m[32m                  [ 85%][0m
+tests/test_verify.py::test_single_c_verified [32mPASSED[0m[32m                      [ 86%][0m
+tests/test_verify.py::test_single_d_pending [32mPASSED[0m[32m                       [ 87%][0m
+tests/test_verify.py::test_two_distinct_d_verified [32mPASSED[0m[32m                [ 87%][0m
+tests/test_verify.py::test_conflict_detected_and_no_side_taken [32mPASSED[0m[32m    [ 88%][0m
+tests/test_verify.py::test_no_conflict_when_consistent [32mPASSED[0m[32m            [ 89%][0m
+tests/test_verify.py::test_negation_substring_not_false_positive [32mPASSED[0m[32m  [ 90%][0m
+tests/test_verify.py::test_independent_ab_orders_A_before_B_and_by_distance [32mPASSED[0m[32m [ 90%][0m
+tests/test_verify.py::test_distinct_by_id_not_url [32mPASSED[0m[32m                 [ 91%][0m
+tests/test_web.py::test_two_pages_graded_c_and_d [32mPASSED[0m[32m                  [ 92%][0m
+tests/test_web.py::test_drop_page_excluded [32mPASSED[0m[32m                        [ 92%][0m
+tests/test_web.py::test_fetch_none_skipped [32mPASSED[0m[32m                        [ 93%][0m
+tests/test_web.py::test_too_short_fulltext_skipped [32mPASSED[0m[32m                [ 94%][0m
+tests/test_web.py::test_search_exception_degrades_to_empty [32mPASSED[0m[32m        [ 95%][0m
+tests/test_web.py::test_content_truncated_with_note [32mPASSED[0m[32m               [ 95%][0m
+tests/test_web.py::test_query_extraction_falls_back_to_question [32mPASSED[0m[32m   [ 96%][0m
+tests/test_web.py::test_retrieve_other_domain_calls_web [32mPASSED[0m[32m           [ 97%][0m
+tests/test_web.py::test_retrieve_law_domain_does_not_call_web [32mPASSED[0m[32m     [ 97%][0m
+tests/test_write.py::test_used_source_ids_from_markers [32mPASSED[0m[32m            [ 98%][0m
+tests/test_write.py::test_pending_evidence_when_insufficient [32mPASSED[0m[32m      [ 99%][0m
+tests/test_write.py::test_out_of_range_marker_removed_and_not_used [32mPASSED[0m[32m [100%][0m
+
+- generated xml file: D:\Users\Administrator\Desktop\autodev-ng\data\note-filler\worktrees\d4cf2554\docs\pytest-audit\per-test-durations-junit-2026-07-20.xml -
+============================== slowest durations ==============================
+36.88s call     tests/test_deselection_guard.py::test_substitute_mapping_is_complete_and_collectable
+4.67s call     tests/test_deselected_ci_gate_acceptance.py::test_ci_gate_fails_when_deselected_allowlist_count_is_too_small
+3.99s call     tests/test_deselected_ci_gate_acceptance.py::test_ci_gate_accepts_only_authorized_deselected_nodes_with_reasons
+2.90s call     tests/test_deselected_ci_gate_acceptance.py::test_ci_gate_fails_when_deselected_allowlist_contains_non_deselected_node
+2.58s call     tests/test_deselection_guard.py::test_integration_allowlist_is_stable
+1.18s call     tests/test_deselection_guard.py::test_deselected_details_lists_node_ids_and_reasons
+0.90s call     tests/test_requirements_test_coverage.py::test_default_gate_collects_every_equivalent_and_safety_regression
+0.44s call     tests/test_law_check.py::test_search_articles_keyword_only
+0.24s call     tests/test_excluded_failing_controls.py::test_control_05_pipeline_c6_pending_when_no_sources
+0.23s call     tests/test_law_search.py::test_search_law_sources_accepts_plain_keyword_response
+0.23s call     tests/test_export_docx.py::test_to_docx_roundtrip_preserves_original_and_marks_supplement
+0.17s call     tests/test_parse.py::test_parse_docx_roundtrip
+0.16s call     tests/test_law_check.py::test_search_articles_limit
+0.13s call     tests/test_design_acceptance.py::test_design_package_head_matches_repo_and_claim_map_printable
+0.10s setup    tests/test_pipeline.py::test_run_pipeline_invariant
+0.10s setup    tests/test_pipeline.py::test_run_pipeline_law_domain_runs_citation_check
+0.09s call     tests/test_pipeline.py::test_run_pipeline_law_domain_runs_citation_check
+0.09s setup    tests/test_pipeline.py::test_run_pipeline_malformed_gap_output_falls_back_to_pending
+0.07s call     tests/test_pipeline.py::test_run_pipeline_invariant
+0.06s call     tests/test_pipeline.py::test_run_pipeline_malformed_gap_output_falls_back_to_pending
+0.05s call     tests/test_design_acceptance.py::test_design_claims_index_is_complete
+0.04s call     tests/test_server.py::test_index_returns_upload_form[asyncio]
+0.03s call     tests/test_server.py::test_run_renders_two_columns[asyncio]
+0.03s call     tests/test_exclusion_correctness_blind_spot.py::test_law_domain_retrieve_must_yield_level_a_not_vacuous_empty
+0.03s call     tests/test_cli.py::test_process_file_json_format_and_outdir
+0.03s call     tests/test_law_lookup.py::test_search_articles_orders_by_numeric_article_no
+0.03s call     tests/test_law_lookup.py::test_search_articles_limit_after_numeric_sort
+0.02s call     tests/test_e2e_acceptance.py::test_e2e_structural_invariants
+0.02s setup    tests/test_export_docx.py::test_to_docx_roundtrip_preserves_original_and_marks_supplement
+0.02s teardown tests/test_grading.py::test_is_stale_under_max_age_is_not_stale
+0.02s call     tests/test_server.py::test_export_returns_markdown_attachment[asyncio]
+0.02s call     tests/test_design_acceptance.py::test_design_acceptance_package_is_machine_checkable
+0.02s setup    tests/test_excluded_failing_controls.py::test_control_05_pipeline_c6_pending_when_no_sources
+0.02s call     tests/test_e2e_acceptance.py::test_e2e_minimal_quality_gates_offline_regression
+0.01s setup    tests/test_deselected_ci_gate_acceptance.py::test_ci_gate_fails_when_deselected_allowlist_contains_non_deselected_node
+0.01s setup    tests/test_deselected_ci_gate_acceptance.py::test_ci_gate_fails_when_deselected_allowlist_count_is_too_small
+0.01s call     tests/test_excluded_failing_controls.py::test_control_02_e2e_offline_quality_gates
+0.01s setup    tests/test_parse.py::test_parse_docx_roundtrip
+0.01s call     tests/test_excluded_failing_controls.py::test_control_07b_retrieve_law_level_a_not_vacuous
+0.01s setup    tests/test_cli.py::test_iter_inputs_expands_dir_filters_suffix_and_dedups
+0.01s setup    tests/test_law_lookup.py::test_search_articles_orders_by_numeric_article_no
+0.01s setup    tests/test_law_lookup.py::test_search_articles_limit_after_numeric_sort
+0.01s call     tests/test_e2e_acceptance.py::test_e2e_offline_supplement_quality_boundary
+0.01s call     tests/test_law_check.py::test_real_law_article_exists
+0.01s call     tests/test_server.py::test_export_without_run_returns_404[asyncio]
+0.01s call     tests/test_cli.py::test_iter_inputs_expands_dir_filters_suffix_and_dedups
+0.01s setup    tests/test_server.py::test_index_returns_upload_form[asyncio]
+0.01s call     tests/test_cli.py::test_process_file_writes_md_and_counts
+
+(372 durations < 0.005s hidden.  Use -vv to show these durations.)
+[32m===================== [32m[1m140 passed[0m, [33m8 deselected[0m[32m in 56.67s[0m[32m ======================[0m
