@@ -1,0 +1,11 @@
+rank,node_id,baseline_s,run1_s,run2_s,run3_s,mean_s,stdev_s,cv,fixture,io,external_resource,subprocess_pytest,primary_cost,verdict,optimizable_true_bottleneck,noise_only,all_passed
+1,tests/test_deselection_guard.py::test_substitute_mapping_is_complete_and_collectable,36.883,34.159,39.354,40.256,37.923,3.2908,0.0868,False,True,False,True,nested_pytest_collect,true_bottleneck,True,False,True
+2,tests/test_deselected_ci_gate_acceptance.py::test_ci_gate_fails_when_deselected_allowlist_count_is_too_small,4.686,4.878,4.004,5.066,4.6493,0.5667,0.1219,True,True,False,True,nested_gate_subprocess,true_bottleneck,True,False,True
+3,tests/test_deselected_ci_gate_acceptance.py::test_ci_gate_accepts_only_authorized_deselected_nodes_with_reasons,3.997,4.608,5.885,4.657,5.05,0.7235,0.1433,True,True,False,True,nested_gate_subprocess,true_bottleneck,True,False,True
+4,tests/test_deselected_ci_gate_acceptance.py::test_ci_gate_fails_when_deselected_allowlist_contains_non_deselected_node,2.914,4.373,4.234,4.484,4.3637,0.1253,0.0287,True,True,False,True,nested_gate_subprocess,true_bottleneck,True,False,True
+5,tests/test_deselection_guard.py::test_integration_allowlist_is_stable,2.578,3.21,2.706,2.703,2.873,0.2919,0.1016,False,True,False,True,nested_pytest_collect,true_bottleneck,True,False,True
+6,tests/test_deselection_guard.py::test_deselected_details_lists_node_ids_and_reasons,1.186,1.615,1.227,2.4,1.7473,0.5976,0.342,False,True,False,True,nested_pytest_collect,true_bottleneck_with_variance,True,False,True
+7,tests/test_requirements_test_coverage.py::test_default_gate_collects_every_equivalent_and_safety_regression,0.898,2.271,1.753,1.449,1.8243,0.4156,0.2278,False,True,False,True,nested_pytest_collect,true_bottleneck,True,False,True
+8,tests/test_law_check.py::test_search_articles_keyword_only,0.443,0.152,0.051,0.067,0.09,0.0543,0.6032,True,True,False,False,sqlite_query,noise_or_marginal,False,True,True
+9,tests/test_excluded_failing_controls.py::test_control_05_pipeline_c6_pending_when_no_sources,0.261,0.097,0.112,0.124,0.111,0.0135,0.1219,True,True,False,False,pipeline_cpu_docx,marginal,False,False,True
+10,tests/test_export_docx.py::test_to_docx_roundtrip_preserves_original_and_marks_supplement,0.251,0.203,0.181,0.221,0.2017,0.02,0.0993,True,True,False,False,docx_io,marginal,False,False,True

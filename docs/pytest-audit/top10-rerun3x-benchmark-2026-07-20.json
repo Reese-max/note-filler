@@ -1,0 +1,697 @@
+{
+  "generated_at": "2026-07-20T07:26:55.868173+00:00",
+  "started_at": "2026-07-20T07:22:24.044281+00:00",
+  "source_baseline": "docs/pytest-audit/per-test-durations-2026-07-20.json",
+  "python": "D:/Users/Administrator/Desktop/筆記補齊/.venv/Scripts/python.exe -X utf8",
+  "runs_per_test": 3,
+  "metric": "junit testcase time attribute (setup+call+teardown); process_wall as secondary",
+  "classification_rules": {
+    "true_bottleneck": "mean>=1.0s and CV<=0.25",
+    "true_bottleneck_with_variance": "mean>=1.0s and CV>0.25",
+    "secondary_stable": "0.5s<=mean<1.0s and CV<=0.25",
+    "marginal": "mean<0.5s and CV<=0.35",
+    "noise_or_marginal": "mean<0.5s and CV>0.35",
+    "cv": "stdev/mean"
+  },
+  "results": [
+    {
+      "rank_baseline": 1,
+      "node_id": "tests/test_deselection_guard.py::test_substitute_mapping_is_complete_and_collectable",
+      "baseline_wall_time_s": 36.883,
+      "runs": [
+        {
+          "run": 1,
+          "returncode": 0,
+          "process_wall_s": 35.552,
+          "junit_time_s": 34.159,
+          "status": "passed",
+          "junit_path": "docs/pytest-audit/top10-rerun3x-junit-2026-07-20/rank01-run1.xml",
+          "stdout_tail": "\u001b[32m.\u001b[0m\u001b[32m                                                                        [100%]\u001b[0m\n\u001b[32m\u001b[32m\u001b[1m1 passed\u001b[0m\u001b[32m in 34.31s\u001b[0m\u001b[0m\n",
+          "stderr_tail": "",
+          "command": "D:/Users/Administrator/Desktop/筆記補齊/.venv/Scripts/python.exe -X utf8 -m pytest tests/test_deselection_guard.py::test_substitute_mapping_is_complete_and_collectable -o addopts= -q --tb=line --junitxml=D:\\Users\\Administrator\\Desktop\\autodev-ng\\data\\note-filler\\worktrees\\8f9976c3\\docs\\pytest-audit\\top10-rerun3x-junit-2026-07-20\\rank01-run1.xml"
+        },
+        {
+          "run": 2,
+          "returncode": 0,
+          "process_wall_s": 40.8374,
+          "junit_time_s": 39.354,
+          "status": "passed",
+          "junit_path": "docs/pytest-audit/top10-rerun3x-junit-2026-07-20/rank01-run2.xml",
+          "stdout_tail": "\u001b[32m.\u001b[0m\u001b[32m                                                                        [100%]\u001b[0m\n\u001b[32m\u001b[32m\u001b[1m1 passed\u001b[0m\u001b[32m in 39.48s\u001b[0m\u001b[0m\n",
+          "stderr_tail": "",
+          "command": "D:/Users/Administrator/Desktop/筆記補齊/.venv/Scripts/python.exe -X utf8 -m pytest tests/test_deselection_guard.py::test_substitute_mapping_is_complete_and_collectable -o addopts= -q --tb=line --junitxml=D:\\Users\\Administrator\\Desktop\\autodev-ng\\data\\note-filler\\worktrees\\8f9976c3\\docs\\pytest-audit\\top10-rerun3x-junit-2026-07-20\\rank01-run2.xml"
+        },
+        {
+          "run": 3,
+          "returncode": 0,
+          "process_wall_s": 41.75,
+          "junit_time_s": 40.256,
+          "status": "passed",
+          "junit_path": "docs/pytest-audit/top10-rerun3x-junit-2026-07-20/rank01-run3.xml",
+          "stdout_tail": "\u001b[32m.\u001b[0m\u001b[32m                                                                        [100%]\u001b[0m\n\u001b[32m\u001b[32m\u001b[1m1 passed\u001b[0m\u001b[32m in 40.36s\u001b[0m\u001b[0m\n",
+          "stderr_tail": "",
+          "command": "D:/Users/Administrator/Desktop/筆記補齊/.venv/Scripts/python.exe -X utf8 -m pytest tests/test_deselection_guard.py::test_substitute_mapping_is_complete_and_collectable -o addopts= -q --tb=line --junitxml=D:\\Users\\Administrator\\Desktop\\autodev-ng\\data\\note-filler\\worktrees\\8f9976c3\\docs\\pytest-audit\\top10-rerun3x-junit-2026-07-20\\rank01-run3.xml"
+        }
+      ],
+      "samples_junit_s": [
+        34.159,
+        39.354,
+        40.256
+      ],
+      "mean_s": 37.923,
+      "stdev_s": 3.2908,
+      "cv": 0.0868,
+      "min_s": 34.159,
+      "max_s": 40.256,
+      "mean_vs_baseline_pct": 2.82,
+      "influence": {
+        "fixture": false,
+        "io": true,
+        "external_resource": false,
+        "subprocess_pytest": true,
+        "primary_cost": "nested_pytest_collect",
+        "notes_zh": "多次 subprocess 再 spawn pytest --collect-only（含全量、default、mapped 與個別替代測）；磁碟讀 allowlist/JSON；無網路。"
+      },
+      "classification": {
+        "verdict": "true_bottleneck",
+        "optimizable_true_bottleneck": true,
+        "noise_only": false,
+        "reason_zh": "平均 37.923s 且 CV=0.087≤0.25，結構性慢點（非單次波動）"
+      },
+      "all_passed": true
+    },
+    {
+      "rank_baseline": 2,
+      "node_id": "tests/test_deselected_ci_gate_acceptance.py::test_ci_gate_fails_when_deselected_allowlist_count_is_too_small",
+      "baseline_wall_time_s": 4.686,
+      "runs": [
+        {
+          "run": 1,
+          "returncode": 0,
+          "process_wall_s": 6.4347,
+          "junit_time_s": 4.878,
+          "status": "passed",
+          "junit_path": "docs/pytest-audit/top10-rerun3x-junit-2026-07-20/rank02-run1.xml",
+          "stdout_tail": "\u001b[32m.\u001b[0m\u001b[32m                                                                        [100%]\u001b[0m\n\u001b[32m\u001b[32m\u001b[1m1 passed\u001b[0m\u001b[32m in 5.00s\u001b[0m\u001b[0m\n",
+          "stderr_tail": "",
+          "command": "D:/Users/Administrator/Desktop/筆記補齊/.venv/Scripts/python.exe -X utf8 -m pytest tests/test_deselected_ci_gate_acceptance.py::test_ci_gate_fails_when_deselected_allowlist_count_is_too_small -o addopts= -q --tb=line --junitxml=D:\\Users\\Administrator\\Desktop\\autodev-ng\\data\\note-filler\\worktrees\\8f9976c3\\docs\\pytest-audit\\top10-rerun3x-junit-2026-07-20\\rank02-run1.xml"
+        },
+        {
+          "run": 2,
+          "returncode": 0,
+          "process_wall_s": 5.3779,
+          "junit_time_s": 4.004,
+          "status": "passed",
+          "junit_path": "docs/pytest-audit/top10-rerun3x-junit-2026-07-20/rank02-run2.xml",
+          "stdout_tail": "\u001b[32m.\u001b[0m\u001b[32m                                                                        [100%]\u001b[0m\n\u001b[32m\u001b[32m\u001b[1m1 passed\u001b[0m\u001b[32m in 4.11s\u001b[0m\u001b[0m\n",
+          "stderr_tail": "",
+          "command": "D:/Users/Administrator/Desktop/筆記補齊/.venv/Scripts/python.exe -X utf8 -m pytest tests/test_deselected_ci_gate_acceptance.py::test_ci_gate_fails_when_deselected_allowlist_count_is_too_small -o addopts= -q --tb=line --junitxml=D:\\Users\\Administrator\\Desktop\\autodev-ng\\data\\note-filler\\worktrees\\8f9976c3\\docs\\pytest-audit\\top10-rerun3x-junit-2026-07-20\\rank02-run2.xml"
+        },
+        {
+          "run": 3,
+          "returncode": 0,
+          "process_wall_s": 6.5694,
+          "junit_time_s": 5.066,
+          "status": "passed",
+          "junit_path": "docs/pytest-audit/top10-rerun3x-junit-2026-07-20/rank02-run3.xml",
+          "stdout_tail": "\u001b[32m.\u001b[0m\u001b[32m                                                                        [100%]\u001b[0m\n\u001b[32m\u001b[32m\u001b[1m1 passed\u001b[0m\u001b[32m in 5.22s\u001b[0m\u001b[0m\n",
+          "stderr_tail": "",
+          "command": "D:/Users/Administrator/Desktop/筆記補齊/.venv/Scripts/python.exe -X utf8 -m pytest tests/test_deselected_ci_gate_acceptance.py::test_ci_gate_fails_when_deselected_allowlist_count_is_too_small -o addopts= -q --tb=line --junitxml=D:\\Users\\Administrator\\Desktop\\autodev-ng\\data\\note-filler\\worktrees\\8f9976c3\\docs\\pytest-audit\\top10-rerun3x-junit-2026-07-20\\rank02-run3.xml"
+        }
+      ],
+      "samples_junit_s": [
+        4.878,
+        4.004,
+        5.066
+      ],
+      "mean_s": 4.6493,
+      "stdev_s": 0.5667,
+      "cv": 0.1219,
+      "min_s": 4.004,
+      "max_s": 5.066,
+      "mean_vs_baseline_pct": -0.78,
+      "influence": {
+        "fixture": true,
+        "io": true,
+        "external_resource": false,
+        "subprocess_pytest": true,
+        "primary_cost": "nested_gate_subprocess",
+        "notes_zh": "tmp_path 寫壞掉 allowlist；_run_gate 以 subprocess 呼叫 validate_deselected_ci.py（內部再 collect）；無網路。"
+      },
+      "classification": {
+        "verdict": "true_bottleneck",
+        "optimizable_true_bottleneck": true,
+        "noise_only": false,
+        "reason_zh": "平均 4.649s 且 CV=0.122≤0.25，結構性慢點（非單次波動）"
+      },
+      "all_passed": true
+    },
+    {
+      "rank_baseline": 3,
+      "node_id": "tests/test_deselected_ci_gate_acceptance.py::test_ci_gate_accepts_only_authorized_deselected_nodes_with_reasons",
+      "baseline_wall_time_s": 3.997,
+      "runs": [
+        {
+          "run": 1,
+          "returncode": 0,
+          "process_wall_s": 6.5357,
+          "junit_time_s": 4.608,
+          "status": "passed",
+          "junit_path": "docs/pytest-audit/top10-rerun3x-junit-2026-07-20/rank03-run1.xml",
+          "stdout_tail": "\u001b[32m.\u001b[0m\u001b[32m                                                                        [100%]\u001b[0m\n\u001b[32m\u001b[32m\u001b[1m1 passed\u001b[0m\u001b[32m in 4.75s\u001b[0m\u001b[0m\n",
+          "stderr_tail": "",
+          "command": "D:/Users/Administrator/Desktop/筆記補齊/.venv/Scripts/python.exe -X utf8 -m pytest tests/test_deselected_ci_gate_acceptance.py::test_ci_gate_accepts_only_authorized_deselected_nodes_with_reasons -o addopts= -q --tb=line --junitxml=D:\\Users\\Administrator\\Desktop\\autodev-ng\\data\\note-filler\\worktrees\\8f9976c3\\docs\\pytest-audit\\top10-rerun3x-junit-2026-07-20\\rank03-run1.xml"
+        },
+        {
+          "run": 2,
+          "returncode": 0,
+          "process_wall_s": 8.6864,
+          "junit_time_s": 5.885,
+          "status": "passed",
+          "junit_path": "docs/pytest-audit/top10-rerun3x-junit-2026-07-20/rank03-run2.xml",
+          "stdout_tail": "\u001b[32m.\u001b[0m\u001b[32m                                                                        [100%]\u001b[0m\n\u001b[32m\u001b[32m\u001b[1m1 passed\u001b[0m\u001b[32m in 6.01s\u001b[0m\u001b[0m\n",
+          "stderr_tail": "",
+          "command": "D:/Users/Administrator/Desktop/筆記補齊/.venv/Scripts/python.exe -X utf8 -m pytest tests/test_deselected_ci_gate_acceptance.py::test_ci_gate_accepts_only_authorized_deselected_nodes_with_reasons -o addopts= -q --tb=line --junitxml=D:\\Users\\Administrator\\Desktop\\autodev-ng\\data\\note-filler\\worktrees\\8f9976c3\\docs\\pytest-audit\\top10-rerun3x-junit-2026-07-20\\rank03-run2.xml"
+        },
+        {
+          "run": 3,
+          "returncode": 0,
+          "process_wall_s": 6.5579,
+          "junit_time_s": 4.657,
+          "status": "passed",
+          "junit_path": "docs/pytest-audit/top10-rerun3x-junit-2026-07-20/rank03-run3.xml",
+          "stdout_tail": "\u001b[32m.\u001b[0m\u001b[32m                                                                        [100%]\u001b[0m\n\u001b[32m\u001b[32m\u001b[1m1 passed\u001b[0m\u001b[32m in 4.77s\u001b[0m\u001b[0m\n",
+          "stderr_tail": "",
+          "command": "D:/Users/Administrator/Desktop/筆記補齊/.venv/Scripts/python.exe -X utf8 -m pytest tests/test_deselected_ci_gate_acceptance.py::test_ci_gate_accepts_only_authorized_deselected_nodes_with_reasons -o addopts= -q --tb=line --junitxml=D:\\Users\\Administrator\\Desktop\\autodev-ng\\data\\note-filler\\worktrees\\8f9976c3\\docs\\pytest-audit\\top10-rerun3x-junit-2026-07-20\\rank03-run3.xml"
+        }
+      ],
+      "samples_junit_s": [
+        4.608,
+        5.885,
+        4.657
+      ],
+      "mean_s": 5.05,
+      "stdev_s": 0.7235,
+      "cv": 0.1433,
+      "min_s": 4.608,
+      "max_s": 5.885,
+      "mean_vs_baseline_pct": 26.34,
+      "influence": {
+        "fixture": true,
+        "io": true,
+        "external_resource": false,
+        "subprocess_pytest": true,
+        "primary_cost": "nested_gate_subprocess",
+        "notes_zh": "tmp_path 產出 gate 報告；subprocess 跑 CI gate 腳本（collect）；無網路。"
+      },
+      "classification": {
+        "verdict": "true_bottleneck",
+        "optimizable_true_bottleneck": true,
+        "noise_only": false,
+        "reason_zh": "平均 5.050s 且 CV=0.143≤0.25，結構性慢點（非單次波動）"
+      },
+      "all_passed": true
+    },
+    {
+      "rank_baseline": 4,
+      "node_id": "tests/test_deselected_ci_gate_acceptance.py::test_ci_gate_fails_when_deselected_allowlist_contains_non_deselected_node",
+      "baseline_wall_time_s": 2.914,
+      "runs": [
+        {
+          "run": 1,
+          "returncode": 0,
+          "process_wall_s": 5.7753,
+          "junit_time_s": 4.373,
+          "status": "passed",
+          "junit_path": "docs/pytest-audit/top10-rerun3x-junit-2026-07-20/rank04-run1.xml",
+          "stdout_tail": "\u001b[32m.\u001b[0m\u001b[32m                                                                        [100%]\u001b[0m\n\u001b[32m\u001b[32m\u001b[1m1 passed\u001b[0m\u001b[32m in 4.49s\u001b[0m\u001b[0m\n",
+          "stderr_tail": "",
+          "command": "D:/Users/Administrator/Desktop/筆記補齊/.venv/Scripts/python.exe -X utf8 -m pytest tests/test_deselected_ci_gate_acceptance.py::test_ci_gate_fails_when_deselected_allowlist_contains_non_deselected_node -o addopts= -q --tb=line --junitxml=D:\\Users\\Administrator\\Desktop\\autodev-ng\\data\\note-filler\\worktrees\\8f9976c3\\docs\\pytest-audit\\top10-rerun3x-junit-2026-07-20\\rank04-run1.xml"
+        },
+        {
+          "run": 2,
+          "returncode": 0,
+          "process_wall_s": 5.7844,
+          "junit_time_s": 4.234,
+          "status": "passed",
+          "junit_path": "docs/pytest-audit/top10-rerun3x-junit-2026-07-20/rank04-run2.xml",
+          "stdout_tail": "\u001b[32m.\u001b[0m\u001b[32m                                                                        [100%]\u001b[0m\n\u001b[32m\u001b[32m\u001b[1m1 passed\u001b[0m\u001b[32m in 4.35s\u001b[0m\u001b[0m\n",
+          "stderr_tail": "",
+          "command": "D:/Users/Administrator/Desktop/筆記補齊/.venv/Scripts/python.exe -X utf8 -m pytest tests/test_deselected_ci_gate_acceptance.py::test_ci_gate_fails_when_deselected_allowlist_contains_non_deselected_node -o addopts= -q --tb=line --junitxml=D:\\Users\\Administrator\\Desktop\\autodev-ng\\data\\note-filler\\worktrees\\8f9976c3\\docs\\pytest-audit\\top10-rerun3x-junit-2026-07-20\\rank04-run2.xml"
+        },
+        {
+          "run": 3,
+          "returncode": 0,
+          "process_wall_s": 6.0931,
+          "junit_time_s": 4.484,
+          "status": "passed",
+          "junit_path": "docs/pytest-audit/top10-rerun3x-junit-2026-07-20/rank04-run3.xml",
+          "stdout_tail": "\u001b[32m.\u001b[0m\u001b[32m                                                                        [100%]\u001b[0m\n\u001b[32m\u001b[32m\u001b[1m1 passed\u001b[0m\u001b[32m in 4.70s\u001b[0m\u001b[0m\n",
+          "stderr_tail": "",
+          "command": "D:/Users/Administrator/Desktop/筆記補齊/.venv/Scripts/python.exe -X utf8 -m pytest tests/test_deselected_ci_gate_acceptance.py::test_ci_gate_fails_when_deselected_allowlist_contains_non_deselected_node -o addopts= -q --tb=line --junitxml=D:\\Users\\Administrator\\Desktop\\autodev-ng\\data\\note-filler\\worktrees\\8f9976c3\\docs\\pytest-audit\\top10-rerun3x-junit-2026-07-20\\rank04-run3.xml"
+        }
+      ],
+      "samples_junit_s": [
+        4.373,
+        4.234,
+        4.484
+      ],
+      "mean_s": 4.3637,
+      "stdev_s": 0.1253,
+      "cv": 0.0287,
+      "min_s": 4.234,
+      "max_s": 4.484,
+      "mean_vs_baseline_pct": 49.75,
+      "influence": {
+        "fixture": true,
+        "io": true,
+        "external_resource": false,
+        "subprocess_pytest": true,
+        "primary_cost": "nested_gate_subprocess",
+        "notes_zh": "tmp_path 寫含多餘 node 的 allowlist；subprocess CI gate；無網路。"
+      },
+      "classification": {
+        "verdict": "true_bottleneck",
+        "optimizable_true_bottleneck": true,
+        "noise_only": false,
+        "reason_zh": "平均 4.364s 且 CV=0.029≤0.25，結構性慢點（非單次波動）"
+      },
+      "all_passed": true
+    },
+    {
+      "rank_baseline": 5,
+      "node_id": "tests/test_deselection_guard.py::test_integration_allowlist_is_stable",
+      "baseline_wall_time_s": 2.578,
+      "runs": [
+        {
+          "run": 1,
+          "returncode": 0,
+          "process_wall_s": 5.0233,
+          "junit_time_s": 3.21,
+          "status": "passed",
+          "junit_path": "docs/pytest-audit/top10-rerun3x-junit-2026-07-20/rank05-run1.xml",
+          "stdout_tail": "\u001b[32m.\u001b[0m\u001b[32m                                                                        [100%]\u001b[0m\n\u001b[32m\u001b[32m\u001b[1m1 passed\u001b[0m\u001b[32m in 3.32s\u001b[0m\u001b[0m\n",
+          "stderr_tail": "",
+          "command": "D:/Users/Administrator/Desktop/筆記補齊/.venv/Scripts/python.exe -X utf8 -m pytest tests/test_deselection_guard.py::test_integration_allowlist_is_stable -o addopts= -q --tb=line --junitxml=D:\\Users\\Administrator\\Desktop\\autodev-ng\\data\\note-filler\\worktrees\\8f9976c3\\docs\\pytest-audit\\top10-rerun3x-junit-2026-07-20\\rank05-run1.xml"
+        },
+        {
+          "run": 2,
+          "returncode": 0,
+          "process_wall_s": 4.0116,
+          "junit_time_s": 2.706,
+          "status": "passed",
+          "junit_path": "docs/pytest-audit/top10-rerun3x-junit-2026-07-20/rank05-run2.xml",
+          "stdout_tail": "\u001b[32m.\u001b[0m\u001b[32m                                                                        [100%]\u001b[0m\n\u001b[32m\u001b[32m\u001b[1m1 passed\u001b[0m\u001b[32m in 2.82s\u001b[0m\u001b[0m\n",
+          "stderr_tail": "",
+          "command": "D:/Users/Administrator/Desktop/筆記補齊/.venv/Scripts/python.exe -X utf8 -m pytest tests/test_deselection_guard.py::test_integration_allowlist_is_stable -o addopts= -q --tb=line --junitxml=D:\\Users\\Administrator\\Desktop\\autodev-ng\\data\\note-filler\\worktrees\\8f9976c3\\docs\\pytest-audit\\top10-rerun3x-junit-2026-07-20\\rank05-run2.xml"
+        },
+        {
+          "run": 3,
+          "returncode": 0,
+          "process_wall_s": 4.4786,
+          "junit_time_s": 2.703,
+          "status": "passed",
+          "junit_path": "docs/pytest-audit/top10-rerun3x-junit-2026-07-20/rank05-run3.xml",
+          "stdout_tail": "\u001b[32m.\u001b[0m\u001b[32m                                                                        [100%]\u001b[0m\n\u001b[32m\u001b[32m\u001b[1m1 passed\u001b[0m\u001b[32m in 2.80s\u001b[0m\u001b[0m\n",
+          "stderr_tail": "",
+          "command": "D:/Users/Administrator/Desktop/筆記補齊/.venv/Scripts/python.exe -X utf8 -m pytest tests/test_deselection_guard.py::test_integration_allowlist_is_stable -o addopts= -q --tb=line --junitxml=D:\\Users\\Administrator\\Desktop\\autodev-ng\\data\\note-filler\\worktrees\\8f9976c3\\docs\\pytest-audit\\top10-rerun3x-junit-2026-07-20\\rank05-run3.xml"
+        }
+      ],
+      "samples_junit_s": [
+        3.21,
+        2.706,
+        2.703
+      ],
+      "mean_s": 2.873,
+      "stdev_s": 0.2919,
+      "cv": 0.1016,
+      "min_s": 2.703,
+      "max_s": 3.21,
+      "mean_vs_baseline_pct": 11.44,
+      "influence": {
+        "fixture": false,
+        "io": true,
+        "external_resource": false,
+        "subprocess_pytest": true,
+        "primary_cost": "nested_pytest_collect",
+        "notes_zh": "兩次 pytest --collect-only（全量 vs default）；比對 allowlist 穩定；無網路。"
+      },
+      "classification": {
+        "verdict": "true_bottleneck",
+        "optimizable_true_bottleneck": true,
+        "noise_only": false,
+        "reason_zh": "平均 2.873s 且 CV=0.102≤0.25，結構性慢點（非單次波動）"
+      },
+      "all_passed": true
+    },
+    {
+      "rank_baseline": 6,
+      "node_id": "tests/test_deselection_guard.py::test_deselected_details_lists_node_ids_and_reasons",
+      "baseline_wall_time_s": 1.186,
+      "runs": [
+        {
+          "run": 1,
+          "returncode": 0,
+          "process_wall_s": 2.7004,
+          "junit_time_s": 1.615,
+          "status": "passed",
+          "junit_path": "docs/pytest-audit/top10-rerun3x-junit-2026-07-20/rank06-run1.xml",
+          "stdout_tail": "\u001b[32m.\u001b[0m\u001b[32m                                                                        [100%]\u001b[0m\n\u001b[32m\u001b[32m\u001b[1m1 passed\u001b[0m\u001b[32m in 1.73s\u001b[0m\u001b[0m\n",
+          "stderr_tail": "",
+          "command": "D:/Users/Administrator/Desktop/筆記補齊/.venv/Scripts/python.exe -X utf8 -m pytest tests/test_deselection_guard.py::test_deselected_details_lists_node_ids_and_reasons -o addopts= -q --tb=line --junitxml=D:\\Users\\Administrator\\Desktop\\autodev-ng\\data\\note-filler\\worktrees\\8f9976c3\\docs\\pytest-audit\\top10-rerun3x-junit-2026-07-20\\rank06-run1.xml"
+        },
+        {
+          "run": 2,
+          "returncode": 0,
+          "process_wall_s": 2.5557,
+          "junit_time_s": 1.227,
+          "status": "passed",
+          "junit_path": "docs/pytest-audit/top10-rerun3x-junit-2026-07-20/rank06-run2.xml",
+          "stdout_tail": "\u001b[32m.\u001b[0m\u001b[32m                                                                        [100%]\u001b[0m\n\u001b[32m\u001b[32m\u001b[1m1 passed\u001b[0m\u001b[32m in 1.30s\u001b[0m\u001b[0m\n",
+          "stderr_tail": "",
+          "command": "D:/Users/Administrator/Desktop/筆記補齊/.venv/Scripts/python.exe -X utf8 -m pytest tests/test_deselection_guard.py::test_deselected_details_lists_node_ids_and_reasons -o addopts= -q --tb=line --junitxml=D:\\Users\\Administrator\\Desktop\\autodev-ng\\data\\note-filler\\worktrees\\8f9976c3\\docs\\pytest-audit\\top10-rerun3x-junit-2026-07-20\\rank06-run2.xml"
+        },
+        {
+          "run": 3,
+          "returncode": 0,
+          "process_wall_s": 4.2084,
+          "junit_time_s": 2.4,
+          "status": "passed",
+          "junit_path": "docs/pytest-audit/top10-rerun3x-junit-2026-07-20/rank06-run3.xml",
+          "stdout_tail": "\u001b[32m.\u001b[0m\u001b[32m                                                                        [100%]\u001b[0m\n\u001b[32m\u001b[32m\u001b[1m1 passed\u001b[0m\u001b[32m in 2.53s\u001b[0m\u001b[0m\n",
+          "stderr_tail": "",
+          "command": "D:/Users/Administrator/Desktop/筆記補齊/.venv/Scripts/python.exe -X utf8 -m pytest tests/test_deselection_guard.py::test_deselected_details_lists_node_ids_and_reasons -o addopts= -q --tb=line --junitxml=D:\\Users\\Administrator\\Desktop\\autodev-ng\\data\\note-filler\\worktrees\\8f9976c3\\docs\\pytest-audit\\top10-rerun3x-junit-2026-07-20\\rank06-run3.xml"
+        }
+      ],
+      "samples_junit_s": [
+        1.615,
+        1.227,
+        2.4
+      ],
+      "mean_s": 1.7473,
+      "stdev_s": 0.5976,
+      "cv": 0.342,
+      "min_s": 1.227,
+      "max_s": 2.4,
+      "mean_vs_baseline_pct": 47.33,
+      "influence": {
+        "fixture": false,
+        "io": true,
+        "external_resource": false,
+        "subprocess_pytest": true,
+        "primary_cost": "nested_pytest_collect",
+        "notes_zh": "一次 pytest --collect-only --deselected-details；讀取輸出解析 node/原因；無網路。"
+      },
+      "classification": {
+        "verdict": "true_bottleneck_with_variance",
+        "optimizable_true_bottleneck": true,
+        "noise_only": false,
+        "reason_zh": "平均 1.747s 仍屬長尾，但 CV=0.342>0.25，有負載/快取波動；仍可優化"
+      },
+      "all_passed": true
+    },
+    {
+      "rank_baseline": 7,
+      "node_id": "tests/test_requirements_test_coverage.py::test_default_gate_collects_every_equivalent_and_safety_regression",
+      "baseline_wall_time_s": 0.898,
+      "runs": [
+        {
+          "run": 1,
+          "returncode": 0,
+          "process_wall_s": 4.4428,
+          "junit_time_s": 2.271,
+          "status": "passed",
+          "junit_path": "docs/pytest-audit/top10-rerun3x-junit-2026-07-20/rank07-run1.xml",
+          "stdout_tail": "\u001b[32m.\u001b[0m\u001b[32m                                                                        [100%]\u001b[0m\n\u001b[32m\u001b[32m\u001b[1m1 passed\u001b[0m\u001b[32m in 2.41s\u001b[0m\u001b[0m\n",
+          "stderr_tail": "",
+          "command": "D:/Users/Administrator/Desktop/筆記補齊/.venv/Scripts/python.exe -X utf8 -m pytest tests/test_requirements_test_coverage.py::test_default_gate_collects_every_equivalent_and_safety_regression -o addopts= -q --tb=line --junitxml=D:\\Users\\Administrator\\Desktop\\autodev-ng\\data\\note-filler\\worktrees\\8f9976c3\\docs\\pytest-audit\\top10-rerun3x-junit-2026-07-20\\rank07-run1.xml"
+        },
+        {
+          "run": 2,
+          "returncode": 0,
+          "process_wall_s": 4.1616,
+          "junit_time_s": 1.753,
+          "status": "passed",
+          "junit_path": "docs/pytest-audit/top10-rerun3x-junit-2026-07-20/rank07-run2.xml",
+          "stdout_tail": "\u001b[32m.\u001b[0m\u001b[32m                                                                        [100%]\u001b[0m\n\u001b[32m\u001b[32m\u001b[1m1 passed\u001b[0m\u001b[32m in 1.95s\u001b[0m\u001b[0m\n",
+          "stderr_tail": "",
+          "command": "D:/Users/Administrator/Desktop/筆記補齊/.venv/Scripts/python.exe -X utf8 -m pytest tests/test_requirements_test_coverage.py::test_default_gate_collects_every_equivalent_and_safety_regression -o addopts= -q --tb=line --junitxml=D:\\Users\\Administrator\\Desktop\\autodev-ng\\data\\note-filler\\worktrees\\8f9976c3\\docs\\pytest-audit\\top10-rerun3x-junit-2026-07-20\\rank07-run2.xml"
+        },
+        {
+          "run": 3,
+          "returncode": 0,
+          "process_wall_s": 2.9018,
+          "junit_time_s": 1.449,
+          "status": "passed",
+          "junit_path": "docs/pytest-audit/top10-rerun3x-junit-2026-07-20/rank07-run3.xml",
+          "stdout_tail": "\u001b[32m.\u001b[0m\u001b[32m                                                                        [100%]\u001b[0m\n\u001b[32m\u001b[32m\u001b[1m1 passed\u001b[0m\u001b[32m in 1.52s\u001b[0m\u001b[0m\n",
+          "stderr_tail": "",
+          "command": "D:/Users/Administrator/Desktop/筆記補齊/.venv/Scripts/python.exe -X utf8 -m pytest tests/test_requirements_test_coverage.py::test_default_gate_collects_every_equivalent_and_safety_regression -o addopts= -q --tb=line --junitxml=D:\\Users\\Administrator\\Desktop\\autodev-ng\\data\\note-filler\\worktrees\\8f9976c3\\docs\\pytest-audit\\top10-rerun3x-junit-2026-07-20\\rank07-run3.xml"
+        }
+      ],
+      "samples_junit_s": [
+        2.271,
+        1.753,
+        1.449
+      ],
+      "mean_s": 1.8243,
+      "stdev_s": 0.4156,
+      "cv": 0.2278,
+      "min_s": 1.449,
+      "max_s": 2.271,
+      "mean_vs_baseline_pct": 103.16,
+      "influence": {
+        "fixture": false,
+        "io": true,
+        "external_resource": false,
+        "subprocess_pytest": true,
+        "primary_cost": "nested_pytest_collect",
+        "notes_zh": "讀 requirements-test-coverage JSON；subprocess pytest --collect-only 預設 gate；無網路。"
+      },
+      "classification": {
+        "verdict": "true_bottleneck",
+        "optimizable_true_bottleneck": true,
+        "noise_only": false,
+        "reason_zh": "平均 1.824s 且 CV=0.228≤0.25，結構性慢點（非單次波動）"
+      },
+      "all_passed": true
+    },
+    {
+      "rank_baseline": 8,
+      "node_id": "tests/test_law_check.py::test_search_articles_keyword_only",
+      "baseline_wall_time_s": 0.443,
+      "runs": [
+        {
+          "run": 1,
+          "returncode": 0,
+          "process_wall_s": 1.3058,
+          "junit_time_s": 0.152,
+          "status": "passed",
+          "junit_path": "docs/pytest-audit/top10-rerun3x-junit-2026-07-20/rank08-run1.xml",
+          "stdout_tail": "\u001b[32m.\u001b[0m\u001b[32m                                                                        [100%]\u001b[0m\n\u001b[32m\u001b[32m\u001b[1m1 passed\u001b[0m\u001b[32m in 0.22s\u001b[0m\u001b[0m\n",
+          "stderr_tail": "",
+          "command": "D:/Users/Administrator/Desktop/筆記補齊/.venv/Scripts/python.exe -X utf8 -m pytest tests/test_law_check.py::test_search_articles_keyword_only -o addopts= -q --tb=line --junitxml=D:\\Users\\Administrator\\Desktop\\autodev-ng\\data\\note-filler\\worktrees\\8f9976c3\\docs\\pytest-audit\\top10-rerun3x-junit-2026-07-20\\rank08-run1.xml"
+        },
+        {
+          "run": 2,
+          "returncode": 0,
+          "process_wall_s": 1.7917,
+          "junit_time_s": 0.051,
+          "status": "passed",
+          "junit_path": "docs/pytest-audit/top10-rerun3x-junit-2026-07-20/rank08-run2.xml",
+          "stdout_tail": "\u001b[32m.\u001b[0m\u001b[32m                                                                        [100%]\u001b[0m\n\u001b[32m\u001b[32m\u001b[1m1 passed\u001b[0m\u001b[32m in 0.16s\u001b[0m\u001b[0m\n",
+          "stderr_tail": "",
+          "command": "D:/Users/Administrator/Desktop/筆記補齊/.venv/Scripts/python.exe -X utf8 -m pytest tests/test_law_check.py::test_search_articles_keyword_only -o addopts= -q --tb=line --junitxml=D:\\Users\\Administrator\\Desktop\\autodev-ng\\data\\note-filler\\worktrees\\8f9976c3\\docs\\pytest-audit\\top10-rerun3x-junit-2026-07-20\\rank08-run2.xml"
+        },
+        {
+          "run": 3,
+          "returncode": 0,
+          "process_wall_s": 1.856,
+          "junit_time_s": 0.067,
+          "status": "passed",
+          "junit_path": "docs/pytest-audit/top10-rerun3x-junit-2026-07-20/rank08-run3.xml",
+          "stdout_tail": "\u001b[32m.\u001b[0m\u001b[32m                                                                        [100%]\u001b[0m\n\u001b[32m\u001b[32m\u001b[1m1 passed\u001b[0m\u001b[32m in 0.15s\u001b[0m\u001b[0m\n",
+          "stderr_tail": "",
+          "command": "D:/Users/Administrator/Desktop/筆記補齊/.venv/Scripts/python.exe -X utf8 -m pytest tests/test_law_check.py::test_search_articles_keyword_only -o addopts= -q --tb=line --junitxml=D:\\Users\\Administrator\\Desktop\\autodev-ng\\data\\note-filler\\worktrees\\8f9976c3\\docs\\pytest-audit\\top10-rerun3x-junit-2026-07-20\\rank08-run3.xml"
+        }
+      ],
+      "samples_junit_s": [
+        0.152,
+        0.051,
+        0.067
+      ],
+      "mean_s": 0.09,
+      "stdev_s": 0.0543,
+      "cv": 0.6032,
+      "min_s": 0.051,
+      "max_s": 0.152,
+      "mean_vs_baseline_pct": -79.68,
+      "influence": {
+        "fixture": true,
+        "io": true,
+        "external_resource": false,
+        "subprocess_pytest": false,
+        "primary_cost": "sqlite_query",
+        "notes_zh": "module-scoped fixture 開 data/law_index.db（SQLite 本地）；關鍵字查詢；無網路。"
+      },
+      "classification": {
+        "verdict": "noise_or_marginal",
+        "optimizable_true_bottleneck": false,
+        "noise_only": true,
+        "reason_zh": "平均僅 0.090s 且 CV=0.603 高，優化邊際低、易被單次波動主導"
+      },
+      "all_passed": true
+    },
+    {
+      "rank_baseline": 9,
+      "node_id": "tests/test_excluded_failing_controls.py::test_control_05_pipeline_c6_pending_when_no_sources",
+      "baseline_wall_time_s": 0.261,
+      "runs": [
+        {
+          "run": 1,
+          "returncode": 0,
+          "process_wall_s": 47.2383,
+          "junit_time_s": 0.097,
+          "status": "passed",
+          "junit_path": "docs/pytest-audit/top10-rerun3x-junit-2026-07-20/rank09-run1.xml",
+          "stdout_tail": "\u001b[32m.\u001b[0m\u001b[32m                                                                        [100%]\u001b[0m\n\u001b[32m\u001b[32m\u001b[1m1 passed\u001b[0m\u001b[32m in 45.06s\u001b[0m\u001b[0m\n",
+          "stderr_tail": "",
+          "command": "D:/Users/Administrator/Desktop/筆記補齊/.venv/Scripts/python.exe -X utf8 -m pytest tests/test_excluded_failing_controls.py::test_control_05_pipeline_c6_pending_when_no_sources -o addopts= -q --tb=line --junitxml=D:\\Users\\Administrator\\Desktop\\autodev-ng\\data\\note-filler\\worktrees\\8f9976c3\\docs\\pytest-audit\\top10-rerun3x-junit-2026-07-20\\rank09-run1.xml"
+        },
+        {
+          "run": 2,
+          "returncode": 0,
+          "process_wall_s": 1.4595,
+          "junit_time_s": 0.112,
+          "status": "passed",
+          "junit_path": "docs/pytest-audit/top10-rerun3x-junit-2026-07-20/rank09-run2.xml",
+          "stdout_tail": "\u001b[32m.\u001b[0m\u001b[32m                                                                        [100%]\u001b[0m\n\u001b[32m\u001b[32m\u001b[1m1 passed\u001b[0m\u001b[32m in 0.30s\u001b[0m\u001b[0m\n",
+          "stderr_tail": "",
+          "command": "D:/Users/Administrator/Desktop/筆記補齊/.venv/Scripts/python.exe -X utf8 -m pytest tests/test_excluded_failing_controls.py::test_control_05_pipeline_c6_pending_when_no_sources -o addopts= -q --tb=line --junitxml=D:\\Users\\Administrator\\Desktop\\autodev-ng\\data\\note-filler\\worktrees\\8f9976c3\\docs\\pytest-audit\\top10-rerun3x-junit-2026-07-20\\rank09-run2.xml"
+        },
+        {
+          "run": 3,
+          "returncode": 0,
+          "process_wall_s": 1.3487,
+          "junit_time_s": 0.124,
+          "status": "passed",
+          "junit_path": "docs/pytest-audit/top10-rerun3x-junit-2026-07-20/rank09-run3.xml",
+          "stdout_tail": "\u001b[32m.\u001b[0m\u001b[32m                                                                        [100%]\u001b[0m\n\u001b[32m\u001b[32m\u001b[1m1 passed\u001b[0m\u001b[32m in 0.28s\u001b[0m\u001b[0m\n",
+          "stderr_tail": "",
+          "command": "D:/Users/Administrator/Desktop/筆記補齊/.venv/Scripts/python.exe -X utf8 -m pytest tests/test_excluded_failing_controls.py::test_control_05_pipeline_c6_pending_when_no_sources -o addopts= -q --tb=line --junitxml=D:\\Users\\Administrator\\Desktop\\autodev-ng\\data\\note-filler\\worktrees\\8f9976c3\\docs\\pytest-audit\\top10-rerun3x-junit-2026-07-20\\rank09-run3.xml"
+        }
+      ],
+      "samples_junit_s": [
+        0.097,
+        0.112,
+        0.124
+      ],
+      "mean_s": 0.111,
+      "stdev_s": 0.0135,
+      "cv": 0.1219,
+      "min_s": 0.097,
+      "max_s": 0.124,
+      "mean_vs_baseline_pct": -57.47,
+      "influence": {
+        "fixture": true,
+        "io": true,
+        "external_resource": false,
+        "subprocess_pytest": false,
+        "primary_cost": "pipeline_cpu_docx",
+        "notes_zh": "tmp_path 建 note.docx；run_pipeline 離線（stub LLM/Twinkle）；無真實外部 API。"
+      },
+      "classification": {
+        "verdict": "marginal",
+        "optimizable_true_bottleneck": false,
+        "noise_only": false,
+        "reason_zh": "平均 0.111s 穩定但絕對時間小，非全套件瓶頸優先項"
+      },
+      "all_passed": true
+    },
+    {
+      "rank_baseline": 10,
+      "node_id": "tests/test_export_docx.py::test_to_docx_roundtrip_preserves_original_and_marks_supplement",
+      "baseline_wall_time_s": 0.251,
+      "runs": [
+        {
+          "run": 1,
+          "returncode": 0,
+          "process_wall_s": 1.7967,
+          "junit_time_s": 0.203,
+          "status": "passed",
+          "junit_path": "docs/pytest-audit/top10-rerun3x-junit-2026-07-20/rank10-run1.xml",
+          "stdout_tail": "\u001b[32m.\u001b[0m\u001b[32m                                                                        [100%]\u001b[0m\n\u001b[32m\u001b[32m\u001b[1m1 passed\u001b[0m\u001b[32m in 0.31s\u001b[0m\u001b[0m\n",
+          "stderr_tail": "",
+          "command": "D:/Users/Administrator/Desktop/筆記補齊/.venv/Scripts/python.exe -X utf8 -m pytest tests/test_export_docx.py::test_to_docx_roundtrip_preserves_original_and_marks_supplement -o addopts= -q --tb=line --junitxml=D:\\Users\\Administrator\\Desktop\\autodev-ng\\data\\note-filler\\worktrees\\8f9976c3\\docs\\pytest-audit\\top10-rerun3x-junit-2026-07-20\\rank10-run1.xml"
+        },
+        {
+          "run": 2,
+          "returncode": 0,
+          "process_wall_s": 1.7337,
+          "junit_time_s": 0.181,
+          "status": "passed",
+          "junit_path": "docs/pytest-audit/top10-rerun3x-junit-2026-07-20/rank10-run2.xml",
+          "stdout_tail": "\u001b[32m.\u001b[0m\u001b[32m                                                                        [100%]\u001b[0m\n\u001b[32m\u001b[32m\u001b[1m1 passed\u001b[0m\u001b[32m in 0.29s\u001b[0m\u001b[0m\n",
+          "stderr_tail": "",
+          "command": "D:/Users/Administrator/Desktop/筆記補齊/.venv/Scripts/python.exe -X utf8 -m pytest tests/test_export_docx.py::test_to_docx_roundtrip_preserves_original_and_marks_supplement -o addopts= -q --tb=line --junitxml=D:\\Users\\Administrator\\Desktop\\autodev-ng\\data\\note-filler\\worktrees\\8f9976c3\\docs\\pytest-audit\\top10-rerun3x-junit-2026-07-20\\rank10-run2.xml"
+        },
+        {
+          "run": 3,
+          "returncode": 0,
+          "process_wall_s": 1.9101,
+          "junit_time_s": 0.221,
+          "status": "passed",
+          "junit_path": "docs/pytest-audit/top10-rerun3x-junit-2026-07-20/rank10-run3.xml",
+          "stdout_tail": "\u001b[32m.\u001b[0m\u001b[32m                                                                        [100%]\u001b[0m\n\u001b[32m\u001b[32m\u001b[1m1 passed\u001b[0m\u001b[32m in 0.62s\u001b[0m\u001b[0m\n",
+          "stderr_tail": "",
+          "command": "D:/Users/Administrator/Desktop/筆記補齊/.venv/Scripts/python.exe -X utf8 -m pytest tests/test_export_docx.py::test_to_docx_roundtrip_preserves_original_and_marks_supplement -o addopts= -q --tb=line --junitxml=D:\\Users\\Administrator\\Desktop\\autodev-ng\\data\\note-filler\\worktrees\\8f9976c3\\docs\\pytest-audit\\top10-rerun3x-junit-2026-07-20\\rank10-run3.xml"
+        }
+      ],
+      "samples_junit_s": [
+        0.203,
+        0.181,
+        0.221
+      ],
+      "mean_s": 0.2017,
+      "stdev_s": 0.02,
+      "cv": 0.0993,
+      "min_s": 0.181,
+      "max_s": 0.221,
+      "mean_vs_baseline_pct": -19.65,
+      "influence": {
+        "fixture": true,
+        "io": true,
+        "external_resource": false,
+        "subprocess_pytest": false,
+        "primary_cost": "docx_io",
+        "notes_zh": "tmp_path 寫 docx roundtrip；python-docx I/O；無網路。"
+      },
+      "classification": {
+        "verdict": "marginal",
+        "optimizable_true_bottleneck": false,
+        "noise_only": false,
+        "reason_zh": "平均 0.202s 穩定但絕對時間小，非全套件瓶頸優先項"
+      },
+      "all_passed": true
+    }
+  ],
+  "summary": {
+    "true_bottlenecks": [
+      "tests/test_deselection_guard.py::test_substitute_mapping_is_complete_and_collectable",
+      "tests/test_deselected_ci_gate_acceptance.py::test_ci_gate_fails_when_deselected_allowlist_count_is_too_small",
+      "tests/test_deselected_ci_gate_acceptance.py::test_ci_gate_accepts_only_authorized_deselected_nodes_with_reasons",
+      "tests/test_deselected_ci_gate_acceptance.py::test_ci_gate_fails_when_deselected_allowlist_contains_non_deselected_node",
+      "tests/test_deselection_guard.py::test_integration_allowlist_is_stable",
+      "tests/test_deselection_guard.py::test_deselected_details_lists_node_ids_and_reasons",
+      "tests/test_requirements_test_coverage.py::test_default_gate_collects_every_equivalent_and_safety_regression"
+    ],
+    "noise_or_not_worth": [
+      "tests/test_law_check.py::test_search_articles_keyword_only",
+      "tests/test_excluded_failing_controls.py::test_control_05_pipeline_c6_pending_when_no_sources",
+      "tests/test_export_docx.py::test_to_docx_roundtrip_preserves_original_and_marks_supplement"
+    ],
+    "all_runs_passed": true,
+    "mean_sum_s": 58.8333,
+    "baseline_sum_s": 54.097
+  }
+}

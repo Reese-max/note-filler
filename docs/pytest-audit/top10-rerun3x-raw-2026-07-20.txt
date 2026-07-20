@@ -1,0 +1,174 @@
+# top10 3x benchmark started 2026-07-20T07:22:24.044281+00:00
+# python=D:/Users/Administrator/Desktop/筆記補齊/.venv/Scripts/python.exe
+# repo=D:\Users\Administrator\Desktop\autodev-ng\data\note-filler\worktrees\8f9976c3
+
+rank=1 run=1 junit=34.159 process_wall=35.552 rc=0 status=passed node=tests/test_deselection_guard.py::test_substitute_mapping_is_complete_and_collectable
+  cmd=D:/Users/Administrator/Desktop/筆記補齊/.venv/Scripts/python.exe -X utf8 -m pytest tests/test_deselection_guard.py::test_substitute_mapping_is_complete_and_collectable -o addopts= -q --tb=line --junitxml=D:\Users\Administrator\Desktop\autodev-ng\data\note-filler\worktrees\8f9976c3\docs\pytest-audit\top10-rerun3x-junit-2026-07-20\rank01-run1.xml
+  stdout_tail:
+    [32m.[0m[32m                                                                        [100%][0m
+    [32m[32m[1m1 passed[0m[32m in 34.31s[0m[0m
+rank=1 run=2 junit=39.354 process_wall=40.8374 rc=0 status=passed node=tests/test_deselection_guard.py::test_substitute_mapping_is_complete_and_collectable
+  cmd=D:/Users/Administrator/Desktop/筆記補齊/.venv/Scripts/python.exe -X utf8 -m pytest tests/test_deselection_guard.py::test_substitute_mapping_is_complete_and_collectable -o addopts= -q --tb=line --junitxml=D:\Users\Administrator\Desktop\autodev-ng\data\note-filler\worktrees\8f9976c3\docs\pytest-audit\top10-rerun3x-junit-2026-07-20\rank01-run2.xml
+  stdout_tail:
+    [32m.[0m[32m                                                                        [100%][0m
+    [32m[32m[1m1 passed[0m[32m in 39.48s[0m[0m
+rank=1 run=3 junit=40.256 process_wall=41.75 rc=0 status=passed node=tests/test_deselection_guard.py::test_substitute_mapping_is_complete_and_collectable
+  cmd=D:/Users/Administrator/Desktop/筆記補齊/.venv/Scripts/python.exe -X utf8 -m pytest tests/test_deselection_guard.py::test_substitute_mapping_is_complete_and_collectable -o addopts= -q --tb=line --junitxml=D:\Users\Administrator\Desktop\autodev-ng\data\note-filler\worktrees\8f9976c3\docs\pytest-audit\top10-rerun3x-junit-2026-07-20\rank01-run3.xml
+  stdout_tail:
+    [32m.[0m[32m                                                                        [100%][0m
+    [32m[32m[1m1 passed[0m[32m in 40.36s[0m[0m
+  STATS mean=37.9230 stdev=3.2908 cv=0.0868 verdict=true_bottleneck optimizable=True
+
+rank=2 run=1 junit=4.878 process_wall=6.4347 rc=0 status=passed node=tests/test_deselected_ci_gate_acceptance.py::test_ci_gate_fails_when_deselected_allowlist_count_is_too_small
+  cmd=D:/Users/Administrator/Desktop/筆記補齊/.venv/Scripts/python.exe -X utf8 -m pytest tests/test_deselected_ci_gate_acceptance.py::test_ci_gate_fails_when_deselected_allowlist_count_is_too_small -o addopts= -q --tb=line --junitxml=D:\Users\Administrator\Desktop\autodev-ng\data\note-filler\worktrees\8f9976c3\docs\pytest-audit\top10-rerun3x-junit-2026-07-20\rank02-run1.xml
+  stdout_tail:
+    [32m.[0m[32m                                                                        [100%][0m
+    [32m[32m[1m1 passed[0m[32m in 5.00s[0m[0m
+rank=2 run=2 junit=4.004 process_wall=5.3779 rc=0 status=passed node=tests/test_deselected_ci_gate_acceptance.py::test_ci_gate_fails_when_deselected_allowlist_count_is_too_small
+  cmd=D:/Users/Administrator/Desktop/筆記補齊/.venv/Scripts/python.exe -X utf8 -m pytest tests/test_deselected_ci_gate_acceptance.py::test_ci_gate_fails_when_deselected_allowlist_count_is_too_small -o addopts= -q --tb=line --junitxml=D:\Users\Administrator\Desktop\autodev-ng\data\note-filler\worktrees\8f9976c3\docs\pytest-audit\top10-rerun3x-junit-2026-07-20\rank02-run2.xml
+  stdout_tail:
+    [32m.[0m[32m                                                                        [100%][0m
+    [32m[32m[1m1 passed[0m[32m in 4.11s[0m[0m
+rank=2 run=3 junit=5.066 process_wall=6.5694 rc=0 status=passed node=tests/test_deselected_ci_gate_acceptance.py::test_ci_gate_fails_when_deselected_allowlist_count_is_too_small
+  cmd=D:/Users/Administrator/Desktop/筆記補齊/.venv/Scripts/python.exe -X utf8 -m pytest tests/test_deselected_ci_gate_acceptance.py::test_ci_gate_fails_when_deselected_allowlist_count_is_too_small -o addopts= -q --tb=line --junitxml=D:\Users\Administrator\Desktop\autodev-ng\data\note-filler\worktrees\8f9976c3\docs\pytest-audit\top10-rerun3x-junit-2026-07-20\rank02-run3.xml
+  stdout_tail:
+    [32m.[0m[32m                                                                        [100%][0m
+    [32m[32m[1m1 passed[0m[32m in 5.22s[0m[0m
+  STATS mean=4.6493 stdev=0.5667 cv=0.1219 verdict=true_bottleneck optimizable=True
+
+rank=3 run=1 junit=4.608 process_wall=6.5357 rc=0 status=passed node=tests/test_deselected_ci_gate_acceptance.py::test_ci_gate_accepts_only_authorized_deselected_nodes_with_reasons
+  cmd=D:/Users/Administrator/Desktop/筆記補齊/.venv/Scripts/python.exe -X utf8 -m pytest tests/test_deselected_ci_gate_acceptance.py::test_ci_gate_accepts_only_authorized_deselected_nodes_with_reasons -o addopts= -q --tb=line --junitxml=D:\Users\Administrator\Desktop\autodev-ng\data\note-filler\worktrees\8f9976c3\docs\pytest-audit\top10-rerun3x-junit-2026-07-20\rank03-run1.xml
+  stdout_tail:
+    [32m.[0m[32m                                                                        [100%][0m
+    [32m[32m[1m1 passed[0m[32m in 4.75s[0m[0m
+rank=3 run=2 junit=5.885 process_wall=8.6864 rc=0 status=passed node=tests/test_deselected_ci_gate_acceptance.py::test_ci_gate_accepts_only_authorized_deselected_nodes_with_reasons
+  cmd=D:/Users/Administrator/Desktop/筆記補齊/.venv/Scripts/python.exe -X utf8 -m pytest tests/test_deselected_ci_gate_acceptance.py::test_ci_gate_accepts_only_authorized_deselected_nodes_with_reasons -o addopts= -q --tb=line --junitxml=D:\Users\Administrator\Desktop\autodev-ng\data\note-filler\worktrees\8f9976c3\docs\pytest-audit\top10-rerun3x-junit-2026-07-20\rank03-run2.xml
+  stdout_tail:
+    [32m.[0m[32m                                                                        [100%][0m
+    [32m[32m[1m1 passed[0m[32m in 6.01s[0m[0m
+rank=3 run=3 junit=4.657 process_wall=6.5579 rc=0 status=passed node=tests/test_deselected_ci_gate_acceptance.py::test_ci_gate_accepts_only_authorized_deselected_nodes_with_reasons
+  cmd=D:/Users/Administrator/Desktop/筆記補齊/.venv/Scripts/python.exe -X utf8 -m pytest tests/test_deselected_ci_gate_acceptance.py::test_ci_gate_accepts_only_authorized_deselected_nodes_with_reasons -o addopts= -q --tb=line --junitxml=D:\Users\Administrator\Desktop\autodev-ng\data\note-filler\worktrees\8f9976c3\docs\pytest-audit\top10-rerun3x-junit-2026-07-20\rank03-run3.xml
+  stdout_tail:
+    [32m.[0m[32m                                                                        [100%][0m
+    [32m[32m[1m1 passed[0m[32m in 4.77s[0m[0m
+  STATS mean=5.0500 stdev=0.7235 cv=0.1433 verdict=true_bottleneck optimizable=True
+
+rank=4 run=1 junit=4.373 process_wall=5.7753 rc=0 status=passed node=tests/test_deselected_ci_gate_acceptance.py::test_ci_gate_fails_when_deselected_allowlist_contains_non_deselected_node
+  cmd=D:/Users/Administrator/Desktop/筆記補齊/.venv/Scripts/python.exe -X utf8 -m pytest tests/test_deselected_ci_gate_acceptance.py::test_ci_gate_fails_when_deselected_allowlist_contains_non_deselected_node -o addopts= -q --tb=line --junitxml=D:\Users\Administrator\Desktop\autodev-ng\data\note-filler\worktrees\8f9976c3\docs\pytest-audit\top10-rerun3x-junit-2026-07-20\rank04-run1.xml
+  stdout_tail:
+    [32m.[0m[32m                                                                        [100%][0m
+    [32m[32m[1m1 passed[0m[32m in 4.49s[0m[0m
+rank=4 run=2 junit=4.234 process_wall=5.7844 rc=0 status=passed node=tests/test_deselected_ci_gate_acceptance.py::test_ci_gate_fails_when_deselected_allowlist_contains_non_deselected_node
+  cmd=D:/Users/Administrator/Desktop/筆記補齊/.venv/Scripts/python.exe -X utf8 -m pytest tests/test_deselected_ci_gate_acceptance.py::test_ci_gate_fails_when_deselected_allowlist_contains_non_deselected_node -o addopts= -q --tb=line --junitxml=D:\Users\Administrator\Desktop\autodev-ng\data\note-filler\worktrees\8f9976c3\docs\pytest-audit\top10-rerun3x-junit-2026-07-20\rank04-run2.xml
+  stdout_tail:
+    [32m.[0m[32m                                                                        [100%][0m
+    [32m[32m[1m1 passed[0m[32m in 4.35s[0m[0m
+rank=4 run=3 junit=4.484 process_wall=6.0931 rc=0 status=passed node=tests/test_deselected_ci_gate_acceptance.py::test_ci_gate_fails_when_deselected_allowlist_contains_non_deselected_node
+  cmd=D:/Users/Administrator/Desktop/筆記補齊/.venv/Scripts/python.exe -X utf8 -m pytest tests/test_deselected_ci_gate_acceptance.py::test_ci_gate_fails_when_deselected_allowlist_contains_non_deselected_node -o addopts= -q --tb=line --junitxml=D:\Users\Administrator\Desktop\autodev-ng\data\note-filler\worktrees\8f9976c3\docs\pytest-audit\top10-rerun3x-junit-2026-07-20\rank04-run3.xml
+  stdout_tail:
+    [32m.[0m[32m                                                                        [100%][0m
+    [32m[32m[1m1 passed[0m[32m in 4.70s[0m[0m
+  STATS mean=4.3637 stdev=0.1253 cv=0.0287 verdict=true_bottleneck optimizable=True
+
+rank=5 run=1 junit=3.21 process_wall=5.0233 rc=0 status=passed node=tests/test_deselection_guard.py::test_integration_allowlist_is_stable
+  cmd=D:/Users/Administrator/Desktop/筆記補齊/.venv/Scripts/python.exe -X utf8 -m pytest tests/test_deselection_guard.py::test_integration_allowlist_is_stable -o addopts= -q --tb=line --junitxml=D:\Users\Administrator\Desktop\autodev-ng\data\note-filler\worktrees\8f9976c3\docs\pytest-audit\top10-rerun3x-junit-2026-07-20\rank05-run1.xml
+  stdout_tail:
+    [32m.[0m[32m                                                                        [100%][0m
+    [32m[32m[1m1 passed[0m[32m in 3.32s[0m[0m
+rank=5 run=2 junit=2.706 process_wall=4.0116 rc=0 status=passed node=tests/test_deselection_guard.py::test_integration_allowlist_is_stable
+  cmd=D:/Users/Administrator/Desktop/筆記補齊/.venv/Scripts/python.exe -X utf8 -m pytest tests/test_deselection_guard.py::test_integration_allowlist_is_stable -o addopts= -q --tb=line --junitxml=D:\Users\Administrator\Desktop\autodev-ng\data\note-filler\worktrees\8f9976c3\docs\pytest-audit\top10-rerun3x-junit-2026-07-20\rank05-run2.xml
+  stdout_tail:
+    [32m.[0m[32m                                                                        [100%][0m
+    [32m[32m[1m1 passed[0m[32m in 2.82s[0m[0m
+rank=5 run=3 junit=2.703 process_wall=4.4786 rc=0 status=passed node=tests/test_deselection_guard.py::test_integration_allowlist_is_stable
+  cmd=D:/Users/Administrator/Desktop/筆記補齊/.venv/Scripts/python.exe -X utf8 -m pytest tests/test_deselection_guard.py::test_integration_allowlist_is_stable -o addopts= -q --tb=line --junitxml=D:\Users\Administrator\Desktop\autodev-ng\data\note-filler\worktrees\8f9976c3\docs\pytest-audit\top10-rerun3x-junit-2026-07-20\rank05-run3.xml
+  stdout_tail:
+    [32m.[0m[32m                                                                        [100%][0m
+    [32m[32m[1m1 passed[0m[32m in 2.80s[0m[0m
+  STATS mean=2.8730 stdev=0.2919 cv=0.1016 verdict=true_bottleneck optimizable=True
+
+rank=6 run=1 junit=1.615 process_wall=2.7004 rc=0 status=passed node=tests/test_deselection_guard.py::test_deselected_details_lists_node_ids_and_reasons
+  cmd=D:/Users/Administrator/Desktop/筆記補齊/.venv/Scripts/python.exe -X utf8 -m pytest tests/test_deselection_guard.py::test_deselected_details_lists_node_ids_and_reasons -o addopts= -q --tb=line --junitxml=D:\Users\Administrator\Desktop\autodev-ng\data\note-filler\worktrees\8f9976c3\docs\pytest-audit\top10-rerun3x-junit-2026-07-20\rank06-run1.xml
+  stdout_tail:
+    [32m.[0m[32m                                                                        [100%][0m
+    [32m[32m[1m1 passed[0m[32m in 1.73s[0m[0m
+rank=6 run=2 junit=1.227 process_wall=2.5557 rc=0 status=passed node=tests/test_deselection_guard.py::test_deselected_details_lists_node_ids_and_reasons
+  cmd=D:/Users/Administrator/Desktop/筆記補齊/.venv/Scripts/python.exe -X utf8 -m pytest tests/test_deselection_guard.py::test_deselected_details_lists_node_ids_and_reasons -o addopts= -q --tb=line --junitxml=D:\Users\Administrator\Desktop\autodev-ng\data\note-filler\worktrees\8f9976c3\docs\pytest-audit\top10-rerun3x-junit-2026-07-20\rank06-run2.xml
+  stdout_tail:
+    [32m.[0m[32m                                                                        [100%][0m
+    [32m[32m[1m1 passed[0m[32m in 1.30s[0m[0m
+rank=6 run=3 junit=2.4 process_wall=4.2084 rc=0 status=passed node=tests/test_deselection_guard.py::test_deselected_details_lists_node_ids_and_reasons
+  cmd=D:/Users/Administrator/Desktop/筆記補齊/.venv/Scripts/python.exe -X utf8 -m pytest tests/test_deselection_guard.py::test_deselected_details_lists_node_ids_and_reasons -o addopts= -q --tb=line --junitxml=D:\Users\Administrator\Desktop\autodev-ng\data\note-filler\worktrees\8f9976c3\docs\pytest-audit\top10-rerun3x-junit-2026-07-20\rank06-run3.xml
+  stdout_tail:
+    [32m.[0m[32m                                                                        [100%][0m
+    [32m[32m[1m1 passed[0m[32m in 2.53s[0m[0m
+  STATS mean=1.7473 stdev=0.5976 cv=0.3420 verdict=true_bottleneck_with_variance optimizable=True
+
+rank=7 run=1 junit=2.271 process_wall=4.4428 rc=0 status=passed node=tests/test_requirements_test_coverage.py::test_default_gate_collects_every_equivalent_and_safety_regression
+  cmd=D:/Users/Administrator/Desktop/筆記補齊/.venv/Scripts/python.exe -X utf8 -m pytest tests/test_requirements_test_coverage.py::test_default_gate_collects_every_equivalent_and_safety_regression -o addopts= -q --tb=line --junitxml=D:\Users\Administrator\Desktop\autodev-ng\data\note-filler\worktrees\8f9976c3\docs\pytest-audit\top10-rerun3x-junit-2026-07-20\rank07-run1.xml
+  stdout_tail:
+    [32m.[0m[32m                                                                        [100%][0m
+    [32m[32m[1m1 passed[0m[32m in 2.41s[0m[0m
+rank=7 run=2 junit=1.753 process_wall=4.1616 rc=0 status=passed node=tests/test_requirements_test_coverage.py::test_default_gate_collects_every_equivalent_and_safety_regression
+  cmd=D:/Users/Administrator/Desktop/筆記補齊/.venv/Scripts/python.exe -X utf8 -m pytest tests/test_requirements_test_coverage.py::test_default_gate_collects_every_equivalent_and_safety_regression -o addopts= -q --tb=line --junitxml=D:\Users\Administrator\Desktop\autodev-ng\data\note-filler\worktrees\8f9976c3\docs\pytest-audit\top10-rerun3x-junit-2026-07-20\rank07-run2.xml
+  stdout_tail:
+    [32m.[0m[32m                                                                        [100%][0m
+    [32m[32m[1m1 passed[0m[32m in 1.95s[0m[0m
+rank=7 run=3 junit=1.449 process_wall=2.9018 rc=0 status=passed node=tests/test_requirements_test_coverage.py::test_default_gate_collects_every_equivalent_and_safety_regression
+  cmd=D:/Users/Administrator/Desktop/筆記補齊/.venv/Scripts/python.exe -X utf8 -m pytest tests/test_requirements_test_coverage.py::test_default_gate_collects_every_equivalent_and_safety_regression -o addopts= -q --tb=line --junitxml=D:\Users\Administrator\Desktop\autodev-ng\data\note-filler\worktrees\8f9976c3\docs\pytest-audit\top10-rerun3x-junit-2026-07-20\rank07-run3.xml
+  stdout_tail:
+    [32m.[0m[32m                                                                        [100%][0m
+    [32m[32m[1m1 passed[0m[32m in 1.52s[0m[0m
+  STATS mean=1.8243 stdev=0.4156 cv=0.2278 verdict=true_bottleneck optimizable=True
+
+rank=8 run=1 junit=0.152 process_wall=1.3058 rc=0 status=passed node=tests/test_law_check.py::test_search_articles_keyword_only
+  cmd=D:/Users/Administrator/Desktop/筆記補齊/.venv/Scripts/python.exe -X utf8 -m pytest tests/test_law_check.py::test_search_articles_keyword_only -o addopts= -q --tb=line --junitxml=D:\Users\Administrator\Desktop\autodev-ng\data\note-filler\worktrees\8f9976c3\docs\pytest-audit\top10-rerun3x-junit-2026-07-20\rank08-run1.xml
+  stdout_tail:
+    [32m.[0m[32m                                                                        [100%][0m
+    [32m[32m[1m1 passed[0m[32m in 0.22s[0m[0m
+rank=8 run=2 junit=0.051 process_wall=1.7917 rc=0 status=passed node=tests/test_law_check.py::test_search_articles_keyword_only
+  cmd=D:/Users/Administrator/Desktop/筆記補齊/.venv/Scripts/python.exe -X utf8 -m pytest tests/test_law_check.py::test_search_articles_keyword_only -o addopts= -q --tb=line --junitxml=D:\Users\Administrator\Desktop\autodev-ng\data\note-filler\worktrees\8f9976c3\docs\pytest-audit\top10-rerun3x-junit-2026-07-20\rank08-run2.xml
+  stdout_tail:
+    [32m.[0m[32m                                                                        [100%][0m
+    [32m[32m[1m1 passed[0m[32m in 0.16s[0m[0m
+rank=8 run=3 junit=0.067 process_wall=1.856 rc=0 status=passed node=tests/test_law_check.py::test_search_articles_keyword_only
+  cmd=D:/Users/Administrator/Desktop/筆記補齊/.venv/Scripts/python.exe -X utf8 -m pytest tests/test_law_check.py::test_search_articles_keyword_only -o addopts= -q --tb=line --junitxml=D:\Users\Administrator\Desktop\autodev-ng\data\note-filler\worktrees\8f9976c3\docs\pytest-audit\top10-rerun3x-junit-2026-07-20\rank08-run3.xml
+  stdout_tail:
+    [32m.[0m[32m                                                                        [100%][0m
+    [32m[32m[1m1 passed[0m[32m in 0.15s[0m[0m
+  STATS mean=0.0900 stdev=0.0543 cv=0.6032 verdict=noise_or_marginal optimizable=False
+
+rank=9 run=1 junit=0.097 process_wall=47.2383 rc=0 status=passed node=tests/test_excluded_failing_controls.py::test_control_05_pipeline_c6_pending_when_no_sources
+  cmd=D:/Users/Administrator/Desktop/筆記補齊/.venv/Scripts/python.exe -X utf8 -m pytest tests/test_excluded_failing_controls.py::test_control_05_pipeline_c6_pending_when_no_sources -o addopts= -q --tb=line --junitxml=D:\Users\Administrator\Desktop\autodev-ng\data\note-filler\worktrees\8f9976c3\docs\pytest-audit\top10-rerun3x-junit-2026-07-20\rank09-run1.xml
+  stdout_tail:
+    [32m.[0m[32m                                                                        [100%][0m
+    [32m[32m[1m1 passed[0m[32m in 45.06s[0m[0m
+rank=9 run=2 junit=0.112 process_wall=1.4595 rc=0 status=passed node=tests/test_excluded_failing_controls.py::test_control_05_pipeline_c6_pending_when_no_sources
+  cmd=D:/Users/Administrator/Desktop/筆記補齊/.venv/Scripts/python.exe -X utf8 -m pytest tests/test_excluded_failing_controls.py::test_control_05_pipeline_c6_pending_when_no_sources -o addopts= -q --tb=line --junitxml=D:\Users\Administrator\Desktop\autodev-ng\data\note-filler\worktrees\8f9976c3\docs\pytest-audit\top10-rerun3x-junit-2026-07-20\rank09-run2.xml
+  stdout_tail:
+    [32m.[0m[32m                                                                        [100%][0m
+    [32m[32m[1m1 passed[0m[32m in 0.30s[0m[0m
+rank=9 run=3 junit=0.124 process_wall=1.3487 rc=0 status=passed node=tests/test_excluded_failing_controls.py::test_control_05_pipeline_c6_pending_when_no_sources
+  cmd=D:/Users/Administrator/Desktop/筆記補齊/.venv/Scripts/python.exe -X utf8 -m pytest tests/test_excluded_failing_controls.py::test_control_05_pipeline_c6_pending_when_no_sources -o addopts= -q --tb=line --junitxml=D:\Users\Administrator\Desktop\autodev-ng\data\note-filler\worktrees\8f9976c3\docs\pytest-audit\top10-rerun3x-junit-2026-07-20\rank09-run3.xml
+  stdout_tail:
+    [32m.[0m[32m                                                                        [100%][0m
+    [32m[32m[1m1 passed[0m[32m in 0.28s[0m[0m
+  STATS mean=0.1110 stdev=0.0135 cv=0.1219 verdict=marginal optimizable=False
+
+rank=10 run=1 junit=0.203 process_wall=1.7967 rc=0 status=passed node=tests/test_export_docx.py::test_to_docx_roundtrip_preserves_original_and_marks_supplement
+  cmd=D:/Users/Administrator/Desktop/筆記補齊/.venv/Scripts/python.exe -X utf8 -m pytest tests/test_export_docx.py::test_to_docx_roundtrip_preserves_original_and_marks_supplement -o addopts= -q --tb=line --junitxml=D:\Users\Administrator\Desktop\autodev-ng\data\note-filler\worktrees\8f9976c3\docs\pytest-audit\top10-rerun3x-junit-2026-07-20\rank10-run1.xml
+  stdout_tail:
+    [32m.[0m[32m                                                                        [100%][0m
+    [32m[32m[1m1 passed[0m[32m in 0.31s[0m[0m
+rank=10 run=2 junit=0.181 process_wall=1.7337 rc=0 status=passed node=tests/test_export_docx.py::test_to_docx_roundtrip_preserves_original_and_marks_supplement
+  cmd=D:/Users/Administrator/Desktop/筆記補齊/.venv/Scripts/python.exe -X utf8 -m pytest tests/test_export_docx.py::test_to_docx_roundtrip_preserves_original_and_marks_supplement -o addopts= -q --tb=line --junitxml=D:\Users\Administrator\Desktop\autodev-ng\data\note-filler\worktrees\8f9976c3\docs\pytest-audit\top10-rerun3x-junit-2026-07-20\rank10-run2.xml
+  stdout_tail:
+    [32m.[0m[32m                                                                        [100%][0m
+    [32m[32m[1m1 passed[0m[32m in 0.29s[0m[0m
+rank=10 run=3 junit=0.221 process_wall=1.9101 rc=0 status=passed node=tests/test_export_docx.py::test_to_docx_roundtrip_preserves_original_and_marks_supplement
+  cmd=D:/Users/Administrator/Desktop/筆記補齊/.venv/Scripts/python.exe -X utf8 -m pytest tests/test_export_docx.py::test_to_docx_roundtrip_preserves_original_and_marks_supplement -o addopts= -q --tb=line --junitxml=D:\Users\Administrator\Desktop\autodev-ng\data\note-filler\worktrees\8f9976c3\docs\pytest-audit\top10-rerun3x-junit-2026-07-20\rank10-run3.xml
+  stdout_tail:
+    [32m.[0m[32m                                                                        [100%][0m
+    [32m[32m[1m1 passed[0m[32m in 0.62s[0m[0m
+  STATS mean=0.2017 stdev=0.0200 cv=0.0993 verdict=marginal optimizable=False
+
