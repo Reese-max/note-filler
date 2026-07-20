@@ -166,9 +166,9 @@ def main() -> None:
     matrix_map = {row["node_id"]: row for row in matrix.get("tests", [])}
 
     all_ids = _parse_node_ids(_run_collect("-o", "addopts="))
-    selected_text = _run_collect()
+    selected_text = _run_collect("--deselected-details")
     selected_ids = _parse_node_ids(selected_text)
-    details = _parse_deselected_details(_run_collect("--deselected-details"))
+    details = _parse_deselected_details(selected_text)
 
     deselected_ids = sorted(set(all_ids) - set(selected_ids))
     failures: list[str] = []

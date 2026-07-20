@@ -14,6 +14,7 @@ import json
 import re
 import subprocess
 import sys
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 _PYTHON = sys.executable
@@ -409,32 +410,31 @@ def test_substitute_mapping_is_complete_and_collectable() -> None:
     assert not unmapped, f"Integration tests without substitute coverage: {unmapped}"
 
     all_ids, all_cmd, _ = _collect_tests("-o", "addopts=")
-    selected_ids, selected_cmd, _ = _collect_tests()
-    details_cmd = _pytest_cmd(
-        "--collect-only", "-q", "--deselected-details", "--color=no"
-    )
-    details_result = _run_captured(details_cmd)
-    assert details_result.returncode == 0, details_result.stdout + details_result.stderr
+    selected_ids, selected_cmd, details_stdout = _collect_tests("--deselected-details")
+    details_cmd = selected_cmd
 
     collectable, collect_map_cmd, _ = _collect_tests(*MAPPED_NON_INTEGRATION_TESTS)
     assert collectable == MAPPED_NON_INTEGRATION_TESTS
 
-    # 單獨執行每個替代測試（非一批彙總）
+    # 保留每個替代測試的獨立行程隔離，只平行處理行程啟動與 collection。
     individual_status: dict[str, dict] = {}
-    for test_id in MAPPED_NON_INTEGRATION_TESTS:
-        status, command, summary, exit_code = _run_one_test(test_id)
-        individual_status[test_id] = {
-            "test_id": test_id,
-            "status": status,
-            "summary": summary,
-            "exit_code": exit_code,
-            "invocation": _format_invocation(command),
-        }
-        assert status == "passed" and exit_code == 0, (
-            f"Substitute individual run failed: {test_id}\n"
-            f"invocation: {_format_invocation(command)}\n"
-            f"summary: {summary}"
-        )
+    with ThreadPoolExecutor(max_workers=4) as pool:
+        results = pool.map(_run_one_test, MAPPED_NON_INTEGRATION_TESTS)
+        for test_id, (status, command, summary, exit_code) in zip(
+            MAPPED_NON_INTEGRATION_TESTS, results, strict=True
+        ):
+            individual_status[test_id] = {
+                "test_id": test_id,
+                "status": status,
+                "summary": summary,
+                "exit_code": exit_code,
+                "invocation": _format_invocation(command),
+            }
+            assert status == "passed" and exit_code == 0, (
+                f"Substitute individual run failed: {test_id}\n"
+                f"invocation: {_format_invocation(command)}\n"
+                f"summary: {summary}"
+            )
 
     live_by_id = _load_live_individual_results()
     per_node: list[dict] = []
@@ -484,7 +484,7 @@ def test_substitute_mapping_is_complete_and_collectable() -> None:
         selected_cmd=selected_cmd,
         selected_ids=selected_ids,
         details_cmd=details_cmd,
-        details_stdout=details_result.stdout,
+        details_stdout=details_stdout,
         per_node=per_node,
     )
 
