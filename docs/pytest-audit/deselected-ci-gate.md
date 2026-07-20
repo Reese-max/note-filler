@@ -1,5 +1,5 @@
 ## CI Deselected 測試稽核
-- 產生時間: 2026-07-19 21:05:32+0800
+- 產生時間: 2026-07-21 05:39:56+0800
 - 工具: validate_deselection_ci.py
 
 - 全量 collected: 148
