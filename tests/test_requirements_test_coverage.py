@@ -11,6 +11,12 @@ from pathlib import Path
 
 _REPO = Path(__file__).resolve().parents[1]
 _MATRIX = _REPO / "docs" / "pytest-audit" / "requirements-test-coverage-2026-07-19.json"
+_PATH_AUDIT = (
+    _REPO
+    / "docs"
+    / "pytest-audit"
+    / "deselected-correctness-path-equivalence-2026-07-21.json"
+)
 _ALLOWLIST = _REPO / "tests" / "deselected_allowlist.json"
 _NODE_ID_RE = re.compile(r"^tests/[^:]+::\S+$")
 
@@ -49,9 +55,53 @@ def _default_collected_ids() -> set[str]:
 
 def test_coverage_matrix_classifies_all_eight_and_has_no_missing_requirement() -> None:
     matrix = _load(_MATRIX)
+    path_audit = _load(_PATH_AUDIT)
     allowlist = _load(_ALLOWLIST)
     assert isinstance(matrix, dict)
     assert isinstance(allowlist, list)
+
+    assert isinstance(path_audit, dict)
+    assert path_audit["schema"] == (
+        "note-filler.deselected-correctness-path-equivalence/v1"
+    )
+    audited = path_audit["tests"]
+    assert len(audited) == 8
+    assert {row["node_id"] for row in audited} == {
+        row["test_id"] for row in allowlist
+    }
+    paths = [path for row in audited for path in row["paths"]]
+    assert len(paths) == len({path["id"] for path in paths}) == 23
+    statuses = {
+        "equivalent_coverage": 15,
+        "regression_protection_insufficient": 6,
+        "not_covered": 2,
+    }
+    assert {
+        status: sum(path["status"] == status for path in paths)
+        for status in statuses
+    } == statuses
+    assert path_audit["summary"] == {
+        "target_tests": 8,
+        "correctness_paths": 23,
+        **statuses,
+        "targets_without_singleton_or_uncovered_path": [
+            "tests/test_llm.py::test_grok_pong_integration"
+        ],
+    }
+    for path in paths:
+        points = path["coverage_points"]
+        if path["status"] == "equivalent_coverage":
+            assert len(points) >= 2
+        elif path["status"] == "regression_protection_insufficient":
+            assert len(points) == 1
+            assert path["status_label"] == "回歸保護不足"
+            assert path["minimal_test_location"]
+            assert path["minimal_test_change"]
+        else:
+            assert points == []
+            assert path["status_label"] == "未覆蓋"
+            assert path["minimal_test_location"]
+            assert path["minimal_test_change"]
 
     allowlist_by_id = {row["test_id"]: row for row in allowlist}
     rows = matrix["tests"]
@@ -95,8 +145,10 @@ def test_coverage_matrix_classifies_all_eight_and_has_no_missing_requirement() -
 
 def test_default_gate_collects_every_equivalent_and_safety_regression() -> None:
     matrix = _load(_MATRIX)
+    path_audit = _load(_PATH_AUDIT)
     allowlist_ids = {row["test_id"] for row in _load(_ALLOWLIST)}
     default_ids = _default_collected_ids()
+    all_ids = default_ids | allowlist_ids
 
     expected = matrix["default_gate"]["expected_collection"]
     assert len(default_ids) == expected["default_selected"]
@@ -121,3 +173,9 @@ def test_default_gate_collects_every_equivalent_and_safety_regression() -> None:
             f"{sorted(covered_by - default_ids)}"
         )
         assert requirement["id"] in all_default_requirements
+
+    for row in path_audit["tests"]:
+        assert set(row["same_group_siblings"]) <= all_ids
+        for path in row["paths"]:
+            assert set(path["coverage_points"]) <= all_ids
+            assert set(path["equivalent_default_tests"]) <= default_ids
