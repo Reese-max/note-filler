@@ -1,0 +1,24 @@
+=== LABEL: run minimal regression core #2 ===
+=== CMD: D:\Users\Administrator\Desktop\筆記補齊\.venv\Scripts\python.exe -X utf8 -m pytest -vv --tb=short --color=no tests/test_e2e_acceptance.py::test_e2e_minimal_quality_gates_offline_regression tests/test_e2e_acceptance.py::test_e2e_offline_supplement_quality_boundary tests/test_excluded_failing_controls.py::test_control_02_e2e_offline_quality_gates tests/test_exclusion_correctness_blind_spot.py::test_deselected_retrieve_smoke_vacuous_pass_on_empty_is_blind_spot tests/test_exclusion_correctness_blind_spot.py::test_law_domain_retrieve_must_yield_level_a_not_vacuous_empty tests/test_twinkle.py::test_search_clamps_similarity_input_to_distance_range ===
+=== CWD: D:\Users\Administrator\Desktop\autodev-ng\data\note-filler\worktrees\0bb09a22 ===
+=== START: 2026-07-21T12:45:35+08:00 ===
+
+============================= test session starts =============================
+platform win32 -- Python 3.11.9, pytest-9.1.1, pluggy-1.6.0 -- D:\Users\Administrator\Desktop\筆記補齊\.venv\Scripts\python.exe
+cachedir: .pytest_cache
+rootdir: D:\Users\Administrator\Desktop\autodev-ng\data\note-filler\worktrees\0bb09a22
+configfile: pyproject.toml
+plugins: anyio-4.14.2
+collecting ... collected 6 items
+
+tests/test_e2e_acceptance.py::test_e2e_minimal_quality_gates_offline_regression PASSED [ 16%]
+tests/test_e2e_acceptance.py::test_e2e_offline_supplement_quality_boundary PASSED [ 33%]
+tests/test_excluded_failing_controls.py::test_control_02_e2e_offline_quality_gates PASSED [ 50%]
+tests/test_exclusion_correctness_blind_spot.py::test_deselected_retrieve_smoke_vacuous_pass_on_empty_is_blind_spot PASSED [ 66%]
+tests/test_exclusion_correctness_blind_spot.py::test_law_domain_retrieve_must_yield_level_a_not_vacuous_empty PASSED [ 83%]
+tests/test_twinkle.py::test_search_clamps_similarity_input_to_distance_range PASSED [100%]
+
+============================== 6 passed in 0.14s ==============================
+
+=== END: 2026-07-21T12:45:36+08:00 ===
+=== EXIT_CODE: 0 ===

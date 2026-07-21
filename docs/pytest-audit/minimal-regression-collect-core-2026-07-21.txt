@@ -1,0 +1,16 @@
+=== LABEL: collect-only minimal regression core ===
+=== CMD: D:\Users\Administrator\Desktop\筆記補齊\.venv\Scripts\python.exe -X utf8 -m pytest --collect-only -q --color=no tests/test_e2e_acceptance.py::test_e2e_minimal_quality_gates_offline_regression tests/test_e2e_acceptance.py::test_e2e_offline_supplement_quality_boundary tests/test_excluded_failing_controls.py::test_control_02_e2e_offline_quality_gates tests/test_exclusion_correctness_blind_spot.py::test_deselected_retrieve_smoke_vacuous_pass_on_empty_is_blind_spot tests/test_exclusion_correctness_blind_spot.py::test_law_domain_retrieve_must_yield_level_a_not_vacuous_empty tests/test_twinkle.py::test_search_clamps_similarity_input_to_distance_range ===
+=== CWD: D:\Users\Administrator\Desktop\autodev-ng\data\note-filler\worktrees\0bb09a22 ===
+=== START: 2026-07-21T12:45:19+08:00 ===
+
+tests/test_e2e_acceptance.py::test_e2e_minimal_quality_gates_offline_regression
+tests/test_e2e_acceptance.py::test_e2e_offline_supplement_quality_boundary
+tests/test_excluded_failing_controls.py::test_control_02_e2e_offline_quality_gates
+tests/test_exclusion_correctness_blind_spot.py::test_deselected_retrieve_smoke_vacuous_pass_on_empty_is_blind_spot
+tests/test_exclusion_correctness_blind_spot.py::test_law_domain_retrieve_must_yield_level_a_not_vacuous_empty
+tests/test_twinkle.py::test_search_clamps_similarity_input_to_distance_range
+
+6 tests collected in 0.63s
+
+=== END: 2026-07-21T12:45:31+08:00 ===
+=== EXIT_CODE: 0 ===
