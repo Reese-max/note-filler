@@ -1,0 +1,106 @@
+{
+  "command_default": "pytest --collect-only -q",
+  "command_verbose": "pytest --collect-only -q -vv",
+  "command_integration_only": "pytest --collect-only -q -m integration",
+  "python": "D:/Users/Administrator/Desktop/筆記補齊/.venv/Scripts/python.exe -X utf8",
+  "cwd": "repo worktree root (note-filler/worktrees/73efcd73)",
+  "summary": {
+    "total_collected": 150,
+    "selected_default_gate": 142,
+    "deselected_default_gate": 8,
+    "default_collect_line": "142/150 tests collected (8 deselected)"
+  },
+  "deselect_mechanism": {
+    "config_file": "pyproject.toml",
+    "section": "tool.pytest.ini_options",
+    "addopts_fragment": "-m 'not integration'",
+    "marker_definition": "integration: 需要真實 grok(:8318)的整合測試;平時用 -m 'not integration' 跳過"
+  },
+  "deselected_tests": [
+    {
+      "nodeid": "tests/test_domain.py::test_detect_domain_real_grok_returns_law",
+      "source_file": "tests/test_domain.py",
+      "marks": ["integration", "skipif"],
+      "marker_details": [
+        {"name": "integration"},
+        {"name": "skipif", "reason": "grok proxy(127.0.0.1:8318)未上線,條件式略過"}
+      ],
+      "deselect_reason": "pyproject.toml addopts -m 'not integration'"
+    },
+    {
+      "nodeid": "tests/test_e2e_acceptance.py::test_e2e_acceptance_real",
+      "source_file": "tests/test_e2e_acceptance.py",
+      "marks": ["integration"],
+      "marker_details": [
+        {"name": "integration"}
+      ],
+      "deselect_reason": "pyproject.toml addopts -m 'not integration'"
+    },
+    {
+      "nodeid": "tests/test_gap.py::test_detect_gaps_real_grok",
+      "source_file": "tests/test_gap.py",
+      "marks": ["integration", "skipif"],
+      "marker_details": [
+        {"name": "integration"},
+        {"name": "skipif", "reason": "grok proxy(127.0.0.1:8318)未上線,條件式略過"}
+      ],
+      "deselect_reason": "pyproject.toml addopts -m 'not integration'"
+    },
+    {
+      "nodeid": "tests/test_llm.py::test_grok_pong_integration",
+      "source_file": "tests/test_llm.py",
+      "marks": ["integration", "skipif"],
+      "marker_details": [
+        {"name": "integration"},
+        {"name": "skipif", "reason": "grok proxy(127.0.0.1:8318)未上線,條件式略過"}
+      ],
+      "deselect_reason": "pyproject.toml addopts -m 'not integration'"
+    },
+    {
+      "nodeid": "tests/test_pipeline.py::test_run_pipeline_real_grok",
+      "source_file": "tests/test_pipeline.py",
+      "marks": ["integration", "skipif"],
+      "marker_details": [
+        {"name": "integration"},
+        {"name": "skipif", "reason": "grok proxy(127.0.0.1:8318)未上線,條件式略過"}
+      ],
+      "deselect_reason": "pyproject.toml addopts -m 'not integration'"
+    },
+    {
+      "nodeid": "tests/test_questions.py::test_generate_questions_real_grok",
+      "source_file": "tests/test_questions.py",
+      "marks": ["integration", "skipif"],
+      "marker_details": [
+        {"name": "integration"},
+        {"name": "skipif", "reason": "grok proxy(127.0.0.1:8318)未上線,條件式略過"}
+      ],
+      "deselect_reason": "pyproject.toml addopts -m 'not integration'"
+    },
+    {
+      "nodeid": "tests/test_retrieve.py::test_retrieve_for_gap_real_twinkle_smoke",
+      "source_file": "tests/test_retrieve.py",
+      "marks": ["integration", "skipif"],
+      "marker_details": [
+        {"name": "integration"},
+        {"name": "skipif", "reason": "缺 data/law_index.db"},
+        {"name": "skipif", "reason": "grok proxy(127.0.0.1:8318)未上線,條件式略過"}
+      ],
+      "deselect_reason": "pyproject.toml addopts -m 'not integration'"
+    },
+    {
+      "nodeid": "tests/test_twinkle.py::test_search_real_twinkle_hub",
+      "source_file": "tests/test_twinkle.py",
+      "marks": ["integration"],
+      "marker_details": [
+        {"name": "integration"}
+      ],
+      "deselect_reason": "pyproject.toml addopts -m 'not integration'"
+    }
+  ],
+  "evidence_files": [
+    "docs/evidence/pytest-collect-only-q.txt",
+    "docs/evidence/pytest-collect-only-q-vv.txt",
+    "docs/evidence/pytest-collect-only-integration-only.txt",
+    "docs/evidence/deselected-8-with-marks.json"
+  ]
+}

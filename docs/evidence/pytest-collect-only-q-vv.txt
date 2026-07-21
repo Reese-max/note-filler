@@ -1,0 +1,334 @@
+[1m============================= test session starts =============================[0m
+platform win32 -- Python 3.11.9, pytest-9.1.1, pluggy-1.6.0 -- D:\Users\Administrator\Desktop\蝑?鋆?\.venv\Scripts\python.exe
+cachedir: .pytest_cache
+rootdir: D:\Users\Administrator\Desktop\autodev-ng\data\note-filler\worktrees\73efcd73
+configfile: pyproject.toml
+testpaths: tests
+plugins: anyio-4.14.2
+[1mcollecting ... [0mcollected 150 items / 8 deselected / 142 selected
+
+<Dir 73efcd73>
+  <Dir tests>
+    <Module test_citation_formatter.py>
+      <Function test_build_reference_lines_two_sources>
+    <Module test_cli.py>
+      CLI(__main__)皜祈岫:頛詨撅? + ?格?頛詨?賢?/?澆?/閮(stub ??pipeline)??
+      <Function test_iter_inputs_expands_dir_filters_suffix_and_dedups>
+      <Function test_process_file_writes_md_and_counts>
+      <Function test_process_file_json_format_and_outdir>
+    <Module test_conclusion_classification.py>
+      蝯???摰?嚗?蝻粹 vs ?祕撽?蝻箏嚗蝻箏??隞塚???
+      
+      隞餃?嚗?撠??隢?憿??祕撽?蝻箏敹???
+      ?舫??曉仃?葫閰艾????箝祕???箝耨敺拙?撽?賭誘??
+      
+      璈靘?嚗ocs/pytest-audit/conclusion-classification-2026-07-19.json
+      鈭粹??勗?嚗ocs/conclusion-classification-2026-07-19.md
+      <Function test_classification_index_schema_and_labels>
+      <Function test_classification_covers_all_eight_allowlist_nodes>
+      <Function test_non_defect_items_have_no_gap_package>
+      <Function test_true_gap_items_have_full_package>
+      <Function test_human_report_exists_and_mentions_both_labels>
+      <Function test_gap_c7_current_smoke_vacuous_pass_on_empty>
+        撖阡?銵嚗銵?smoke 撠?empty ?函?嚗acuous嚗? 蝻箏隞??皜?PASSED??
+        
+        靽桀儔敺?smoke ?寧閬??征嚗皜祆??孵神??箸???raise嚗?
+        ?函撩?????嚗迨皜祇??唾??祕???箝???
+      <Function test_gap_c7_strengthened_contract_fails_on_empty>
+        ?舫??曉仃??靽桀儔敺?蝝? empty 敹? AssertionError嚗????粹?摰???
+        
+        ???撖阡?霅撩???瘙??舫??曉仃?葫閰佗?
+        - ??嚗?蝛箏?蝝?蝯?[]
+        - 撖阡?嚗??改?嚗銵?smoke 銝?蝯?[]嚗?銝?皜穿?
+      <Function test_gap_c7_package_acceptance_commands_are_non_empty_shell>
+    <Module test_correction.py>
+      <Function test_original_segments_verbatim_and_immutable>
+        ??畾菟??函?頛詨,??/畾菜銝?,confidence=verified??
+      <Function test_written_two_independent_a_verified_only_used_sources>
+        written 撘 2 ?蝡?A ??verified,銝?segment.sources ?芸??2 ??
+      <Function test_pending_evidence_written_empty_sources>
+        written ?箝?鋆??? pending_evidence 銝?sources 蝛箝?
+      <Function test_retrieved_five_but_only_two_cited>
+        retrieved ??5 ???芸???2 ????segment ?芣???2 ??
+      <Function test_single_a_used_source_verified>
+        撘 1 ??level A(銝????grounded)??verified??
+      <Function test_three_articles_same_law_same_url_verified>
+        撘?3 璇?瘜??輻?摨???3/94/96(level A?rl ?詨??d/title 銝?)??verified??
+        ?? url ?詨?鋡怨炊璅?pending ??靘?銝??璇??摰???
+      <Function test_two_distinct_b_verified>
+        撘?2 ????level B(id 銝?? A)??verified(閬?鈭???
+      <Function test_single_b_no_a_pending>
+        撘?1 ??level B? A ??pending_evidence??
+      <Function test_single_c_used_source_verified>
+        撘?1 ??level C(摰/璅?蝯?銝??憒?owasp.org/NIST/CVE)??verified??
+      <Function test_single_d_used_source_pending>
+        撘?1 ??level D??嗡? ??pending_evidence(?桐?鈭?銝?摰?)??
+      <Function test_two_distinct_d_verified>
+        撘?2 ???level D(id 銝?)??verified(憭?雿?,閬?銝???level)??
+      <Function test_anchor_picks_keyword_overlap>
+      <Function test_anchor_none_when_no_overlap>
+    <Module test_deselected_ci_gate_acceptance.py>
+      Acceptance checks for the CI deselected policy gate.
+      
+      The gate must fail before the regular test run when the default pytest
+      selection excludes an unapproved node, the count drifts, or exclusion reasons
+      cannot be attributed to every deselected test.
+      <Function test_ci_gate_accepts_only_authorized_deselected_nodes_with_reasons>
+      <Function test_ci_gate_fails_when_deselected_allowlist_count_is_too_small>
+      <Function test_ci_gate_fails_when_deselected_allowlist_contains_non_deselected_node>
+    <Module test_deselection_guard.py>
+      Keep the integration exclusion list and its offline coverage map traceable.
+      
+      The machine-readable audit is the single source for both the eight excluded
+      test ids and the non-integration tests that cover their deterministic paths.
+      
+      Acceptance must not rely on aggregate counts alone: every formal package must
+      include full pytest invocations, all eight node ids, per-node exclusion
+      reasons, individual execution results, and fail / NOT-REPRODUCIBLE evidence.
+      <Function test_integration_allowlist_is_stable>
+        The current default deselection must exactly match the audited eight.
+      <Function test_deselected_details_lists_node_ids_and_reasons>
+        The opt-in report must expose every deselected node and its filter.
+      <Function test_substitute_mapping_is_complete_and_collectable>
+        Every excluded test maps to default tests that pass individually.
+        
+        Acceptance output is an expanded package (invocations + 8 node ids +
+        exclusion reasons + per-test individual results + fail/NOT-REPRODUCIBLE),
+        never aggregate counts alone.
+      <Function test_acceptance_package_rejects_count_only_summary>
+        A counts-only dict must fail the expanded acceptance schema checks.
+      <Function test_c7_correctness_path_law_domain_level_a_not_excluded>
+        C7 correctness regression: law+LawLookup 敹???Level A ?征??
+        
+        ??憸券嚗eselected #7 ??smoke 撠?empty 隞?vacuous PASS嚗?霅?嚗?
+        ?祆葫閰虫誑?祕 LawLookup + FakeTwinkle + FakeLLM ?湔 exercised ??頝臬?嚗?
+        ?瑁?瘥?vacuous smoke ?游撥嚗?蝛?+ ??Level A??
+        
+        ?交迨皜祈岫鋡?-m 'not integration' ? ???豢?閬?????correctness 頝臬??鈭?
+        ?交迨皜祈岫 FAIL ??law Level A ?Ｗ?頝臬??飛嚗?daily CI 敹??賣??芥?
+    <Module test_design_acceptance.py>
+      Machine-checkable design acceptance for D-01..D-05.
+      
+      Narrative-only or count-only packages must fail. Every claim must map to a
+      spec file, impl content anchors, and offline test anchors present in the
+      committed package.
+      <Function test_design_claims_index_is_complete>
+        Source claims catalog must list D-01..D-05 with required fields.
+      <Function test_design_acceptance_package_is_machine_checkable>
+        Committed package must be per-claim evidence, not a count summary.
+      <Function test_design_acceptance_rejects_claim_without_artifact>
+        A narrative-only / count-only payload must fail schema requirements.
+      <Function test_design_package_head_matches_repo_and_claim_map_printable>
+        Package HEAD must be a real git object; claim map must be 1:1 printable.
+    <Module test_domain.py>
+      <Function test_detect_domain_law>
+      <Function test_detect_domain_admin>
+      <Function test_detect_domain_exam>
+      <Function test_detect_domain_noise_falls_back_to_other>
+      <Function test_detect_domain_label_with_trailing_punctuation>
+      <Function test_detect_domain_uppercase_and_whitespace>
+    <Module test_e2e_acceptance.py>
+      蝡臬蝡舫??嗆葫閰?spec 禮12)??
+      
+      禮12 蝖砌?霈?:
+        1. ?阮??銝霈?diff ?芸?銝)
+        2. ?∩?皞? + C6:supplement sources 蝛?-> confidence == "pending_evidence"
+        3. 鈭文?撽? C4:supplement verified -> sources ?征銝? A/B??=2 ?函?靘?
+        4. 鋆?瘜?蝬?check_law_citations(text=..., lookup) ??article_not_found
+        5. C3:頛詨??T14 to_markdown ?Ｗ,?怒?????鋆?/??憛?撣嗆??C7)
+      <Function test_e2e_structural_invariants>
+      <Function test_e2e_offline_supplement_quality_boundary>
+        ?撠?failing-regression ?:?Ｙ?頝臬??臬閫貊 _assert_supplement_quality 憭望???
+        
+        ?亦瘜帘摰? ??隞?”閰脫???瘜??integration 銝誑憭望?敶Ｗ??
+        (?文? NOT-REPRODUCIBLE,閬?docs/e2e-offline-quality-boundary-2026-07-18.md)??
+      <Function test_e2e_minimal_quality_gates_offline_regression>
+        ?撠? failing regression:?Ｙ??撠?蝵桐????釭??血蝛拙?憭望???
+        
+        ?蔭 = FakeLLM + _StubTwinkle + LawLookup(data/law_index.db)??
+        ?亦帘摰?PASS ???文? NOT-REPRODUCIBLE
+        (閬?docs/minimal-quality-gates-regression-2026-07-19.md)??
+    <Module test_excluded_failing_controls.py>
+      ?箸??◤ -m 'not integration' ??葫閰血遣蝡?failing-first 撠????
+      
+      隞餃?嚗???瑁?閰?integration 皜祈岫??血?賣??correctness 蝻粹??
+      瘥?撠??鋡急??斗葫??determinism ?舫??暹敹??亦?楝敺帘摰?PASS嚗?
+      ???????Ｗ?蝻粹? **NOT-REPRODUCIBLE**嚗? docs/嚗?
+      
+      撠閮剛???嚗ailing-first ?嚗?
+      - ?暹??亙熒?? PASS嚗?
+      - ?亙???correctness 憟?鋡怎憯?甇斗葫??嚗??身 CI ??deselect
+        銝?頝 integration ?祇???甇文??扯?銝?determinism ?航??扼?
+      <Function test_control_map_covers_all_eight_excluded>
+        撠璅∠?敹? 1:1 閬? 8 ??deselected node id嚗瞍?嚗?
+      <Function test_control_01_domain_legal_label_contract>
+        Failing-first嚗?憿舀?敺? + 璅惜憟?嚗憯?strip/fallback ????
+        
+        ?皜砍撽? Grok ??law?蝺??折?摰???璅惜敹銝准?閮?蝖祉? law??
+      <Function test_control_02_e2e_offline_quality_gates>
+        Failing-first嚗蝺?蝖祇?嚗遙銝??甇豢?蝝?撠? e2e ?皜?determinism ?詨?嚗?
+      <Function test_control_03_gap_uncovered_question_must_surface>
+        Failing-first嚗?憿舀瘨菔?憿??脩撩???covered 敹?鋡急蕪??
+      <Function test_control_04_grok_client_parse_and_endpoint_contract>
+        Failing-first嚗rokClient 敹??? endpoint 銝行迤蝣箄圾??content嚗ONG 憟???determinism 撅歹???
+      <Function test_control_05_pipeline_c6_pending_when_no_sources>
+        Failing-first嚗?璅∪?頝臬???empty twinkle ??C6 隞?摰?pending_evidence??
+      <Function test_control_06_questions_clean_list_contract>
+        Failing-first嚗?憿??桀???蝛箔嗾瘛典?銝脯?敺???JSON 蝯?蝚艾?
+      <Function test_control_07_retrieve_smoke_vacuous_empty_is_blind_spot>
+        霅? #7 smoke 撠?empty 隞? ???芸銵?撘望閮?舀?炎蝝Ｗ皛?
+      <Function test_control_07b_retrieve_law_level_a_not_vacuous>
+        Failing-first ?Ｗ?頝臬?嚗aw+LawLookup 銝?鋡?vacuous empty ?抵???
+      <Function test_control_08_twinkle_parsed_source_contract>
+        Failing-first嚗CP 閫??敺?Source 敹? level?/B?ontent ?征?etched_date ?嗆??
+    <Module test_exclusion_correctness_blind_spot.py>
+      ?蝭?嚗eselected integration嚗orrectness ?脣??飛??
+      
+      ??撠情嚗tests/test_retrieve.py::test_retrieve_for_gap_real_twinkle_smoke`
+      嚗?閮?`-m 'not integration'` ?嚗? `tests/deselected_allowlist.json` #7嚗?
+      
+      ?琿??脣?嚗府 integration smoke ???閮撠?**蝛箸???* ? vacuous True嚗?
+      
+          assert all(isinstance(s, Source) for s in out)
+          assert all(s.level in ("A", "B") for s in out)
+          keys = [(_LEVEL_RANK[s.level], s.distance) for s in out]
+          assert keys == sorted(keys)
+      
+      ?迨?炎蝝Ｗ皛??◤閰?smoke ???亙虜????integration ??嚗?
+      ??smoke ?祈澈?賭??瑁?嚗?⊥?霅? law ?? Level A 頝臬?隞?具?
+      
+      ?祆??拙?甇賂?
+      1. 蝝?頛荔?? vacuous pass嚗??撘瑕??瑁? = 撽?蝻箏嚗?
+      2. ?銝???failing-first ?嚗?law + ?祕 LawLookup 銝??征??
+         敹???Level A?甇斗葫憭望?嚗?箏甇詨??潦???撘?smoke?? correctness ?脣???
+      
+      ?文?嚗 (2) 蝛拙? PASS ???Ｗ?蝻粹頝臬? **NOT-REPRODUCIBLE**嚗?
+      vacuous 閮剛?蝻箏隞??箝?撖阡?霅撩???閬?docs/嚗?
+      <Function test_deselected_retrieve_smoke_vacuous_pass_on_empty_is_blind_spot>
+        霅?嚗??斤???#7 ??smoke ?瑁?撠?empty out 隞?券???
+        
+        ???舐???箇撩?瘀????瑁?/撘望閮????correctness 撽??脣?嚗?
+        瑼Ｙ揣?冽???smoke 隞???
+      <Function test_law_domain_retrieve_must_yield_level_a_not_vacuous_empty>
+        Failing-first ?嚗aw ?? + ?祕 LawLookup 銝?鋡?vacuous empty ?抵???
+        
+        ?蔭嚗akeLLM ?箏? keyword?winkle ?征?awLookup(data/law_index.db)??
+        ??嚗瘜摨瑟? PASS嚗??喳?銝蝑?Level A??
+        ?亙仃???券?閮剜???#7 銝?smoke ?迂 empty ????嚗撣?CI ???唳迨 correctness 蝻箏??
+    <Module test_export.py>
+      <Function test_to_json_serializes_segments>
+      <Function test_to_markdown_format_locked>
+      <Function test_to_markdown_pending_segment_has_no_footnote>
+    <Module test_export_docx.py>
+      to_docx round-trip:撖怠 .docx ????撽?????鋆?畾菜?閮?
+      <Function test_to_docx_roundtrip_preserves_original_and_marks_supplement>
+    <Module test_gap.py>
+      <Function test_detect_gaps_keeps_only_partial_and_missing>
+        LLM ????JSON ???;covered 閬◤瞈暹?,?芰? partial+missing??
+      <Function test_detect_gaps_calls_llm_exactly_once>
+        FakeLLM ?芷今銝??????detect_gaps 憭活?澆?? responses pop 蝛???IndexError??
+      <Function test_detect_gaps_parse_failure_marks_all_missing>
+        JSON 閫??憭望? ???券 questions 靽?璅?missing,reason 閮圾?仃??
+      <Function test_detect_gaps_non_array_json_also_fallbacks>
+        ?? JSON 雿??舫??dict) ???見韏唬?摰?fallback??
+      <Function test_detect_gaps_strips_code_fence>
+        LLM 撣詨? ```json ??,??賢??文?隞圾??
+      <Function test_detect_gaps_empty_questions_short_circuits>
+        蝛箏?憿??桃?亙?蝛?銝??LLM??
+    <Module test_grading.py>
+      <Function test_source_dataclass_has_locked_fields>
+      <Function test_grade_law_returns_A>
+      <Function test_grade_twinkle_returns_B>
+      <Function test_is_stale_exactly_max_age_is_not_stale>
+      <Function test_is_stale_over_max_age_is_stale>
+      <Function test_is_stale_under_max_age_is_not_stale>
+      <Function test_is_stale_today_is_not_stale>
+    <Module test_law_check.py>
+      <Function test_real_law_article_exists>
+      <Function test_fake_article_no_flagged_not_found>
+      <Function test_unknown_law_not_false_reported>
+      <Function test_search_articles_keyword_with_law_name>
+      <Function test_search_articles_keyword_only>
+      <Function test_search_articles_limit>
+      <Function test_check_law_citations_first_param_is_text>
+    <Module test_law_lookup.py>
+      search_articles ??撽:? LIKE ?賭葉靘?article_no ?詨澆?,?詨?璇?鋡?rowid ????
+      <Function test_search_articles_orders_by_numeric_article_no>
+      <Function test_search_articles_limit_after_numeric_sort>
+    <Module test_law_search.py>
+      Q2:retrieve/law_search.py ??search_law_sources 撽??
+      <Function test_search_law_sources_returns_level_A_law_articles>
+      <Function test_search_law_sources_accepts_plain_keyword_response>
+        LLM ?芸?蝝??菔?(??JSON)銋??賡?雿?law_name 閬 None??
+      <Function test_search_law_sources_uses_single_llm_call_and_empty_on_no_hit>
+        ?∪銝剖?蝛?list;?芸?思?甈?llm.complete??
+      <Function test_search_law_sources_unions_multiple_keywords_dedup_and_order>
+      <Function test_search_law_sources_backward_compat_single_keyword>
+      <Function test_search_law_sources_non_json_treated_as_single_keyword>
+      <Function test_search_law_sources_empty_keywords_returns_empty>
+    <Module test_llm.py>
+      <Function test_fakellm_returns_canned_in_order>
+      <Function test_grokclient_builds_request_body>
+    <Module test_parse.py>
+      <Function test_parse_txt_splits_on_blank_lines>
+      <Function test_paragraph_and_document_are_frozen>
+      <Function test_parse_docx_roundtrip>
+    <Module test_pipeline.py>
+      <Function test_run_pipeline_invariant>
+      <Function test_run_pipeline_law_domain_runs_citation_check>
+      <Function test_run_pipeline_malformed_gap_output_falls_back_to_pending>
+    <Module test_questions.py>
+      <Function test_generate_questions_splits_multiline_string>
+      <Function test_generate_questions_strips_and_drops_blank_lines>
+      <Function test_generate_questions_empty_response_returns_empty_list>
+      <Function test_generate_questions_calls_llm_exactly_once>
+    <Module test_requirements_test_coverage.py>
+      摰? 8 ??deselected 皜祈岫??瘙?憿??身蝑閬???
+      <Function test_coverage_matrix_classifies_all_eight_and_has_no_missing_requirement>
+      <Function test_default_gate_collects_every_equivalent_and_safety_regression>
+    <Module test_retrieve.py>
+      <Function test_retrieve_for_gap_law_domain_puts_level_A_before_B>
+      <Function test_retrieve_for_gap_other_domain_uses_web_not_twinkle>
+    <Module test_server.py>
+      <Function test_index_returns_upload_form[asyncio]>
+      <Function test_run_renders_two_columns[asyncio]>
+      <Function test_export_returns_markdown_attachment[asyncio]>
+      <Function test_export_without_run_returns_404[asyncio]>
+    <Module test_twinkle.py>
+      <Function test_search_parses_source_with_full_content>
+      <Function test_search_clamps_similarity_input_to_distance_range>
+      <Function test_search_returns_empty_without_token>
+      <Function test_search_reuses_mcp_session>
+      <Function test_search_transport_failure_returns_empty>
+      <Function test_default_timeout_is_60>
+    <Module test_verify.py>
+      <Function test_two_independent_ab_sources_verified>
+      <Function test_three_articles_same_law_same_url_verified>
+      <Function test_single_a_source_verified>
+      <Function test_two_distinct_b_verified>
+      <Function test_single_b_no_a_pending>
+      <Function test_single_c_verified>
+      <Function test_single_d_pending>
+      <Function test_two_distinct_d_verified>
+      <Function test_conflict_detected_and_no_side_taken>
+      <Function test_no_conflict_when_consistent>
+      <Function test_negation_substring_not_false_positive>
+      <Function test_independent_ab_orders_A_before_B_and_by_distance>
+      <Function test_distinct_by_id_not_url>
+    <Module test_web.py>
+      <Function test_two_pages_graded_c_and_d>
+      <Function test_drop_page_excluded>
+      <Function test_fetch_none_skipped>
+      <Function test_too_short_fulltext_skipped>
+      <Function test_search_exception_degrades_to_empty>
+      <Function test_content_truncated_with_note>
+      <Function test_query_extraction_falls_back_to_question>
+      <Function test_retrieve_other_domain_calls_web>
+      <Function test_retrieve_law_domain_does_not_call_web>
+    <Module test_write.py>
+      Q3:write.py ??write_supplement / WrittenSupplement 撽??
+      <Function test_used_source_ids_from_markers>
+      <Function test_pending_evidence_when_insufficient>
+      <Function test_out_of_range_marker_removed_and_not_used>
+
+[32m=============== [32m142/150 tests collected (8 deselected)[0m[32m in 1.96s[0m[32m ===============[0m
