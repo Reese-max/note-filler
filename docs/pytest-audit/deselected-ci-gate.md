@@ -1,9 +1,9 @@
 ## CI Deselected 測試稽核
-- 產生時間: 2026-07-21 05:39:56+0800
+- 產生時間: 2026-07-21 12:25:39+0800
 - 工具: validate_deselection_ci.py
 
-- 全量 collected: 148
-- 預設 selected: 140
+- 全量 collected: 149
+- 預設 selected: 141
 - 預設 deselected: 8
 - allowlist 數: 8
 

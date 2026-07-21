@@ -255,6 +255,18 @@ def evidence_report(
         lines.extend(
             [
                 f"- 未覆蓋邊界：{item['coverage_gap']}",
+            ]
+        )
+        mitigations = item.get("gap_mitigation_evidence", [])
+        if mitigations:
+            lines.append("- 缺口替代驗證流程：")
+            for ev in mitigations:
+                lines.append(
+                    f"  - `{ev['source']}` `{ev['anchor']}`：{ev['process']} — "
+                    f"scope: {ev['scope']} | limitation: {ev['limitation']}"
+                )
+        lines.extend(
+            [
                 "- 結論：替代測試已保護確定性程式契約；剩餘邊界屬真實模型／外部服務，故可接受未執行。",
                 "",
             ]
@@ -337,6 +349,7 @@ def build_acceptance_package(
             {
                 "node_id": node_id,
                 "exclusion_reason": item["exclusion_reason"],
+                "gap_mitigation_evidence": list(item.get("gap_mitigation_evidence", [])),
                 "collection_reason": next(
                     (
                         d["reason"]
@@ -431,6 +444,14 @@ def render_acceptance_markdown(package: dict) -> str:
                 )
         else:
             lines.append("- 失敗／NOT-REPRODUCIBLE：（無）")
+        mitigations = node.get("gap_mitigation_evidence", [])
+        if mitigations:
+            lines.append("- 缺口替代驗證流程：")
+            for ev in mitigations:
+                lines.append(
+                    f"  - `{ev['source']}` `{ev['anchor']}`：{ev['process']} — "
+                    f"scope: {ev['scope']} | limitation: {ev['limitation']}"
+                )
         lines.append("")
     lines.extend(
         [

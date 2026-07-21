@@ -158,6 +158,17 @@ def _assert_allowlist_evidence() -> None:
             assert evidence["claim"].strip()
             _assert_source_evidence(evidence["source"], evidence["anchor"])
 
+        gap_mitigation = item.get("gap_mitigation_evidence", [])
+        assert gap_mitigation, (
+            f"Missing gap_mitigation_evidence for {item['test_id']}"
+        )
+        for evidence in gap_mitigation:
+            for field in ("process", "source", "anchor", "scope", "limitation"):
+                assert evidence.get(field), (
+                    f"Missing {field!r} in gap_mitigation_evidence for {item['test_id']}"
+                )
+            _assert_source_evidence(evidence["source"], evidence["anchor"])
+
 
 def _pytest_cmd(*pytest_args: str) -> list[str]:
     return [_PYTHON, "-X", "utf8", "-m", "pytest", *pytest_args]
@@ -342,6 +353,14 @@ def _print_acceptance_package(package: dict) -> None:
             )
         if not node["failure_or_not_reproducible"]:
             print("  failure_or_not_reproducible: (none — substitutes passed; gap is external-only)")
+        mitigations = node.get("gap_mitigation_evidence", [])
+        if mitigations:
+            print("  gap_mitigation_evidence:")
+            for item in mitigations:
+                print(
+                    f"    - source: {item['source']} | anchor: {item['anchor']} | "
+                    f"scope: {item['scope']}"
+                )
     print("FAILED_OR_NOT_REPRODUCIBLE_INDEX:")
     if package["failed_tests_or_not_reproducible"]:
         for item in package["failed_tests_or_not_reproducible"]:
@@ -470,6 +489,7 @@ def test_substitute_mapping_is_complete_and_collectable() -> None:
                 "collection_reason": "deselected by -m 'not integration'",
                 "covered_function": item["covered_function"],
                 "coverage_gap": item["coverage_gap"],
+                "gap_mitigation_evidence": list(item.get("gap_mitigation_evidence", [])),
                 "substitute_individual_results": sub_results,
                 "live_individual_result": live_result,
                 "failure_or_not_reproducible": list(
