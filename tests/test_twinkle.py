@@ -80,6 +80,25 @@ def test_search_parses_source_with_full_content(monkeypatch):
     assert abs(src.distance - (0.6 + 0.4 * (1 - 0.82))) < 1e-9
 
 
+def test_search_clamps_similarity_input_to_distance_range(monkeypatch):
+    weird_hits = [
+        {**_BILL, "id": "1120002", "similarity": "oops"},
+        {**_BILL, "id": "1120003", "similarity": 1.4},
+        {key: value for key, value in _BILL.items() if key != "similarity"}
+        | {"id": "1120004"},
+    ]
+    monkeypatch.setattr(twinkle.urllib.request, "urlopen", _make_fake_urlopen(weird_hits))
+
+    results = TwinkleClient(token="fake-token").search("酒駕 罰則", n=3)
+
+    assert len(results) == 3
+    dists = {src.id: src.distance for src in results}
+    assert dists["1120002"] == 1.0
+    assert dists["1120003"] == 0.6
+    assert dists["1120004"] == 1.0
+    assert all(0.6 <= src.distance <= 1.0 for src in results)
+
+
 def test_search_returns_empty_without_token(monkeypatch):
     monkeypatch.delenv("TWINKLE_HUB_TOKEN", raising=False)
     assert TwinkleClient(token="").search("酒駕") == []
