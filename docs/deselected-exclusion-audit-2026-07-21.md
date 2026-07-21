@@ -6,7 +6,7 @@
 ## 觸發排除的設定來源
 
 pyproject.toml:32 `addopts` 中的 `-m 'not integration'` 是唯一起作用的 collection 篩選器。
-沒有 `-k` 表達式、沒有 `--deselect` 旗標、沒有 path 規則參與排除。
+沒有 `-k` 表達式、`--ignore` / `--deselect` 旗標或 repo 自定義收集 hook 參與這 8 項排除。
 
 ## 排除總覽
 
@@ -14,6 +14,47 @@ pyproject.toml:32 `addopts` 中的 `-m 'not integration'` 是唯一起作用的 
 - deselected：8
 - selected：142
 - 排除原因：全部為 `-m 'not integration'`
+
+## 8 項完整清單
+
+| # | 完整 node ID | 所在檔案（定義行） | 測試名稱 | 導致 deselection 的具體條件 |
+|---:|---|---|---|---|
+| 1 | `tests/test_domain.py::test_detect_domain_real_grok_returns_law` | `tests/test_domain.py:52` | `test_detect_domain_real_grok_returns_law` | `tests/test_domain.py:50` 的 `@pytest.mark.integration` 被 `pyproject.toml:32` 預設 `-m 'not integration'` 排除 |
+| 2 | `tests/test_e2e_acceptance.py::test_e2e_acceptance_real` | `tests/test_e2e_acceptance.py:245` | `test_e2e_acceptance_real` | `tests/test_e2e_acceptance.py:244` 的 `@pytest.mark.integration` 被 `pyproject.toml:32` 預設 `-m 'not integration'` 排除 |
+| 3 | `tests/test_gap.py::test_detect_gaps_real_grok` | `tests/test_gap.py:73` | `test_detect_gaps_real_grok` | `tests/test_gap.py:71` 的 `@pytest.mark.integration` 被 `pyproject.toml:32` 預設 `-m 'not integration'` 排除 |
+| 4 | `tests/test_llm.py::test_grok_pong_integration` | `tests/test_llm.py:68` | `test_grok_pong_integration` | `tests/test_llm.py:66` 的 `@pytest.mark.integration` 被 `pyproject.toml:32` 預設 `-m 'not integration'` 排除 |
+| 5 | `tests/test_pipeline.py::test_run_pipeline_real_grok` | `tests/test_pipeline.py:153` | `test_run_pipeline_real_grok` | `tests/test_pipeline.py:151` 的 `@pytest.mark.integration` 被 `pyproject.toml:32` 預設 `-m 'not integration'` 排除 |
+| 6 | `tests/test_questions.py::test_generate_questions_real_grok` | `tests/test_questions.py:64` | `test_generate_questions_real_grok` | `tests/test_questions.py:62` 的 `@pytest.mark.integration` 被 `pyproject.toml:32` 預設 `-m 'not integration'` 排除 |
+| 7 | `tests/test_retrieve.py::test_retrieve_for_gap_real_twinkle_smoke` | `tests/test_retrieve.py:105` | `test_retrieve_for_gap_real_twinkle_smoke` | `tests/test_retrieve.py:102` 的 `@pytest.mark.integration` 被 `pyproject.toml:32` 預設 `-m 'not integration'` 排除 |
+| 8 | `tests/test_twinkle.py::test_search_real_twinkle_hub` | `tests/test_twinkle.py:142` | `test_search_real_twinkle_hub` | `tests/test_twinkle.py:141` 的 `@pytest.mark.integration` 被 `pyproject.toml:32` 預設 `-m 'not integration'` 排除 |
+
+## Selection 機制排除對照
+
+| 機制 | 是否造成這 8 項 deselection | 具體條件與證據 |
+|---|---|---|
+| pytest marker | **是** | `pyproject.toml:32` 的 `addopts` 預設套用 `-m 'not integration'`；8 個函式均有 `@pytest.mark.integration`。pytest 內建 marker selection 在 collection 階段將它們 deselect。 |
+| `-k` | 否 | 本次命令與 `PYTEST_ADDOPTS` 都沒有 keyword expression；repo 的 `pyproject.toml` / `.github` / `scripts` / `tests` 也沒有作業用 `-k`。`--deselected-details` 實跑的 8 行原因只有 `-m 'not integration'`。 |
+| `--ignore` | 否 | 命令、`addopts`、CI 與腳本皆無 `--ignore`；`testpaths = ["tests"]` 只限定收集根目錄，8 個 node 都在其中。 |
+| `--deselect` | 否 | 本次未傳入，`config.getoption("deselect")` 為空；`tests/conftest.py:28-31` 僅能在有傳入時顯示該原因。 |
+| repo 收集 hook | 否 | repo 只定義 `pytest_addoption`、`pytest_deselected` 與 `pytest_terminal_summary`。`pytest_deselected` 只接收 pytest 已排除的 items 供輸出，不改寫 item 集合；無 `pytest_collection_modifyitems`、`pytest_ignore_collect` 或 `collect_ignore`。 |
+| `skipif` / `pytest.skip()` | 否 | 這些是取消 `-m` 排除、真正執行 integration 時才評估的 runtime skip，不是 collection deselection。各 node 條件見下方「額外防護」。 |
+| 環境附加參數 | 否 | 實跑時 `PYTEST_ADDOPTS` 與 `PYTEST_PLUGINS` 均為空，沒有隱藏的環境篩選。 |
+
+## 可重現驗證
+
+環境：Python 3.11.9、pytest 9.1.1。實跑結果：
+
+| 命令目的 | 結果 | 證明 |
+|---|---|---|
+| 預設 collection + `--deselected-details` | `142/150 tests collected (8 deselected)` | 8 行完整 node ID 均回報 `deselected by -m 'not integration'` |
+| 以 `-o "addopts=-p no:asyncio --strict-markers"` 移除預設 mark expression | `150 tests collected` | 8 項本身可收集，無 `--ignore`、path 或 hook 另行排除 |
+| 同上並明確套用 `-m integration` | `8/150 tests collected (142 deselected)` | integration 集合與預設的 8 項 deselected 差集完全相等 |
+
+```powershell
+& "D:/Users/Administrator/Desktop/筆記補齊/.venv/Scripts/python.exe" -X utf8 -m pytest --collect-only -q --deselected-details --color=no
+& "D:/Users/Administrator/Desktop/筆記補齊/.venv/Scripts/python.exe" -X utf8 -m pytest --collect-only -q -o "addopts=-p no:asyncio --strict-markers" --color=no
+& "D:/Users/Administrator/Desktop/筆記補齊/.venv/Scripts/python.exe" -X utf8 -m pytest --collect-only -q -o "addopts=-p no:asyncio --strict-markers" -m integration --deselected-details --color=no
+```
 
 ## 逐項審計
 
@@ -98,7 +139,7 @@ pyproject.toml:32 `addopts` 中的 `-m 'not integration'` 是唯一起作用的 
 
 | 屬性 | 內容 |
 |---|---|
-| 原始檔 | `tests/test_twinkle.py:148` |
+| 原始檔 | `tests/test_twinkle.py:142` |
 | 參數化來源 | 無 |
 | 排除機制 | `@pytest.mark.integration` (line 141) → `-m 'not integration'` |
 | 額外防護 | 函式內 `pytest.skip()` if no TWINKLE_HUB_TOKEN (line 146-147) |
@@ -107,7 +148,7 @@ pyproject.toml:32 `addopts` 中的 `-m 'not integration'` 是唯一起作用的 
 
 ## 綜合結論
 
-1. **排除原因單一**：全部 8 項僅因 `-m 'not integration'` 在 collection 階段被排除；無 `-k`、path 或 config 其他規則介入。
+1. **排除原因單一**：全部 8 項僅因 `-m 'not integration'` 在 collection 階段被排除；無 `-k`、`--ignore`、`--deselect` 或 repo 自定義收集 hook 介入。
 2. **原始對應明確**：每個 deselected node 可直接追溯到對應測試檔中明確的 `@pytest.mark.integration` decorator。
 3. **參數化**：全部 8 項皆為純函式，**無** `@pytest.mark.parametrize`。
 4. **受控程度**：8/8 皆為**受控且有明確設計意圖**。每個排除都有：
