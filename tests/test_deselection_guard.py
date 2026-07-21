@@ -17,12 +17,14 @@ import sys
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
+import pytest
+
 _PYTHON = sys.executable
 _REPO_ROOT = Path(__file__).resolve().parent.parent
 _AUDIT = json.loads(
     (_REPO_ROOT / "tests" / "deselected_allowlist.json").read_text(encoding="utf-8")
 )
-_EXPECTED_COUNTS = (149, 141, 8)
+_EXPECTED_COUNTS = (150, 142, 8)
 _EXPECTED_DESELECTED_COUNT = _EXPECTED_COUNTS[2]
 ALLOWED_INTEGRATION_TESTS = sorted(item["test_id"] for item in _AUDIT)
 MAPPED_NON_INTEGRATION_TESTS = sorted(
@@ -559,3 +561,61 @@ def test_acceptance_package_rejects_count_only_summary() -> None:
     assert missing == required, "counts-only payload must lack full acceptance fields"
     assert "per_node" not in count_only
     assert count_only["counts"]["deselected"] == 8  # 數字本身不足
+
+
+# ---------------------------------------------------------------------------
+# C7 correctness path regression: law domain retrieve with real LawLookup
+# 非原 deselected 測試本體；驗證 -m 'not integration' 不會排除 law Level A 路徑
+# ---------------------------------------------------------------------------
+_C7_LAW_DB = _REPO_ROOT / "data" / "law_index.db"
+
+
+@pytest.mark.skipif(not _C7_LAW_DB.exists(), reason="缺 data/law_index.db,無法驗 law Level A 路徑")
+def test_c7_correctness_path_law_domain_level_a_not_excluded() -> None:
+    """C7 correctness regression: law+LawLookup 必須回 Level A 非空。
+
+    鎖定風險：deselected #7 的 smoke 對 empty 仍 vacuous PASS（驗證盲區）。
+    本測試以真實 LawLookup + FakeTwinkle + FakeLLM 直接 exercised 同一路徑，
+    斷言比 vacuous smoke 更強：非空 + 全 Level A。
+
+    若此測試被 -m 'not integration' 排除 → 選擇規則把關鍵 correctness 路徑排除了。
+    若此測試 FAIL → law Level A 產品路徑回歸， daily CI 必須能攔截。
+    """
+    from note_filler.gap import Gap
+    from note_filler.knowledge.law_lookup import LawLookup
+    from note_filler.llm import FakeLLM
+    from note_filler.retrieve import _LEVEL_RANK, retrieve_for_gap
+    from note_filler.retrieve.models import Source
+
+    class _EmptyTwinkle:
+        def search(self, query: str, n: int = 3) -> list[Source]:
+            return []
+
+    gap = Gap(
+        question="行政處分附款的容許界限為何?",
+        status="missing",
+        reason="",
+    )
+    law = LawLookup(str(_C7_LAW_DB))
+    llm = FakeLLM(['{"keyword": "行政處分", "law_name": "行政程序法"}'])
+
+    out = retrieve_for_gap(gap, "law", _EmptyTwinkle(), law, llm)
+
+    # 強於 vacuous smoke：非空
+    assert out, (
+        "C7 correctness regression: law+LawLookup 回空; "
+        "deselected #7 的 smoke 對 empty 仍 vacuous PASS，"
+        "但本非 integration 測試攔截到了"
+    )
+    # 強於 vacuous smoke：全 Level A（Twinkle 已隔離為空，不應混入 B/C/D）
+    assert all(s.level == "A" for s in out), (
+        "law 領域 + 空 Twinkle 下結果應全 Level A; "
+        f"實際 levels: {[s.level for s in out]}"
+    )
+    # 排序不變式（同 deselected smoke 的第三道斷言）
+    keys = [(_LEVEL_RANK[s.level], s.distance) for s in out]
+    assert keys == sorted(keys), "Level A 來源 distance 排序不一致"
+    # 來源類型：law 前綴
+    assert all(s.id.startswith("law:") for s in out), (
+        f"law 領域來源 id 應以 law: 開頭; 實際: {[s.id for s in out]}"
+    )
