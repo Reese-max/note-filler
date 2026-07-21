@@ -1,0 +1,338 @@
+============================= test session starts =============================
+platform win32 -- Python 3.11.9, pytest-9.1.1, pluggy-1.6.0 -- C:\Users\Administrator\AppData\Local\hermes\hermes-agent\venv\Scripts\python.exe
+cachedir: .pytest_cache
+rootdir: D:\Users\Administrator\Desktop\autodev-ng\data\note-filler\worktrees\875705e6
+configfile: pyproject.toml
+testpaths: tests
+plugins: anyio-4.12.1, langsmith-0.8.9, cov-7.1.0, split-0.11.0, timeout-2.4.0, xdist-3.8.0
+collecting ... collected 154 items / 8 deselected / 146 selected
+
+<Dir 875705e6>
+  <Dir tests>
+    <Module test_citation_formatter.py>
+      <Function test_build_reference_lines_two_sources>
+    <Module test_cli.py>
+      CLI(__main__)測試:輸入展開 + 單檔輸出命名/格式/計數(stub 掉 pipeline)。
+      <Function test_iter_inputs_expands_dir_filters_suffix_and_dedups>
+      <Function test_process_file_writes_md_and_counts>
+      <Function test_process_file_json_format_and_outdir>
+    <Module test_conclusion_classification.py>
+      結論分類守衛：非缺陷 vs 真實驗證缺口（含缺口四要件）。
+      
+      任務：逐項將既有結論分類；真實驗證缺口必須附
+      可重現失敗測試、預期行為、實際行為、修復後驗收命令。
+      
+      機器來源：docs/pytest-audit/conclusion-classification-2026-07-19.json
+      人類報告：docs/conclusion-classification-2026-07-19.md
+      <Function test_classification_index_schema_and_labels>
+      <Function test_classification_covers_all_eight_allowlist_nodes>
+      <Function test_non_defect_items_have_no_gap_package>
+      <Function test_true_gap_items_have_full_package>
+      <Function test_human_report_exists_and_mentions_both_labels>
+      <Function test_gap_c7_current_smoke_vacuous_pass_on_empty>
+        實際行為：現行 smoke 對 empty 全綠（vacuous）→ 缺口仍開時本測 PASSED。
+        
+        修復後（smoke 改為要求非空）本測應改寫或改為期望 raise；
+        在缺口關閉前，此測通過即證明「實際行為」可重現。
+      <Function test_gap_c7_strengthened_contract_fails_on_empty>
+        可重現失敗：修復後契約對 empty 必須 AssertionError（預期行為鎖定）。
+        
+        這是「真實驗證缺口」要求的可重現失敗測試：
+        - 預期：非空契約拒絕 []
+        - 實際（對照）：現行 smoke 不拒絕 []（見上一測）
+      <Function test_gap_c7_package_acceptance_commands_are_non_empty_shell>
+    <Module test_correction.py>
+      <Function test_original_segments_verbatim_and_immutable>
+        原文段逐字全等輸入,順序/段數不變,confidence=verified。
+      <Function test_written_two_independent_a_verified_only_used_sources>
+        written 引用 2 個獨立 A → verified,且 segment.sources 只含那 2 個。
+      <Function test_pending_evidence_written_empty_sources>
+        written 為【待補證】→ pending_evidence 且 sources 空。
+      <Function test_retrieved_five_but_only_two_cited>
+        retrieved 有 5 個但只引用 2 個 → segment 只掛那 2 個。
+      <Function test_single_a_used_source_verified>
+        引用 1 個 level A(一手源即 grounded)→ verified。
+      <Function test_three_articles_same_law_same_url_verified>
+        引 3 條同法《行政程序法》93/94/96(level A、url 相同、id/title 不同)→ verified。
+        先前 url 相同被誤標 pending 的案例:一手法條原文即定論。
+      <Function test_two_distinct_b_verified>
+        引 2 個不同 level B(id 不同、無 A)→ verified(規則二)。
+      <Function test_single_b_no_a_pending>
+        引 1 個 level B、無 A → pending_evidence。
+      <Function test_single_c_used_source_verified>
+        引 1 個 level C(官方/標準組織一手,如 owasp.org/NIST/CVE)→ verified。
+      <Function test_single_d_used_source_pending>
+        引 1 個 level D、無其他 → pending_evidence(單一二手不算定論)。
+      <Function test_two_distinct_d_verified>
+        引 2 個相異 level D(id 不同)→ verified(多源佐證,規則三不限 level)。
+      <Function test_anchor_picks_keyword_overlap>
+      <Function test_anchor_none_when_no_overlap>
+    <Module test_deselected_ci_gate_acceptance.py>
+      Acceptance checks for the CI deselected policy gate.
+      
+      The gate must fail before the regular test run when the default pytest
+      selection excludes an unapproved node, the count drifts, or exclusion reasons
+      cannot be attributed to every deselected test.
+      <Function test_ci_gate_accepts_only_authorized_deselected_nodes_with_reasons>
+      <Function test_ci_gate_fails_when_deselected_allowlist_count_is_too_small>
+      <Function test_ci_gate_fails_when_deselected_allowlist_contains_non_deselected_node>
+    <Module test_deselection_guard.py>
+      Keep the integration exclusion list and its offline coverage map traceable.
+      
+      The machine-readable audit is the single source for both the eight excluded
+      test ids and the non-integration tests that cover their deterministic paths.
+      
+      Acceptance must not rely on aggregate counts alone: every formal package must
+      include full pytest invocations, all eight node ids, per-node exclusion
+      reasons, individual execution results, and fail / NOT-REPRODUCIBLE evidence.
+      <Function test_integration_allowlist_is_stable>
+        The current default deselection must exactly match the audited eight.
+      <Function test_deselected_details_lists_node_ids_and_reasons>
+        The opt-in report must expose every deselected node and its filter.
+      <Function test_substitute_mapping_is_complete_and_collectable>
+        Every excluded test maps to default tests that pass individually.
+        
+        Acceptance output is an expanded package (invocations + 8 node ids +
+        exclusion reasons + per-test individual results + fail/NOT-REPRODUCIBLE),
+        never aggregate counts alone.
+      <Function test_acceptance_package_rejects_count_only_summary>
+        A counts-only dict must fail the expanded acceptance schema checks.
+      <Function test_c7_correctness_path_law_domain_level_a_not_excluded>
+        C7 correctness regression: law+LawLookup 必須回 Level A 非空。
+        
+        鎖定風險：deselected #7 的 smoke 對 empty 仍 vacuous PASS（驗證盲區）。
+        本測試以真實 LawLookup + FakeTwinkle + FakeLLM 直接 exercised 同一路徑，
+        斷言比 vacuous smoke 更強：非空 + 全 Level A。
+        
+        若此測試被 -m 'not integration' 排除 → 選擇規則把關鍵 correctness 路徑排除了。
+        若此測試 FAIL → law Level A 產品路徑回歸， daily CI 必須能攔截。
+    <Module test_design_acceptance.py>
+      Machine-checkable design acceptance for D-01..D-05.
+      
+      Narrative-only or count-only packages must fail. Every claim must map to a
+      spec file, impl content anchors, and offline test anchors present in the
+      committed package.
+      <Function test_design_claims_index_is_complete>
+        Source claims catalog must list D-01..D-05 with required fields.
+      <Function test_design_acceptance_package_is_machine_checkable>
+        Committed package must be per-claim evidence, not a count summary.
+      <Function test_design_acceptance_rejects_claim_without_artifact>
+        A narrative-only / count-only payload must fail schema requirements.
+      <Function test_design_package_head_matches_repo_and_claim_map_printable>
+        Package HEAD must be a real git object; claim map must be 1:1 printable.
+    <Module test_domain.py>
+      <Function test_detect_domain_law>
+      <Function test_detect_domain_admin>
+      <Function test_detect_domain_exam>
+      <Function test_detect_domain_noise_falls_back_to_other>
+      <Function test_detect_domain_label_with_trailing_punctuation>
+      <Function test_detect_domain_uppercase_and_whitespace>
+    <Module test_e2e_acceptance.py>
+      端到端驗收測試(spec §12)。
+      
+      §12 硬不變式:
+        1. 原稿逐字不可變(diff 只增不改)
+        2. 無來源閘 + C6:supplement sources 空 -> confidence == "pending_evidence"
+        3. 交叉驗證 C4:supplement verified -> sources 非空且皆 A/B、>=2 獨立來源
+        4. 補充法條經 check_law_citations(text=..., lookup) 無 article_not_found
+        5. C3:\u8f38\u51fa\u7531 T14 to_markdown \u7522\u51fa,\u542b\u3010\u88dc\u5145\u3011/\u26a0\u5f85\u88dc\u8b49/\u53c3\u8003\u5340\u584a(\u5e36\u65e5\u671f C7)
+      <Function test_e2e_structural_invariants>
+      <Function test_e2e_offline_supplement_quality_boundary>
+        最小 failing-regression 候選:離線路徑是否觸發 _assert_supplement_quality 失敗。
+        
+        若現況穩定通過 → 代表該整合邊界無法在非-integration 下以失敗形式重現
+        (判定 NOT-REPRODUCIBLE,見 docs/e2e-offline-quality-boundary-2026-07-18.md)。
+      <Function test_e2e_minimal_quality_gates_offline_regression>
+        最小化 failing regression:離線最小前置下四項品質閘是否可穩定失敗。
+        
+        前置 = FakeLLM + _StubTwinkle + LawLookup(data/law_index.db)。
+        若穩定 PASS → 判定 NOT-REPRODUCIBLE
+        (見 docs/minimal-quality-gates-regression-2026-07-19.md)。
+    <Module test_excluded_failing_controls.py>
+      為每個被 -m 'not integration' 排除的測試建立 failing-first 對照情境。
+      
+      任務：證明「未執行該 integration 測試」是否可能掩蓋 correctness 缺陷。
+      每項對照鎖定被排除測的 determinism 可重現核心；若產品路徑穩定 PASS，
+      則「因排除而掩蓋的產品缺陷」判 **NOT-REPRODUCIBLE**（見 docs/）。
+      
+      對照設計原則（failing-first 候選）：
+      - 現況健康時應 PASS；
+      - 若對應 correctness 契約被破壞，此測應紅，且預設 CI 因 deselect
+        不會跑到 integration 本體——故此對照補上 determinism 可見性。
+      <Function test_control_map_covers_all_eight_excluded>
+        對照模組必須 1:1 覆蓋 8 個 deselected node id（防漏項）。
+      <Function test_control_01_domain_legal_label_contract>
+        Failing-first：明顯法律文 + 標籤契約；破壞 strip/fallback 應紅。
+        
+        排除測只驗真 Grok 回 law。離線對照鎖定：合法標籤必命中、雜訊不硬猜 law。
+      <Function test_control_02_e2e_offline_quality_gates>
+        Failing-first：離線四硬閘；任一閘回歸應紅（對應 e2e 排除測 determinism 核心）。
+      <Function test_control_03_gap_uncovered_question_must_surface>
+        Failing-first：明顯未涵蓋題必須進缺口；covered 必須被濾掉。
+      <Function test_control_04_grok_client_parse_and_endpoint_contract>
+        Failing-first：GrokClient 必須打對 endpoint 並正確解析 content（PONG 契約的 determinism 層）。
+      <Function test_control_05_pipeline_c6_pending_when_no_sources>
+        Failing-first：真模型路徑用 empty twinkle 時 C6 仍須守 pending_evidence。
+      <Function test_control_06_questions_clean_list_contract>
+        Failing-first：問題清單必須非空乾淨字串、不得殘留 JSON 結構符。
+      <Function test_control_07_retrieve_smoke_vacuous_empty_is_blind_spot>
+        證明 #7 smoke 對 empty 仍綠 → 未執行/弱斷言可掩蓋「檢索全滅」。
+      <Function test_control_07b_retrieve_law_level_a_not_vacuous>
+        Failing-first 產品路徑：law+LawLookup 不得被 vacuous empty 掩蓋。
+      <Function test_control_08_twinkle_parsed_source_contract>
+        Failing-first\uff1aMCP \u89e3\u6790\u5f8c Source \u5fc5\u9808 level\u2208A/B\u3001content \u975e\u7a7a\u3001fetched_date \u7576\u65e5\u3002
+    <Module test_exclusion_correctness_blind_spot.py>
+      排除範圍（deselected integration）correctness 盲區回歸。
+      
+      鎖定對象：`tests/test_retrieve.py::test_retrieve_for_gap_real_twinkle_smoke`
+      （預設 `-m 'not integration'` 排除；見 `tests/deselected_allowlist.json` #7）。
+      
+      具體盲區：該 integration smoke 的三道斷言對 **空清單** 皆為 vacuous True：
+      
+          assert all(isinstance(s, Source) for s in out)
+          assert all(s.level in ("A", "B") for s in out)
+          keys = [(_LEVEL_RANK[s.level], s.distance) for s in out]
+          assert keys == sorted(keys)
+      
+      因此「檢索全滅」不會被該 smoke 攔截。若日常僅跑非 integration 集合，
+      連 smoke 本身都不執行，更無法證明 law 領域 Level A 路徑仍可用。
+      
+      本檔兩個回歸：
+      1. 純邏輯：重現 vacuous pass（證明未強化斷言 = 驗證缺口）。
+      2. 生產不變量（failing-first 候選）：law + 真實 LawLookup 不得回空、
+         必須含 Level A。若此測失敗，即為可歸因於「排除/弱 smoke」的 correctness 盲區。
+      
+      判定：若 (2) 穩定 PASS → 產品缺陷路徑 **NOT-REPRODUCIBLE**；
+      vacuous 設計缺口仍列為「真實驗證缺口」（見 docs/）。
+      <Function test_deselected_retrieve_smoke_vacuous_pass_on_empty_is_blind_spot>
+        證明：排除範圍 #7 的 smoke 斷言對 empty out 仍全部通過。
+        
+        這不是產品行為缺陷，而是「未執行/弱斷言」造成的 correctness 驗證盲區：
+        檢索全滅時 smoke 仍綠燈。
+      <Function test_law_domain_retrieve_must_yield_level_a_not_vacuous_empty>
+        Failing-first 候選：law 領域 + 真實 LawLookup 不得被 vacuous empty 掩蓋。
+        
+        前置：FakeLLM 固定 keyword、Twinkle 回空、LawLookup(data/law_index.db)。
+        預期（現況健康時 PASS）：至少一筆 Level A。
+        若失敗：在預設排除 #7 且 smoke 允許 empty 的前提下，日常 CI 看不到此 correctness 缺口。
+    <Module test_export.py>
+      <Function test_to_json_serializes_segments>
+      <Function test_to_markdown_format_locked>
+      <Function test_to_markdown_pending_segment_has_no_footnote>
+    <Module test_export_docx.py>
+      to_docx round-trip:寫出 .docx 再重開,驗原文保留與補充段標記。
+      <Function test_to_docx_roundtrip_preserves_original_and_marks_supplement>
+    <Module test_gap.py>
+      <Function test_detect_gaps_keeps_only_partial_and_missing>
+        LLM 回一個 JSON 陣列;covered 要被濾掉,只留 partial+missing。
+      <Function test_detect_gaps_calls_llm_exactly_once>
+        FakeLLM 只餵一個回應;若 detect_gaps 多次呼叫會把 responses pop 空 → IndexError。
+      <Function test_detect_gaps_parse_failure_marks_all_missing>
+        JSON 解析失敗 → 全部 questions 保守標 missing,reason 記解析失敗。
+      <Function test_detect_gaps_non_array_json_also_fallbacks>
+        合法 JSON 但不是陣列(dict) → 同樣走保守 fallback。
+      <Function test_detect_gaps_strips_code_fence>
+        LLM 常包 ```json 圍欄,需能剝除後仍解析。
+      <Function test_detect_gaps_empty_questions_short_circuits>
+        空問題清單直接回空,不呼叫 LLM。
+    <Module test_grading.py>
+      <Function test_source_dataclass_has_locked_fields>
+      <Function test_grade_law_returns_A>
+      <Function test_grade_twinkle_returns_B>
+      <Function test_is_stale_exactly_max_age_is_not_stale>
+      <Function test_is_stale_over_max_age_is_stale>
+      <Function test_is_stale_under_max_age_is_not_stale>
+      <Function test_is_stale_today_is_not_stale>
+    <Module test_law_check.py>
+      <Function test_real_law_article_exists>
+      <Function test_fake_article_no_flagged_not_found>
+      <Function test_unknown_law_not_false_reported>
+      <Function test_search_articles_keyword_with_law_name>
+      <Function test_search_articles_keyword_only>
+      <Function test_search_articles_limit>
+      <Function test_check_law_citations_first_param_is_text>
+    <Module test_law_lookup.py>
+      search_articles 排序驗收:同批 LIKE 命中依 article_no 數值序,核心條不被 rowid 擠掉。
+      <Function test_search_articles_orders_by_numeric_article_no>
+      <Function test_search_articles_limit_after_numeric_sort>
+    <Module test_law_search.py>
+      Q2:retrieve/law_search.py 的 search_law_sources 驗收。
+      <Function test_search_law_sources_returns_level_A_law_articles>
+      <Function test_search_law_sources_accepts_plain_keyword_response>
+        LLM 只回純關鍵詞(非 JSON)也要能運作,law_name 視為 None。
+      <Function test_search_law_sources_uses_single_llm_call_and_empty_on_no_hit>
+        無命中回空 list;只呼叫一次 llm.complete。
+      <Function test_search_law_sources_unions_multiple_keywords_dedup_and_order>
+      <Function test_search_law_sources_backward_compat_single_keyword>
+      <Function test_search_law_sources_non_json_treated_as_single_keyword>
+      <Function test_search_law_sources_empty_keywords_returns_empty>
+    <Module test_llm.py>
+      <Function test_fakellm_returns_canned_in_order>
+      <Function test_grokclient_builds_request_body>
+    <Module test_parse.py>
+      <Function test_parse_txt_splits_on_blank_lines>
+      <Function test_paragraph_and_document_are_frozen>
+      <Function test_parse_docx_roundtrip>
+    <Module test_pipeline.py>
+      <Function test_run_pipeline_invariant>
+      <Function test_run_pipeline_law_domain_runs_citation_check>
+      <Function test_run_pipeline_malformed_gap_output_falls_back_to_pending>
+    <Module test_questions.py>
+      <Function test_generate_questions_splits_multiline_string>
+      <Function test_generate_questions_strips_and_drops_blank_lines>
+      <Function test_generate_questions_empty_response_returns_empty_list>
+      <Function test_generate_questions_calls_llm_exactly_once>
+    <Module test_requirements_test_coverage.py>
+      守住 8 個 deselected 測試的需求分類與預設等價覆蓋。
+      <Function test_coverage_matrix_classifies_all_eight_and_has_no_missing_requirement>
+      <Function test_default_gate_collects_every_equivalent_and_safety_regression>
+    <Module test_retrieve.py>
+      <Function test_retrieve_for_gap_law_domain_puts_level_A_before_B>
+      <Function test_retrieve_for_gap_other_domain_uses_web_not_twinkle>
+    <Module test_server.py>
+      <Function test_index_returns_upload_form[asyncio]>
+      <Function test_run_renders_two_columns[asyncio]>
+      <Function test_export_returns_markdown_attachment[asyncio]>
+      <Function test_export_without_run_returns_404[asyncio]>
+      <Function test_index_returns_upload_form[trio]>
+      <Function test_run_renders_two_columns[trio]>
+      <Function test_export_returns_markdown_attachment[trio]>
+      <Function test_export_without_run_returns_404[trio]>
+    <Module test_twinkle.py>
+      <Function test_search_parses_source_with_full_content>
+      <Function test_search_clamps_similarity_input_to_distance_range>
+      <Function test_search_returns_empty_without_token>
+      <Function test_search_reuses_mcp_session>
+      <Function test_search_transport_failure_returns_empty>
+      <Function test_default_timeout_is_60>
+    <Module test_verify.py>
+      <Function test_two_independent_ab_sources_verified>
+      <Function test_three_articles_same_law_same_url_verified>
+      <Function test_single_a_source_verified>
+      <Function test_two_distinct_b_verified>
+      <Function test_single_b_no_a_pending>
+      <Function test_single_c_verified>
+      <Function test_single_d_pending>
+      <Function test_two_distinct_d_verified>
+      <Function test_conflict_detected_and_no_side_taken>
+      <Function test_no_conflict_when_consistent>
+      <Function test_negation_substring_not_false_positive>
+      <Function test_independent_ab_orders_A_before_B_and_by_distance>
+      <Function test_distinct_by_id_not_url>
+    <Module test_web.py>
+      <Function test_two_pages_graded_c_and_d>
+      <Function test_drop_page_excluded>
+      <Function test_fetch_none_skipped>
+      <Function test_too_short_fulltext_skipped>
+      <Function test_search_exception_degrades_to_empty>
+      <Function test_content_truncated_with_note>
+      <Function test_query_extraction_falls_back_to_question>
+      <Function test_retrieve_other_domain_calls_web>
+      <Function test_retrieve_law_domain_does_not_call_web>
+    <Module test_write.py>
+      Q3:write.py 的 write_supplement / WrittenSupplement 驗收。
+      <Function test_used_source_ids_from_markers>
+      <Function test_pending_evidence_when_insufficient>
+      <Function test_out_of_range_marker_removed_and_not_used>
+
+=============== 146/154 tests collected (8 deselected) in 0.94s ===============
