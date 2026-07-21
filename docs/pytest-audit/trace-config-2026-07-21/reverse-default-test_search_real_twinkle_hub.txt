@@ -1,0 +1,4 @@
+
+============================= deselected details ==============================
+tests/test_twinkle.py::test_search_real_twinkle_hub | reason: deselected by -m 'not integration'
+[33m[33mno tests collected (1 deselected)[0m[33m in 0.01s[0m[0m

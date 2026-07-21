@@ -1,0 +1,275 @@
+PLUGIN registered: <_pytest.config.PytestPluginManager object at 0x000001E2DD4D0D50>
+PLUGIN registered: <_pytest.config.Config object at 0x000001E2DDECA450>
+PLUGIN registered: <module '_pytest.mark' from 'D:\\Users\\Administrator\\Desktop\\蝑?鋆?\\.venv\\Lib\\site-packages\\_pytest\\mark\\__init__.py'>
+PLUGIN registered: <module '_pytest.main' from 'D:\\Users\\Administrator\\Desktop\\蝑?鋆?\\.venv\\Lib\\site-packages\\_pytest\\main.py'>
+PLUGIN registered: <module '_pytest.runner' from 'D:\\Users\\Administrator\\Desktop\\蝑?鋆?\\.venv\\Lib\\site-packages\\_pytest\\runner.py'>
+PLUGIN registered: <module '_pytest.fixtures' from 'D:\\Users\\Administrator\\Desktop\\蝑?鋆?\\.venv\\Lib\\site-packages\\_pytest\\fixtures.py'>
+PLUGIN registered: <module '_pytest.helpconfig' from 'D:\\Users\\Administrator\\Desktop\\蝑?鋆?\\.venv\\Lib\\site-packages\\_pytest\\helpconfig.py'>
+PLUGIN registered: <module '_pytest.python' from 'D:\\Users\\Administrator\\Desktop\\蝑?鋆?\\.venv\\Lib\\site-packages\\_pytest\\python.py'>
+PLUGIN registered: <module '_pytest.terminal' from 'D:\\Users\\Administrator\\Desktop\\蝑?鋆?\\.venv\\Lib\\site-packages\\_pytest\\terminal.py'>
+PLUGIN registered: <module '_pytest.debugging' from 'D:\\Users\\Administrator\\Desktop\\蝑?鋆?\\.venv\\Lib\\site-packages\\_pytest\\debugging.py'>
+PLUGIN registered: <module '_pytest.unittest' from 'D:\\Users\\Administrator\\Desktop\\蝑?鋆?\\.venv\\Lib\\site-packages\\_pytest\\unittest.py'>
+PLUGIN registered: <module '_pytest.capture' from 'D:\\Users\\Administrator\\Desktop\\蝑?鋆?\\.venv\\Lib\\site-packages\\_pytest\\capture.py'>
+PLUGIN registered: <module '_pytest.skipping' from 'D:\\Users\\Administrator\\Desktop\\蝑?鋆?\\.venv\\Lib\\site-packages\\_pytest\\skipping.py'>
+PLUGIN registered: <module '_pytest.legacypath' from 'D:\\Users\\Administrator\\Desktop\\蝑?鋆?\\.venv\\Lib\\site-packages\\_pytest\\legacypath.py'>
+PLUGIN registered: <module '_pytest.tmpdir' from 'D:\\Users\\Administrator\\Desktop\\蝑?鋆?\\.venv\\Lib\\site-packages\\_pytest\\tmpdir.py'>
+PLUGIN registered: <module '_pytest.monkeypatch' from 'D:\\Users\\Administrator\\Desktop\\蝑?鋆?\\.venv\\Lib\\site-packages\\_pytest\\monkeypatch.py'>
+PLUGIN registered: <module '_pytest.recwarn' from 'D:\\Users\\Administrator\\Desktop\\蝑?鋆?\\.venv\\Lib\\site-packages\\_pytest\\recwarn.py'>
+PLUGIN registered: <module '_pytest.pastebin' from 'D:\\Users\\Administrator\\Desktop\\蝑?鋆?\\.venv\\Lib\\site-packages\\_pytest\\pastebin.py'>
+PLUGIN registered: <module '_pytest.assertion' from 'D:\\Users\\Administrator\\Desktop\\蝑?鋆?\\.venv\\Lib\\site-packages\\_pytest\\assertion\\__init__.py'>
+PLUGIN registered: <module '_pytest.junitxml' from 'D:\\Users\\Administrator\\Desktop\\蝑?鋆?\\.venv\\Lib\\site-packages\\_pytest\\junitxml.py'>
+PLUGIN registered: <module '_pytest.doctest' from 'D:\\Users\\Administrator\\Desktop\\蝑?鋆?\\.venv\\Lib\\site-packages\\_pytest\\doctest.py'>
+PLUGIN registered: <module '_pytest.cacheprovider' from 'D:\\Users\\Administrator\\Desktop\\蝑?鋆?\\.venv\\Lib\\site-packages\\_pytest\\cacheprovider.py'>
+PLUGIN registered: <module '_pytest.setuponly' from 'D:\\Users\\Administrator\\Desktop\\蝑?鋆?\\.venv\\Lib\\site-packages\\_pytest\\setuponly.py'>
+PLUGIN registered: <module '_pytest.setupplan' from 'D:\\Users\\Administrator\\Desktop\\蝑?鋆?\\.venv\\Lib\\site-packages\\_pytest\\setupplan.py'>
+PLUGIN registered: <module '_pytest.stepwise' from 'D:\\Users\\Administrator\\Desktop\\蝑?鋆?\\.venv\\Lib\\site-packages\\_pytest\\stepwise.py'>
+PLUGIN registered: <module '_pytest.unraisableexception' from 'D:\\Users\\Administrator\\Desktop\\蝑?鋆?\\.venv\\Lib\\site-packages\\_pytest\\unraisableexception.py'>
+PLUGIN registered: <module '_pytest.threadexception' from 'D:\\Users\\Administrator\\Desktop\\蝑?鋆?\\.venv\\Lib\\site-packages\\_pytest\\threadexception.py'>
+PLUGIN registered: <module '_pytest.warnings' from 'D:\\Users\\Administrator\\Desktop\\蝑?鋆?\\.venv\\Lib\\site-packages\\_pytest\\warnings.py'>
+PLUGIN registered: <module '_pytest.logging' from 'D:\\Users\\Administrator\\Desktop\\蝑?鋆?\\.venv\\Lib\\site-packages\\_pytest\\logging.py'>
+PLUGIN registered: <module '_pytest.reports' from 'D:\\Users\\Administrator\\Desktop\\蝑?鋆?\\.venv\\Lib\\site-packages\\_pytest\\reports.py'>
+PLUGIN registered: <module '_pytest.faulthandler' from 'D:\\Users\\Administrator\\Desktop\\蝑?鋆?\\.venv\\Lib\\site-packages\\_pytest\\faulthandler.py'>
+PLUGIN registered: <module '_pytest.subtests' from 'D:\\Users\\Administrator\\Desktop\\蝑?鋆?\\.venv\\Lib\\site-packages\\_pytest\\subtests.py'>
+PLUGIN registered: <module 'anyio.pytest_plugin' from 'D:\\Users\\Administrator\\Desktop\\蝑?鋆?\\.venv\\Lib\\site-packages\\anyio\\pytest_plugin.py'>
+PLUGIN registered: <CaptureManager _method='fd' _global_capturing=<MultiCapture out=<FDCapture 1 oldfd=5 _state='suspended' tmpfile=<_io.TextIOWrapper name='<tempfile._TemporaryFileWrapper object at 0x000001E2DF3B5050>' mode='r+' encoding='utf-8'>> err=<FDCapture 2 oldfd=7 _state='suspended' tmpfile=<_io.TextIOWrapper name='<tempfile._TemporaryFileWrapper object at 0x000001E2DF3B5990>' mode='r+' encoding='utf-8'>> in_=<FDCapture 0 oldfd=3 _state='started' tmpfile=<_io.TextIOWrapper name='nul' mode='r' encoding='utf-8'>> _state='suspended' _in_suspended=False> _capture_fixture=None>
+PLUGIN registered: <module 'conftest' from 'D:\\Users\\Administrator\\Desktop\\autodev-ng\\data\\note-filler\\worktrees\\7d3662a0\\tests\\conftest.py'>
+PLUGIN registered: <Session  exitstatus=<ExitCode.OK: 0> testsfailed=0 testscollected=0>
+PLUGIN registered: <_pytest.cacheprovider.LFPlugin object at 0x000001E2DFDE5190>
+PLUGIN registered: <_pytest.cacheprovider.NFPlugin object at 0x000001E2DF53F8D0>
+PLUGIN registered: <class '_pytest.legacypath.LegacyTmpdirPlugin'>
+PLUGIN registered: <_pytest.terminal.TerminalReporter object at 0x000001E2DFF0E650>
+PLUGIN registered: <module '_pytest.terminalprogress' from 'D:\\Users\\Administrator\\Desktop\\蝑?鋆?\\.venv\\Lib\\site-packages\\_pytest\\terminalprogress.py'>
+PLUGIN registered: <_pytest.logging.LoggingPlugin object at 0x000001E2DFF0E5D0>
+PLUGIN registered: <_pytest.fixtures.FixtureManager object at 0x000001E2DFF3F250>
+[1m============================= test session starts =============================[0m
+platform win32 -- Python 3.11.9, pytest-9.1.1, pluggy-1.6.0
+using: pytest-9.1.1
+registered third-party plugins:
+  anyio-4.14.2 at D:\Users\Administrator\Desktop\蝑?鋆?\.venv\Lib\site-packages\anyio\pytest_plugin.py
+active plugins:
+    2073887051088       : <_pytest.config.PytestPluginManager object at 0x000001E2DD4D0D50>
+    pytestconfig        : <_pytest.config.Config object at 0x000001E2DDECA450>
+    mark                : D:\Users\Administrator\Desktop\蝑?鋆?\.venv\Lib\site-packages\_pytest\mark\__init__.py
+    main                : D:\Users\Administrator\Desktop\蝑?鋆?\.venv\Lib\site-packages\_pytest\main.py
+    runner              : D:\Users\Administrator\Desktop\蝑?鋆?\.venv\Lib\site-packages\_pytest\runner.py
+    fixtures            : D:\Users\Administrator\Desktop\蝑?鋆?\.venv\Lib\site-packages\_pytest\fixtures.py
+    helpconfig          : D:\Users\Administrator\Desktop\蝑?鋆?\.venv\Lib\site-packages\_pytest\helpconfig.py
+    python              : D:\Users\Administrator\Desktop\蝑?鋆?\.venv\Lib\site-packages\_pytest\python.py
+    terminal            : D:\Users\Administrator\Desktop\蝑?鋆?\.venv\Lib\site-packages\_pytest\terminal.py
+    debugging           : D:\Users\Administrator\Desktop\蝑?鋆?\.venv\Lib\site-packages\_pytest\debugging.py
+    unittest            : D:\Users\Administrator\Desktop\蝑?鋆?\.venv\Lib\site-packages\_pytest\unittest.py
+    capture             : D:\Users\Administrator\Desktop\蝑?鋆?\.venv\Lib\site-packages\_pytest\capture.py
+    skipping            : D:\Users\Administrator\Desktop\蝑?鋆?\.venv\Lib\site-packages\_pytest\skipping.py
+    legacypath          : D:\Users\Administrator\Desktop\蝑?鋆?\.venv\Lib\site-packages\_pytest\legacypath.py
+    tmpdir              : D:\Users\Administrator\Desktop\蝑?鋆?\.venv\Lib\site-packages\_pytest\tmpdir.py
+    monkeypatch         : D:\Users\Administrator\Desktop\蝑?鋆?\.venv\Lib\site-packages\_pytest\monkeypatch.py
+    recwarn             : D:\Users\Administrator\Desktop\蝑?鋆?\.venv\Lib\site-packages\_pytest\recwarn.py
+    pastebin            : D:\Users\Administrator\Desktop\蝑?鋆?\.venv\Lib\site-packages\_pytest\pastebin.py
+    assertion           : D:\Users\Administrator\Desktop\蝑?鋆?\.venv\Lib\site-packages\_pytest\assertion\__init__.py
+    junitxml            : D:\Users\Administrator\Desktop\蝑?鋆?\.venv\Lib\site-packages\_pytest\junitxml.py
+    doctest             : D:\Users\Administrator\Desktop\蝑?鋆?\.venv\Lib\site-packages\_pytest\doctest.py
+    cacheprovider       : D:\Users\Administrator\Desktop\蝑?鋆?\.venv\Lib\site-packages\_pytest\cacheprovider.py
+    setuponly           : D:\Users\Administrator\Desktop\蝑?鋆?\.venv\Lib\site-packages\_pytest\setuponly.py
+    setupplan           : D:\Users\Administrator\Desktop\蝑?鋆?\.venv\Lib\site-packages\_pytest\setupplan.py
+    stepwise            : D:\Users\Administrator\Desktop\蝑?鋆?\.venv\Lib\site-packages\_pytest\stepwise.py
+    unraisableexception : D:\Users\Administrator\Desktop\蝑?鋆?\.venv\Lib\site-packages\_pytest\unraisableexception.py
+    threadexception     : D:\Users\Administrator\Desktop\蝑?鋆?\.venv\Lib\site-packages\_pytest\threadexception.py
+    warnings            : D:\Users\Administrator\Desktop\蝑?鋆?\.venv\Lib\site-packages\_pytest\warnings.py
+    logging             : D:\Users\Administrator\Desktop\蝑?鋆?\.venv\Lib\site-packages\_pytest\logging.py
+    reports             : D:\Users\Administrator\Desktop\蝑?鋆?\.venv\Lib\site-packages\_pytest\reports.py
+    faulthandler        : D:\Users\Administrator\Desktop\蝑?鋆?\.venv\Lib\site-packages\_pytest\faulthandler.py
+    subtests            : D:\Users\Administrator\Desktop\蝑?鋆?\.venv\Lib\site-packages\_pytest\subtests.py
+    asyncio             : None
+    pytest_asyncio      : None
+    anyio               : D:\Users\Administrator\Desktop\蝑?鋆?\.venv\Lib\site-packages\anyio\pytest_plugin.py
+    capturemanager      : <CaptureManager _method='fd' _global_capturing=<MultiCapture out=<FDCapture 1 oldfd=5 _state='suspended' tmpfile=<_io.TextIOWrapper name='<tempfile._TemporaryFileWrapper object at 0x000001E2DF3B5050>' mode='r+' encoding='utf-8'>> err=<FDCapture 2 oldfd=7 _state='suspended' tmpfile=<_io.TextIOWrapper name='<tempfile._TemporaryFileWrapper object at 0x000001E2DF3B5990>' mode='r+' encoding='utf-8'>> in_=<FDCapture 0 oldfd=3 _state='started' tmpfile=<_io.TextIOWrapper name='nul' mode='r' encoding='utf-8'>> _state='suspended' _in_suspended=False> _capture_fixture=None>
+    D:\Users\Administrator\Desktop\autodev-ng\data\note-filler\worktrees\7d3662a0\tests\conftest.py: D:\Users\Administrator\Desktop\autodev-ng\data\note-filler\worktrees\7d3662a0\tests\conftest.py
+    session             : <Session  exitstatus=<ExitCode.OK: 0> testsfailed=0 testscollected=0>
+    lfplugin            : <_pytest.cacheprovider.LFPlugin object at 0x000001E2DFDE5190>
+    nfplugin            : <_pytest.cacheprovider.NFPlugin object at 0x000001E2DF53F8D0>
+    legacypath-tmpdir   : <class '_pytest.legacypath.LegacyTmpdirPlugin'>
+    terminalreporter    : <_pytest.terminal.TerminalReporter object at 0x000001E2DFF0E650>
+    terminalprogress    : D:\Users\Administrator\Desktop\蝑?鋆?\.venv\Lib\site-packages\_pytest\terminalprogress.py
+    logging-plugin      : <_pytest.logging.LoggingPlugin object at 0x000001E2DFF0E5D0>
+    funcmanage          : <_pytest.fixtures.FixtureManager object at 0x000001E2DFF3F250>
+rootdir: D:\Users\Administrator\Desktop\autodev-ng\data\note-filler\worktrees\7d3662a0
+configfile: pyproject.toml
+testpaths: tests
+plugins: anyio-4.14.2
+collected 150 items / 8 deselected / 142 selected
+
+<Dir 7d3662a0>
+  <Dir tests>
+    <Module test_citation_formatter.py>
+      <Function test_build_reference_lines_two_sources>
+    <Module test_cli.py>
+      <Function test_iter_inputs_expands_dir_filters_suffix_and_dedups>
+      <Function test_process_file_writes_md_and_counts>
+      <Function test_process_file_json_format_and_outdir>
+    <Module test_conclusion_classification.py>
+      <Function test_classification_index_schema_and_labels>
+      <Function test_classification_covers_all_eight_allowlist_nodes>
+      <Function test_non_defect_items_have_no_gap_package>
+      <Function test_true_gap_items_have_full_package>
+      <Function test_human_report_exists_and_mentions_both_labels>
+      <Function test_gap_c7_current_smoke_vacuous_pass_on_empty>
+      <Function test_gap_c7_strengthened_contract_fails_on_empty>
+      <Function test_gap_c7_package_acceptance_commands_are_non_empty_shell>
+    <Module test_correction.py>
+      <Function test_original_segments_verbatim_and_immutable>
+      <Function test_written_two_independent_a_verified_only_used_sources>
+      <Function test_pending_evidence_written_empty_sources>
+      <Function test_retrieved_five_but_only_two_cited>
+      <Function test_single_a_used_source_verified>
+      <Function test_three_articles_same_law_same_url_verified>
+      <Function test_two_distinct_b_verified>
+      <Function test_single_b_no_a_pending>
+      <Function test_single_c_used_source_verified>
+      <Function test_single_d_used_source_pending>
+      <Function test_two_distinct_d_verified>
+      <Function test_anchor_picks_keyword_overlap>
+      <Function test_anchor_none_when_no_overlap>
+    <Module test_deselected_ci_gate_acceptance.py>
+      <Function test_ci_gate_accepts_only_authorized_deselected_nodes_with_reasons>
+      <Function test_ci_gate_fails_when_deselected_allowlist_count_is_too_small>
+      <Function test_ci_gate_fails_when_deselected_allowlist_contains_non_deselected_node>
+    <Module test_deselection_guard.py>
+      <Function test_integration_allowlist_is_stable>
+      <Function test_deselected_details_lists_node_ids_and_reasons>
+      <Function test_substitute_mapping_is_complete_and_collectable>
+      <Function test_acceptance_package_rejects_count_only_summary>
+      <Function test_c7_correctness_path_law_domain_level_a_not_excluded>
+    <Module test_design_acceptance.py>
+      <Function test_design_claims_index_is_complete>
+      <Function test_design_acceptance_package_is_machine_checkable>
+      <Function test_design_acceptance_rejects_claim_without_artifact>
+      <Function test_design_package_head_matches_repo_and_claim_map_printable>
+    <Module test_domain.py>
+      <Function test_detect_domain_law>
+      <Function test_detect_domain_admin>
+      <Function test_detect_domain_exam>
+      <Function test_detect_domain_noise_falls_back_to_other>
+      <Function test_detect_domain_label_with_trailing_punctuation>
+      <Function test_detect_domain_uppercase_and_whitespace>
+    <Module test_e2e_acceptance.py>
+      <Function test_e2e_structural_invariants>
+      <Function test_e2e_offline_supplement_quality_boundary>
+      <Function test_e2e_minimal_quality_gates_offline_regression>
+    <Module test_excluded_failing_controls.py>
+      <Function test_control_map_covers_all_eight_excluded>
+      <Function test_control_01_domain_legal_label_contract>
+      <Function test_control_02_e2e_offline_quality_gates>
+      <Function test_control_03_gap_uncovered_question_must_surface>
+      <Function test_control_04_grok_client_parse_and_endpoint_contract>
+      <Function test_control_05_pipeline_c6_pending_when_no_sources>
+      <Function test_control_06_questions_clean_list_contract>
+      <Function test_control_07_retrieve_smoke_vacuous_empty_is_blind_spot>
+      <Function test_control_07b_retrieve_law_level_a_not_vacuous>
+      <Function test_control_08_twinkle_parsed_source_contract>
+    <Module test_exclusion_correctness_blind_spot.py>
+      <Function test_deselected_retrieve_smoke_vacuous_pass_on_empty_is_blind_spot>
+      <Function test_law_domain_retrieve_must_yield_level_a_not_vacuous_empty>
+    <Module test_export.py>
+      <Function test_to_json_serializes_segments>
+      <Function test_to_markdown_format_locked>
+      <Function test_to_markdown_pending_segment_has_no_footnote>
+    <Module test_export_docx.py>
+      <Function test_to_docx_roundtrip_preserves_original_and_marks_supplement>
+    <Module test_gap.py>
+      <Function test_detect_gaps_keeps_only_partial_and_missing>
+      <Function test_detect_gaps_calls_llm_exactly_once>
+      <Function test_detect_gaps_parse_failure_marks_all_missing>
+      <Function test_detect_gaps_non_array_json_also_fallbacks>
+      <Function test_detect_gaps_strips_code_fence>
+      <Function test_detect_gaps_empty_questions_short_circuits>
+    <Module test_grading.py>
+      <Function test_source_dataclass_has_locked_fields>
+      <Function test_grade_law_returns_A>
+      <Function test_grade_twinkle_returns_B>
+      <Function test_is_stale_exactly_max_age_is_not_stale>
+      <Function test_is_stale_over_max_age_is_stale>
+      <Function test_is_stale_under_max_age_is_not_stale>
+      <Function test_is_stale_today_is_not_stale>
+    <Module test_law_check.py>
+      <Function test_real_law_article_exists>
+      <Function test_fake_article_no_flagged_not_found>
+      <Function test_unknown_law_not_false_reported>
+      <Function test_search_articles_keyword_with_law_name>
+      <Function test_search_articles_keyword_only>
+      <Function test_search_articles_limit>
+      <Function test_check_law_citations_first_param_is_text>
+    <Module test_law_lookup.py>
+      <Function test_search_articles_orders_by_numeric_article_no>
+      <Function test_search_articles_limit_after_numeric_sort>
+    <Module test_law_search.py>
+      <Function test_search_law_sources_returns_level_A_law_articles>
+      <Function test_search_law_sources_accepts_plain_keyword_response>
+      <Function test_search_law_sources_uses_single_llm_call_and_empty_on_no_hit>
+      <Function test_search_law_sources_unions_multiple_keywords_dedup_and_order>
+      <Function test_search_law_sources_backward_compat_single_keyword>
+      <Function test_search_law_sources_non_json_treated_as_single_keyword>
+      <Function test_search_law_sources_empty_keywords_returns_empty>
+    <Module test_llm.py>
+      <Function test_fakellm_returns_canned_in_order>
+      <Function test_grokclient_builds_request_body>
+    <Module test_parse.py>
+      <Function test_parse_txt_splits_on_blank_lines>
+      <Function test_paragraph_and_document_are_frozen>
+      <Function test_parse_docx_roundtrip>
+    <Module test_pipeline.py>
+      <Function test_run_pipeline_invariant>
+      <Function test_run_pipeline_law_domain_runs_citation_check>
+      <Function test_run_pipeline_malformed_gap_output_falls_back_to_pending>
+    <Module test_questions.py>
+      <Function test_generate_questions_splits_multiline_string>
+      <Function test_generate_questions_strips_and_drops_blank_lines>
+      <Function test_generate_questions_empty_response_returns_empty_list>
+      <Function test_generate_questions_calls_llm_exactly_once>
+    <Module test_requirements_test_coverage.py>
+      <Function test_coverage_matrix_classifies_all_eight_and_has_no_missing_requirement>
+      <Function test_default_gate_collects_every_equivalent_and_safety_regression>
+    <Module test_retrieve.py>
+      <Function test_retrieve_for_gap_law_domain_puts_level_A_before_B>
+      <Function test_retrieve_for_gap_other_domain_uses_web_not_twinkle>
+    <Module test_server.py>
+      <Function test_index_returns_upload_form[asyncio]>
+      <Function test_run_renders_two_columns[asyncio]>
+      <Function test_export_returns_markdown_attachment[asyncio]>
+      <Function test_export_without_run_returns_404[asyncio]>
+    <Module test_twinkle.py>
+      <Function test_search_parses_source_with_full_content>
+      <Function test_search_clamps_similarity_input_to_distance_range>
+      <Function test_search_returns_empty_without_token>
+      <Function test_search_reuses_mcp_session>
+      <Function test_search_transport_failure_returns_empty>
+      <Function test_default_timeout_is_60>
+    <Module test_verify.py>
+      <Function test_two_independent_ab_sources_verified>
+      <Function test_three_articles_same_law_same_url_verified>
+      <Function test_single_a_source_verified>
+      <Function test_two_distinct_b_verified>
+      <Function test_single_b_no_a_pending>
+      <Function test_single_c_verified>
+      <Function test_single_d_pending>
+      <Function test_two_distinct_d_verified>
+      <Function test_conflict_detected_and_no_side_taken>
+      <Function test_no_conflict_when_consistent>
+      <Function test_negation_substring_not_false_positive>
+      <Function test_independent_ab_orders_A_before_B_and_by_distance>
+      <Function test_distinct_by_id_not_url>
+    <Module test_web.py>
+      <Function test_two_pages_graded_c_and_d>
+      <Function test_drop_page_excluded>
+      <Function test_fetch_none_skipped>
+      <Function test_too_short_fulltext_skipped>
+      <Function test_search_exception_degrades_to_empty>
+      <Function test_content_truncated_with_note>
+      <Function test_query_extraction_falls_back_to_question>
+      <Function test_retrieve_other_domain_calls_web>
+      <Function test_retrieve_law_domain_does_not_call_web>
+    <Module test_write.py>
+      <Function test_used_source_ids_from_markers>
+      <Function test_pending_evidence_when_insufficient>
+      <Function test_out_of_range_marker_removed_and_not_used>
+
+[32m=============== [32m142/150 tests collected (8 deselected)[0m[32m in 0.17s[0m[32m ===============[0m

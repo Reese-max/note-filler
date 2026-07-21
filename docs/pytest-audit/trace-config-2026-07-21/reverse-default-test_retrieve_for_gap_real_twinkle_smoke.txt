@@ -1,0 +1,4 @@
+
+============================= deselected details ==============================
+tests/test_retrieve.py::test_retrieve_for_gap_real_twinkle_smoke | reason: deselected by -m 'not integration'
+[33m[33mno tests collected (1 deselected)[0m[33m in 0.03s[0m[0m

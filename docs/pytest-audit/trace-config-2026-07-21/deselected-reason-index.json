@@ -1,0 +1,596 @@
+{
+  "audit_date": "2026-07-21",
+  "task": "pytest config / CLI / env / markers; exact deselect reason per test",
+  "python": "D:/Users/Administrator/Desktop/筆記補齊/.venv/Scripts/python.exe",
+  "pytest_version": "9.1.1",
+  "env_probe": {
+    "GROK_PROXY_REACHABLE": true,
+    "TWINKLE_HUB_TOKEN_SET": true,
+    "GOV_AI_ENABLE_TWINKLE_MCP": null,
+    "LAW_DB_EXISTS": true,
+    "cwd": "D:\\Users\\Administrator\\Desktop\\autodev-ng\\data\\note-filler\\worktrees\\7d3662a0",
+    "python": "D:/Users/Administrator/Desktop/筆記補齊/.venv/Scripts/python.exe",
+    "timestamp_utc": "2026-07-21T06:46:04.750009+00:00"
+  },
+  "config": {
+    "configfile": "pyproject.toml",
+    "testpaths": [
+      "tests"
+    ],
+    "pythonpath": [
+      "src"
+    ],
+    "addopts": "-p no:asyncio --strict-markers -m 'not integration' -W error::DeprecationWarning -W error::PendingDeprecationWarning",
+    "markers": [
+      "integration: 需要真實 grok(:8318)的整合測試;平時用 -m 'not integration' 跳過"
+    ],
+    "strict_markers": true,
+    "asyncio_plugin_disabled": true,
+    "conftest_hooks": [
+      "tests/conftest.py::pytest_addoption(--deselected-details)",
+      "tests/conftest.py::pytest_deselected",
+      "tests/conftest.py::pytest_terminal_summary"
+    ]
+  },
+  "collection_counts": {
+    "full_no_markexpr": {
+      "selected": 150,
+      "summary": "\u001b[32m\u001b[32m150 tests collected\u001b[0m\u001b[32m in 0.14s\u001b[0m\u001b[0m"
+    },
+    "default_addopts": {
+      "selected": 142,
+      "deselected": 8,
+      "summary": "\u001b[32m\u001b[32m142/150 tests collected (8 deselected)\u001b[0m\u001b[32m in 0.18s\u001b[0m\u001b[0m"
+    },
+    "m_integration": {
+      "selected": 8,
+      "deselected": 142,
+      "summary": "\u001b[32m\u001b[32m8/150 tests collected (142 deselected)\u001b[0m\u001b[32m in 0.19s\u001b[0m\u001b[0m"
+    },
+    "m_not_integration_explicit": {
+      "selected": 142,
+      "summary": "\u001b[32m\u001b[32m142/150 tests collected (8 deselected)\u001b[0m\u001b[32m in 0.19s\u001b[0m\u001b[0m"
+    }
+  },
+  "set_identities": {
+    "full_minus_default_equals_integration_selected": true,
+    "default_equals_not_integration_explicit": true,
+    "default_union_integration_equals_full": true,
+    "default_intersect_integration_empty": true
+  },
+  "deselected_nodeids": [
+    "tests/test_domain.py::test_detect_domain_real_grok_returns_law",
+    "tests/test_e2e_acceptance.py::test_e2e_acceptance_real",
+    "tests/test_gap.py::test_detect_gaps_real_grok",
+    "tests/test_llm.py::test_grok_pong_integration",
+    "tests/test_pipeline.py::test_run_pipeline_real_grok",
+    "tests/test_questions.py::test_generate_questions_real_grok",
+    "tests/test_retrieve.py::test_retrieve_for_gap_real_twinkle_smoke",
+    "tests/test_twinkle.py::test_search_real_twinkle_hub"
+  ],
+  "deselected_records": [
+    {
+      "nodeid": "tests/test_domain.py::test_detect_domain_real_grok_returns_law",
+      "collection_filter_reason": {
+        "exact": "deselected by mark expression -m 'not integration' from pyproject.toml [tool.pytest.ini_options].addopts",
+        "addopts_source": "pyproject.toml:32",
+        "addopts_value": "-p no:asyncio --strict-markers -m 'not integration' -W error::DeprecationWarning -W error::PendingDeprecationWarning",
+        "effective_markexpr": "not integration",
+        "hook_reported_reason": "-m 'not integration'",
+        "marker_on_test": "integration",
+        "marker_definition": "integration: 需要真實 grok(:8318)的整合測試;平時用 -m 'not integration' 跳過",
+        "marker_source_line": {
+          "file": "tests/test_domain.py",
+          "line": 50,
+          "decorator": "@pytest.mark.integration"
+        }
+      },
+      "not_the_collection_reason": [
+        "skipif / runtime skip is NOT applied at collection deselect time",
+        "env vars (TWINKLE_HUB_TOKEN, GOV_AI_ENABLE_TWINKLE_MCP) do not deselect at collection",
+        "CLI --deselect was not used",
+        "CLI -k was not used"
+      ],
+      "reverse_filter_verification": {
+        "nodeid": "tests/test_domain.py::test_detect_domain_real_grok_returns_law",
+        "with_default_filter": {
+          "summary": "\u001b[33m\u001b[33mno tests collected (1 deselected)\u001b[0m\u001b[33m in 0.01s\u001b[0m\u001b[0m",
+          "selected": [],
+          "deselected_details": [
+            {
+              "nodeid": "tests/test_domain.py::test_detect_domain_real_grok_returns_law",
+              "reason": "-m 'not integration'"
+            }
+          ],
+          "expected": "0 selected / 1 deselected by -m not integration",
+          "ok": true
+        },
+        "with_m_integration": {
+          "summary": "\u001b[32m\u001b[32m1 test collected\u001b[0m\u001b[32m in 0.02s\u001b[0m\u001b[0m",
+          "selected": [
+            "tests/test_domain.py::test_detect_domain_real_grok_returns_law"
+          ],
+          "expected": "1 selected",
+          "ok": true
+        },
+        "with_no_markexpr": {
+          "summary": "\u001b[32m\u001b[32m1 test collected\u001b[0m\u001b[32m in 0.01s\u001b[0m\u001b[0m",
+          "selected": [
+            "tests/test_domain.py::test_detect_domain_real_grok_returns_law"
+          ],
+          "expected": "1 selected (proves node exists; only markexpr deselects it)",
+          "ok": true
+        }
+      }
+    },
+    {
+      "nodeid": "tests/test_e2e_acceptance.py::test_e2e_acceptance_real",
+      "collection_filter_reason": {
+        "exact": "deselected by mark expression -m 'not integration' from pyproject.toml [tool.pytest.ini_options].addopts",
+        "addopts_source": "pyproject.toml:32",
+        "addopts_value": "-p no:asyncio --strict-markers -m 'not integration' -W error::DeprecationWarning -W error::PendingDeprecationWarning",
+        "effective_markexpr": "not integration",
+        "hook_reported_reason": "-m 'not integration'",
+        "marker_on_test": "integration",
+        "marker_definition": "integration: 需要真實 grok(:8318)的整合測試;平時用 -m 'not integration' 跳過",
+        "marker_source_line": {
+          "file": "tests/test_e2e_acceptance.py",
+          "line": 244,
+          "decorator": "@pytest.mark.integration"
+        }
+      },
+      "not_the_collection_reason": [
+        "skipif / runtime skip is NOT applied at collection deselect time",
+        "env vars (TWINKLE_HUB_TOKEN, GOV_AI_ENABLE_TWINKLE_MCP) do not deselect at collection",
+        "CLI --deselect was not used",
+        "CLI -k was not used"
+      ],
+      "reverse_filter_verification": {
+        "nodeid": "tests/test_e2e_acceptance.py::test_e2e_acceptance_real",
+        "with_default_filter": {
+          "summary": "\u001b[33m\u001b[33mno tests collected (1 deselected)\u001b[0m\u001b[33m in 0.01s\u001b[0m\u001b[0m",
+          "selected": [],
+          "deselected_details": [
+            {
+              "nodeid": "tests/test_e2e_acceptance.py::test_e2e_acceptance_real",
+              "reason": "-m 'not integration'"
+            }
+          ],
+          "expected": "0 selected / 1 deselected by -m not integration",
+          "ok": true
+        },
+        "with_m_integration": {
+          "summary": "\u001b[32m\u001b[32m1 test collected\u001b[0m\u001b[32m in 0.01s\u001b[0m\u001b[0m",
+          "selected": [
+            "tests/test_e2e_acceptance.py::test_e2e_acceptance_real"
+          ],
+          "expected": "1 selected",
+          "ok": true
+        },
+        "with_no_markexpr": {
+          "summary": "\u001b[32m\u001b[32m1 test collected\u001b[0m\u001b[32m in 0.01s\u001b[0m\u001b[0m",
+          "selected": [
+            "tests/test_e2e_acceptance.py::test_e2e_acceptance_real"
+          ],
+          "expected": "1 selected (proves node exists; only markexpr deselects it)",
+          "ok": true
+        }
+      }
+    },
+    {
+      "nodeid": "tests/test_gap.py::test_detect_gaps_real_grok",
+      "collection_filter_reason": {
+        "exact": "deselected by mark expression -m 'not integration' from pyproject.toml [tool.pytest.ini_options].addopts",
+        "addopts_source": "pyproject.toml:32",
+        "addopts_value": "-p no:asyncio --strict-markers -m 'not integration' -W error::DeprecationWarning -W error::PendingDeprecationWarning",
+        "effective_markexpr": "not integration",
+        "hook_reported_reason": "-m 'not integration'",
+        "marker_on_test": "integration",
+        "marker_definition": "integration: 需要真實 grok(:8318)的整合測試;平時用 -m 'not integration' 跳過",
+        "marker_source_line": {
+          "file": "tests/test_gap.py",
+          "line": 71,
+          "decorator": "@pytest.mark.integration"
+        }
+      },
+      "not_the_collection_reason": [
+        "skipif / runtime skip is NOT applied at collection deselect time",
+        "env vars (TWINKLE_HUB_TOKEN, GOV_AI_ENABLE_TWINKLE_MCP) do not deselect at collection",
+        "CLI --deselect was not used",
+        "CLI -k was not used"
+      ],
+      "reverse_filter_verification": {
+        "nodeid": "tests/test_gap.py::test_detect_gaps_real_grok",
+        "with_default_filter": {
+          "summary": "\u001b[33m\u001b[33mno tests collected (1 deselected)\u001b[0m\u001b[33m in 0.01s\u001b[0m\u001b[0m",
+          "selected": [],
+          "deselected_details": [
+            {
+              "nodeid": "tests/test_gap.py::test_detect_gaps_real_grok",
+              "reason": "-m 'not integration'"
+            }
+          ],
+          "expected": "0 selected / 1 deselected by -m not integration",
+          "ok": true
+        },
+        "with_m_integration": {
+          "summary": "\u001b[32m\u001b[32m1 test collected\u001b[0m\u001b[32m in 0.02s\u001b[0m\u001b[0m",
+          "selected": [
+            "tests/test_gap.py::test_detect_gaps_real_grok"
+          ],
+          "expected": "1 selected",
+          "ok": true
+        },
+        "with_no_markexpr": {
+          "summary": "\u001b[32m\u001b[32m1 test collected\u001b[0m\u001b[32m in 0.01s\u001b[0m\u001b[0m",
+          "selected": [
+            "tests/test_gap.py::test_detect_gaps_real_grok"
+          ],
+          "expected": "1 selected (proves node exists; only markexpr deselects it)",
+          "ok": true
+        }
+      }
+    },
+    {
+      "nodeid": "tests/test_llm.py::test_grok_pong_integration",
+      "collection_filter_reason": {
+        "exact": "deselected by mark expression -m 'not integration' from pyproject.toml [tool.pytest.ini_options].addopts",
+        "addopts_source": "pyproject.toml:32",
+        "addopts_value": "-p no:asyncio --strict-markers -m 'not integration' -W error::DeprecationWarning -W error::PendingDeprecationWarning",
+        "effective_markexpr": "not integration",
+        "hook_reported_reason": "-m 'not integration'",
+        "marker_on_test": "integration",
+        "marker_definition": "integration: 需要真實 grok(:8318)的整合測試;平時用 -m 'not integration' 跳過",
+        "marker_source_line": {
+          "file": "tests/test_llm.py",
+          "line": 66,
+          "decorator": "@pytest.mark.integration"
+        }
+      },
+      "not_the_collection_reason": [
+        "skipif / runtime skip is NOT applied at collection deselect time",
+        "env vars (TWINKLE_HUB_TOKEN, GOV_AI_ENABLE_TWINKLE_MCP) do not deselect at collection",
+        "CLI --deselect was not used",
+        "CLI -k was not used"
+      ],
+      "reverse_filter_verification": {
+        "nodeid": "tests/test_llm.py::test_grok_pong_integration",
+        "with_default_filter": {
+          "summary": "\u001b[33m\u001b[33mno tests collected (1 deselected)\u001b[0m\u001b[33m in 0.01s\u001b[0m\u001b[0m",
+          "selected": [],
+          "deselected_details": [
+            {
+              "nodeid": "tests/test_llm.py::test_grok_pong_integration",
+              "reason": "-m 'not integration'"
+            }
+          ],
+          "expected": "0 selected / 1 deselected by -m not integration",
+          "ok": true
+        },
+        "with_m_integration": {
+          "summary": "\u001b[32m\u001b[32m1 test collected\u001b[0m\u001b[32m in 0.01s\u001b[0m\u001b[0m",
+          "selected": [
+            "tests/test_llm.py::test_grok_pong_integration"
+          ],
+          "expected": "1 selected",
+          "ok": true
+        },
+        "with_no_markexpr": {
+          "summary": "\u001b[32m\u001b[32m1 test collected\u001b[0m\u001b[32m in 0.01s\u001b[0m\u001b[0m",
+          "selected": [
+            "tests/test_llm.py::test_grok_pong_integration"
+          ],
+          "expected": "1 selected (proves node exists; only markexpr deselects it)",
+          "ok": true
+        }
+      }
+    },
+    {
+      "nodeid": "tests/test_pipeline.py::test_run_pipeline_real_grok",
+      "collection_filter_reason": {
+        "exact": "deselected by mark expression -m 'not integration' from pyproject.toml [tool.pytest.ini_options].addopts",
+        "addopts_source": "pyproject.toml:32",
+        "addopts_value": "-p no:asyncio --strict-markers -m 'not integration' -W error::DeprecationWarning -W error::PendingDeprecationWarning",
+        "effective_markexpr": "not integration",
+        "hook_reported_reason": "-m 'not integration'",
+        "marker_on_test": "integration",
+        "marker_definition": "integration: 需要真實 grok(:8318)的整合測試;平時用 -m 'not integration' 跳過",
+        "marker_source_line": {
+          "file": "tests/test_pipeline.py",
+          "line": 151,
+          "decorator": "@pytest.mark.integration"
+        }
+      },
+      "not_the_collection_reason": [
+        "skipif / runtime skip is NOT applied at collection deselect time",
+        "env vars (TWINKLE_HUB_TOKEN, GOV_AI_ENABLE_TWINKLE_MCP) do not deselect at collection",
+        "CLI --deselect was not used",
+        "CLI -k was not used"
+      ],
+      "reverse_filter_verification": {
+        "nodeid": "tests/test_pipeline.py::test_run_pipeline_real_grok",
+        "with_default_filter": {
+          "summary": "\u001b[33m\u001b[33mno tests collected (1 deselected)\u001b[0m\u001b[33m in 0.06s\u001b[0m\u001b[0m",
+          "selected": [],
+          "deselected_details": [
+            {
+              "nodeid": "tests/test_pipeline.py::test_run_pipeline_real_grok",
+              "reason": "-m 'not integration'"
+            }
+          ],
+          "expected": "0 selected / 1 deselected by -m not integration",
+          "ok": true
+        },
+        "with_m_integration": {
+          "summary": "\u001b[32m\u001b[32m1 test collected\u001b[0m\u001b[32m in 0.06s\u001b[0m\u001b[0m",
+          "selected": [
+            "tests/test_pipeline.py::test_run_pipeline_real_grok"
+          ],
+          "expected": "1 selected",
+          "ok": true
+        },
+        "with_no_markexpr": {
+          "summary": "\u001b[32m\u001b[32m1 test collected\u001b[0m\u001b[32m in 0.06s\u001b[0m\u001b[0m",
+          "selected": [
+            "tests/test_pipeline.py::test_run_pipeline_real_grok"
+          ],
+          "expected": "1 selected (proves node exists; only markexpr deselects it)",
+          "ok": true
+        }
+      }
+    },
+    {
+      "nodeid": "tests/test_questions.py::test_generate_questions_real_grok",
+      "collection_filter_reason": {
+        "exact": "deselected by mark expression -m 'not integration' from pyproject.toml [tool.pytest.ini_options].addopts",
+        "addopts_source": "pyproject.toml:32",
+        "addopts_value": "-p no:asyncio --strict-markers -m 'not integration' -W error::DeprecationWarning -W error::PendingDeprecationWarning",
+        "effective_markexpr": "not integration",
+        "hook_reported_reason": "-m 'not integration'",
+        "marker_on_test": "integration",
+        "marker_definition": "integration: 需要真實 grok(:8318)的整合測試;平時用 -m 'not integration' 跳過",
+        "marker_source_line": {
+          "file": "tests/test_questions.py",
+          "line": 62,
+          "decorator": "@pytest.mark.integration"
+        }
+      },
+      "not_the_collection_reason": [
+        "skipif / runtime skip is NOT applied at collection deselect time",
+        "env vars (TWINKLE_HUB_TOKEN, GOV_AI_ENABLE_TWINKLE_MCP) do not deselect at collection",
+        "CLI --deselect was not used",
+        "CLI -k was not used"
+      ],
+      "reverse_filter_verification": {
+        "nodeid": "tests/test_questions.py::test_generate_questions_real_grok",
+        "with_default_filter": {
+          "summary": "\u001b[33m\u001b[33mno tests collected (1 deselected)\u001b[0m\u001b[33m in 0.01s\u001b[0m\u001b[0m",
+          "selected": [],
+          "deselected_details": [
+            {
+              "nodeid": "tests/test_questions.py::test_generate_questions_real_grok",
+              "reason": "-m 'not integration'"
+            }
+          ],
+          "expected": "0 selected / 1 deselected by -m not integration",
+          "ok": true
+        },
+        "with_m_integration": {
+          "summary": "\u001b[32m\u001b[32m1 test collected\u001b[0m\u001b[32m in 0.02s\u001b[0m\u001b[0m",
+          "selected": [
+            "tests/test_questions.py::test_generate_questions_real_grok"
+          ],
+          "expected": "1 selected",
+          "ok": true
+        },
+        "with_no_markexpr": {
+          "summary": "\u001b[32m\u001b[32m1 test collected\u001b[0m\u001b[32m in 0.01s\u001b[0m\u001b[0m",
+          "selected": [
+            "tests/test_questions.py::test_generate_questions_real_grok"
+          ],
+          "expected": "1 selected (proves node exists; only markexpr deselects it)",
+          "ok": true
+        }
+      }
+    },
+    {
+      "nodeid": "tests/test_retrieve.py::test_retrieve_for_gap_real_twinkle_smoke",
+      "collection_filter_reason": {
+        "exact": "deselected by mark expression -m 'not integration' from pyproject.toml [tool.pytest.ini_options].addopts",
+        "addopts_source": "pyproject.toml:32",
+        "addopts_value": "-p no:asyncio --strict-markers -m 'not integration' -W error::DeprecationWarning -W error::PendingDeprecationWarning",
+        "effective_markexpr": "not integration",
+        "hook_reported_reason": "-m 'not integration'",
+        "marker_on_test": "integration",
+        "marker_definition": "integration: 需要真實 grok(:8318)的整合測試;平時用 -m 'not integration' 跳過",
+        "marker_source_line": {
+          "file": "tests/test_retrieve.py",
+          "line": 102,
+          "decorator": "@pytest.mark.integration"
+        }
+      },
+      "not_the_collection_reason": [
+        "skipif / runtime skip is NOT applied at collection deselect time",
+        "env vars (TWINKLE_HUB_TOKEN, GOV_AI_ENABLE_TWINKLE_MCP) do not deselect at collection",
+        "CLI --deselect was not used",
+        "CLI -k was not used"
+      ],
+      "reverse_filter_verification": {
+        "nodeid": "tests/test_retrieve.py::test_retrieve_for_gap_real_twinkle_smoke",
+        "with_default_filter": {
+          "summary": "\u001b[33m\u001b[33mno tests collected (1 deselected)\u001b[0m\u001b[33m in 0.03s\u001b[0m\u001b[0m",
+          "selected": [],
+          "deselected_details": [
+            {
+              "nodeid": "tests/test_retrieve.py::test_retrieve_for_gap_real_twinkle_smoke",
+              "reason": "-m 'not integration'"
+            }
+          ],
+          "expected": "0 selected / 1 deselected by -m not integration",
+          "ok": true
+        },
+        "with_m_integration": {
+          "summary": "\u001b[32m\u001b[32m1 test collected\u001b[0m\u001b[32m in 0.01s\u001b[0m\u001b[0m",
+          "selected": [
+            "tests/test_retrieve.py::test_retrieve_for_gap_real_twinkle_smoke"
+          ],
+          "expected": "1 selected",
+          "ok": true
+        },
+        "with_no_markexpr": {
+          "summary": "\u001b[32m\u001b[32m1 test collected\u001b[0m\u001b[32m in 0.01s\u001b[0m\u001b[0m",
+          "selected": [
+            "tests/test_retrieve.py::test_retrieve_for_gap_real_twinkle_smoke"
+          ],
+          "expected": "1 selected (proves node exists; only markexpr deselects it)",
+          "ok": true
+        }
+      }
+    },
+    {
+      "nodeid": "tests/test_twinkle.py::test_search_real_twinkle_hub",
+      "collection_filter_reason": {
+        "exact": "deselected by mark expression -m 'not integration' from pyproject.toml [tool.pytest.ini_options].addopts",
+        "addopts_source": "pyproject.toml:32",
+        "addopts_value": "-p no:asyncio --strict-markers -m 'not integration' -W error::DeprecationWarning -W error::PendingDeprecationWarning",
+        "effective_markexpr": "not integration",
+        "hook_reported_reason": "-m 'not integration'",
+        "marker_on_test": "integration",
+        "marker_definition": "integration: 需要真實 grok(:8318)的整合測試;平時用 -m 'not integration' 跳過",
+        "marker_source_line": {
+          "file": "tests/test_twinkle.py",
+          "line": 141,
+          "decorator": "@pytest.mark.integration"
+        }
+      },
+      "not_the_collection_reason": [
+        "skipif / runtime skip is NOT applied at collection deselect time",
+        "env vars (TWINKLE_HUB_TOKEN, GOV_AI_ENABLE_TWINKLE_MCP) do not deselect at collection",
+        "CLI --deselect was not used",
+        "CLI -k was not used"
+      ],
+      "reverse_filter_verification": {
+        "nodeid": "tests/test_twinkle.py::test_search_real_twinkle_hub",
+        "with_default_filter": {
+          "summary": "\u001b[33m\u001b[33mno tests collected (1 deselected)\u001b[0m\u001b[33m in 0.01s\u001b[0m\u001b[0m",
+          "selected": [],
+          "deselected_details": [
+            {
+              "nodeid": "tests/test_twinkle.py::test_search_real_twinkle_hub",
+              "reason": "-m 'not integration'"
+            }
+          ],
+          "expected": "0 selected / 1 deselected by -m not integration",
+          "ok": true
+        },
+        "with_m_integration": {
+          "summary": "\u001b[32m\u001b[32m1 test collected\u001b[0m\u001b[32m in 0.01s\u001b[0m\u001b[0m",
+          "selected": [
+            "tests/test_twinkle.py::test_search_real_twinkle_hub"
+          ],
+          "expected": "1 selected",
+          "ok": true
+        },
+        "with_no_markexpr": {
+          "summary": "\u001b[32m\u001b[32m1 test collected\u001b[0m\u001b[32m in 0.01s\u001b[0m\u001b[0m",
+          "selected": [
+            "tests/test_twinkle.py::test_search_real_twinkle_hub"
+          ],
+          "expected": "1 selected (proves node exists; only markexpr deselects it)",
+          "ok": true
+        }
+      }
+    }
+  ],
+  "commands_run": {
+    "markers": {
+      "returncode": 0,
+      "cmd": [
+        "D:/Users/Administrator/Desktop/筆記補齊/.venv/Scripts/python.exe",
+        "-X",
+        "utf8",
+        "-m",
+        "pytest",
+        "--markers",
+        "-q"
+      ],
+      "bytes": 2516
+    },
+    "trace-config-only": {
+      "returncode": 0,
+      "cmd": [
+        "D:/Users/Administrator/Desktop/筆記補齊/.venv/Scripts/python.exe",
+        "-X",
+        "utf8",
+        "-m",
+        "pytest",
+        "--trace-config",
+        "--collect-only",
+        "-q"
+      ],
+      "bytes": 16459
+    },
+    "collect-default": {
+      "returncode": 0,
+      "cmd": [
+        "D:/Users/Administrator/Desktop/筆記補齊/.venv/Scripts/python.exe",
+        "-X",
+        "utf8",
+        "-m",
+        "pytest",
+        "--collect-only",
+        "-q",
+        "--deselected-details"
+      ],
+      "bytes": 10963
+    },
+    "collect-full-no-markexpr": {
+      "returncode": 0,
+      "cmd": [
+        "D:/Users/Administrator/Desktop/筆記補齊/.venv/Scripts/python.exe",
+        "-X",
+        "utf8",
+        "-m",
+        "pytest",
+        "--collect-only",
+        "-q",
+        "-o",
+        "addopts=-p no:asyncio --strict-markers -W error::DeprecationWarning -W error::PendingDeprecationWarning",
+        "--deselected-details"
+      ],
+      "bytes": 10504
+    },
+    "collect-m-integration": {
+      "returncode": 0,
+      "cmd": [
+        "D:/Users/Administrator/Desktop/筆記補齊/.venv/Scripts/python.exe",
+        "-X",
+        "utf8",
+        "-m",
+        "pytest",
+        "--collect-only",
+        "-q",
+        "-m",
+        "integration",
+        "--deselected-details"
+      ],
+      "bytes": 16425
+    },
+    "collect-m-not-integration-explicit": {
+      "returncode": 0,
+      "cmd": [
+        "D:/Users/Administrator/Desktop/筆記補齊/.venv/Scripts/python.exe",
+        "-X",
+        "utf8",
+        "-m",
+        "pytest",
+        "--collect-only",
+        "-q",
+        "-m",
+        "not integration",
+        "--deselected-details"
+      ],
+      "bytes": 10963
+    }
+  }
+}

@@ -1,0 +1,4 @@
+
+============================= deselected details ==============================
+tests/test_gap.py::test_detect_gaps_real_grok | reason: deselected by -m 'not integration'
+[33m[33mno tests collected (1 deselected)[0m[33m in 0.01s[0m[0m

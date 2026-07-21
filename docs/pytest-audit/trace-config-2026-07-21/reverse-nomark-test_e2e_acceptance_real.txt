@@ -1,0 +1,3 @@
+tests/test_e2e_acceptance.py::test_e2e_acceptance_real
+
+[32m[32m1 test collected[0m[32m in 0.01s[0m[0m
