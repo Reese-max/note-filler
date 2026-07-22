@@ -1,0 +1,45 @@
+============================= test session starts =============================
+platform win32 -- Python 3.11.9, pytest-9.1.1, pluggy-1.6.0 -- D:\Users\Administrator\Desktop\蝑?鋆?\.venv\Scripts\python.exe
+cachedir: .pytest_cache
+rootdir: D:\Users\Administrator\Desktop\autodev-ng\data\note-filler\worktrees\ce174d2b
+configfile: pyproject.toml
+plugins: anyio-4.14.2
+collecting ... collected 35 items
+
+tests/test_domain.py::test_detect_domain_law PASSED                      [  2%]
+tests/test_excluded_failing_controls.py::test_control_01_domain_legal_label_contract PASSED [  5%]
+tests/test_e2e_acceptance.py::test_e2e_structural_invariants PASSED      [  8%]
+tests/test_e2e_acceptance.py::test_e2e_offline_supplement_quality_boundary PASSED [ 11%]
+tests/test_e2e_acceptance.py::test_e2e_minimal_quality_gates_offline_regression PASSED [ 14%]
+tests/test_pipeline.py::test_run_pipeline_invariant PASSED               [ 17%]
+tests/test_pipeline.py::test_run_pipeline_malformed_gap_output_falls_back_to_pending PASSED [ 20%]
+tests/test_pipeline.py::test_run_pipeline_law_domain_runs_citation_check PASSED [ 22%]
+tests/test_correction.py::test_retrieved_five_but_only_two_cited PASSED  [ 25%]
+tests/test_excluded_failing_controls.py::test_control_02_e2e_offline_quality_gates PASSED [ 28%]
+tests/test_gap.py::test_detect_gaps_keeps_only_partial_and_missing PASSED [ 31%]
+tests/test_excluded_failing_controls.py::test_control_03_gap_uncovered_question_must_surface PASSED [ 34%]
+tests/test_llm.py::test_grokclient_builds_request_body PASSED            [ 37%]
+tests/test_excluded_failing_controls.py::test_control_04_grok_client_parse_and_endpoint_contract PASSED [ 40%]
+tests/test_excluded_failing_controls.py::test_control_05_pipeline_c6_pending_when_no_sources PASSED [ 42%]
+tests/test_questions.py::test_generate_questions_splits_multiline_string PASSED [ 45%]
+tests/test_questions.py::test_generate_questions_strips_and_drops_blank_lines PASSED [ 48%]
+tests/test_questions.py::test_generate_questions_strips_markdown_fence PASSED [ 51%]
+tests/test_excluded_failing_controls.py::test_control_06_questions_clean_list_contract PASSED [ 54%]
+tests/test_retrieve.py::test_retrieve_for_gap_law_domain_puts_level_A_before_B PASSED [ 57%]
+tests/test_law_search.py::test_search_law_sources_returns_level_A_law_articles PASSED [ 60%]
+tests/test_twinkle.py::test_search_parses_source_with_full_content PASSED [ 62%]
+tests/test_twinkle.py::test_search_reuses_mcp_session PASSED             [ 65%]
+tests/test_twinkle.py::test_search_transport_failure_returns_empty PASSED [ 68%]
+tests/test_exclusion_correctness_blind_spot.py::test_deselected_retrieve_smoke_vacuous_pass_on_empty_is_blind_spot PASSED [ 71%]
+tests/test_exclusion_correctness_blind_spot.py::test_law_domain_retrieve_must_yield_level_a_not_vacuous_empty PASSED [ 74%]
+tests/test_excluded_failing_controls.py::test_control_07_retrieve_smoke_vacuous_empty_is_blind_spot PASSED [ 77%]
+tests/test_excluded_failing_controls.py::test_control_07b_retrieve_law_level_a_not_vacuous PASSED [ 80%]
+tests/test_twinkle.py::test_search_mcp_protocol_error_returns_empty PASSED [ 82%]
+tests/test_excluded_failing_controls.py::test_control_08_twinkle_parsed_source_contract PASSED [ 85%]
+tests/test_domain.py::test_detect_domain_admin PASSED                    [ 88%]
+tests/test_domain.py::test_detect_domain_exam PASSED                     [ 91%]
+tests/test_domain.py::test_detect_domain_noise_falls_back_to_other PASSED [ 94%]
+tests/test_write.py::test_used_source_ids_from_markers PASSED            [ 97%]
+tests/test_write.py::test_pending_evidence_when_insufficient PASSED      [100%]
+
+============================= 35 passed in 0.52s ==============================

@@ -1,0 +1,281 @@
+{
+  "schema": "note-filler.deselected-11-full-flow-evidence/v1",
+  "generated_at": "2026-07-23T03:09:28+08:00",
+  "worktree": "D:\\Users\\Administrator\\Desktop\\autodev-ng\\data\\note-filler\\worktrees\\ce174d2b",
+  "python": "D:/Users/Administrator/Desktop/筆記補齊/.venv/Scripts/python.exe",
+  "preflight": [
+    "GROK_PROXY status=200",
+    "TWINKLE_HUB_TOKEN=set",
+    "LAW_DB=present"
+  ],
+  "counts": {
+    "collected_total": 163,
+    "default_selected": 152,
+    "deselected": 11,
+    "allowlist": 11,
+    "unique_substitutes": 35,
+    "substitutes_passed": 35,
+    "integration_first_passed": 10,
+    "integration_first_failed": 1,
+    "all_eleven_final_ok": true
+  },
+  "exits": {
+    "C1_collect": 0,
+    "C2_ci_gate": 0,
+    "C3_substitutes": 0,
+    "C4_integration_first": 1,
+    "C4b_e2e_retry": 0,
+    "C5_default_suite": 0,
+    "C6_guards": 0
+  },
+  "default_suite_summary": "152 passed, 11 deselected in 23.90s",
+  "regression_protection": {
+    "status": "unaffected",
+    "rationale": [
+      "預設 CI 路徑 152 passed / 11 deselected，exit=0",
+      "11 個 deselected 均在 allowlist 且 decision=acceptable_unexecuted",
+      "排除原因全部為 authorized: deselected by -m 'not integration'",
+      "35 個唯一替代測試全數 PASSED（exit=0）",
+      "CI gate validate_deselection_ci.py PASS",
+      "deselect guard / requirements coverage / ci gate acceptance 11 passed",
+      "替代 CI 路徑 integration：10/11 首次 PASSED；e2e 單獨重跑 PASSED（外部 grok 瞬時空 choices）"
+    ],
+    "quality_gates_not_weakened": true
+  },
+  "per_deselected_node": [
+    {
+      "test_id": "tests/test_domain.py::test_detect_domain_real_grok_representative_domains",
+      "collection_reason": "deselected by -m 'not integration'",
+      "allowlist_decision": "acceptable_unexecuted",
+      "integration_first_run": "PASSED",
+      "integration_final": "PASSED",
+      "substitute_all_passed": true,
+      "substitute_count": 4,
+      "substitute_outcomes": {
+        "tests/test_domain.py::test_detect_domain_law": "PASSED",
+        "tests/test_domain.py::test_detect_domain_admin": "PASSED",
+        "tests/test_domain.py::test_detect_domain_exam": "PASSED",
+        "tests/test_domain.py::test_detect_domain_noise_falls_back_to_other": "PASSED"
+      },
+      "verdict": "executed_and_passed",
+      "notes": [
+        "allowlist decision=acceptable_unexecuted; collection_reason=deselected by -m 'not integration'"
+      ]
+    },
+    {
+      "test_id": "tests/test_domain.py::test_detect_domain_real_grok_returns_law",
+      "collection_reason": "deselected by -m 'not integration'",
+      "allowlist_decision": "acceptable_unexecuted",
+      "integration_first_run": "PASSED",
+      "integration_final": "PASSED",
+      "substitute_all_passed": true,
+      "substitute_count": 2,
+      "substitute_outcomes": {
+        "tests/test_domain.py::test_detect_domain_law": "PASSED",
+        "tests/test_excluded_failing_controls.py::test_control_01_domain_legal_label_contract": "PASSED"
+      },
+      "verdict": "executed_and_passed",
+      "notes": [
+        "allowlist decision=acceptable_unexecuted; collection_reason=deselected by -m 'not integration'"
+      ]
+    },
+    {
+      "test_id": "tests/test_e2e_acceptance.py::test_e2e_acceptance_real",
+      "collection_reason": "deselected by -m 'not integration'",
+      "allowlist_decision": "acceptable_unexecuted",
+      "integration_first_run": "FAILED",
+      "integration_final": "PASSED_ON_RETRY",
+      "substitute_all_passed": true,
+      "substitute_count": 8,
+      "substitute_outcomes": {
+        "tests/test_e2e_acceptance.py::test_e2e_structural_invariants": "PASSED",
+        "tests/test_e2e_acceptance.py::test_e2e_offline_supplement_quality_boundary": "PASSED",
+        "tests/test_e2e_acceptance.py::test_e2e_minimal_quality_gates_offline_regression": "PASSED",
+        "tests/test_pipeline.py::test_run_pipeline_invariant": "PASSED",
+        "tests/test_pipeline.py::test_run_pipeline_malformed_gap_output_falls_back_to_pending": "PASSED",
+        "tests/test_pipeline.py::test_run_pipeline_law_domain_runs_citation_check": "PASSED",
+        "tests/test_correction.py::test_retrieved_five_but_only_two_cited": "PASSED",
+        "tests/test_excluded_failing_controls.py::test_control_02_e2e_offline_quality_gates": "PASSED"
+      },
+      "verdict": "executed_and_passed",
+      "notes": [
+        "首次 integration 全跑因 grok 回傳空 choices 觸發 IndexError；單獨重跑 PASSED",
+        "allowlist decision=acceptable_unexecuted; collection_reason=deselected by -m 'not integration'"
+      ]
+    },
+    {
+      "test_id": "tests/test_gap.py::test_detect_gaps_real_grok",
+      "collection_reason": "deselected by -m 'not integration'",
+      "allowlist_decision": "acceptable_unexecuted",
+      "integration_first_run": "PASSED",
+      "integration_final": "PASSED",
+      "substitute_all_passed": true,
+      "substitute_count": 2,
+      "substitute_outcomes": {
+        "tests/test_gap.py::test_detect_gaps_keeps_only_partial_and_missing": "PASSED",
+        "tests/test_excluded_failing_controls.py::test_control_03_gap_uncovered_question_must_surface": "PASSED"
+      },
+      "verdict": "executed_and_passed",
+      "notes": [
+        "allowlist decision=acceptable_unexecuted; collection_reason=deselected by -m 'not integration'"
+      ]
+    },
+    {
+      "test_id": "tests/test_gap.py::test_detect_gaps_real_grok_semantic_matrix",
+      "collection_reason": "deselected by -m 'not integration'",
+      "allowlist_decision": "acceptable_unexecuted",
+      "integration_first_run": "PASSED",
+      "integration_final": "PASSED",
+      "substitute_all_passed": true,
+      "substitute_count": 2,
+      "substitute_outcomes": {
+        "tests/test_gap.py::test_detect_gaps_keeps_only_partial_and_missing": "PASSED",
+        "tests/test_excluded_failing_controls.py::test_control_03_gap_uncovered_question_must_surface": "PASSED"
+      },
+      "verdict": "executed_and_passed",
+      "notes": [
+        "allowlist decision=acceptable_unexecuted; collection_reason=deselected by -m 'not integration'"
+      ]
+    },
+    {
+      "test_id": "tests/test_llm.py::test_grok_pong_integration",
+      "collection_reason": "deselected by -m 'not integration'",
+      "allowlist_decision": "acceptable_unexecuted",
+      "integration_first_run": "PASSED",
+      "integration_final": "PASSED",
+      "substitute_all_passed": true,
+      "substitute_count": 2,
+      "substitute_outcomes": {
+        "tests/test_llm.py::test_grokclient_builds_request_body": "PASSED",
+        "tests/test_excluded_failing_controls.py::test_control_04_grok_client_parse_and_endpoint_contract": "PASSED"
+      },
+      "verdict": "executed_and_passed",
+      "notes": [
+        "allowlist decision=acceptable_unexecuted; collection_reason=deselected by -m 'not integration'"
+      ]
+    },
+    {
+      "test_id": "tests/test_pipeline.py::test_run_pipeline_real_grok",
+      "collection_reason": "deselected by -m 'not integration'",
+      "allowlist_decision": "acceptable_unexecuted",
+      "integration_first_run": "PASSED",
+      "integration_final": "PASSED",
+      "substitute_all_passed": true,
+      "substitute_count": 5,
+      "substitute_outcomes": {
+        "tests/test_pipeline.py::test_run_pipeline_invariant": "PASSED",
+        "tests/test_pipeline.py::test_run_pipeline_malformed_gap_output_falls_back_to_pending": "PASSED",
+        "tests/test_pipeline.py::test_run_pipeline_law_domain_runs_citation_check": "PASSED",
+        "tests/test_correction.py::test_retrieved_five_but_only_two_cited": "PASSED",
+        "tests/test_excluded_failing_controls.py::test_control_05_pipeline_c6_pending_when_no_sources": "PASSED"
+      },
+      "verdict": "executed_and_passed",
+      "notes": [
+        "allowlist decision=acceptable_unexecuted; collection_reason=deselected by -m 'not integration'"
+      ]
+    },
+    {
+      "test_id": "tests/test_questions.py::test_generate_questions_real_grok",
+      "collection_reason": "deselected by -m 'not integration'",
+      "allowlist_decision": "acceptable_unexecuted",
+      "integration_first_run": "PASSED",
+      "integration_final": "PASSED",
+      "substitute_all_passed": true,
+      "substitute_count": 4,
+      "substitute_outcomes": {
+        "tests/test_questions.py::test_generate_questions_splits_multiline_string": "PASSED",
+        "tests/test_questions.py::test_generate_questions_strips_and_drops_blank_lines": "PASSED",
+        "tests/test_questions.py::test_generate_questions_strips_markdown_fence": "PASSED",
+        "tests/test_excluded_failing_controls.py::test_control_06_questions_clean_list_contract": "PASSED"
+      },
+      "verdict": "executed_and_passed",
+      "notes": [
+        "allowlist decision=acceptable_unexecuted; collection_reason=deselected by -m 'not integration'"
+      ]
+    },
+    {
+      "test_id": "tests/test_retrieve.py::test_retrieve_for_gap_real_twinkle_smoke",
+      "collection_reason": "deselected by -m 'not integration'",
+      "allowlist_decision": "acceptable_unexecuted",
+      "integration_first_run": "PASSED",
+      "integration_final": "PASSED",
+      "substitute_all_passed": true,
+      "substitute_count": 9,
+      "substitute_outcomes": {
+        "tests/test_retrieve.py::test_retrieve_for_gap_law_domain_puts_level_A_before_B": "PASSED",
+        "tests/test_law_search.py::test_search_law_sources_returns_level_A_law_articles": "PASSED",
+        "tests/test_twinkle.py::test_search_parses_source_with_full_content": "PASSED",
+        "tests/test_twinkle.py::test_search_reuses_mcp_session": "PASSED",
+        "tests/test_twinkle.py::test_search_transport_failure_returns_empty": "PASSED",
+        "tests/test_exclusion_correctness_blind_spot.py::test_deselected_retrieve_smoke_vacuous_pass_on_empty_is_blind_spot": "PASSED",
+        "tests/test_exclusion_correctness_blind_spot.py::test_law_domain_retrieve_must_yield_level_a_not_vacuous_empty": "PASSED",
+        "tests/test_excluded_failing_controls.py::test_control_07_retrieve_smoke_vacuous_empty_is_blind_spot": "PASSED",
+        "tests/test_excluded_failing_controls.py::test_control_07b_retrieve_law_level_a_not_vacuous": "PASSED"
+      },
+      "verdict": "executed_and_passed",
+      "notes": [
+        "allowlist decision=acceptable_unexecuted; collection_reason=deselected by -m 'not integration'"
+      ]
+    },
+    {
+      "test_id": "tests/test_twinkle.py::test_search_real_twinkle_hub",
+      "collection_reason": "deselected by -m 'not integration'",
+      "allowlist_decision": "acceptable_unexecuted",
+      "integration_first_run": "PASSED",
+      "integration_final": "PASSED",
+      "substitute_all_passed": true,
+      "substitute_count": 5,
+      "substitute_outcomes": {
+        "tests/test_twinkle.py::test_search_parses_source_with_full_content": "PASSED",
+        "tests/test_twinkle.py::test_search_reuses_mcp_session": "PASSED",
+        "tests/test_twinkle.py::test_search_transport_failure_returns_empty": "PASSED",
+        "tests/test_twinkle.py::test_search_mcp_protocol_error_returns_empty": "PASSED",
+        "tests/test_excluded_failing_controls.py::test_control_08_twinkle_parsed_source_contract": "PASSED"
+      },
+      "verdict": "executed_and_passed",
+      "notes": [
+        "allowlist decision=acceptable_unexecuted; collection_reason=deselected by -m 'not integration'"
+      ]
+    },
+    {
+      "test_id": "tests/test_write.py::test_write_supplement_real_grok_grounded_output",
+      "collection_reason": "deselected by -m 'not integration'",
+      "allowlist_decision": "acceptable_unexecuted",
+      "integration_first_run": "PASSED",
+      "integration_final": "PASSED",
+      "substitute_all_passed": true,
+      "substitute_count": 2,
+      "substitute_outcomes": {
+        "tests/test_write.py::test_used_source_ids_from_markers": "PASSED",
+        "tests/test_write.py::test_pending_evidence_when_insufficient": "PASSED"
+      },
+      "verdict": "executed_and_passed",
+      "notes": [
+        "allowlist decision=acceptable_unexecuted; collection_reason=deselected by -m 'not integration'"
+      ]
+    }
+  ],
+  "evidence_files": [
+    "docs/pytest-audit/full-flow-2026-07-23/preflight.txt",
+    "docs/pytest-audit/full-flow-2026-07-23/C1-collect-deselected-details.txt",
+    "docs/pytest-audit/full-flow-2026-07-23/C2-validate-deselection-ci.txt",
+    "docs/pytest-audit/full-flow-2026-07-23/C2-deselected-ci-gate.md",
+    "docs/pytest-audit/full-flow-2026-07-23/C3-substitute-runs.txt",
+    "docs/pytest-audit/full-flow-2026-07-23/substitute-nodeids.txt",
+    "docs/pytest-audit/full-flow-2026-07-23/C4-integration-runs.txt",
+    "docs/pytest-audit/full-flow-2026-07-23/C4b-e2e-retry.txt",
+    "docs/pytest-audit/full-flow-2026-07-23/C5-default-suite.txt",
+    "docs/pytest-audit/full-flow-2026-07-23/C6-guard-tests.txt",
+    "docs/deselected-11-full-flow-execution-2026-07-23.md",
+    "docs/pytest-audit/full-flow-2026-07-23/machine-index.json"
+  ],
+  "commands": {
+    "C1": "& 'D:/Users/Administrator/Desktop/筆記補齊/.venv/Scripts/python.exe' -X utf8 -m pytest --collect-only -q --deselected-details --color=no",
+    "C2": "& 'D:/Users/Administrator/Desktop/筆記補齊/.venv/Scripts/python.exe' -X utf8 scripts/validate_deselection_ci.py --report docs/pytest-audit/full-flow-2026-07-23/C2-deselected-ci-gate.md",
+    "C3": "pytest <35 unique substitute nodeids from allowlist> -vv",
+    "C4": "& 'D:/Users/Administrator/Desktop/筆記補齊/.venv/Scripts/python.exe' -X utf8 -m pytest tests/ -m integration -v --tb=short --color=no",
+    "C4b": "& 'D:/Users/Administrator/Desktop/筆記補齊/.venv/Scripts/python.exe' -X utf8 -m pytest tests/test_e2e_acceptance.py::test_e2e_acceptance_real -m integration -vv",
+    "C5": "& 'D:/Users/Administrator/Desktop/筆記補齊/.venv/Scripts/python.exe' -X utf8 -m pytest -q --color=no",
+    "C6": "& 'D:/Users/Administrator/Desktop/筆記補齊/.venv/Scripts/python.exe' -X utf8 -m pytest tests/test_deselection_guard.py tests/test_deselected_ci_gate_acceptance.py tests/test_requirements_test_coverage.py -q"
+  }
+}

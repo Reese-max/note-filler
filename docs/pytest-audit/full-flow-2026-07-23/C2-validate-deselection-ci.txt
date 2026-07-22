@@ -1,0 +1,14 @@
+[gate] total=163 selected=152 deselected=11
+[gate] deselected list:
+  01. tests/test_domain.py::test_detect_domain_real_grok_representative_domains | reason=deselected by -m 'not integration' | security_risk=?芰 | decision=acceptable_unexecuted
+  02. tests/test_domain.py::test_detect_domain_real_grok_returns_law | reason=deselected by -m 'not integration' | security_risk=銝?| decision=acceptable_unexecuted
+  03. tests/test_e2e_acceptance.py::test_e2e_acceptance_real | reason=deselected by -m 'not integration' | security_risk=擃?| decision=acceptable_unexecuted
+  04. tests/test_gap.py::test_detect_gaps_real_grok | reason=deselected by -m 'not integration' | security_risk=擃?| decision=acceptable_unexecuted
+  05. tests/test_gap.py::test_detect_gaps_real_grok_semantic_matrix | reason=deselected by -m 'not integration' | security_risk=?芰 | decision=acceptable_unexecuted
+  06. tests/test_llm.py::test_grok_pong_integration | reason=deselected by -m 'not integration' | security_risk=擃?| decision=acceptable_unexecuted
+  07. tests/test_pipeline.py::test_run_pipeline_real_grok | reason=deselected by -m 'not integration' | security_risk=擃?| decision=acceptable_unexecuted
+  08. tests/test_questions.py::test_generate_questions_real_grok | reason=deselected by -m 'not integration' | security_risk=銝?| decision=acceptable_unexecuted
+  09. tests/test_retrieve.py::test_retrieve_for_gap_real_twinkle_smoke | reason=deselected by -m 'not integration' | security_risk=擃?| decision=acceptable_unexecuted
+  10. tests/test_twinkle.py::test_search_real_twinkle_hub | reason=deselected by -m 'not integration' | security_risk=擃?| decision=acceptable_unexecuted
+  11. tests/test_write.py::test_write_supplement_real_grok_grounded_output | reason=deselected by -m 'not integration' | security_risk=?芰 | decision=acceptable_unexecuted
+[gate] PASS: deselected policy ?賊???
