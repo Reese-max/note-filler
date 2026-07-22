@@ -7,8 +7,8 @@
     "exclusion_reason": "預設 -m 'not integration' 在 collection 階段排除；需要真實 grok proxy (127.0.0.1:8318)，proxy 不可達時由 skipif 略過",
     "exclusion_evidence": [
       {"source": "pyproject.toml:32", "anchor": "-m 'not integration'", "claim": "預設集合排除 integration marker"},
-      {"source": "tests/test_domain.py:50", "anchor": "@pytest.mark.integration", "claim": "目標測試標記為 integration"},
-      {"source": "tests/test_domain.py:51", "anchor": "@pytest.mark.skipif", "claim": "grok proxy 不可達時 runtime skip"}
+      {"source": "tests/test_domain.py:62", "anchor": "@pytest.mark.integration", "claim": "目標測試標記為 integration"},
+      {"source": "tests/test_domain.py:63", "anchor": "@pytest.mark.skipif", "claim": "grok proxy 不可達時 runtime skip"}
     ],
     "covered_function": "note_filler.domain.detect_domain — LLM 領域偵測 (law/admin/exam/other)",
     "substitute_tests": [
@@ -97,8 +97,8 @@
     "exclusion_reason": "預設 -m 'not integration' 在 collection 階段排除；需要真實 grok proxy (127.0.0.1:8318)，proxy 不可達時由 skipif 略過",
     "exclusion_evidence": [
       {"source": "pyproject.toml:32", "anchor": "-m 'not integration'", "claim": "預設集合排除 integration marker"},
-      {"source": "tests/test_gap.py:71", "anchor": "@pytest.mark.integration", "claim": "目標測試標記為 integration"},
-      {"source": "tests/test_gap.py:72", "anchor": "@pytest.mark.skipif", "claim": "grok proxy 不可達時 runtime skip"}
+      {"source": "tests/test_gap.py:83", "anchor": "@pytest.mark.integration", "claim": "目標測試標記為 integration"},
+      {"source": "tests/test_gap.py:84", "anchor": "@pytest.mark.skipif", "claim": "grok proxy 不可達時 runtime skip"}
     ],
     "covered_function": "note_filler.gap.detect_gaps — LLM 缺口偵測 (partial/missing 過濾)",
     "substitute_tests": [
@@ -135,8 +135,8 @@
     "exclusion_reason": "預設 -m 'not integration' 在 collection 階段排除；需要真實 grok proxy (127.0.0.1:8318)，proxy 不可達時由 skipif 略過",
     "exclusion_evidence": [
       {"source": "pyproject.toml:32", "anchor": "-m 'not integration'", "claim": "預設集合排除 integration marker"},
-      {"source": "tests/test_llm.py:66", "anchor": "@pytest.mark.integration", "claim": "目標測試標記為 integration"},
-      {"source": "tests/test_llm.py:67", "anchor": "@pytest.mark.skipif", "claim": "grok proxy 不可達時 runtime skip"}
+      {"source": "tests/test_llm.py:95", "anchor": "@pytest.mark.integration", "claim": "目標測試標記為 integration"},
+      {"source": "tests/test_llm.py:96", "anchor": "@pytest.mark.skipif", "claim": "grok proxy 不可達時 runtime skip"}
     ],
     "covered_function": "note_filler.llm.GrokClient.complete — 真實 HTTP 連線 + 回應解析",
     "substitute_tests": [
@@ -144,7 +144,7 @@
       "tests/test_excluded_failing_controls.py::test_control_04_grok_client_parse_and_endpoint_contract"
     ],
     "substitute_evidence": [
-      {"test_id": "tests/test_llm.py::test_grokclient_builds_request_body", "source": "tests/test_llm.py:53", "anchor": "assert out == \"OK\"", "claim": "monkeypatch 驗證 request body、Bearer、POST endpoint、timeout 與 response parse"},
+      {"test_id": "tests/test_llm.py::test_grokclient_builds_request_body", "source": "tests/test_llm.py:54", "anchor": "assert out == \"OK\"", "claim": "monkeypatch 驗證 request body、Bearer、POST endpoint、timeout 與 response parse"},
       {"test_id": "tests/test_excluded_failing_controls.py::test_control_04_grok_client_parse_and_endpoint_contract", "source": "tests/test_excluded_failing_controls.py:211", "anchor": "assert \"PONG\" in out.upper()", "claim": "failing-first 對照：PONG 契約 + endpoint/model 鎖定"}
     ],
     "coverage_gap": "真實 TCP 連線到 proxy 的連通性、proxy 回應格式解析",
@@ -217,8 +217,8 @@
     "exclusion_reason": "預設 -m 'not integration' 在 collection 階段排除；需要真實 grok proxy (127.0.0.1:8318)，proxy 不可達時由 skipif 略過",
     "exclusion_evidence": [
       {"source": "pyproject.toml:32", "anchor": "-m 'not integration'", "claim": "預設集合排除 integration marker"},
-      {"source": "tests/test_questions.py:62", "anchor": "@pytest.mark.integration", "claim": "目標測試標記為 integration"},
-      {"source": "tests/test_questions.py:63", "anchor": "@pytest.mark.skipif", "claim": "grok proxy 不可達時 runtime skip"}
+      {"source": "tests/test_questions.py:74", "anchor": "@pytest.mark.integration", "claim": "目標測試標記為 integration"},
+      {"source": "tests/test_questions.py:75", "anchor": "@pytest.mark.skipif", "claim": "grok proxy 不可達時 runtime skip"}
     ],
     "covered_function": "note_filler.questions.generate_questions — 真模型問題生成格式與品質",
     "substitute_tests": [

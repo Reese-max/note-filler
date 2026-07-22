@@ -1,5 +1,6 @@
 import json
 import socket
+import urllib.error
 import urllib.request
 
 import pytest
@@ -61,6 +62,34 @@ def test_grokclient_builds_request_body(monkeypatch):
         "temperature": 0.0,
     }
     assert captured["timeout"] == 42
+
+
+def test_grokclient_urlopen_error(monkeypatch):
+    def fake_error(*args, **kw):
+        raise urllib.error.URLError("connection refused")
+    monkeypatch.setattr(urllib.request, "urlopen", fake_error)
+    with pytest.raises(urllib.error.URLError, match="connection refused"):
+        GrokClient().complete([{"role": "user", "content": "hi"}])
+
+
+def test_grokclient_json_decode_error(monkeypatch):
+    class FakeResp:
+        def __enter__(self): return self
+        def __exit__(self, *exc): return False
+        def read(self): return b"not-json-at-all"
+    monkeypatch.setattr(urllib.request, "urlopen", lambda *a, **kw: FakeResp())
+    with pytest.raises(json.JSONDecodeError):
+        GrokClient().complete([{"role": "user", "content": "hi"}])
+
+
+def test_grokclient_malformed_response_error(monkeypatch):
+    class FakeResp:
+        def __enter__(self): return self
+        def __exit__(self, *exc): return False
+        def read(self): return json.dumps({"unexpected": "shape"}).encode("utf-8")
+    monkeypatch.setattr(urllib.request, "urlopen", lambda *a, **kw: FakeResp())
+    with pytest.raises((KeyError, IndexError)):
+        GrokClient().complete([{"role": "user", "content": "hi"}])
 
 
 @pytest.mark.integration

@@ -68,6 +68,18 @@ def test_detect_gaps_empty_questions_short_circuits():
     assert detect_gaps([], "筆記", llm) == []
 
 
+def test_detect_gaps_grok_error_propagates():
+    from note_filler.llm import GrokClient
+
+    def fake_complete(*args, **kw):
+        raise RuntimeError("grok transport failure")
+    monkeypatch = pytest.MonkeyPatch()
+    monkeypatch.setattr(GrokClient, "complete", fake_complete)
+    with pytest.raises(RuntimeError, match="grok transport failure"):
+        detect_gaps(["一個問題"], "筆記文字", GrokClient())
+    monkeypatch.undo()
+
+
 @pytest.mark.integration
 @pytest.mark.skipif(not _grok_reachable(), reason="grok proxy(127.0.0.1:8318)未上線,條件式略過")
 def test_detect_gaps_real_grok():
