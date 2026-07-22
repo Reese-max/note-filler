@@ -1,0 +1,78 @@
+{
+  "version": "2026-07-22",
+  "description": "8 個 deselected node id → fixture/mark/收集階段原因 → 是否確定為預期排除",
+  "generated_by": "pytest -vv --setup-show / pytest --collect-only -vv --deselected-details",
+  "nodeids": [
+    {
+      "nodeid": "tests/test_domain.py::test_detect_domain_real_grok_returns_law",
+      "fixtures": ["event_loop_policy"],
+      "marks": ["@pytest.mark.integration", "@pytest.mark.skipif(not _grok_reachable())"],
+      "collection_reason": "deselected by -m 'not integration'",
+      "is_expected_exclusion": true,
+      "explanation": "刻意分組：帶 @pytest.mark.integration 被 pyproject.toml addopts -m 'not integration' 排除"
+    },
+    {
+      "nodeid": "tests/test_e2e_acceptance.py::test_e2e_acceptance_real",
+      "fixtures": ["event_loop_policy"],
+      "marks": ["@pytest.mark.integration"],
+      "collection_reason": "deselected by -m 'not integration'",
+      "is_expected_exclusion": true,
+      "explanation": "刻意分組：帶 @pytest.mark.integration 被 pyproject.toml addopts -m 'not integration' 排除；另有 runtime guard (LAW_DB.exists(), _grok_up(), _twinkle_ready())"
+    },
+    {
+      "nodeid": "tests/test_gap.py::test_detect_gaps_real_grok",
+      "fixtures": ["event_loop_policy"],
+      "marks": ["@pytest.mark.integration", "@pytest.mark.skipif(not _grok_reachable())"],
+      "collection_reason": "deselected by -m 'not integration'",
+      "is_expected_exclusion": true,
+      "explanation": "刻意分組：帶 @pytest.mark.integration 被 pyproject.toml addopts -m 'not integration' 排除"
+    },
+    {
+      "nodeid": "tests/test_llm.py::test_grok_pong_integration",
+      "fixtures": ["event_loop_policy"],
+      "marks": ["@pytest.mark.integration", "@pytest.mark.skipif(not _grok_reachable())"],
+      "collection_reason": "deselected by -m 'not integration'",
+      "is_expected_exclusion": true,
+      "explanation": "刻意分組：帶 @pytest.mark.integration 被 pyproject.toml addopts -m 'not integration' 排除"
+    },
+    {
+      "nodeid": "tests/test_pipeline.py::test_run_pipeline_real_grok",
+      "fixtures": ["event_loop_policy", "tmp_path_factory", "tmp_path", "note_path"],
+      "marks": ["@pytest.mark.integration", "@pytest.mark.skipif(not _grok_reachable())"],
+      "collection_reason": "deselected by -m 'not integration'",
+      "is_expected_exclusion": true,
+      "explanation": "刻意分組：帶 @pytest.mark.integration 被 pyproject.toml addopts -m 'not integration' 排除；使用 note_path fixture 建立臨時 .docx"
+    },
+    {
+      "nodeid": "tests/test_questions.py::test_generate_questions_real_grok",
+      "fixtures": ["event_loop_policy"],
+      "marks": ["@pytest.mark.integration", "@pytest.mark.skipif(not _grok_reachable())"],
+      "collection_reason": "deselected by -m 'not integration'",
+      "is_expected_exclusion": true,
+      "explanation": "刻意分組：帶 @pytest.mark.integration 被 pyproject.toml addopts -m 'not integration' 排除"
+    },
+    {
+      "nodeid": "tests/test_retrieve.py::test_retrieve_for_gap_real_twinkle_smoke",
+      "fixtures": ["event_loop_policy"],
+      "marks": ["@pytest.mark.integration", "@pytest.mark.skipif(not LAW_DB.exists())", "@pytest.mark.skipif(not _grok_reachable())"],
+      "collection_reason": "deselected by -m 'not integration'",
+      "is_expected_exclusion": true,
+      "explanation": "刻意分組：帶 @pytest.mark.integration 被 pyproject.toml addopts -m 'not integration' 排除；三層 runtime guard (LAW_DB.exists(), _grok_reachable(), TWINKLE_HUB_TOKEN)"
+    },
+    {
+      "nodeid": "tests/test_twinkle.py::test_search_real_twinkle_hub",
+      "fixtures": ["event_loop_policy"],
+      "marks": ["@pytest.mark.integration"],
+      "collection_reason": "deselected by -m 'not integration'",
+      "is_expected_exclusion": true,
+      "explanation": "刻意分組：帶 @pytest.mark.integration 被 pyproject.toml addopts -m 'not integration' 排除；runtime guard (TWINKLE_HUB_TOKEN)"
+    }
+  ],
+  "summary": {
+    "total_nodeids": 8,
+    "expected_exclusions": 8,
+    "unexpected_exclusions": 0,
+    "all_deselected_by_markexpr": true,
+    "common_collection_reason": "deselected by -m 'not integration'"
+  }
+}
