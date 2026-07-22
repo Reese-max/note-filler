@@ -1,7 +1,7 @@
 {
   "version": "2026-07-23",
-  "description": "8 個 deselected node id → 最終排除原因 → 對應 CI/job 或替代路徑 → 證據檔路徑",
-  "scope": "原始 8 個被 -m 'not integration' 排除的整合測試",
+  "description": "11 個 deselected node id → 最終排除原因 → 對應 CI/job 或替代路徑 → 證據檔路徑",
+  "scope": "全部 11 個被 -m 'not integration' 排除的整合測試",
   "generated_from": [
     "docs/deselected-nodeid-collection-mapping.json",
     "docs/deselected-traceability-index-2026-07-22.md",
@@ -29,6 +29,23 @@
       ],
       "missing_substitute_evidence": false,
       "coverage_gap": "真 grok 對法律文字的實際回應正確性（FakeLLM 不驗模型品質）"
+    },
+    {
+      "node_id": "tests/test_domain.py::test_detect_domain_real_grok_representative_domains",
+      "final_exclusion_reason": "deselected by -m 'not integration' (pyproject.toml addopts)",
+      "ci_job": "test-integration (.github/workflows/ci.yml:73) - workflow_dispatch 手動觸發",
+      "substitute_tests": [
+        "tests/test_domain.py::test_detect_domain_law",
+        "tests/test_domain.py::test_detect_domain_admin",
+        "tests/test_domain.py::test_detect_domain_exam",
+        "tests/test_domain.py::test_detect_domain_noise_falls_back_to_other"
+      ],
+      "evidence_files": [
+        "tests/deselected_allowlist.json",
+        "docs/deselected-missing-not-reproducible-evidence-2026-07-22.md"
+      ],
+      "missing_substitute_evidence": false,
+      "coverage_gap": "真模型分類品質與 proxy 可用性仍須 integration 執行；預設測試只覆蓋標籤解析契約"
     },
     {
       "node_id": "tests/test_e2e_acceptance.py::test_e2e_acceptance_real",
@@ -77,6 +94,21 @@
       ],
       "missing_substitute_evidence": false,
       "coverage_gap": "真 grok 對法律文本的缺口判斷品質（FakeLLM 不驗模型理解能力）"
+    },
+    {
+      "node_id": "tests/test_gap.py::test_detect_gaps_real_grok_semantic_matrix",
+      "final_exclusion_reason": "deselected by -m 'not integration' (pyproject.toml addopts)",
+      "ci_job": "test-integration (.github/workflows/ci.yml:73) - workflow_dispatch 手動觸發",
+      "substitute_tests": [
+        "tests/test_gap.py::test_detect_gaps_keeps_only_partial_and_missing",
+        "tests/test_excluded_failing_controls.py::test_control_03_gap_uncovered_question_must_surface"
+      ],
+      "evidence_files": [
+        "tests/deselected_allowlist.json",
+        "docs/deselected-missing-not-reproducible-evidence-2026-07-22.md"
+      ],
+      "missing_substitute_evidence": false,
+      "coverage_gap": "真模型對筆記涵蓋度的語意判斷仍須 integration 執行；預設測試只覆蓋解析與過濾"
     },
     {
       "node_id": "tests/test_llm.py::test_grok_pong_integration",
@@ -193,11 +225,26 @@
       ],
       "missing_substitute_evidence": false,
       "coverage_gap": "真實 Twinkle Hub 服務可用性、session 相容性與網路逾時"
+    },
+    {
+      "node_id": "tests/test_write.py::test_write_supplement_real_grok_grounded_output",
+      "final_exclusion_reason": "deselected by -m 'not integration' (pyproject.toml addopts)",
+      "ci_job": "test-integration (.github/workflows/ci.yml:73) - workflow_dispatch 手動觸發",
+      "substitute_tests": [
+        "tests/test_write.py::test_used_source_ids_from_markers",
+        "tests/test_write.py::test_pending_evidence_when_insufficient"
+      ],
+      "evidence_files": [
+        "tests/deselected_allowlist.json",
+        "docs/deselected-missing-not-reproducible-evidence-2026-07-22.md"
+      ],
+      "missing_substitute_evidence": false,
+      "coverage_gap": "真模型能否只依固定來源寫出帶有效註腳的補充仍須 integration 執行"
     }
   ],
   "summary": {
-    "total_nodes": 8,
-    "nodes_with_complete_substitute_evidence": 8,
+    "total_nodes": 11,
+    "nodes_with_complete_substitute_evidence": 11,
     "nodes_missing_substitute_evidence": 0,
     "common_exclusion_mechanism": "pyproject.toml addopts -m 'not integration'",
     "common_ci_job": "test-integration (.github/workflows/ci.yml:73) - workflow_dispatch 手動觸發",
