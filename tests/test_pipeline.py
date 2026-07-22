@@ -148,6 +148,45 @@ def test_run_pipeline_malformed_gap_output_falls_back_to_pending(note_path):
     assert twinkle.queries == ["正當程序的要件為何?"]
 
 
+def test_original_text_immutable_in_output(note_path):
+    """驗證原始筆記內容在輸出中保持不變，防止「輸出資料已變但筆記內容未同步」的假綠情境。
+    
+    此測試刻意構造一個直接比對情境：如果 parse_note 或 assemble_correction 的邏輯被修改，
+    導致輸出中的原文段與原始筆記不一致，此測試會失敗，從而暴露「輸出資料已變但筆記內容未同步」的缺口。
+    """
+    llm = FakeLLM([
+        "admin",
+        "正當程序的要件為何?",
+        json.dumps([{"question": "正當程序的要件為何?", "status": "missing", "reason": "筆記未展開"}], ensure_ascii=False),
+        '{"keyword": "正當程序", "law_name": null}',
+        "【待補證】此問題缺乏可用來源,尚待補充。",
+    ])
+    twinkle = FakeTwinkle([[]])
+
+    doc = run_pipeline(note_path, llm, twinkle, FakeLaw())
+
+    # 驗證輸出中的原文段與原始筆記完全一致
+    original_segments = [s for s in doc.segments if s.type == "original"]
+    original_texts = [s.text for s in original_segments]
+    
+    # 原始筆記的內容應該與輸出中的原文段逐字一致
+    expected_texts = [
+        "行政程序法要求行政行為應遵守正當程序。",
+        "本筆記僅記錄部分重點,尚未展開。",
+    ]
+    
+    assert original_texts == expected_texts, (
+        f"原始筆記內容在輸出中被修改：\n"
+        f"預期: {expected_texts}\n"
+        f"實際: {original_texts}\n"
+        f"這表示「輸出資料已變但筆記內容未同步」的缺口存在。"
+    )
+    
+    # 驗證原文段的 anchor_idx 正確對應到原始段落索引
+    for i, seg in enumerate(original_segments):
+        assert seg.anchor_idx == i, f"原文段 {i} 的 anchor_idx 應為 {i}，實際為 {seg.anchor_idx}"
+
+
 @pytest.mark.integration
 @pytest.mark.skipif(not _grok_reachable(), reason="grok proxy(127.0.0.1:8318)未上線,條件式略過")
 def test_run_pipeline_real_grok(note_path):

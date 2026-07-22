@@ -9,8 +9,8 @@
     "command": "D:/Users/Administrator/Desktop/筆記補齊/.venv/Scripts/python.exe -X utf8 -m pytest -m 'not integration' -q --color=no",
     "collection_command": "D:/Users/Administrator/Desktop/筆記補齊/.venv/Scripts/python.exe -X utf8 -m pytest --collect-only -q --deselected-details --color=no",
     "expected_collection": {
-      "collected": 171,
-      "default_selected": 160,
+      "collected": 172,
+      "default_selected": 161,
       "deselected": 11
     }
   },
@@ -24,8 +24,8 @@
     "observed": {
       "coverage_matrix": "2 passed",
       "blind_spot_and_controls": "12 passed",
-      "default_suite": "160 passed, 11 deselected",
-      "deselection_guard": "updated with anti-leak gate counts 171/160/11"
+      "default_suite": "161 passed, 11 deselected",
+      "deselection_guard": "updated with anti-leak gate counts 172/161/11"
     }
   },
   "paths": [
@@ -153,6 +153,7 @@
         "tests/test_pipeline.py::test_run_pipeline_invariant",
         "tests/test_pipeline.py::test_run_pipeline_malformed_gap_output_falls_back_to_pending",
         "tests/test_pipeline.py::test_run_pipeline_law_domain_runs_citation_check",
+        "tests/test_pipeline.py::test_original_text_immutable_in_output",
         "tests/test_correction.py::test_retrieved_five_but_only_two_cited",
         "tests/test_excluded_failing_controls.py::test_control_05_pipeline_c6_pending_when_no_sources"
       ],
@@ -244,6 +245,7 @@
       "critical_path": "P5",
       "covered_by": [
         "tests/test_correction.py::test_original_segments_verbatim_and_immutable",
+        "tests/test_pipeline.py::test_original_text_immutable_in_output",
         "tests/test_e2e_acceptance.py::test_e2e_structural_invariants",
         "tests/test_excluded_failing_controls.py::test_control_02_e2e_offline_quality_gates"
       ],
