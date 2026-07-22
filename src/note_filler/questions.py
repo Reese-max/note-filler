@@ -42,8 +42,14 @@ def generate_questions(full_text: str, domain: Domain, llm: LLMClient) -> list[s
 
     raw = llm.complete(messages)  # 恰一次呼叫
 
-    if raw.lstrip().startswith(("[", "{")):
+    s = raw.strip()
+    if s.startswith("```"):
+        s = s.split("\n", 1)[1] if "\n" in s else ""
+        if s.rstrip().endswith("```"):
+            s = s.rstrip()[: s.rstrip().rindex("```")]
+
+    if s.lstrip().startswith(("[", "{")):
         return []
 
-    lines = [line.strip() for line in raw.splitlines()]
+    lines = [line.strip() for line in s.splitlines()]
     return [line for line in lines if line]

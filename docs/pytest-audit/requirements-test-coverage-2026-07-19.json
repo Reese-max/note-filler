@@ -9,8 +9,8 @@
     "command": "D:/Users/Administrator/Desktop/筆記補齊/.venv/Scripts/python.exe -X utf8 -m pytest -m 'not integration' -q --color=no",
     "collection_command": "D:/Users/Administrator/Desktop/筆記補齊/.venv/Scripts/python.exe -X utf8 -m pytest --collect-only -q --deselected-details --color=no",
     "expected_collection": {
-      "collected": 161,
-      "default_selected": 150,
+      "collected": 163,
+      "default_selected": 152,
       "deselected": 11
     }
   },
@@ -24,7 +24,7 @@
     "observed": {
       "coverage_matrix": "2 passed",
       "blind_spot_and_controls": "12 passed",
-      "default_suite": "150 passed, 11 deselected",
+      "default_suite": "152 passed, 11 deselected",
       "deselection_guard": "4 passed"
     }
   },
@@ -172,6 +172,7 @@
       "equivalent_default_tests": [
         "tests/test_questions.py::test_generate_questions_splits_multiline_string",
         "tests/test_questions.py::test_generate_questions_strips_and_drops_blank_lines",
+        "tests/test_questions.py::test_generate_questions_strips_markdown_fence",
         "tests/test_excluded_failing_controls.py::test_control_06_questions_clean_list_contract"
       ],
       "verification_gap_tests": [],
@@ -216,6 +217,7 @@
         "tests/test_twinkle.py::test_search_parses_source_with_full_content",
         "tests/test_twinkle.py::test_search_reuses_mcp_session",
         "tests/test_twinkle.py::test_search_transport_failure_returns_empty",
+        "tests/test_twinkle.py::test_search_mcp_protocol_error_returns_empty",
         "tests/test_excluded_failing_controls.py::test_control_08_twinkle_parsed_source_contract"
       ],
       "verification_gap_tests": [],

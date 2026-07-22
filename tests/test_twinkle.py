@@ -138,6 +138,31 @@ def test_default_timeout_is_60():
     assert TwinkleClient(token="x").timeout == 60
 
 
+def _make_fake_urlopen_error():
+    """回傳 isError=true 的 JSON-RPC 回應。"""
+    def fake_urlopen(request, timeout=None):
+        body = json.loads(request.data.decode("utf-8"))
+        envelope = json.dumps(
+            {
+                "jsonrpc": "2.0",
+                "id": body.get("id"),
+                "result": {
+                    "isError": True,
+                    "content": [{"type": "text", "text": "搜尋服務暫時不可用"}],
+                },
+            },
+            ensure_ascii=False,
+        )
+        return _FakeResponse(f"data: {envelope}\n\n")
+    return fake_urlopen
+
+
+def test_search_mcp_protocol_error_returns_empty(monkeypatch):
+    """MCP 回報 isError → 安全降級為空結果,不拋例外。"""
+    monkeypatch.setattr(twinkle.urllib.request, "urlopen", _make_fake_urlopen_error())
+    assert TwinkleClient(token="fake-token").search("酒駕 罰則", n=3) == []
+
+
 @pytest.mark.integration
 def test_search_real_twinkle_hub():
     import os

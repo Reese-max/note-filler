@@ -95,3 +95,10 @@ def test_generate_questions_rejects_json_shaped_response():
     """不信任的 JSON-shaped 模型輸出不得成為下游問題。"""
     for response in ('["第一題?", "第二題?"]', '{"questions": ["第一題?"]}'):
         assert generate_questions("筆記", "law", FakeLLM([response])) == []
+
+
+def test_generate_questions_strips_markdown_fence():
+    """LLM 回包裹在 ```markdown 圍欄的內容 → 圍欄行被剝除,只留實際問題。"""
+    canned = "```markdown\n問題1?\n問題2?\n```"
+    result = generate_questions("某段筆記", "law", FakeLLM([canned]))
+    assert result == ["問題1?", "問題2?"]

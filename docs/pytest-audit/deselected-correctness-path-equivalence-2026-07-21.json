@@ -463,10 +463,12 @@
           "correctness_path": "不信任的模型輸出不得把 JSON 陣列/物件結構符當成問題送入下游",
           "coverage_points": [
             "tests/test_questions.py::test_generate_questions_real_grok",
-            "tests/test_questions.py::test_generate_questions_rejects_json_shaped_response"
+            "tests/test_questions.py::test_generate_questions_rejects_json_shaped_response",
+            "tests/test_questions.py::test_generate_questions_strips_markdown_fence"
           ],
           "equivalent_default_tests": [
-            "tests/test_questions.py::test_generate_questions_rejects_json_shaped_response"
+            "tests/test_questions.py::test_generate_questions_rejects_json_shaped_response",
+            "tests/test_questions.py::test_generate_questions_strips_markdown_fence"
           ],
           "status": "equivalent_coverage",
           "status_label": "已有等價覆蓋",
@@ -578,11 +580,13 @@
           "correctness_path": "缺 token 或 transport failure 時安全降級為空清單，不偽造來源也不讓外部錯誤中斷主流程",
           "coverage_points": [
             "tests/test_twinkle.py::test_search_returns_empty_without_token",
-            "tests/test_twinkle.py::test_search_transport_failure_returns_empty"
+            "tests/test_twinkle.py::test_search_transport_failure_returns_empty",
+            "tests/test_twinkle.py::test_search_mcp_protocol_error_returns_empty"
           ],
           "equivalent_default_tests": [
             "tests/test_twinkle.py::test_search_returns_empty_without_token",
-            "tests/test_twinkle.py::test_search_transport_failure_returns_empty"
+            "tests/test_twinkle.py::test_search_transport_failure_returns_empty",
+            "tests/test_twinkle.py::test_search_mcp_protocol_error_returns_empty"
           ],
           "status": "equivalent_coverage",
           "status_label": "已有等價覆蓋",
