@@ -213,13 +213,13 @@
 
 | # | deselected 測試 | 缺口類型 | 說明 |
 |---|---|---|---|
-| 2 | `test_detect_domain_real_grok_representative_domains` | NOT-REPRODUCIBLE 無實證文件 | substitute_tests 存在但無獨立盲區/控制對照驗證文檔 |
-| 5 | `test_detect_gaps_real_grok_semantic_matrix` | NOT-REPRODUCIBLE 無實證文件 | substitute_tests 存在但無獨立盲區/控制對照驗證文檔 |
-| 11 | `test_write_supplement_real_grok_grounded_output` | NOT-REPRODUCIBLE 無實證文件 | substitute_tests 存在但無獨立盲區/控制對照驗證文檔 |
+| 2 | `test_detect_domain_real_grok_representative_domains` | **已解決** | 新增 `docs/deselected-missing-not-reproducible-evidence-2026-07-22.md` |
+| 5 | `test_detect_gaps_real_grok_semantic_matrix` | **已解決** | 新增 `docs/deselected-missing-not-reproducible-evidence-2026-07-22.md` |
+| 11 | `test_write_supplement_real_grok_grounded_output` | **已解決** | 新增 `docs/deselected-missing-not-reproducible-evidence-2026-07-22.md` |
 
-> 以上 3 筆的 allowlist.json 中有 `substitute_evidence` 且替代測試可收集可通過，
-> 但缺少像其他 8 筆那樣的 `docs/excluded-failing-controls-*.md` 獨立驗證文件
-> 來正式判定 `NOT-REPRODUCIBLE`。這是追蹤缺口，非產品 correctness 缺口。
+> 以上 3 筆原缺少像其他 8 筆那樣的獨立驗證文件來正式判定 `NOT-REPRODUCIBLE`。
+> 已於 2026-07-22 新增 `docs/deselected-missing-not-reproducible-evidence-2026-07-22.md` 補充驗證，
+> 並更新 `tests/test_deselection_guard.py` 中的 `_NOT_REPRODUCIBLE_EVIDENCE` 映射。
 
 ---
 

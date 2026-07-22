@@ -43,6 +43,13 @@ _NOT_REPRODUCIBLE_EVIDENCE: dict[str, list[dict[str, str]]] = {
             "evidence": "docs/excluded-failing-controls-2026-07-19.md",
         },
     ],
+    "tests/test_domain.py::test_detect_domain_real_grok_representative_domains": [
+        {
+            "status": "NOT-REPRODUCIBLE",
+            "claim": "四類標籤解析契約對照 PASS；真模型四類代表文本語意分類品質無法以產品失敗重現",
+            "evidence": "docs/deselected-missing-not-reproducible-evidence-2026-07-22.md",
+        },
+    ],
     "tests/test_e2e_acceptance.py::test_e2e_acceptance_real": [
         {
             "status": "NOT-REPRODUCIBLE",
@@ -65,6 +72,13 @@ _NOT_REPRODUCIBLE_EVIDENCE: dict[str, list[dict[str, str]]] = {
             "status": "NOT-REPRODUCIBLE",
             "claim": "缺口過濾 determinism 對照 PASS；真模型缺口判斷品質無法以產品失敗重現",
             "evidence": "docs/excluded-failing-controls-2026-07-19.md",
+        },
+    ],
+    "tests/test_gap.py::test_detect_gaps_real_grok_semantic_matrix": [
+        {
+            "status": "NOT-REPRODUCIBLE",
+            "claim": "covered 過濾與 partial/missing 結構對照 PASS；真模型對筆記涵蓋度的語意判斷無法以產品失敗重現",
+            "evidence": "docs/deselected-missing-not-reproducible-evidence-2026-07-22.md",
         },
     ],
     "tests/test_llm.py::test_grok_pong_integration": [
@@ -105,6 +119,13 @@ _NOT_REPRODUCIBLE_EVIDENCE: dict[str, list[dict[str, str]]] = {
             "status": "NOT-REPRODUCIBLE",
             "claim": "Twinkle Source 解析契約對照 PASS；真 Hub 可用性屬外部 I/O 非 determinism 產品缺陷",
             "evidence": "docs/excluded-failing-controls-2026-07-19.md",
+        },
+    ],
+    "tests/test_write.py::test_write_supplement_real_grok_grounded_output": [
+        {
+            "status": "NOT-REPRODUCIBLE",
+            "claim": "註腳到來源 ID 映射與降級邏輯對照 PASS；真模型固定來源 grounded 寫作品質無法以產品失敗重現",
+            "evidence": "docs/deselected-missing-not-reproducible-evidence-2026-07-22.md",
         },
     ],
 }
