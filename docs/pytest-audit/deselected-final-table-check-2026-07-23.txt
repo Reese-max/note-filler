@@ -1,0 +1,1 @@
+FINAL_TABLE_CHECK=PASS rows=11 covered=11 needs_tests=0

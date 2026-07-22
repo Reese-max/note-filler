@@ -1,0 +1,181 @@
+============================= test session starts =============================
+platform win32 -- Python 3.11.9, pytest-9.1.1, pluggy-1.6.0 -- D:\Users\Administrator\Desktop\筆記補齊\.venv\Scripts\python.exe
+cachedir: .pytest_cache
+rootdir: D:\Users\Administrator\Desktop\autodev-ng\data\note-filler\worktrees\91c75f35
+configfile: pyproject.toml
+plugins: anyio-4.14.2
+collecting ... collected 1 item
+
+tests/test_deselection_guard.py::test_substitute_mapping_is_complete_and_collectable
+===== ACCEPTANCE_PACKAGE_BEGIN =====
+SCHEMA: note-filler.deselected-acceptance/v1
+RULE: 禁止僅以 collected/selected/deselected 彙總數字驗收；必須具備下列欄位
+INVOCATIONS:
+  collect_all: D:\Users\Administrator\Desktop\筆記補齊\.venv\Scripts\python.exe -X utf8 -m pytest --collect-only -q --color=no -o addopts=
+  collect_default: D:\Users\Administrator\Desktop\筆記補齊\.venv\Scripts\python.exe -X utf8 -m pytest --collect-only -q --color=no --deselected-details
+  deselected_details: D:\Users\Administrator\Desktop\筆記補齊\.venv\Scripts\python.exe -X utf8 -m pytest --collect-only -q --color=no --deselected-details
+COUNTS (context only, not acceptance): collected=163 selected=152 deselected=11
+NODE_ID_COUNT: 11
+[1/11] node_id: tests/test_domain.py::test_detect_domain_real_grok_returns_law
+  exclusion_reason: 預設 -m 'not integration' 在 collection 階段排除；需要真實 grok proxy (127.0.0.1:8318)，proxy 不可達時由 skipif 略過
+  collection_reason: deselected by -m 'not integration'
+  substitute_individual_results:
+    - PASSED tests/test_domain.py::test_detect_domain_law | ============================== 1 passed in 0.04s ============================== | inv: D:\Users\Administrator\Desktop\筆記補齊\.venv\Scripts\python.exe -X utf8 -m pytest tests/test_domain.py::test_detect_domain_law -vv --tb=line --color=no
+    - PASSED tests/test_excluded_failing_controls.py::test_control_01_domain_legal_label_contract | ============================== 1 passed in 0.06s ============================== | inv: D:\Users\Administrator\Desktop\筆記補齊\.venv\Scripts\python.exe -X utf8 -m pytest tests/test_excluded_failing_controls.py::test_control_01_domain_legal_label_contract -vv --tb=line --color=no
+  live_individual_result: status=pass exit=0 wall_s=5.44 source=docs/pytest-audit/deselected-individual-results-2026-07-19.json
+  failure_or_not_reproducible: NOT-REPRODUCIBLE | domain 標籤 determinism 對照 PASS；真模型語意品質缺口無法以產品失敗重現 | docs/excluded-failing-controls-2026-07-19.md
+  gap_mitigation_evidence:
+    - source: .github/workflows/ci.yml:76 | anchor: workflow_dispatch | scope: 8 個整合測試的真實 Grok Proxy 連線驗證；模型回應格式、PONG 契約與端到端 pipeline 穩定性
+    - source: docs/testing-guide.md:44 | anchor: ./scripts/run_tests.sh all | scope: 同一套整合測試在本機 grok proxy 環境下的完整執行
+[2/11] node_id: tests/test_e2e_acceptance.py::test_e2e_acceptance_real
+  exclusion_reason: 預設 -m 'not integration' 在 collection 階段排除；真跑需要 data/law_index.db、grok proxy 與 TWINKLE_HUB_TOKEN，任一前置條件不足即 skip
+  collection_reason: deselected by -m 'not integration'
+  substitute_individual_results:
+    - PASSED tests/test_e2e_acceptance.py::test_e2e_structural_invariants | ============================== 1 passed in 0.02s ============================== | inv: D:\Users\Administrator\Desktop\筆記補齊\.venv\Scripts\python.exe -X utf8 -m pytest tests/test_e2e_acceptance.py::test_e2e_structural_invariants -vv --tb=line --color=no
+    - PASSED tests/test_e2e_acceptance.py::test_e2e_offline_supplement_quality_boundary | ============================== 1 passed in 0.02s ============================== | inv: D:\Users\Administrator\Desktop\筆記補齊\.venv\Scripts\python.exe -X utf8 -m pytest tests/test_e2e_acceptance.py::test_e2e_offline_supplement_quality_boundary -vv --tb=line --color=no
+    - PASSED tests/test_e2e_acceptance.py::test_e2e_minimal_quality_gates_offline_regression | ============================== 1 passed in 0.02s ============================== | inv: D:\Users\Administrator\Desktop\筆記補齊\.venv\Scripts\python.exe -X utf8 -m pytest tests/test_e2e_acceptance.py::test_e2e_minimal_quality_gates_offline_regression -vv --tb=line --color=no
+    - PASSED tests/test_pipeline.py::test_run_pipeline_invariant | ============================== 1 passed in 0.23s ============================== | inv: D:\Users\Administrator\Desktop\筆記補齊\.venv\Scripts\python.exe -X utf8 -m pytest tests/test_pipeline.py::test_run_pipeline_invariant -vv --tb=line --color=no
+    - PASSED tests/test_pipeline.py::test_run_pipeline_malformed_gap_output_falls_back_to_pending | ============================== 1 passed in 0.23s ============================== | inv: D:\Users\Administrator\Desktop\筆記補齊\.venv\Scripts\python.exe -X utf8 -m pytest tests/test_pipeline.py::test_run_pipeline_malformed_gap_output_falls_back_to_pending -vv --tb=line --color=no
+    - PASSED tests/test_pipeline.py::test_run_pipeline_law_domain_runs_citation_check | ============================== 1 passed in 0.23s ============================== | inv: D:\Users\Administrator\Desktop\筆記補齊\.venv\Scripts\python.exe -X utf8 -m pytest tests/test_pipeline.py::test_run_pipeline_law_domain_runs_citation_check -vv --tb=line --color=no
+    - PASSED tests/test_correction.py::test_retrieved_five_but_only_two_cited | ============================== 1 passed in 0.02s ============================== | inv: D:\Users\Administrator\Desktop\筆記補齊\.venv\Scripts\python.exe -X utf8 -m pytest tests/test_correction.py::test_retrieved_five_but_only_two_cited -vv --tb=line --color=no
+    - PASSED tests/test_excluded_failing_controls.py::test_control_02_e2e_offline_quality_gates | ============================== 1 passed in 0.06s ============================== | inv: D:\Users\Administrator\Desktop\筆記補齊\.venv\Scripts\python.exe -X utf8 -m pytest tests/test_excluded_failing_controls.py::test_control_02_e2e_offline_quality_gates -vv --tb=line --color=no
+  live_individual_result: status=pass exit=0 wall_s=118.5 source=docs/pytest-audit/deselected-individual-results-2026-07-19.json
+  failure_or_not_reproducible: NOT-REPRODUCIBLE | 離線四硬閘 failing-first 對照穩定 PASS，無法以產品失敗重現 | docs/excluded-failing-controls-2026-07-19.md
+  failure_or_not_reproducible: NOT-REPRODUCIBLE | 離線最小品質閘與 supplement 品質邊界皆穩定 PASS | docs/minimal-quality-gates-regression-2026-07-19.md
+  failure_or_not_reproducible: NOT-REPRODUCIBLE | e2e offline quality boundary 無法穩定失敗 | docs/e2e-offline-quality-boundary-2026-07-18.md
+  gap_mitigation_evidence:
+    - source: .github/workflows/ci.yml:76 | anchor: workflow_dispatch | scope: 真實 Grok + 真實 Twinkle Hub 組合下 gap 偵測、補充寫作品質 (_assert_supplement_quality) 與 Level A 路由穩定性
+    - source: docs/testing-guide.md:59 | anchor: TWINKLE_HUB_TOKEN | scope: 同上述端到端驗收在本機環境的完整執行
+[3/11] node_id: tests/test_gap.py::test_detect_gaps_real_grok
+  exclusion_reason: 預設 -m 'not integration' 在 collection 階段排除；需要真實 grok proxy (127.0.0.1:8318)，proxy 不可達時由 skipif 略過
+  collection_reason: deselected by -m 'not integration'
+  substitute_individual_results:
+    - PASSED tests/test_gap.py::test_detect_gaps_keeps_only_partial_and_missing | ============================== 1 passed in 0.02s ============================== | inv: D:\Users\Administrator\Desktop\筆記補齊\.venv\Scripts\python.exe -X utf8 -m pytest tests/test_gap.py::test_detect_gaps_keeps_only_partial_and_missing -vv --tb=line --color=no
+    - PASSED tests/test_excluded_failing_controls.py::test_control_03_gap_uncovered_question_must_surface | ============================== 1 passed in 0.06s ============================== | inv: D:\Users\Administrator\Desktop\筆記補齊\.venv\Scripts\python.exe -X utf8 -m pytest tests/test_excluded_failing_controls.py::test_control_03_gap_uncovered_question_must_surface -vv --tb=line --color=no
+  live_individual_result: status=pass exit=0 wall_s=5.74 source=docs/pytest-audit/deselected-individual-results-2026-07-19.json
+  failure_or_not_reproducible: NOT-REPRODUCIBLE | 缺口過濾 determinism 對照 PASS；真模型缺口判斷品質無法以產品失敗重現 | docs/excluded-failing-controls-2026-07-19.md
+  gap_mitigation_evidence:
+    - source: .github/workflows/ci.yml:76 | anchor: workflow_dispatch | scope: 8 個整合測試的真實 Grok Proxy 連線驗證；模型回應格式與語意判斷
+    - source: docs/testing-guide.md:44 | anchor: ./scripts/run_tests.sh all | scope: 同一套整合測試在本機 grok proxy 環境下的完整執行
+[4/11] node_id: tests/test_llm.py::test_grok_pong_integration
+  exclusion_reason: 預設 -m 'not integration' 在 collection 階段排除；需要真實 grok proxy (127.0.0.1:8318)，proxy 不可達時由 skipif 略過
+  collection_reason: deselected by -m 'not integration'
+  substitute_individual_results:
+    - PASSED tests/test_llm.py::test_grokclient_builds_request_body | ============================== 1 passed in 0.03s ============================== | inv: D:\Users\Administrator\Desktop\筆記補齊\.venv\Scripts\python.exe -X utf8 -m pytest tests/test_llm.py::test_grokclient_builds_request_body -vv --tb=line --color=no
+    - PASSED tests/test_excluded_failing_controls.py::test_control_04_grok_client_parse_and_endpoint_contract | ============================== 1 passed in 0.06s ============================== | inv: D:\Users\Administrator\Desktop\筆記補齊\.venv\Scripts\python.exe -X utf8 -m pytest tests/test_excluded_failing_controls.py::test_control_04_grok_client_parse_and_endpoint_contract -vv --tb=line --color=no
+  live_individual_result: status=pass exit=0 wall_s=1.94 source=docs/pytest-audit/deselected-individual-results-2026-07-19.json
+  failure_or_not_reproducible: NOT-REPRODUCIBLE | GrokClient parse/endpoint 對照 PASS；純 TCP 連通性屬運維非產品邏輯缺陷 | docs/excluded-failing-controls-2026-07-19.md
+  gap_mitigation_evidence:
+    - source: .github/workflows/ci.yml:76 | anchor: workflow_dispatch | scope: 8 個整合測試的真實 Grok Proxy 連線驗證；PONG 契約與 proxy 回應格式相容性
+    - source: scripts/run_tests.sh:52 | anchor: integ|integration) | scope: 真實 TCP 連線到 proxy port 8318 的端到端連通性
+[5/11] node_id: tests/test_pipeline.py::test_run_pipeline_real_grok
+  exclusion_reason: 預設 -m 'not integration' 在 collection 階段排除；只要真實 grok proxy 才能執行，Twinkle 與 law 雖以 fake 隔離仍保留 integration 邊界
+  collection_reason: deselected by -m 'not integration'
+  substitute_individual_results:
+    - PASSED tests/test_pipeline.py::test_run_pipeline_invariant | ============================== 1 passed in 0.23s ============================== | inv: D:\Users\Administrator\Desktop\筆記補齊\.venv\Scripts\python.exe -X utf8 -m pytest tests/test_pipeline.py::test_run_pipeline_invariant -vv --tb=line --color=no
+    - PASSED tests/test_pipeline.py::test_run_pipeline_malformed_gap_output_falls_back_to_pending | ============================== 1 passed in 0.23s ============================== | inv: D:\Users\Administrator\Desktop\筆記補齊\.venv\Scripts\python.exe -X utf8 -m pytest tests/test_pipeline.py::test_run_pipeline_malformed_gap_output_falls_back_to_pending -vv --tb=line --color=no
+    - PASSED tests/test_pipeline.py::test_run_pipeline_law_domain_runs_citation_check | ============================== 1 passed in 0.23s ============================== | inv: D:\Users\Administrator\Desktop\筆記補齊\.venv\Scripts\python.exe -X utf8 -m pytest tests/test_pipeline.py::test_run_pipeline_law_domain_runs_citation_check -vv --tb=line --color=no
+    - PASSED tests/test_correction.py::test_retrieved_five_but_only_two_cited | ============================== 1 passed in 0.02s ============================== | inv: D:\Users\Administrator\Desktop\筆記補齊\.venv\Scripts\python.exe -X utf8 -m pytest tests/test_correction.py::test_retrieved_five_but_only_two_cited -vv --tb=line --color=no
+    - PASSED tests/test_excluded_failing_controls.py::test_control_05_pipeline_c6_pending_when_no_sources | ============================== 1 passed in 0.16s ============================== | inv: D:\Users\Administrator\Desktop\筆記補齊\.venv\Scripts\python.exe -X utf8 -m pytest tests/test_excluded_failing_controls.py::test_control_05_pipeline_c6_pending_when_no_sources -vv --tb=line --color=no
+  live_individual_result: status=pass exit=0 wall_s=67.3 source=docs/pytest-audit/deselected-individual-results-2026-07-19.json
+  failure_or_not_reproducible: NOT-REPRODUCIBLE | C6 pending_evidence 對照 PASS；真模型輸出品質缺口無法以產品失敗重現 | docs/excluded-failing-controls-2026-07-19.md
+  gap_mitigation_evidence:
+    - source: .github/workflows/ci.yml:76 | anchor: workflow_dispatch | scope: 8 個整合測試包含 pipeline 在真 Grok 模型輸出下的 domain/questions/gaps 正確性與端到端穩定性
+    - source: docs/testing-guide.md:44 | anchor: ./scripts/run_tests.sh all | scope: 完整 pipeline 在本機 grok proxy 環境下的執行結果
+[6/11] node_id: tests/test_questions.py::test_generate_questions_real_grok
+  exclusion_reason: 預設 -m 'not integration' 在 collection 階段排除；需要真實 grok proxy (127.0.0.1:8318)，proxy 不可達時由 skipif 略過
+  collection_reason: deselected by -m 'not integration'
+  substitute_individual_results:
+    - PASSED tests/test_questions.py::test_generate_questions_splits_multiline_string | ============================== 1 passed in 0.02s ============================== | inv: D:\Users\Administrator\Desktop\筆記補齊\.venv\Scripts\python.exe -X utf8 -m pytest tests/test_questions.py::test_generate_questions_splits_multiline_string -vv --tb=line --color=no
+    - PASSED tests/test_questions.py::test_generate_questions_strips_and_drops_blank_lines | ============================== 1 passed in 0.02s ============================== | inv: D:\Users\Administrator\Desktop\筆記補齊\.venv\Scripts\python.exe -X utf8 -m pytest tests/test_questions.py::test_generate_questions_strips_and_drops_blank_lines -vv --tb=line --color=no
+    - PASSED tests/test_questions.py::test_generate_questions_strips_markdown_fence | ============================== 1 passed in 0.02s ============================== | inv: D:\Users\Administrator\Desktop\筆記補齊\.venv\Scripts\python.exe -X utf8 -m pytest tests/test_questions.py::test_generate_questions_strips_markdown_fence -vv --tb=line --color=no
+    - PASSED tests/test_excluded_failing_controls.py::test_control_06_questions_clean_list_contract | ============================== 1 passed in 0.07s ============================== | inv: D:\Users\Administrator\Desktop\筆記補齊\.venv\Scripts\python.exe -X utf8 -m pytest tests/test_excluded_failing_controls.py::test_control_06_questions_clean_list_contract -vv --tb=line --color=no
+  live_individual_result: status=pass exit=0 wall_s=6.59 source=docs/pytest-audit/deselected-individual-results-2026-07-19.json
+  failure_or_not_reproducible: NOT-REPRODUCIBLE | 問題清單契約對照 PASS；真模型出題品質無法以產品失敗重現 | docs/excluded-failing-controls-2026-07-19.md
+  gap_mitigation_evidence:
+    - source: .github/workflows/ci.yml:76 | anchor: workflow_dispatch | scope: 8 個整合測試包含問題生成在真 Grok 模型下的品質驗證
+    - source: docs/testing-guide.md:44 | anchor: ./scripts/run_tests.sh all | scope: 真實 Grok 對法律文本的問題生成品質在本機的執行驗證
+[7/11] node_id: tests/test_retrieve.py::test_retrieve_for_gap_real_twinkle_smoke
+  exclusion_reason: 預設 -m 'not integration' 在 collection 階段排除；真跑需要 data/law_index.db、grok proxy 與 TWINKLE_HUB_TOKEN
+  collection_reason: deselected by -m 'not integration'
+  substitute_individual_results:
+    - PASSED tests/test_retrieve.py::test_retrieve_for_gap_law_domain_puts_level_A_before_B | ============================== 1 passed in 0.02s ============================== | inv: D:\Users\Administrator\Desktop\筆記補齊\.venv\Scripts\python.exe -X utf8 -m pytest tests/test_retrieve.py::test_retrieve_for_gap_law_domain_puts_level_A_before_B -vv --tb=line --color=no
+    - PASSED tests/test_law_search.py::test_search_law_sources_returns_level_A_law_articles | ============================== 1 passed in 0.03s ============================== | inv: D:\Users\Administrator\Desktop\筆記補齊\.venv\Scripts\python.exe -X utf8 -m pytest tests/test_law_search.py::test_search_law_sources_returns_level_A_law_articles -vv --tb=line --color=no
+    - PASSED tests/test_twinkle.py::test_search_parses_source_with_full_content | ============================== 1 passed in 0.02s ============================== | inv: D:\Users\Administrator\Desktop\筆記補齊\.venv\Scripts\python.exe -X utf8 -m pytest tests/test_twinkle.py::test_search_parses_source_with_full_content -vv --tb=line --color=no
+    - PASSED tests/test_twinkle.py::test_search_reuses_mcp_session | ============================== 1 passed in 0.02s ============================== | inv: D:\Users\Administrator\Desktop\筆記補齊\.venv\Scripts\python.exe -X utf8 -m pytest tests/test_twinkle.py::test_search_reuses_mcp_session -vv --tb=line --color=no
+    - PASSED tests/test_twinkle.py::test_search_transport_failure_returns_empty | ============================== 1 passed in 0.02s ============================== | inv: D:\Users\Administrator\Desktop\筆記補齊\.venv\Scripts\python.exe -X utf8 -m pytest tests/test_twinkle.py::test_search_transport_failure_returns_empty -vv --tb=line --color=no
+    - PASSED tests/test_exclusion_correctness_blind_spot.py::test_deselected_retrieve_smoke_vacuous_pass_on_empty_is_blind_spot | ============================== 1 passed in 0.02s ============================== | inv: D:\Users\Administrator\Desktop\筆記補齊\.venv\Scripts\python.exe -X utf8 -m pytest tests/test_exclusion_correctness_blind_spot.py::test_deselected_retrieve_smoke_vacuous_pass_on_empty_is_blind_spot -vv --tb=line --color=no
+    - PASSED tests/test_exclusion_correctness_blind_spot.py::test_law_domain_retrieve_must_yield_level_a_not_vacuous_empty | ============================== 1 passed in 0.02s ============================== | inv: D:\Users\Administrator\Desktop\筆記補齊\.venv\Scripts\python.exe -X utf8 -m pytest tests/test_exclusion_correctness_blind_spot.py::test_law_domain_retrieve_must_yield_level_a_not_vacuous_empty -vv --tb=line --color=no
+    - PASSED tests/test_excluded_failing_controls.py::test_control_07_retrieve_smoke_vacuous_empty_is_blind_spot | ============================== 1 passed in 0.08s ============================== | inv: D:\Users\Administrator\Desktop\筆記補齊\.venv\Scripts\python.exe -X utf8 -m pytest tests/test_excluded_failing_controls.py::test_control_07_retrieve_smoke_vacuous_empty_is_blind_spot -vv --tb=line --color=no
+    - PASSED tests/test_excluded_failing_controls.py::test_control_07b_retrieve_law_level_a_not_vacuous | ============================== 1 passed in 0.07s ============================== | inv: D:\Users\Administrator\Desktop\筆記補齊\.venv\Scripts\python.exe -X utf8 -m pytest tests/test_excluded_failing_controls.py::test_control_07b_retrieve_law_level_a_not_vacuous -vv --tb=line --color=no
+  live_individual_result: status=pass exit=0 wall_s=7.28 source=docs/pytest-audit/deselected-individual-results-2026-07-19.json
+  failure_or_not_reproducible: NOT-REPRODUCIBLE | law Level A 非空對照 PASS；產品缺陷路徑不可重現（vacuous smoke 為驗證層盲區已鎖定） | docs/excluded-failing-controls-2026-07-19.md
+  failure_or_not_reproducible: NOT-REPRODUCIBLE | 產品 law+LawLookup 路徑穩定回 Level A 非空 | docs/exclusion-correctness-blind-spot-2026-07-19.md
+  gap_mitigation_evidence:
+    - source: .github/workflows/ci.yml:76 | anchor: workflow_dispatch | scope: 真實 Twinkle Hub MCP 連線、Session 相容性、Source 解析與 Grok 關鍵字抽取
+    - source: docs/testing-guide.md:59 | anchor: TWINKLE_HUB_TOKEN | scope: 真實 Twinkle Hub I/O 在本機環境下的執行驗證
+[8/11] node_id: tests/test_twinkle.py::test_search_real_twinkle_hub
+  exclusion_reason: 預設 -m 'not integration' 在 collection 階段排除；真跑需要 TWINKLE_HUB_TOKEN，缺 token 時由函式內 pytest.skip 略過
+  collection_reason: deselected by -m 'not integration'
+  substitute_individual_results:
+    - PASSED tests/test_twinkle.py::test_search_parses_source_with_full_content | ============================== 1 passed in 0.02s ============================== | inv: D:\Users\Administrator\Desktop\筆記補齊\.venv\Scripts\python.exe -X utf8 -m pytest tests/test_twinkle.py::test_search_parses_source_with_full_content -vv --tb=line --color=no
+    - PASSED tests/test_twinkle.py::test_search_reuses_mcp_session | ============================== 1 passed in 0.02s ============================== | inv: D:\Users\Administrator\Desktop\筆記補齊\.venv\Scripts\python.exe -X utf8 -m pytest tests/test_twinkle.py::test_search_reuses_mcp_session -vv --tb=line --color=no
+    - PASSED tests/test_twinkle.py::test_search_transport_failure_returns_empty | ============================== 1 passed in 0.02s ============================== | inv: D:\Users\Administrator\Desktop\筆記補齊\.venv\Scripts\python.exe -X utf8 -m pytest tests/test_twinkle.py::test_search_transport_failure_returns_empty -vv --tb=line --color=no
+    - PASSED tests/test_twinkle.py::test_search_mcp_protocol_error_returns_empty | ============================== 1 passed in 0.02s ============================== | inv: D:\Users\Administrator\Desktop\筆記補齊\.venv\Scripts\python.exe -X utf8 -m pytest tests/test_twinkle.py::test_search_mcp_protocol_error_returns_empty -vv --tb=line --color=no
+    - PASSED tests/test_excluded_failing_controls.py::test_control_08_twinkle_parsed_source_contract | ============================== 1 passed in 0.10s ============================== | inv: D:\Users\Administrator\Desktop\筆記補齊\.venv\Scripts\python.exe -X utf8 -m pytest tests/test_excluded_failing_controls.py::test_control_08_twinkle_parsed_source_contract -vv --tb=line --color=no
+  live_individual_result: status=pass exit=0 wall_s=4.58 source=docs/pytest-audit/deselected-individual-results-2026-07-19.json
+  failure_or_not_reproducible: NOT-REPRODUCIBLE | Twinkle Source 解析契約對照 PASS；真 Hub 可用性屬外部 I/O 非 determinism 產品缺陷 | docs/excluded-failing-controls-2026-07-19.md
+  gap_mitigation_evidence:
+    - source: .github/workflows/ci.yml:76 | anchor: workflow_dispatch | scope: 真實 Twinkle Hub MCP 服務可用性、Session 相容性與網路逾時行為
+    - source: docs/testing-guide.md:59 | anchor: TWINKLE_HUB_TOKEN | scope: 真實 Twinkle Hub 連線在本機環境下的完整驗證
+[9/11] node_id: tests/test_domain.py::test_detect_domain_real_grok_representative_domains
+  exclusion_reason: 預設 -m 'not integration' 排除；四類代表文本需真實 grok proxy (127.0.0.1:8318)，proxy 不可達時由 skipif 略過
+  collection_reason: deselected by -m 'not integration'
+  substitute_individual_results:
+    - PASSED tests/test_domain.py::test_detect_domain_law | ============================== 1 passed in 0.04s ============================== | inv: D:\Users\Administrator\Desktop\筆記補齊\.venv\Scripts\python.exe -X utf8 -m pytest tests/test_domain.py::test_detect_domain_law -vv --tb=line --color=no
+    - PASSED tests/test_domain.py::test_detect_domain_admin | ============================== 1 passed in 0.01s ============================== | inv: D:\Users\Administrator\Desktop\筆記補齊\.venv\Scripts\python.exe -X utf8 -m pytest tests/test_domain.py::test_detect_domain_admin -vv --tb=line --color=no
+    - PASSED tests/test_domain.py::test_detect_domain_exam | ============================== 1 passed in 0.05s ============================== | inv: D:\Users\Administrator\Desktop\筆記補齊\.venv\Scripts\python.exe -X utf8 -m pytest tests/test_domain.py::test_detect_domain_exam -vv --tb=line --color=no
+    - PASSED tests/test_domain.py::test_detect_domain_noise_falls_back_to_other | ============================== 1 passed in 0.01s ============================== | inv: D:\Users\Administrator\Desktop\筆記補齊\.venv\Scripts\python.exe -X utf8 -m pytest tests/test_domain.py::test_detect_domain_noise_falls_back_to_other -vv --tb=line --color=no
+  failure_or_not_reproducible: NOT-REPRODUCIBLE | 四類標籤解析契約對照 PASS；真模型四類代表文本語意分類品質無法以產品失敗重現 | docs/deselected-missing-not-reproducible-evidence-2026-07-22.md
+  gap_mitigation_evidence:
+    - source: .github/workflows/ci.yml:76 | anchor: workflow_dispatch | scope: 真實 Grok 對 law/admin/exam/other 代表文本的語意分類
+[10/11] node_id: tests/test_gap.py::test_detect_gaps_real_grok_semantic_matrix
+  exclusion_reason: 預設 -m 'not integration' 排除；covered/missing 語意矩陣需真實 grok proxy (127.0.0.1:8318)，proxy 不可達時由 skipif 略過
+  collection_reason: deselected by -m 'not integration'
+  substitute_individual_results:
+    - PASSED tests/test_gap.py::test_detect_gaps_keeps_only_partial_and_missing | ============================== 1 passed in 0.02s ============================== | inv: D:\Users\Administrator\Desktop\筆記補齊\.venv\Scripts\python.exe -X utf8 -m pytest tests/test_gap.py::test_detect_gaps_keeps_only_partial_and_missing -vv --tb=line --color=no
+    - PASSED tests/test_excluded_failing_controls.py::test_control_03_gap_uncovered_question_must_surface | ============================== 1 passed in 0.06s ============================== | inv: D:\Users\Administrator\Desktop\筆記補齊\.venv\Scripts\python.exe -X utf8 -m pytest tests/test_excluded_failing_controls.py::test_control_03_gap_uncovered_question_must_surface -vv --tb=line --color=no
+  failure_or_not_reproducible: NOT-REPRODUCIBLE | covered 過濾與 partial/missing 結構對照 PASS；真模型對筆記涵蓋度的語意判斷無法以產品失敗重現 | docs/deselected-missing-not-reproducible-evidence-2026-07-22.md
+  gap_mitigation_evidence:
+    - source: .github/workflows/ci.yml:76 | anchor: workflow_dispatch | scope: 真實 Grok 對明顯 covered 與 missing 問題的相反判定
+[11/11] node_id: tests/test_write.py::test_write_supplement_real_grok_grounded_output
+  exclusion_reason: 預設 -m 'not integration' 排除；固定來源的 grounded writer 語意需真實 grok proxy (127.0.0.1:8318)，proxy 不可達時由 skipif 略過
+  collection_reason: deselected by -m 'not integration'
+  substitute_individual_results:
+    - PASSED tests/test_write.py::test_used_source_ids_from_markers | ============================== 1 passed in 0.03s ============================== | inv: D:\Users\Administrator\Desktop\筆記補齊\.venv\Scripts\python.exe -X utf8 -m pytest tests/test_write.py::test_used_source_ids_from_markers -vv --tb=line --color=no
+    - PASSED tests/test_write.py::test_pending_evidence_when_insufficient | ============================== 1 passed in 0.04s ============================== | inv: D:\Users\Administrator\Desktop\筆記補齊\.venv\Scripts\python.exe -X utf8 -m pytest tests/test_write.py::test_pending_evidence_when_insufficient -vv --tb=line --color=no
+  failure_or_not_reproducible: NOT-REPRODUCIBLE | 註腳到來源 ID 映射與降級邏輯對照 PASS；真模型固定來源 grounded 寫作品質無法以產品失敗重現 | docs/deselected-missing-not-reproducible-evidence-2026-07-22.md
+  gap_mitigation_evidence:
+    - source: .github/workflows/ci.yml:76 | anchor: workflow_dispatch | scope: 真實 Grok grounded 寫作、有效註腳與 used_source_ids
+FAILED_OR_NOT_REPRODUCIBLE_INDEX:
+  - tests/test_domain.py::test_detect_domain_real_grok_returns_law: NOT-REPRODUCIBLE | domain 標籤 determinism 對照 PASS；真模型語意品質缺口無法以產品失敗重現 | docs/excluded-failing-controls-2026-07-19.md
+  - tests/test_e2e_acceptance.py::test_e2e_acceptance_real: NOT-REPRODUCIBLE | 離線四硬閘 failing-first 對照穩定 PASS，無法以產品失敗重現 | docs/excluded-failing-controls-2026-07-19.md
+  - tests/test_e2e_acceptance.py::test_e2e_acceptance_real: NOT-REPRODUCIBLE | 離線最小品質閘與 supplement 品質邊界皆穩定 PASS | docs/minimal-quality-gates-regression-2026-07-19.md
+  - tests/test_e2e_acceptance.py::test_e2e_acceptance_real: NOT-REPRODUCIBLE | e2e offline quality boundary 無法穩定失敗 | docs/e2e-offline-quality-boundary-2026-07-18.md
+  - tests/test_gap.py::test_detect_gaps_real_grok: NOT-REPRODUCIBLE | 缺口過濾 determinism 對照 PASS；真模型缺口判斷品質無法以產品失敗重現 | docs/excluded-failing-controls-2026-07-19.md
+  - tests/test_llm.py::test_grok_pong_integration: NOT-REPRODUCIBLE | GrokClient parse/endpoint 對照 PASS；純 TCP 連通性屬運維非產品邏輯缺陷 | docs/excluded-failing-controls-2026-07-19.md
+  - tests/test_pipeline.py::test_run_pipeline_real_grok: NOT-REPRODUCIBLE | C6 pending_evidence 對照 PASS；真模型輸出品質缺口無法以產品失敗重現 | docs/excluded-failing-controls-2026-07-19.md
+  - tests/test_questions.py::test_generate_questions_real_grok: NOT-REPRODUCIBLE | 問題清單契約對照 PASS；真模型出題品質無法以產品失敗重現 | docs/excluded-failing-controls-2026-07-19.md
+  - tests/test_retrieve.py::test_retrieve_for_gap_real_twinkle_smoke: NOT-REPRODUCIBLE | law Level A 非空對照 PASS；產品缺陷路徑不可重現（vacuous smoke 為驗證層盲區已鎖定） | docs/excluded-failing-controls-2026-07-19.md
+  - tests/test_retrieve.py::test_retrieve_for_gap_real_twinkle_smoke: NOT-REPRODUCIBLE | 產品 law+LawLookup 路徑穩定回 Level A 非空 | docs/exclusion-correctness-blind-spot-2026-07-19.md
+  - tests/test_twinkle.py::test_search_real_twinkle_hub: NOT-REPRODUCIBLE | Twinkle Source 解析契約對照 PASS；真 Hub 可用性屬外部 I/O 非 determinism 產品缺陷 | docs/excluded-failing-controls-2026-07-19.md
+  - tests/test_domain.py::test_detect_domain_real_grok_representative_domains: NOT-REPRODUCIBLE | 四類標籤解析契約對照 PASS；真模型四類代表文本語意分類品質無法以產品失敗重現 | docs/deselected-missing-not-reproducible-evidence-2026-07-22.md
+  - tests/test_gap.py::test_detect_gaps_real_grok_semantic_matrix: NOT-REPRODUCIBLE | covered 過濾與 partial/missing 結構對照 PASS；真模型對筆記涵蓋度的語意判斷無法以產品失敗重現 | docs/deselected-missing-not-reproducible-evidence-2026-07-22.md
+  - tests/test_write.py::test_write_supplement_real_grok_grounded_output: NOT-REPRODUCIBLE | 註腳到來源 ID 映射與降級邏輯對照 PASS；真模型固定來源 grounded 寫作品質無法以產品失敗重現 | docs/deselected-missing-not-reproducible-evidence-2026-07-22.md
+ACCEPTANCE_MODE: per-node-evidence
+TARGETED_VERIFICATION=PASS
+===== ACCEPTANCE_PACKAGE_END =====
+LEGACY_COUNTERS_CONTEXT_ONLY: DESELECTED_AUDIT=11 MAPPED_TESTS=35 COLLECT_MAP_INV=D:\Users\Administrator\Desktop\筆記補齊\.venv\Scripts\python.exe -X utf8 -m pytest --collect-only -q --color=no tests/test_correction.py::test_retrieved_five_but_only_two_cited tests/test_domain.py::test_detect_domain_admin tests/test_domain.py::test_detect_domain_exam tests/test_domain.py::test_detect_domain_law tests/test_domain.py::test_detect_domain_noise_falls_back_to_other tests/test_e2e_acceptance.py::test_e2e_minimal_quality_gates_offline_regression tests/test_e2e_acceptance.py::test_e2e_offline_supplement_quality_boundary tests/test_e2e_acceptance.py::test_e2e_structural_invariants tests/test_excluded_failing_controls.py::test_control_01_domain_legal_label_contract tests/test_excluded_failing_controls.py::test_control_02_e2e_offline_quality_gates tests/test_excluded_failing_controls.py::test_control_03_gap_uncovered_question_must_surface tests/test_excluded_failing_controls.py::test_control_04_grok_client_parse_and_endpoint_contract tests/test_excluded_failing_controls.py::test_control_05_pipeline_c6_pending_when_no_sources tests/test_excluded_failing_controls.py::test_control_06_questions_clean_list_contract tests/test_excluded_failing_controls.py::test_control_07_retrieve_smoke_vacuous_empty_is_blind_spot tests/test_excluded_failing_controls.py::test_control_07b_retrieve_law_level_a_not_vacuous tests/test_excluded_failing_controls.py::test_control_08_twinkle_parsed_source_contract tests/test_exclusion_correctness_blind_spot.py::test_deselected_retrieve_smoke_vacuous_pass_on_empty_is_blind_spot tests/test_exclusion_correctness_blind_spot.py::test_law_domain_retrieve_must_yield_level_a_not_vacuous_empty tests/test_gap.py::test_detect_gaps_keeps_only_partial_and_missing tests/test_law_search.py::test_search_law_sources_returns_level_A_law_articles tests/test_llm.py::test_grokclient_builds_request_body tests/test_pipeline.py::test_run_pipeline_invariant tests/test_pipeline.py::test_run_pipeline_law_domain_runs_citation_check tests/test_pipeline.py::test_run_pipeline_malformed_gap_output_falls_back_to_pending tests/test_questions.py::test_generate_questions_splits_multiline_string tests/test_questions.py::test_generate_questions_strips_and_drops_blank_lines tests/test_questions.py::test_generate_questions_strips_markdown_fence tests/test_retrieve.py::test_retrieve_for_gap_law_domain_puts_level_A_before_B tests/test_twinkle.py::test_search_mcp_protocol_error_returns_empty tests/test_twinkle.py::test_search_parses_source_with_full_content tests/test_twinkle.py::test_search_reuses_mcp_session tests/test_twinkle.py::test_search_transport_failure_returns_empty tests/test_write.py::test_pending_evidence_when_insufficient tests/test_write.py::test_used_source_ids_from_markers
+PASSED
+
+============================= 1 passed in 11.75s ==============================
