@@ -209,9 +209,18 @@ def main() -> None:
         detail = details.get(node_id)
         if detail is None:
             failures.append(f"缺少 deselected reason：{node_id}")
+            continue
+        allow_entry = allowmap.get(node_id)
+        if allow_entry:
+            expected = allow_entry.get("collection_reason", AUTHORIZED_REASON)
+            if detail != expected:
+                failures.append(
+                    f"deselected reason 與 allowlist 不符：{node_id} "
+                    f"(actual={detail!r}, expected={expected!r})"
+                )
         elif detail != AUTHORIZED_REASON:
             failures.append(
-                f"deselected reason 未授權：{node_id} (reason={detail!r})"
+                f"deselected reason 未授權 (不在 allowlist)：{node_id} (reason={detail!r})"
             )
 
     # 同步輸出，作為 CI log，非僅彙總數字

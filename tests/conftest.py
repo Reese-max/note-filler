@@ -28,10 +28,12 @@ def pytest_deselected(items):
     deselect = config.getoption("deselect") or []
     for item in items:
         matched = [prefix for prefix in deselect if item.nodeid.startswith(prefix)]
-        reason = f"--deselect {matched!r}" if matched else "collection filter"
-        if reasons:
-            reason = ", ".join(reasons)
-        details[item.nodeid] = reason
+        item_reasons = list(reasons)
+        if matched:
+            item_reasons.append(f"--deselect {matched!r}")
+        if not item_reasons:
+            item_reasons.append("collection filter")
+        details[item.nodeid] = ", ".join(item_reasons)
 
 
 def pytest_terminal_summary(terminalreporter, exitstatus, config):

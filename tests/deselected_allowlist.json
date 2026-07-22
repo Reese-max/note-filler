@@ -3,6 +3,7 @@
     "test_id": "tests/test_domain.py::test_detect_domain_real_grok_returns_law",
     "marker": "integration",
     "decision": "acceptable_unexecuted",
+    "collection_reason": "deselected by -m 'not integration'",
     "exclusion_reason": "預設 -m 'not integration' 在 collection 階段排除；需要真實 grok proxy (127.0.0.1:8318)，proxy 不可達時由 skipif 略過",
     "exclusion_evidence": [
       {"source": "pyproject.toml:32", "anchor": "-m 'not integration'", "claim": "預設集合排除 integration marker"},
@@ -40,6 +41,7 @@
     "test_id": "tests/test_e2e_acceptance.py::test_e2e_acceptance_real",
     "marker": "integration",
     "decision": "acceptable_unexecuted",
+    "collection_reason": "deselected by -m 'not integration'",
     "exclusion_reason": "預設 -m 'not integration' 在 collection 階段排除；真跑需要 data/law_index.db、grok proxy 與 TWINKLE_HUB_TOKEN，任一前置條件不足即 skip",
     "exclusion_evidence": [
       {"source": "pyproject.toml:32", "anchor": "-m 'not integration'", "claim": "預設集合排除 integration marker"},
@@ -91,6 +93,7 @@
     "test_id": "tests/test_gap.py::test_detect_gaps_real_grok",
     "marker": "integration",
     "decision": "acceptable_unexecuted",
+    "collection_reason": "deselected by -m 'not integration'",
     "exclusion_reason": "預設 -m 'not integration' 在 collection 階段排除；需要真實 grok proxy (127.0.0.1:8318)，proxy 不可達時由 skipif 略過",
     "exclusion_evidence": [
       {"source": "pyproject.toml:32", "anchor": "-m 'not integration'", "claim": "預設集合排除 integration marker"},
@@ -128,6 +131,7 @@
     "test_id": "tests/test_llm.py::test_grok_pong_integration",
     "marker": "integration",
     "decision": "acceptable_unexecuted",
+    "collection_reason": "deselected by -m 'not integration'",
     "exclusion_reason": "預設 -m 'not integration' 在 collection 階段排除；需要真實 grok proxy (127.0.0.1:8318)，proxy 不可達時由 skipif 略過",
     "exclusion_evidence": [
       {"source": "pyproject.toml:32", "anchor": "-m 'not integration'", "claim": "預設集合排除 integration marker"},
@@ -165,6 +169,7 @@
     "test_id": "tests/test_pipeline.py::test_run_pipeline_real_grok",
     "marker": "integration",
     "decision": "acceptable_unexecuted",
+    "collection_reason": "deselected by -m 'not integration'",
     "exclusion_reason": "預設 -m 'not integration' 在 collection 階段排除；只要真實 grok proxy 才能執行，Twinkle 與 law 雖以 fake 隔離仍保留 integration 邊界",
     "exclusion_evidence": [
       {"source": "pyproject.toml:32", "anchor": "-m 'not integration'", "claim": "預設集合排除 integration marker"},
@@ -208,6 +213,7 @@
     "test_id": "tests/test_questions.py::test_generate_questions_real_grok",
     "marker": "integration",
     "decision": "acceptable_unexecuted",
+    "collection_reason": "deselected by -m 'not integration'",
     "exclusion_reason": "預設 -m 'not integration' 在 collection 階段排除；需要真實 grok proxy (127.0.0.1:8318)，proxy 不可達時由 skipif 略過",
     "exclusion_evidence": [
       {"source": "pyproject.toml:32", "anchor": "-m 'not integration'", "claim": "預設集合排除 integration marker"},
@@ -247,6 +253,7 @@
     "test_id": "tests/test_retrieve.py::test_retrieve_for_gap_real_twinkle_smoke",
     "marker": "integration",
     "decision": "acceptable_unexecuted",
+    "collection_reason": "deselected by -m 'not integration'",
     "exclusion_reason": "預設 -m 'not integration' 在 collection 階段排除；真跑需要 data/law_index.db、grok proxy 與 TWINKLE_HUB_TOKEN",
     "exclusion_evidence": [
       {"source": "pyproject.toml:32", "anchor": "-m 'not integration'", "claim": "預設集合排除 integration marker"},
@@ -301,6 +308,7 @@
     "test_id": "tests/test_twinkle.py::test_search_real_twinkle_hub",
     "marker": "integration",
     "decision": "acceptable_unexecuted",
+    "collection_reason": "deselected by -m 'not integration'",
     "exclusion_reason": "預設 -m 'not integration' 在 collection 階段排除；真跑需要 TWINKLE_HUB_TOKEN，缺 token 時由函式內 pytest.skip 略過",
     "exclusion_evidence": [
       {"source": "pyproject.toml:32", "anchor": "-m 'not integration'", "claim": "預設集合排除 integration marker"},

@@ -102,3 +102,21 @@ def test_ci_gate_fails_when_deselected_allowlist_contains_non_deselected_node(tm
     assert "deselected 數量異常" in combined
     assert "allowlist 中預期 deselected 未出現" in combined
     assert unexpected["test_id"] in combined
+
+
+def test_ci_gate_fails_when_deselected_reason_changes(tmp_path: Path) -> None:
+    allowlist = _load_allowlist()
+    modified = [dict(entry) for entry in allowlist]
+    modified[0] = {**modified[0], "collection_reason": "deselected by -k 'not test_parse'"}
+    bad_allowlist = tmp_path / "deselected_allowlist_reason_changed.json"
+    bad_allowlist.write_text(
+        json.dumps(modified, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+
+    result = _run_gate(tmp_path, "--allowlist", str(bad_allowlist))
+    combined = result.stdout + result.stderr
+
+    assert result.returncode != 0
+    assert "deselected reason 與 allowlist 不符" in combined
+    assert modified[0]["test_id"] in combined
