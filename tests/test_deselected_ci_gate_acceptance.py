@@ -65,11 +65,11 @@ def test_ci_gate_accepts_only_authorized_deselected_nodes_with_reasons(tmp_path:
     assert "採集原因: unknown" not in report
 
 
-def test_ci_gate_fails_when_deselected_allowlist_count_is_too_small(tmp_path: Path) -> None:
+def test_ci_gate_fails_when_deselected_count_drifts_from_11_to_8(tmp_path: Path) -> None:
     allowlist = _load_allowlist()
-    bad_allowlist = tmp_path / "deselected_allowlist_missing_one.json"
+    bad_allowlist = tmp_path / "deselected_allowlist_only_8.json"
     bad_allowlist.write_text(
-        json.dumps(allowlist[1:], ensure_ascii=False, indent=2),
+        json.dumps(allowlist[:8], ensure_ascii=False, indent=2),
         encoding="utf-8",
     )
 
@@ -77,9 +77,10 @@ def test_ci_gate_fails_when_deselected_allowlist_count_is_too_small(tmp_path: Pa
     combined = result.stdout + result.stderr
 
     assert result.returncode != 0
+    assert "核准 deselected 數量漂移：預期 11，實際 8" in combined
     assert "deselected 數量異常" in combined
     assert "未核准 deselected" in combined
-    assert allowlist[0]["test_id"] in combined
+    assert allowlist[8]["test_id"] in combined
 
 
 def test_ci_gate_fails_when_deselected_allowlist_contains_non_deselected_node(tmp_path: Path) -> None:
@@ -104,7 +105,7 @@ def test_ci_gate_fails_when_deselected_allowlist_contains_non_deselected_node(tm
     assert unexpected["test_id"] in combined
 
 
-def test_ci_gate_fails_when_deselected_reason_changes(tmp_path: Path) -> None:
+def test_ci_gate_fails_when_deselected_reason_changes_or_is_missing(tmp_path: Path) -> None:
     allowlist = _load_allowlist()
     modified = [dict(entry) for entry in allowlist]
     modified[0] = {**modified[0], "collection_reason": "deselected by -k 'not test_parse'"}
@@ -120,3 +121,18 @@ def test_ci_gate_fails_when_deselected_reason_changes(tmp_path: Path) -> None:
     assert result.returncode != 0
     assert "deselected reason 與 allowlist 不符" in combined
     assert modified[0]["test_id"] in combined
+
+    modified = [dict(entry) for entry in allowlist]
+    missing_reason_id = modified[0]["test_id"]
+    modified[0].pop("collection_reason")
+    bad_allowlist = tmp_path / "deselected_allowlist_missing_reason.json"
+    bad_allowlist.write_text(
+        json.dumps(modified, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+
+    result = _run_gate(tmp_path, "--allowlist", str(bad_allowlist))
+    combined = result.stdout + result.stderr
+
+    assert result.returncode != 0
+    assert f"allowlist 缺少 collection_reason：{missing_reason_id}" in combined
