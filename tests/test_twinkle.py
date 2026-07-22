@@ -147,6 +147,7 @@ def test_search_real_twinkle_hub():
         pytest.skip("未設定 TWINKLE_HUB_TOKEN,跳過 twinkle-hub 真打整合測試")
     results = TwinkleClient(token=token).search("道路交通管理處罰條例", n=3)
     assert isinstance(results, list)
+    assert results
     for src in results:
         assert isinstance(src, Source)
         assert src.level in ("A", "B")

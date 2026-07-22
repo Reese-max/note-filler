@@ -162,7 +162,9 @@ def test_run_pipeline_real_grok(note_path):
 
     assert doc.original is not None
     assert isinstance(doc.segments, list)
+    supplements = [seg for seg in doc.segments if seg.type == "supplement"]
+    assert supplements, "真模型應至少產生一個 gap 並驅動下游補充"
     # 真模型下無源補充仍須守 C6 不變式
-    for seg in doc.segments:
-        if seg.type == "supplement" and not seg.sources:
+    for seg in supplements:
+        if not seg.sources:
             assert seg.confidence == "pending_evidence"

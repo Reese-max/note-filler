@@ -89,3 +89,9 @@ def test_generate_questions_real_grok():
     assert all(isinstance(q, str) and q.strip() for q in result)
     # 合約:回傳為換行切割後的乾淨清單,不應殘留 JSON 括號等結構符號
     assert not any(q.strip().startswith(("[", "{")) for q in result)
+
+
+def test_generate_questions_rejects_json_shaped_response():
+    """不信任的 JSON-shaped 模型輸出不得成為下游問題。"""
+    for response in ('["第一題?", "第二題?"]', '{"questions": ["第一題?"]}'):
+        assert generate_questions("筆記", "law", FakeLLM([response])) == []

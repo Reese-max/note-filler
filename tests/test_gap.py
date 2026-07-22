@@ -101,3 +101,23 @@ def test_detect_gaps_real_grok():
     assert all(g.status in ("partial", "missing") for g in gaps)  # 只回缺口
     # 第二題明顯未涵蓋,至少要出現在缺口清單
     assert any("裁量基準" in g.question or "罰鍰" in g.question for g in gaps)
+
+
+@pytest.mark.integration
+@pytest.mark.skipif(not _grok_reachable(), reason="grok proxy(127.0.0.1:8318)未上線,條件式略過")
+def test_detect_gaps_real_grok_semantic_matrix():
+    """真模型須排除明顯 covered 題,並保留明顯 missing 題。"""
+    from note_filler.llm import GrokClient
+
+    covered = "行政處分的法定定義為何?"
+    missing = "行政罰鍰的裁量基準與上限為何?"
+    note = (
+        "行政程序法第92條規定,行政處分係行政機關就公法上具體事件所為之"
+        "對外直接發生法律效果之單方行政行為。"
+    )
+
+    gaps = detect_gaps([covered, missing], note, GrokClient())
+    questions = {gap.question for gap in gaps}
+
+    assert covered not in questions
+    assert missing in questions

@@ -1,4 +1,4 @@
-"""守住 8 個 deselected 測試的需求分類與預設等價覆蓋。"""
+"""守住 8 個原始 deselected 測試與最小補測的等價覆蓋。"""
 
 from __future__ import annotations
 
@@ -19,6 +19,11 @@ _PATH_AUDIT = (
 )
 _ALLOWLIST = _REPO / "tests" / "deselected_allowlist.json"
 _NODE_ID_RE = re.compile(r"^tests/[^:]+::\S+$")
+_SUPPLEMENTAL_INTEGRATION_IDS = {
+    "tests/test_domain.py::test_detect_domain_real_grok_representative_domains",
+    "tests/test_gap.py::test_detect_gaps_real_grok_semantic_matrix",
+    "tests/test_write.py::test_write_supplement_real_grok_grounded_output",
+}
 
 
 def _load(path: Path) -> dict | list:
@@ -66,15 +71,16 @@ def test_coverage_matrix_classifies_all_eight_and_has_no_missing_requirement() -
     )
     audited = path_audit["tests"]
     assert len(audited) == 8
-    assert {row["node_id"] for row in audited} == {
-        row["test_id"] for row in allowlist
-    }
+    audited_ids = {row["node_id"] for row in audited}
+    allowlist_ids = {row["test_id"] for row in allowlist}
+    assert audited_ids <= allowlist_ids
+    assert allowlist_ids - audited_ids == _SUPPLEMENTAL_INTEGRATION_IDS
     paths = [path for row in audited for path in row["paths"]]
     assert len(paths) == len({path["id"] for path in paths}) == 23
     statuses = {
-        "equivalent_coverage": 15,
-        "regression_protection_insufficient": 6,
-        "not_covered": 2,
+        "equivalent_coverage": 23,
+        "regression_protection_insufficient": 0,
+        "not_covered": 0,
     }
     assert {
         status: sum(path["status"] == status for path in paths)
@@ -85,7 +91,14 @@ def test_coverage_matrix_classifies_all_eight_and_has_no_missing_requirement() -
         "correctness_paths": 23,
         **statuses,
         "targets_without_singleton_or_uncovered_path": [
-            "tests/test_llm.py::test_grok_pong_integration"
+            "tests/test_domain.py::test_detect_domain_real_grok_returns_law",
+            "tests/test_e2e_acceptance.py::test_e2e_acceptance_real",
+            "tests/test_gap.py::test_detect_gaps_real_grok",
+            "tests/test_llm.py::test_grok_pong_integration",
+            "tests/test_pipeline.py::test_run_pipeline_real_grok",
+            "tests/test_questions.py::test_generate_questions_real_grok",
+            "tests/test_retrieve.py::test_retrieve_for_gap_real_twinkle_smoke",
+            "tests/test_twinkle.py::test_search_real_twinkle_hub",
         ],
     }
     for path in paths:
@@ -106,7 +119,7 @@ def test_coverage_matrix_classifies_all_eight_and_has_no_missing_requirement() -
     allowlist_by_id = {row["test_id"]: row for row in allowlist}
     rows = matrix["tests"]
     assert len(rows) == 8
-    assert {row["node_id"] for row in rows} == set(allowlist_by_id)
+    assert {row["node_id"] for row in rows} <= set(allowlist_by_id)
     assert matrix["missing_requirements"] == []
     assert matrix["summary"] == {
         "excluded_tests": 8,

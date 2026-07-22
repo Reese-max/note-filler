@@ -1,5 +1,7 @@
 # 8 個 deselected 測試 correctness 路徑等價覆蓋審計
 
+> 2026-07-22 後續補測已關閉本報告列出的 6 個 singleton 與 2 個零覆蓋點；本檔保留第 1 步基線，完成證據見 `docs/deselected-minimal-supplements-2026-07-22.md`。
+
 > 日期：2026-07-21
 > 範圍：`tests/deselected_allowlist.json` 的 8 個 `integration` node ID
 > 機器索引：`docs/pytest-audit/deselected-correctness-path-equivalence-2026-07-21.json`

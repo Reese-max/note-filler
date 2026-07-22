@@ -1,10 +1,10 @@
 """Keep the integration exclusion list and its offline coverage map traceable.
 
-The machine-readable audit is the single source for both the eight excluded
+The machine-readable audit is the single source for all approved excluded
 test ids and the non-integration tests that cover their deterministic paths.
 
 Acceptance must not rely on aggregate counts alone: every formal package must
-include full pytest invocations, all eight node ids, per-node exclusion
+include full pytest invocations, all approved node ids, per-node exclusion
 reasons, individual execution results, and fail / NOT-REPRODUCIBLE evidence.
 """
 
@@ -24,7 +24,7 @@ _REPO_ROOT = Path(__file__).resolve().parent.parent
 _AUDIT = json.loads(
     (_REPO_ROOT / "tests" / "deselected_allowlist.json").read_text(encoding="utf-8")
 )
-_EXPECTED_COUNTS = (157, 149, 8)
+_EXPECTED_COUNTS = (161, 150, 11)
 _EXPECTED_DESELECTED_COUNT = _EXPECTED_COUNTS[2]
 ALLOWED_INTEGRATION_TESTS = sorted(item["test_id"] for item in _AUDIT)
 MAPPED_NON_INTEGRATION_TESTS = sorted(
@@ -378,7 +378,7 @@ def _print_acceptance_package(package: dict) -> None:
 
 
 def test_integration_allowlist_is_stable() -> None:
-    """The current default deselection must exactly match the audited eight."""
+    """The current default deselection must exactly match the approved list."""
     all_tests, _, _ = _collect_tests("-o", "addopts=")
     selected_tests, _, _ = _collect_tests()
     actual = sorted(set(all_tests) - set(selected_tests))
@@ -547,8 +547,8 @@ def test_substitute_mapping_is_complete_and_collectable() -> None:
 def test_acceptance_package_rejects_count_only_summary() -> None:
     """A counts-only dict must fail the expanded acceptance schema checks."""
     count_only = {
-        "counts": {"collected": 120, "selected": 112, "deselected": 8},
-        "summary": "112 passed, 8 deselected",
+        "counts": {"collected": 123, "selected": 112, "deselected": 11},
+        "summary": "112 passed, 11 deselected",
     }
     required = {
         "schema",
@@ -560,7 +560,7 @@ def test_acceptance_package_rejects_count_only_summary() -> None:
     missing = required - set(count_only)
     assert missing == required, "counts-only payload must lack full acceptance fields"
     assert "per_node" not in count_only
-    assert count_only["counts"]["deselected"] == 8  # 數字本身不足
+    assert count_only["counts"]["deselected"] == 11  # 數字本身不足
 
 
 # ---------------------------------------------------------------------------

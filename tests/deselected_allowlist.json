@@ -346,6 +346,103 @@
         "limitation": "需外部 Twinkle Hub 服務可用且 token 有效"
       }
     ]
+  },
+  {
+    "test_id": "tests/test_domain.py::test_detect_domain_real_grok_representative_domains",
+    "marker": "integration",
+    "decision": "acceptable_unexecuted",
+    "collection_reason": "deselected by -m 'not integration'",
+    "exclusion_reason": "預設 -m 'not integration' 排除；四類代表文本需真實 grok proxy (127.0.0.1:8318)，proxy 不可達時由 skipif 略過",
+    "exclusion_evidence": [
+      {"source": "pyproject.toml:32", "anchor": "-m 'not integration'", "claim": "預設集合排除 integration marker"},
+      {"source": "tests/test_domain.py:76", "anchor": "@pytest.mark.integration", "claim": "代表領域語意矩陣標記為 integration"},
+      {"source": "tests/test_domain.py:77", "anchor": "@pytest.mark.skipif", "claim": "grok proxy 不可達時 runtime skip"}
+    ],
+    "covered_function": "note_filler.domain.detect_domain — 真 Grok 四類代表文本語意矩陣",
+    "substitute_tests": [
+      "tests/test_domain.py::test_detect_domain_law",
+      "tests/test_domain.py::test_detect_domain_admin",
+      "tests/test_domain.py::test_detect_domain_exam",
+      "tests/test_domain.py::test_detect_domain_noise_falls_back_to_other"
+    ],
+    "substitute_evidence": [
+      {"test_id": "tests/test_domain.py::test_detect_domain_law", "source": "tests/test_domain.py:19", "anchor": "assert detect_domain", "claim": "FakeLLM 鎖定 law 回傳契約"},
+      {"test_id": "tests/test_domain.py::test_detect_domain_admin", "source": "tests/test_domain.py:24", "anchor": "assert detect_domain", "claim": "FakeLLM 鎖定 admin 回傳契約"},
+      {"test_id": "tests/test_domain.py::test_detect_domain_exam", "source": "tests/test_domain.py:29", "anchor": "assert detect_domain", "claim": "FakeLLM 鎖定 exam 回傳契約"},
+      {"test_id": "tests/test_domain.py::test_detect_domain_noise_falls_back_to_other", "source": "tests/test_domain.py:35", "anchor": "assert detect_domain", "claim": "FakeLLM 鎖定無法辨識時的 other fallback"}
+    ],
+    "coverage_gap": "真模型分類品質與 proxy 可用性仍須 integration 執行；預設測試只覆蓋標籤解析契約",
+    "gap_mitigation_evidence": [
+      {
+        "process": "CI workflow_dispatch 觸發 test-integration job 執行四類代表文本",
+        "source": ".github/workflows/ci.yml:76",
+        "anchor": "workflow_dispatch",
+        "scope": "真實 Grok 對 law/admin/exam/other 代表文本的語意分類",
+        "limitation": "需 grok proxy (:8318) 可用"
+      }
+    ]
+  },
+  {
+    "test_id": "tests/test_gap.py::test_detect_gaps_real_grok_semantic_matrix",
+    "marker": "integration",
+    "decision": "acceptable_unexecuted",
+    "collection_reason": "deselected by -m 'not integration'",
+    "exclusion_reason": "預設 -m 'not integration' 排除；covered/missing 語意矩陣需真實 grok proxy (127.0.0.1:8318)，proxy 不可達時由 skipif 略過",
+    "exclusion_evidence": [
+      {"source": "pyproject.toml:32", "anchor": "-m 'not integration'", "claim": "預設集合排除 integration marker"},
+      {"source": "tests/test_gap.py:106", "anchor": "@pytest.mark.integration", "claim": "真模型語意矩陣標記為 integration"},
+      {"source": "tests/test_gap.py:107", "anchor": "@pytest.mark.skipif", "claim": "grok proxy 不可達時 runtime skip"}
+    ],
+    "covered_function": "note_filler.gap.detect_gaps — 真 Grok covered/missing 對照語意",
+    "substitute_tests": [
+      "tests/test_gap.py::test_detect_gaps_keeps_only_partial_and_missing",
+      "tests/test_excluded_failing_controls.py::test_control_03_gap_uncovered_question_must_surface"
+    ],
+    "substitute_evidence": [
+      {"test_id": "tests/test_gap.py::test_detect_gaps_keeps_only_partial_and_missing", "source": "tests/test_gap.py:26", "anchor": "assert [g.status for g in gaps]", "claim": "FakeLLM 鎖定 covered 過濾與 partial/missing 結構"},
+      {"test_id": "tests/test_excluded_failing_controls.py::test_control_03_gap_uncovered_question_must_surface", "source": "tests/test_excluded_failing_controls.py:175", "anchor": "assert any", "claim": "離線對照鎖定明顯未涵蓋題必須浮現"}
+    ],
+    "coverage_gap": "真模型對筆記涵蓋度的語意判斷仍須 integration 執行；預設測試只覆蓋解析與過濾",
+    "gap_mitigation_evidence": [
+      {
+        "process": "CI workflow_dispatch 觸發 test-integration job 執行 covered/missing 語意矩陣",
+        "source": ".github/workflows/ci.yml:76",
+        "anchor": "workflow_dispatch",
+        "scope": "真實 Grok 對明顯 covered 與 missing 問題的相反判定",
+        "limitation": "需 grok proxy (:8318) 可用"
+      }
+    ]
+  },
+  {
+    "test_id": "tests/test_write.py::test_write_supplement_real_grok_grounded_output",
+    "marker": "integration",
+    "decision": "acceptable_unexecuted",
+    "collection_reason": "deselected by -m 'not integration'",
+    "exclusion_reason": "預設 -m 'not integration' 排除；固定來源的 grounded writer 語意需真實 grok proxy (127.0.0.1:8318)，proxy 不可達時由 skipif 略過",
+    "exclusion_evidence": [
+      {"source": "pyproject.toml:32", "anchor": "-m 'not integration'", "claim": "預設集合排除 integration marker"},
+      {"source": "tests/test_write.py:63", "anchor": "@pytest.mark.integration", "claim": "真 writer 補測標記為 integration"},
+      {"source": "tests/test_write.py:64", "anchor": "@pytest.mark.skipif", "claim": "grok proxy 不可達時 runtime skip"}
+    ],
+    "covered_function": "note_filler.write.write_supplement — 固定兩筆 Level A 來源下的真 Grok grounded 輸出",
+    "substitute_tests": [
+      "tests/test_write.py::test_used_source_ids_from_markers",
+      "tests/test_write.py::test_pending_evidence_when_insufficient"
+    ],
+    "substitute_evidence": [
+      {"test_id": "tests/test_write.py::test_used_source_ids_from_markers", "source": "tests/test_write.py:34", "anchor": "assert out.used_source_ids ==", "claim": "FakeLLM 鎖定合法註腳到實際來源 ID 的映射"},
+      {"test_id": "tests/test_write.py::test_pending_evidence_when_insufficient", "source": "tests/test_write.py:42", "anchor": "assert out.text.startswith", "claim": "FakeLLM 鎖定來源不足時保守回 pending_evidence 文本"}
+    ],
+    "coverage_gap": "真模型能否只依固定來源寫出帶有效註腳的補充仍須 integration 執行",
+    "gap_mitigation_evidence": [
+      {
+        "process": "CI workflow_dispatch 觸發 test-integration job 單跑固定來源 writer",
+        "source": ".github/workflows/ci.yml:76",
+        "anchor": "workflow_dispatch",
+        "scope": "真實 Grok grounded 寫作、有效註腳與 used_source_ids",
+        "limitation": "需 grok proxy (:8318) 可用"
+      }
+    ]
   }
 ]
 

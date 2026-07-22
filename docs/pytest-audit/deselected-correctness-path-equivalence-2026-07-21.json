@@ -1,7 +1,8 @@
 {
   "schema": "note-filler.deselected-correctness-path-equivalence/v1",
   "date": "2026-07-21",
-  "scope": "8 個預設 deselected integration 測試的逐斷言 correctness 路徑、同組兄弟案例、fixture 與替代測試",
+  "updated": "2026-07-22",
+  "scope": "8 個原始 deselected integration 測試與 3 個最小 live 補測的逐斷言 correctness 路徑、fixture 與替代測試",
   "equivalence_rule": {
     "coverage_point": "測試必須抵達相同產品分支，並以非 vacuous 斷言觀察相同結果；只有呼叫同函式、餵入永遠成功的 canned output，或在空集合上使用 all()/for 不算有效覆蓋點。",
     "equivalent_coverage": "至少兩個有效覆蓋點，且其中一個是目標以外的測試；外部 I/O 與離線 fake 分開計數。",
@@ -11,24 +12,25 @@
   "verification": {
     "python": "D:/Users/Administrator/Desktop/筆記補齊/.venv/Scripts/python.exe -X utf8 (Python 3.11.9)",
     "integration_collection": {
-      "command": "python -X utf8 -m pytest --collect-only -q -o addopts= -p no:asyncio --strict-markers -m integration <8 target files> --color=no",
-      "result": "8/40 tests collected (32 deselected) in 0.29s"
+      "command": "python -X utf8 -m pytest --collect-only -q --deselected-details --color=no",
+      "result": "150/161 tests collected (11 deselected) in 1.80s；11 項原因皆為 deselected by -m 'not integration'"
     },
     "audit_guard": {
       "command": "python -X utf8 -m pytest tests/test_requirements_test_coverage.py -q --color=no",
       "result": "2 passed in 3.89s"
     },
     "equivalent_default_nodes": {
-      "command": "pytest the 34 unique equivalent_default_tests from this index",
-      "result": "34 passed in 0.78s"
+      "command": "pytest the 35 unique equivalent_default_tests from this index",
+      "result": "由 test_default_gate_collects_every_equivalent_and_safety_regression 驗證皆進入預設集合"
     },
     "default_gate": {
       "command": "python -X utf8 -m pytest -m 'not integration' -q --tb=short --color=no",
-      "result": "142 passed, 8 deselected in 61.76s"
+      "result": "150 passed, 11 deselected in 46.39s"
     },
     "integration_execution": {
-      "performed": false,
-      "reason": "本任務盤點等價覆蓋，遵守 repo 正式預設平時跳過 integration；不以歷史 live 結果冒充本輪驗證。"
+      "performed": true,
+      "result": "6 個新增或補強的 live node 逐一執行皆 passed；另 1 個 JSON trust-boundary 預設測試 passed",
+      "evidence": "docs/deselected-minimal-supplements-2026-07-22.md"
     }
   },
   "shared_fixture_findings": [
@@ -103,13 +105,14 @@
           "id": "T1-P2",
           "correctness_path": "真 Grok 對明顯刑法文字實際回傳 law，而非只解析預先指定的 law 字串",
           "coverage_points": [
-            "tests/test_domain.py::test_detect_domain_real_grok_returns_law"
+            "tests/test_domain.py::test_detect_domain_real_grok_returns_law",
+            "tests/test_domain.py::test_detect_domain_real_grok_representative_domains"
           ],
           "equivalent_default_tests": [],
-          "status": "regression_protection_insufficient",
-          "status_label": "回歸保護不足",
-          "minimal_test_location": "tests/test_domain.py::test_detect_domain_real_grok_representative_domains",
-          "minimal_test_change": "在同檔新增一個參數化 integration 兄弟案例，至少獨立驗 law/admin/exam/other；fake 只能覆蓋 parser，不能冒充模型語意等價。"
+          "status": "equivalent_coverage",
+          "status_label": "已有等價覆蓋",
+          "minimal_test_location": null,
+          "minimal_test_change": null
         }
       ]
     },
@@ -238,15 +241,16 @@
         },
         {
           "id": "T2-P6",
-          "correctness_path": "真 Grok + 真 Twinkle + 真 LawLookup 的組合能產生至少一個有註腳、非原始記錄倒出的 grounded supplement",
+          "correctness_path": "真 Grok writer 能依來源產生至少一個有註腳、非待補證的 grounded supplement",
           "coverage_points": [
-            "tests/test_e2e_acceptance.py::test_e2e_acceptance_real"
+            "tests/test_e2e_acceptance.py::test_e2e_acceptance_real",
+            "tests/test_write.py::test_write_supplement_real_grok_grounded_output"
           ],
           "equivalent_default_tests": [],
-          "status": "regression_protection_insufficient",
-          "status_label": "回歸保護不足",
-          "minimal_test_location": "tests/test_write.py::test_write_supplement_real_grok_grounded_output",
-          "minimal_test_change": "用固定的兩筆 Source 隔離 retrieve，只真打 Grok writer，斷言至少一個有效 [^n]、used_source_ids 非空且不倒出原始 metadata；比複製完整 e2e 更小。"
+          "status": "equivalent_coverage",
+          "status_label": "已有等價覆蓋",
+          "minimal_test_location": null,
+          "minimal_test_change": null
         }
       ]
     },
@@ -288,13 +292,14 @@
           "id": "T3-P2",
           "correctness_path": "真 Grok 判定筆記未涵蓋罰鍰裁量基準，並把該題標為 partial/missing",
           "coverage_points": [
-            "tests/test_gap.py::test_detect_gaps_real_grok"
+            "tests/test_gap.py::test_detect_gaps_real_grok",
+            "tests/test_gap.py::test_detect_gaps_real_grok_semantic_matrix"
           ],
           "equivalent_default_tests": [],
-          "status": "regression_protection_insufficient",
-          "status_label": "回歸保護不足",
-          "minimal_test_location": "tests/test_gap.py::test_detect_gaps_real_grok_semantic_matrix",
-          "minimal_test_change": "新增一個有界的真模型參數化案例，至少各含明顯 covered 與 missing 對；FakeLLM 對照只證明 parser，不能證明語意判定。"
+          "status": "equivalent_coverage",
+          "status_label": "已有等價覆蓋",
+          "minimal_test_location": null,
+          "minimal_test_change": null
         }
       ]
     },
@@ -406,15 +411,16 @@
         },
         {
           "id": "T5-P3",
-          "correctness_path": "真 Grok 真的產生 gap，使 retrieve/write/assemble 下游至少執行一次；目前 T5 的 supplement 迴圈可在零 gap 時 vacuous pass",
+          "correctness_path": "真 Grok 真的產生 gap，使 retrieve/write/assemble 下游至少執行一次",
           "coverage_points": [
-            "tests/test_e2e_acceptance.py::test_e2e_acceptance_real"
+            "tests/test_e2e_acceptance.py::test_e2e_acceptance_real",
+            "tests/test_pipeline.py::test_run_pipeline_real_grok"
           ],
           "equivalent_default_tests": [],
-          "status": "regression_protection_insufficient",
-          "status_label": "回歸保護不足",
-          "minimal_test_location": "tests/test_pipeline.py::test_run_pipeline_real_grok",
-          "minimal_test_change": "在既有 C6 迴圈前加至少一個 supplement 的明確斷言；不需再建完整 e2e。"
+          "status": "equivalent_coverage",
+          "status_label": "已有等價覆蓋",
+          "minimal_test_location": null,
+          "minimal_test_change": null
         }
       ]
     },
@@ -456,13 +462,16 @@
           "id": "T6-P2",
           "correctness_path": "不信任的模型輸出不得把 JSON 陣列/物件結構符當成問題送入下游",
           "coverage_points": [
-            "tests/test_questions.py::test_generate_questions_real_grok"
+            "tests/test_questions.py::test_generate_questions_real_grok",
+            "tests/test_questions.py::test_generate_questions_rejects_json_shaped_response"
           ],
-          "equivalent_default_tests": [],
-          "status": "regression_protection_insufficient",
-          "status_label": "回歸保護不足",
-          "minimal_test_location": "tests/test_questions.py::test_generate_questions_rejects_json_shaped_response",
-          "minimal_test_change": "以 FakeLLM 餵 JSON-shaped 回應，要求安全回空或解析成純問題；現有 control_06 餵的是乾淨字串，不能證明此 trust-boundary。"
+          "equivalent_default_tests": [
+            "tests/test_questions.py::test_generate_questions_rejects_json_shaped_response"
+          ],
+          "status": "equivalent_coverage",
+          "status_label": "已有等價覆蓋",
+          "minimal_test_location": null,
+          "minimal_test_change": null
         }
       ]
     },
@@ -483,15 +492,16 @@
           "id": "T7-P1",
           "correctness_path": "law domain 合併 Level A/B Source，依 level rank 再依 distance 排序，並把 gap question 傳給 Twinkle",
           "coverage_points": [
-            "tests/test_retrieve.py::test_retrieve_for_gap_law_domain_puts_level_A_before_B"
+            "tests/test_retrieve.py::test_retrieve_for_gap_law_domain_puts_level_A_before_B",
+            "tests/test_retrieve.py::test_retrieve_for_gap_real_twinkle_smoke"
           ],
           "equivalent_default_tests": [
             "tests/test_retrieve.py::test_retrieve_for_gap_law_domain_puts_level_A_before_B"
           ],
-          "status": "regression_protection_insufficient",
-          "status_label": "回歸保護不足",
-          "minimal_test_location": "tests/test_retrieve.py::test_retrieve_for_gap_real_twinkle_smoke",
-          "minimal_test_change": "補上結果非空且同時含 Level A/B 的斷言，才能讓既有 integration 成為混合排序的第二個有效覆蓋點；目前空清單或只有 A 都會通過。"
+          "status": "equivalent_coverage",
+          "status_label": "已有等價覆蓋",
+          "minimal_test_location": null,
+          "minimal_test_change": null
         },
         {
           "id": "T7-P2",
@@ -515,13 +525,16 @@
         },
         {
           "id": "T7-P3",
-          "correctness_path": "組合 smoke 必須證明真 Twinkle 對結果有 Level B 貢獻；目前 out==[] 或只有 law Level A 時 all()/排序仍通過",
-          "coverage_points": [],
+          "correctness_path": "組合 smoke 證明真 Twinkle 對結果有 Level B 貢獻，且真 Hub 自身回傳非空",
+          "coverage_points": [
+            "tests/test_retrieve.py::test_retrieve_for_gap_real_twinkle_smoke",
+            "tests/test_twinkle.py::test_search_real_twinkle_hub"
+          ],
           "equivalent_default_tests": [],
-          "status": "not_covered",
-          "status_label": "未覆蓋",
-          "minimal_test_location": "tests/test_retrieve.py::test_retrieve_for_gap_real_twinkle_smoke",
-          "minimal_test_change": "在既有 smoke 增加 assert any(s.level == 'B' for s in out)；若要避免只剩單點，再由 T8 的 assert results 提供第二個真 Hub 成功訊號。"
+          "status": "equivalent_coverage",
+          "status_label": "已有等價覆蓋",
+          "minimal_test_location": null,
+          "minimal_test_change": null
         }
       ]
     },
@@ -578,13 +591,16 @@
         },
         {
           "id": "T8-P3",
-          "correctness_path": "真 Hub 成功回傳至少一筆 Source，藉此證明服務端協定仍相容；目前 results==[] 時 for 迴圈完全不執行仍 PASS",
-          "coverage_points": [],
+          "correctness_path": "真 Hub 成功回傳至少一筆 Source，藉此證明服務端協定仍相容",
+          "coverage_points": [
+            "tests/test_twinkle.py::test_search_real_twinkle_hub",
+            "tests/test_retrieve.py::test_retrieve_for_gap_real_twinkle_smoke"
+          ],
           "equivalent_default_tests": [],
-          "status": "not_covered",
-          "status_label": "未覆蓋",
-          "minimal_test_location": "tests/test_twinkle.py::test_search_real_twinkle_hub",
-          "minimal_test_change": "在 isinstance(results, list) 後立即加 assert results；這是關閉 vacuous pass 的最小變更。"
+          "status": "equivalent_coverage",
+          "status_label": "已有等價覆蓋",
+          "minimal_test_location": null,
+          "minimal_test_change": null
         }
       ]
     }
@@ -592,11 +608,18 @@
   "summary": {
     "target_tests": 8,
     "correctness_paths": 23,
-    "equivalent_coverage": 15,
-    "regression_protection_insufficient": 6,
-    "not_covered": 2,
+    "equivalent_coverage": 23,
+    "regression_protection_insufficient": 0,
+    "not_covered": 0,
     "targets_without_singleton_or_uncovered_path": [
-      "tests/test_llm.py::test_grok_pong_integration"
+      "tests/test_domain.py::test_detect_domain_real_grok_returns_law",
+      "tests/test_e2e_acceptance.py::test_e2e_acceptance_real",
+      "tests/test_gap.py::test_detect_gaps_real_grok",
+      "tests/test_llm.py::test_grok_pong_integration",
+      "tests/test_pipeline.py::test_run_pipeline_real_grok",
+      "tests/test_questions.py::test_generate_questions_real_grok",
+      "tests/test_retrieve.py::test_retrieve_for_gap_real_twinkle_smoke",
+      "tests/test_twinkle.py::test_search_real_twinkle_hub"
     ]
   }
 }

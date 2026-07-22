@@ -71,3 +71,33 @@ def test_detect_domain_real_grok_returns_law():
         "前項之未遂犯罰之。本條為普通殺人罪之構成要件與法定刑度。"
     )
     assert detect_domain(text, llm) == "law"
+
+
+@pytest.mark.integration
+@pytest.mark.skipif(not _grok_reachable(), reason="grok proxy(127.0.0.1:8318)未上線,條件式略過")
+def test_detect_domain_real_grok_representative_domains():
+    """用一個可單跑的有界矩陣補足真模型四類語意回歸。"""
+    from note_filler.llm import GrokClient
+
+    cases = (
+        (
+            "law",
+            "民法第184條規定故意或過失不法侵害他人權利者,負損害賠償責任。",
+        ),
+        (
+            "admin",
+            "本府各單位公文收發、簽核、用印與檔案歸檔作業流程。",
+        ),
+        (
+            "exam",
+            "高普考行政法申論題的作答架構、配分與歷屆考古題整理。",
+        ),
+        (
+            "other",
+            "家庭烘焙時先將麵粉過篩,再加入奶油與雞蛋拌勻。",
+        ),
+    )
+    llm = GrokClient()
+
+    for expected, text in cases:
+        assert detect_domain(text, llm) == expected

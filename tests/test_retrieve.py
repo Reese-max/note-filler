@@ -118,6 +118,9 @@ def test_retrieve_for_gap_real_twinkle_smoke():
 
     out = retrieve_for_gap(gap, "law", twinkle, law, llm)
 
+    assert out
+    assert any(s.level == "A" for s in out)
+    assert any(s.level == "B" for s in out)
     assert all(isinstance(s, Source) for s in out)
     assert all(s.level in ("A", "B") for s in out)  # MVP 只產 A/B
     # 排序不變式:整串 (rank, distance) 已升序

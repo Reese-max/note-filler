@@ -1,5 +1,7 @@
 # 失敗語義覆蓋最終判定
 
+> 2026-07-22 後續補測已落地；本檔保留補測前判定，完成後的 node、排除原因與實跑證據見 `docs/deselected-minimal-supplements-2026-07-22.md`。
+
 ## 判定依據
 
 - CI 配置：`.github/workflows/ci.yml`

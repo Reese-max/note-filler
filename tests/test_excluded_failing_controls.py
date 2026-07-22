@@ -52,7 +52,7 @@ def test_control_map_covers_all_eight_excluded() -> None:
         (Path(__file__).resolve().parents[1] / "tests" / "deselected_allowlist.json")
         .read_text(encoding="utf-8")
     )
-    assert [row["test_id"] for row in allowlist] == list(EXCLUDED_NODE_IDS)
+    assert [row["test_id"] for row in allowlist[:8]] == list(EXCLUDED_NODE_IDS)
 
 
 # ---------------------------------------------------------------------------
