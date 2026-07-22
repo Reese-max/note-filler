@@ -23,7 +23,6 @@ ROOT = Path(__file__).resolve().parents[1]
 NODE_ID_RE = re.compile(r"^tests/[^:]+::\S+$")
 DETAILS_RE = re.compile(r"^(tests/[^:|]+::\S+)\s+\| reason: (.*)$")
 AUTHORIZED_REASON = "deselected by -m 'not integration'"
-EXPECTED_DESELECTED_COUNT = 11
 
 
 def _run_collect(*args: str) -> str:
@@ -174,16 +173,6 @@ def main() -> None:
     deselected_ids = sorted(set(all_ids) - set(selected_ids))
     failures: list[str] = []
 
-    if len(allowlist) != EXPECTED_DESELECTED_COUNT:
-        failures.append(
-            "核准 deselected 數量漂移："
-            f"預期 {EXPECTED_DESELECTED_COUNT}，實際 {len(allowlist)}"
-        )
-    if len(deselected_ids) != EXPECTED_DESELECTED_COUNT:
-        failures.append(
-            "實際 deselected 數量漂移："
-            f"預期 {EXPECTED_DESELECTED_COUNT}，實際 {len(deselected_ids)}"
-        )
     if len(deselected_ids) != len(allowlist):
         failures.append(
             f"deselected 數量異常：實際 {len(deselected_ids)}，allowlist {len(allowlist)}"

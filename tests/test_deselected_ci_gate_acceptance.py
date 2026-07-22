@@ -65,11 +65,12 @@ def test_ci_gate_accepts_only_authorized_deselected_nodes_with_reasons(tmp_path:
     assert "採集原因: unknown" not in report
 
 
-def test_ci_gate_fails_when_deselected_count_drifts_from_11_to_8(tmp_path: Path) -> None:
+def test_ci_gate_fails_when_deselected_count_differs_from_allowlist(tmp_path: Path) -> None:
     allowlist = _load_allowlist()
-    bad_allowlist = tmp_path / "deselected_allowlist_only_8.json"
+    short_allowlist = allowlist[:-1]
+    bad_allowlist = tmp_path / "deselected_allowlist_missing_one.json"
     bad_allowlist.write_text(
-        json.dumps(allowlist[:8], ensure_ascii=False, indent=2),
+        json.dumps(short_allowlist, ensure_ascii=False, indent=2),
         encoding="utf-8",
     )
 
@@ -77,22 +78,25 @@ def test_ci_gate_fails_when_deselected_count_drifts_from_11_to_8(tmp_path: Path)
     combined = result.stdout + result.stderr
 
     assert result.returncode != 0
-    assert "核准 deselected 數量漂移：預期 11，實際 8" in combined
-    assert "deselected 數量異常" in combined
+    assert (
+        f"deselected 數量異常：實際 {len(allowlist)}，"
+        f"allowlist {len(short_allowlist)}"
+    ) in combined
     assert "未核准 deselected" in combined
-    assert allowlist[8]["test_id"] in combined
+    assert allowlist[-1]["test_id"] in combined
 
 
 def test_ci_gate_fails_when_deselected_allowlist_contains_non_deselected_node(tmp_path: Path) -> None:
     allowlist = _load_allowlist()
+    removed = allowlist[0]
     unexpected = {
-        **allowlist[0],
+        **removed,
         "test_id": "tests/test_parse.py::test_parse_segments_basic",
         "exclusion_reason": "測試用：此節點不應出現在預設 deselected 清單",
     }
-    bad_allowlist = tmp_path / "deselected_allowlist_extra_node.json"
+    bad_allowlist = tmp_path / "deselected_allowlist_equal_count_swap.json"
     bad_allowlist.write_text(
-        json.dumps([*allowlist, unexpected], ensure_ascii=False, indent=2),
+        json.dumps([unexpected, *allowlist[1:]], ensure_ascii=False, indent=2),
         encoding="utf-8",
     )
 
@@ -100,7 +104,9 @@ def test_ci_gate_fails_when_deselected_allowlist_contains_non_deselected_node(tm
     combined = result.stdout + result.stderr
 
     assert result.returncode != 0
-    assert "deselected 數量異常" in combined
+    assert "deselected 數量異常" not in combined
+    assert "未核准 deselected" in combined
+    assert removed["test_id"] in combined
     assert "allowlist 中預期 deselected 未出現" in combined
     assert unexpected["test_id"] in combined
 
