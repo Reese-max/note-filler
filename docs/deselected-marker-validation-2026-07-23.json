@@ -1,0 +1,193 @@
+{
+  "validation_timestamp": "2026-07-23",
+  "validation_scope": "11個 deselected 測試的 marker 定義與排除規則驗證",
+  "validation_method": "逐一檢查 marker 定義、pytest.ini/pyproject.toml/conftest.py 與 CI pytest 命令",
+  "validation_environment": {
+    "python_path": "python -X utf8",
+    "pytest_version": "9.1.1",
+    "working_directory": "D:\\Users\\Administrator\\Desktop\\autodev-ng\\data\\note-filler\\worktrees\\02fd69ec"
+  },
+  "marker_definition": {
+    "source": "pyproject.toml [tool.pytest.ini_options]",
+    "markers_section": "markers = [\"integration: 需要真實 grok(:8318)的整合測試;平時用 -m 'not integration' 跳過\"]",
+    "addopts": "-p no:asyncio --strict-markers -m 'not integration' -W error::DeprecationWarning -W error::PendingDeprecationWarning",
+    "marker_registered": true,
+    "strict_markers_enabled": true
+  },
+  "ci_configuration": {
+    "source": ".github/workflows/ci.yml",
+    "test_pinned_command": "python -m pytest tests/ -m \"not integration\" -v",
+    "test_latest_command": "python -m pytest tests/ -m \"not integration\" -v",
+    "test_integration_command": "python -m pytest tests/ -m \"integration\" -v",
+    "consistency": "CI 命令與 pyproject.toml addopts 一致使用 -m 'not integration'"
+  },
+  "conftest_hooks": {
+    "pytest_collection_modifyitems": "未使用",
+    "custom_deselected_details": "有自訂 --deselected-details hook 用於輸出 deselected 原因",
+    "conditional_collection": "無條件式收集邏輯"
+  },
+  "deselected_tests": [
+    {
+      "node_id": "tests/test_domain.py::test_detect_domain_real_grok_representative_domains",
+      "marker": "@pytest.mark.integration",
+      "marker_location": "tests/test_domain.py:76",
+      "skipif": "@pytest.mark.skipif(not _grok_reachable(), reason=\"grok proxy(127.0.0.1:8318)未上線,條件式略過\")",
+      "skipif_location": "tests/test_domain.py:77",
+      "exclusion_reason": "deselected by -m 'not integration'",
+      "exclusion_mechanism": "pyproject.toml addopts -m 'not integration'",
+      "marker_registered": true,
+      "explicit_exclusion": true,
+      "version_controlled": true
+    },
+    {
+      "node_id": "tests/test_domain.py::test_detect_domain_real_grok_returns_law",
+      "marker": "@pytest.mark.integration",
+      "marker_location": "tests/test_domain.py:62",
+      "skipif": "@pytest.mark.skipif(not _grok_reachable(), reason=\"grok proxy(127.0.0.1:8318)未上線,條件式略過\")",
+      "skipif_location": "tests/test_domain.py:63",
+      "exclusion_reason": "deselected by -m 'not integration'",
+      "exclusion_mechanism": "pyproject.toml addopts -m 'not integration'",
+      "marker_registered": true,
+      "explicit_exclusion": true,
+      "version_controlled": true
+    },
+    {
+      "node_id": "tests/test_e2e_acceptance.py::test_e2e_acceptance_real",
+      "marker": "@pytest.mark.integration",
+      "marker_location": "tests/test_e2e_acceptance.py:244",
+      "skipif": "無 @pytest.mark.skipif，但函式內有 pytest.skip 條件檢查",
+      "skipif_location": "tests/test_e2e_acceptance.py:247-254",
+      "exclusion_reason": "deselected by -m 'not integration'",
+      "exclusion_mechanism": "pyproject.toml addopts -m 'not integration'",
+      "marker_registered": true,
+      "explicit_exclusion": true,
+      "version_controlled": true
+    },
+    {
+      "node_id": "tests/test_gap.py::test_detect_gaps_real_grok",
+      "marker": "@pytest.mark.integration",
+      "marker_location": "tests/test_gap.py:83",
+      "skipif": "@pytest.mark.skipif(not _grok_reachable(), reason=\"grok proxy(127.0.0.1:8318)未上線,條件式略過\")",
+      "skipif_location": "tests/test_gap.py:84",
+      "exclusion_reason": "deselected by -m 'not integration'",
+      "exclusion_mechanism": "pyproject.toml addopts -m 'not integration'",
+      "marker_registered": true,
+      "explicit_exclusion": true,
+      "version_controlled": true
+    },
+    {
+      "node_id": "tests/test_gap.py::test_detect_gaps_real_grok_semantic_matrix",
+      "marker": "@pytest.mark.integration",
+      "marker_location": "tests/test_gap.py:106",
+      "skipif": "@pytest.mark.skipif(not _grok_reachable(), reason=\"grok proxy(127.0.0.1:8318)未上線,條件式略過\")",
+      "skipif_location": "tests/test_gap.py:107",
+      "exclusion_reason": "deselected by -m 'not integration'",
+      "exclusion_mechanism": "pyproject.toml addopts -m 'not integration'",
+      "marker_registered": true,
+      "explicit_exclusion": true,
+      "version_controlled": true
+    },
+    {
+      "node_id": "tests/test_llm.py::test_grok_pong_integration",
+      "marker": "@pytest.mark.integration",
+      "marker_location": "tests/test_llm.py:95",
+      "skipif": "@pytest.mark.skipif(not _grok_reachable(), reason=\"grok proxy(127.0.0.1:8318)未上線,條件式略過\")",
+      "skipif_location": "tests/test_llm.py:96",
+      "exclusion_reason": "deselected by -m 'not integration'",
+      "exclusion_mechanism": "pyproject.toml addopts -m 'not integration'",
+      "marker_registered": true,
+      "explicit_exclusion": true,
+      "version_controlled": true
+    },
+    {
+      "node_id": "tests/test_pipeline.py::test_run_pipeline_real_grok",
+      "marker": "@pytest.mark.integration",
+      "marker_location": "tests/test_pipeline.py:151",
+      "skipif": "@pytest.mark.skipif(not _grok_reachable(), reason=\"grok proxy(127.0.0.1:8318)未上線,條件式略過\")",
+      "skipif_location": "tests/test_pipeline.py:152",
+      "exclusion_reason": "deselected by -m 'not integration'",
+      "exclusion_mechanism": "pyproject.toml addopts -m 'not integration'",
+      "marker_registered": true,
+      "explicit_exclusion": true,
+      "version_controlled": true
+    },
+    {
+      "node_id": "tests/test_questions.py::test_generate_questions_real_grok",
+      "marker": "@pytest.mark.integration",
+      "marker_location": "tests/test_questions.py:74",
+      "skipif": "@pytest.mark.skipif(not _grok_reachable(), reason=\"grok proxy(127.0.0.1:8318)未上線,條件式略過\")",
+      "skipif_location": "tests/test_questions.py:75",
+      "exclusion_reason": "deselected by -m 'not integration'",
+      "exclusion_mechanism": "pyproject.toml addopts -m 'not integration'",
+      "marker_registered": true,
+      "explicit_exclusion": true,
+      "version_controlled": true
+    },
+    {
+      "node_id": "tests/test_retrieve.py::test_retrieve_for_gap_real_twinkle_smoke",
+      "marker": "@pytest.mark.integration",
+      "marker_location": "tests/test_retrieve.py:102",
+      "skipif": "雙重 skipif: @pytest.mark.skipif(not LAW_DB.exists()) + @pytest.mark.skipif(not _grok_reachable())",
+      "skipif_location": "tests/test_retrieve.py:103-104",
+      "exclusion_reason": "deselected by -m 'not integration'",
+      "exclusion_mechanism": "pyproject.toml addopts -m 'not integration'",
+      "marker_registered": true,
+      "explicit_exclusion": true,
+      "version_controlled": true
+    },
+    {
+      "node_id": "tests/test_twinkle.py::test_search_real_twinkle_hub",
+      "marker": "@pytest.mark.integration",
+      "marker_location": "tests/test_twinkle.py:166",
+      "skipif": "無 @pytest.mark.skipif，但函式內有 pytest.skip 條件檢查",
+      "skipif_location": "tests/test_twinkle.py:170-172",
+      "exclusion_reason": "deselected by -m 'not integration'",
+      "exclusion_mechanism": "pyproject.toml addopts -m 'not integration'",
+      "marker_registered": true,
+      "explicit_exclusion": true,
+      "version_controlled": true
+    },
+    {
+      "node_id": "tests/test_write.py::test_write_supplement_real_grok_grounded_output",
+      "marker": "@pytest.mark.integration",
+      "marker_location": "tests/test_write.py:63",
+      "skipif": "@pytest.mark.skipif(not _grok_reachable(), reason=\"grok proxy(127.0.0.1:8318)未上線,條件式略過\")",
+      "skipif_location": "tests/test_write.py:64",
+      "exclusion_reason": "deselected by -m 'not integration'",
+      "exclusion_mechanism": "pyproject.toml addopts -m 'not integration'",
+      "marker_registered": true,
+      "explicit_exclusion": true,
+      "version_controlled": true
+    }
+  ],
+  "validation_summary": {
+    "total_deselected": 11,
+    "all_have_registered_marker": true,
+    "all_have_explicit_exclusion": true,
+    "all_version_controlled": true,
+    "exclusion_mechanism_consistency": "統一使用 pyproject.toml addopts -m 'not integration'",
+    "no_unregistered_markers": true,
+    "no_conditional_collection": true,
+    "no_command_line_filtering_side_effects": true,
+    "no_deselect_flag_usage": true
+  },
+  "findings": {
+    "passed": [
+      "所有 11 個 deselected 測試都有 @pytest.mark.integration 標記",
+      "integration marker 已在 pyproject.toml 中正確註冊",
+      "啟用 --strict-markers 確保未註冊 marker 會報錯",
+      "排除機制統一為 pyproject.toml addopts -m 'not integration'",
+      "CI 命令與 pyproject.toml 配置一致",
+      "無使用 pytest_collection_modifyitems 條件式收集",
+      "無使用 -k keyword 過濾",
+      "無使用 --deselect 命令列過濾",
+      "所有排除規則皆受版本控制（pyproject.toml 與測試檔案）"
+    ],
+    "no_issues": [
+      "無未註冊 marker",
+      "無條件判斷錯誤",
+      "無命令列過濾副作用"
+    ]
+  },
+  "conclusion": "所有 11 個 deselected 測試的排除規則皆為顯式且受版本控制，透過統一的 @pytest.mark.integration 標記與 pyproject.toml addopts -m 'not integration' 排除機制實作，無未註冊 marker、條件判斷錯誤或命令列過濾副作用問題。"
+}
