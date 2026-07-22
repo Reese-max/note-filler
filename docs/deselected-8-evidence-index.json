@@ -1,0 +1,206 @@
+{
+  "version": "2026-07-23",
+  "description": "8 個 deselected node id → 最終排除原因 → 對應 CI/job 或替代路徑 → 證據檔路徑",
+  "scope": "原始 8 個被 -m 'not integration' 排除的整合測試",
+  "generated_from": [
+    "docs/deselected-nodeid-collection-mapping.json",
+    "docs/deselected-traceability-index-2026-07-22.md",
+    "docs/deselected-substitute-coverage-evidence-2026-07-22.md",
+    "docs/deselected-failure-semantic-coverage-2026-07-22.md",
+    "tests/deselected_allowlist.json"
+  ],
+  "nodes": [
+    {
+      "node_id": "tests/test_domain.py::test_detect_domain_real_grok_returns_law",
+      "final_exclusion_reason": "deselected by -m 'not integration' (pyproject.toml addopts)",
+      "ci_job": "test-integration (.github/workflows/ci.yml:73) - workflow_dispatch 手動觸發",
+      "substitute_tests": [
+        "tests/test_domain.py::test_detect_domain_law",
+        "tests/test_excluded_failing_controls.py::test_control_01_domain_legal_label_contract"
+      ],
+      "evidence_files": [
+        "docs/deselected-nodeid-collection-mapping.json",
+        "docs/evidence/deselected-8-with-marks.json",
+        "docs/deselected-traceability-index-2026-07-22.md",
+        "docs/deselected-substitute-coverage-evidence-2026-07-22.md",
+        "docs/deselected-failure-semantic-coverage-2026-07-22.md",
+        "docs/excluded-failing-controls-2026-07-19.md",
+        "tests/deselected_allowlist.json"
+      ],
+      "missing_substitute_evidence": false,
+      "coverage_gap": "真 grok 對法律文字的實際回應正確性（FakeLLM 不驗模型品質）"
+    },
+    {
+      "node_id": "tests/test_e2e_acceptance.py::test_e2e_acceptance_real",
+      "final_exclusion_reason": "deselected by -m 'not integration' (pyproject.toml addopts)",
+      "ci_job": "test-integration (.github/workflows/ci.yml:73) - workflow_dispatch 手動觸發，需 grok + Twinkle + law_db",
+      "substitute_tests": [
+        "tests/test_e2e_acceptance.py::test_e2e_structural_invariants",
+        "tests/test_e2e_acceptance.py::test_e2e_offline_supplement_quality_boundary",
+        "tests/test_e2e_acceptance.py::test_e2e_minimal_quality_gates_offline_regression",
+        "tests/test_pipeline.py::test_run_pipeline_invariant",
+        "tests/test_pipeline.py::test_run_pipeline_malformed_gap_output_falls_back_to_pending",
+        "tests/test_pipeline.py::test_run_pipeline_law_domain_runs_citation_check",
+        "tests/test_correction.py::test_retrieved_five_but_only_two_cited",
+        "tests/test_excluded_failing_controls.py::test_control_02_e2e_offline_quality_gates"
+      ],
+      "evidence_files": [
+        "docs/deselected-nodeid-collection-mapping.json",
+        "docs/evidence/deselected-8-with-marks.json",
+        "docs/deselected-traceability-index-2026-07-22.md",
+        "docs/deselected-substitute-coverage-evidence-2026-07-22.md",
+        "docs/deselected-failure-semantic-coverage-2026-07-22.md",
+        "docs/excluded-failing-controls-2026-07-19.md",
+        "docs/minimal-quality-gates-regression-2026-07-19.md",
+        "docs/e2e-offline-quality-boundary-2026-07-18.md",
+        "tests/deselected_allowlist.json"
+      ],
+      "missing_substitute_evidence": false,
+      "coverage_gap": "真模型+真檢索下的 gap 偵測品質、補充寫作品質、Level A 路由穩定性"
+    },
+    {
+      "node_id": "tests/test_gap.py::test_detect_gaps_real_grok",
+      "final_exclusion_reason": "deselected by -m 'not integration' (pyproject.toml addopts)",
+      "ci_job": "test-integration (.github/workflows/ci.yml:73) - workflow_dispatch 手動觸發",
+      "substitute_tests": [
+        "tests/test_gap.py::test_detect_gaps_keeps_only_partial_and_missing",
+        "tests/test_excluded_failing_controls.py::test_control_03_gap_uncovered_question_must_surface"
+      ],
+      "evidence_files": [
+        "docs/deselected-nodeid-collection-mapping.json",
+        "docs/evidence/deselected-8-with-marks.json",
+        "docs/deselected-traceability-index-2026-07-22.md",
+        "docs/deselected-substitute-coverage-evidence-2026-07-22.md",
+        "docs/deselected-failure-semantic-coverage-2026-07-22.md",
+        "docs/excluded-failing-controls-2026-07-19.md",
+        "tests/deselected_allowlist.json"
+      ],
+      "missing_substitute_evidence": false,
+      "coverage_gap": "真 grok 對法律文本的缺口判斷品質（FakeLLM 不驗模型理解能力）"
+    },
+    {
+      "node_id": "tests/test_llm.py::test_grok_pong_integration",
+      "final_exclusion_reason": "deselected by -m 'not integration' (pyproject.toml addopts)",
+      "ci_job": "test-integration (.github/workflows/ci.yml:73) - workflow_dispatch 手動觸發",
+      "substitute_tests": [
+        "tests/test_llm.py::test_grokclient_builds_request_body",
+        "tests/test_excluded_failing_controls.py::test_control_04_grok_client_parse_and_endpoint_contract"
+      ],
+      "evidence_files": [
+        "docs/deselected-nodeid-collection-mapping.json",
+        "docs/evidence/deselected-8-with-marks.json",
+        "docs/deselected-traceability-index-2026-07-22.md",
+        "docs/deselected-substitute-coverage-evidence-2026-07-22.md",
+        "docs/deselected-failure-semantic-coverage-2026-07-22.md",
+        "docs/excluded-failing-controls-2026-07-19.md",
+        "tests/deselected_allowlist.json"
+      ],
+      "missing_substitute_evidence": false,
+      "coverage_gap": "真實 TCP 連線到 proxy 的連通性、proxy 回應格式解析"
+    },
+    {
+      "node_id": "tests/test_pipeline.py::test_run_pipeline_real_grok",
+      "final_exclusion_reason": "deselected by -m 'not integration' (pyproject.toml addopts)",
+      "ci_job": "test-integration (.github/workflows/ci.yml:73) - workflow_dispatch 手動觸發，需 grok proxy",
+      "substitute_tests": [
+        "tests/test_pipeline.py::test_run_pipeline_invariant",
+        "tests/test_pipeline.py::test_run_pipeline_malformed_gap_output_falls_back_to_pending",
+        "tests/test_pipeline.py::test_run_pipeline_law_domain_runs_citation_check",
+        "tests/test_correction.py::test_retrieved_five_but_only_two_cited",
+        "tests/test_excluded_failing_controls.py::test_control_05_pipeline_c6_pending_when_no_sources"
+      ],
+      "evidence_files": [
+        "docs/deselected-nodeid-collection-mapping.json",
+        "docs/evidence/deselected-8-with-marks.json",
+        "docs/deselected-traceability-index-2026-07-22.md",
+        "docs/deselected-substitute-coverage-evidence-2026-07-22.md",
+        "docs/deselected-failure-semantic-coverage-2026-07-22.md",
+        "docs/excluded-failing-controls-2026-07-19.md",
+        "tests/deselected_allowlist.json"
+      ],
+      "missing_substitute_evidence": false,
+      "coverage_gap": "真 Grok 模型輸出的 domain/questions/gaps 正確性 + pipeline 穩定性"
+    },
+    {
+      "node_id": "tests/test_questions.py::test_generate_questions_real_grok",
+      "final_exclusion_reason": "deselected by -m 'not integration' (pyproject.toml addopts)",
+      "ci_job": "test-integration (.github/workflows/ci.yml:73) - workflow_dispatch 手動觸發",
+      "substitute_tests": [
+        "tests/test_questions.py::test_generate_questions_splits_multiline_string",
+        "tests/test_questions.py::test_generate_questions_strips_and_drops_blank_lines",
+        "tests/test_questions.py::test_generate_questions_strips_markdown_fence",
+        "tests/test_excluded_failing_controls.py::test_control_06_questions_clean_list_contract"
+      ],
+      "evidence_files": [
+        "docs/deselected-nodeid-collection-mapping.json",
+        "docs/evidence/deselected-8-with-marks.json",
+        "docs/deselected-traceability-index-2026-07-22.md",
+        "docs/deselected-substitute-coverage-evidence-2026-07-22.md",
+        "docs/deselected-failure-semantic-coverage-2026-07-22.md",
+        "docs/excluded-failing-controls-2026-07-19.md",
+        "tests/deselected_allowlist.json"
+      ],
+      "missing_substitute_evidence": false,
+      "coverage_gap": "真 Grok 對法律文本的問題生成品質"
+    },
+    {
+      "node_id": "tests/test_retrieve.py::test_retrieve_for_gap_real_twinkle_smoke",
+      "final_exclusion_reason": "deselected by -m 'not integration' (pyproject.toml addopts)",
+      "ci_job": "test-integration (.github/workflows/ci.yml:73) - workflow_dispatch 手動觸發，需 grok + token + law_db",
+      "substitute_tests": [
+        "tests/test_retrieve.py::test_retrieve_for_gap_law_domain_puts_level_A_before_B",
+        "tests/test_law_search.py::test_search_law_sources_returns_level_A_law_articles",
+        "tests/test_twinkle.py::test_search_parses_source_with_full_content",
+        "tests/test_twinkle.py::test_search_reuses_mcp_session",
+        "tests/test_twinkle.py::test_search_transport_failure_returns_empty",
+        "tests/test_exclusion_correctness_blind_spot.py::test_deselected_retrieve_smoke_vacuous_pass_on_empty_is_blind_spot",
+        "tests/test_exclusion_correctness_blind_spot.py::test_law_domain_retrieve_must_yield_level_a_not_vacuous_empty",
+        "tests/test_excluded_failing_controls.py::test_control_07_retrieve_smoke_vacuous_empty_is_blind_spot",
+        "tests/test_excluded_failing_controls.py::test_control_07b_retrieve_law_level_a_not_vacuous"
+      ],
+      "evidence_files": [
+        "docs/deselected-nodeid-collection-mapping.json",
+        "docs/evidence/deselected-8-with-marks.json",
+        "docs/deselected-traceability-index-2026-07-22.md",
+        "docs/deselected-substitute-coverage-evidence-2026-07-22.md",
+        "docs/deselected-failure-semantic-coverage-2026-07-22.md",
+        "docs/excluded-failing-controls-2026-07-19.md",
+        "docs/exclusion-correctness-blind-spot-2026-07-19.md",
+        "tests/deselected_allowlist.json"
+      ],
+      "missing_substitute_evidence": false,
+      "coverage_gap": "真實 Twinkle Hub 服務 I/O 與真 Grok 關鍵字抽取品質；smoke vacuous pass 已由離線盲區鎖定"
+    },
+    {
+      "node_id": "tests/test_twinkle.py::test_search_real_twinkle_hub",
+      "final_exclusion_reason": "deselected by -m 'not integration' (pyproject.toml addopts)",
+      "ci_job": "test-integration (.github/workflows/ci.yml:73) - workflow_dispatch 手動觸發，需 TWINKLE_HUB_TOKEN",
+      "substitute_tests": [
+        "tests/test_twinkle.py::test_search_parses_source_with_full_content",
+        "tests/test_twinkle.py::test_search_reuses_mcp_session",
+        "tests/test_twinkle.py::test_search_transport_failure_returns_empty",
+        "tests/test_twinkle.py::test_search_mcp_protocol_error_returns_empty",
+        "tests/test_excluded_failing_controls.py::test_control_08_twinkle_parsed_source_contract"
+      ],
+      "evidence_files": [
+        "docs/deselected-nodeid-collection-mapping.json",
+        "docs/evidence/deselected-8-with-marks.json",
+        "docs/deselected-traceability-index-2026-07-22.md",
+        "docs/deselected-substitute-coverage-evidence-2026-07-22.md",
+        "docs/deselected-failure-semantic-coverage-2026-07-22.md",
+        "docs/excluded-failing-controls-2026-07-19.md",
+        "tests/deselected_allowlist.json"
+      ],
+      "missing_substitute_evidence": false,
+      "coverage_gap": "真實 Twinkle Hub 服務可用性、session 相容性與網路逾時"
+    }
+  ],
+  "summary": {
+    "total_nodes": 8,
+    "nodes_with_complete_substitute_evidence": 8,
+    "nodes_missing_substitute_evidence": 0,
+    "common_exclusion_mechanism": "pyproject.toml addopts -m 'not integration'",
+    "common_ci_job": "test-integration (.github/workflows/ci.yml:73) - workflow_dispatch 手動觸發",
+    "all_nodes_have_evidence_files": true
+  }
+}
