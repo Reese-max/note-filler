@@ -19,6 +19,7 @@ import traceback
 from datetime import datetime, timezone
 from pathlib import Path
 
+from .audit import audit_event
 from .export import to_docx, to_json, to_markdown
 from .knowledge.law_lookup import LawLookup
 from .llm import GrokClient
@@ -59,6 +60,16 @@ def write_delivery_receipt(
     manifest_dir = output_path.parent
     manifest_path = manifest_dir / MANIFEST_NAME
 
+    if manifest_path.exists():
+        audit_event(
+            logger,
+            "delivery_receipt_replaced",
+            input_path,
+            level=logging.INFO,
+            manifest_path=manifest_path,
+            reason="output directory keeps the latest delivery receipt",
+        )
+
     content_hash = ""
     if content is not None:
         content_hash = hashlib.sha256(content.encode("utf-8")).hexdigest()[:16]
@@ -94,11 +105,26 @@ def _iter_inputs(paths: list[str]) -> list[Path]:
     for raw in paths:
         p = Path(raw)
         cands = sorted(q for q in p.rglob("*") if q.suffix.lower() in _SUFFIXES) if p.is_dir() else [p]
+        if p.is_dir() and not cands:
+            audit_event(
+                logger,
+                "input_directory_skipped",
+                p,
+                reason="no supported note files",
+            )
         for q in cands:
             rp = q.resolve()
             if rp not in seen:
                 seen.add(rp)
                 out.append(q)
+            else:
+                audit_event(
+                    logger,
+                    "input_file_deduplicated",
+                    rp,
+                    level=logging.INFO,
+                    reason="same resolved path already queued",
+                )
     return out
 
 
@@ -172,21 +198,44 @@ def main(argv: list[str] | None = None) -> int:
             print(f"✅ {r['input']} → {r['output']}(補充 {r['supplements']}、verified {r['verified']})")
         except Exception as e:  # 單檔失敗不拖垮整批
             tb = traceback.format_exc()
-            logger.error("處理 %s 時失敗:\n%s", f, tb)
+            audit_event(
+                logger,
+                "file_processing_failed",
+                f,
+                level=logging.ERROR,
+                error_type=type(e).__name__,
+                error=str(e),
+                traceback=tb,
+            )
             print(f"❌ {f}:{type(e).__name__}: {e}", file=sys.stderr)
             # 寫 delivery_manifest 失敗回執,讓下游可查詢交付狀態
             dest_dir = out_dir if out_dir is not None else f.parent
-            dest_dir.mkdir(parents=True, exist_ok=True)
             dest = dest_dir / f"{f.stem}.訂正稿.{args.format}"
-            write_delivery_receipt(
-                dest, f,
-                status="failed",
-                content=None,
-                fmt=args.format,
-                supplements=0,
-                verified=0,
-                error=f"{type(e).__name__}: {e}",
-            )
+            try:
+                dest_dir.mkdir(parents=True, exist_ok=True)
+                write_delivery_receipt(
+                    dest, f,
+                    status="failed",
+                    content=None,
+                    fmt=args.format,
+                    supplements=0,
+                    verified=0,
+                    error=f"{type(e).__name__}: {e}",
+                )
+            except Exception as receipt_error:  # 回執持久化失敗不得吞掉或中斷後續檔案
+                audit_event(
+                    logger,
+                    "delivery_receipt_persist_failed",
+                    f,
+                    level=logging.ERROR,
+                    manifest_path=dest.parent / MANIFEST_NAME,
+                    error_type=type(receipt_error).__name__,
+                    error=str(receipt_error),
+                )
+                print(
+                    f"❌ {f}:失敗回執寫入失敗:{type(receipt_error).__name__}: {receipt_error}",
+                    file=sys.stderr,
+                )
 
     print(f"完成 {ok}/{len(files)} 檔。")
     return 0 if ok == len(files) else 1

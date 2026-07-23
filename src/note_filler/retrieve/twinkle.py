@@ -13,6 +13,7 @@ import urllib.request
 from datetime import date
 from typing import Any
 
+from note_filler.audit import audit_event
 from note_filler.retrieve.models import Source
 
 logger = logging.getLogger(__name__)
@@ -102,7 +103,12 @@ class TwinkleMCPClient:
         self._ensure_session()
         response = self._rpc("tools/call", {"name": name, "arguments": arguments})
         if not response:
-            logger.warning("twinkle MCP returned empty response for tool=%s", name)
+            audit_event(
+                logger,
+                "twinkle_response_empty",
+                name,
+                arguments=arguments,
+            )
             return {}
         result = response.get("result")
         if not isinstance(result, dict):
@@ -117,15 +123,40 @@ class TwinkleMCPClient:
             raise MCPProtocolError("MCP tools/call 缺少 content")
         for item in content:
             if not isinstance(item, dict) or item.get("type") not in (None, "text"):
-                logger.debug("twinkle MCP: skipping non-text content item type=%s", item.get("type") if isinstance(item, dict) else type(item).__name__)
+                audit_event(
+                    logger,
+                    "twinkle_content_item_skipped",
+                    name,
+                    level=logging.INFO,
+                    item_type=item.get("type") if isinstance(item, dict) else type(item).__name__,
+                    reason="non-text content",
+                )
                 continue
             text = item.get("text")
             if not isinstance(text, str) or not text.strip():
+                audit_event(
+                    logger,
+                    "twinkle_content_item_skipped",
+                    name,
+                    reason="empty text content",
+                )
                 continue
             decoded = json.loads(text)
             if isinstance(decoded, dict):
                 return decoded
-        logger.warning("twinkle MCP: no parseable JSON found in content items for tool=%s", name)
+            audit_event(
+                logger,
+                "twinkle_content_item_skipped",
+                name,
+                reason="decoded JSON is not an object",
+                decoded_type=type(decoded).__name__,
+            )
+        audit_event(
+            logger,
+            "twinkle_response_unusable",
+            name,
+            reason="no parseable JSON object in content items",
+        )
         return {}
 
 
@@ -138,10 +169,17 @@ def _first_text(hit: dict[str, Any], *names: str) -> str:
     return ""
 
 
-def _clamp_similarity(value: Any) -> float:
+def _clamp_similarity(value: Any, data_id: object = "twinkle:unknown") -> float:
     try:
         similarity = float(value or 0.0)
-    except (TypeError, ValueError):
+    except (TypeError, ValueError) as exc:
+        audit_event(
+            logger,
+            "twinkle_similarity_defaulted",
+            data_id,
+            value=repr(value),
+            error=str(exc),
+        )
         return 0.0
     return min(max(similarity, 0.0), 1.0)
 
@@ -154,7 +192,7 @@ def _extract_hits(data: dict[str, Any]) -> list[Any]:
     return []
 
 
-def _record_fulltext(hit: dict[str, Any]) -> str:
+def _record_fulltext(hit: dict[str, Any], data_id: object = "twinkle:unknown") -> str:
     """★C5/G4:把整筆記錄(含 metadata)攤平成全文,絕不截斷成搜尋摘要。"""
     lines: list[str] = []
     for key, value in hit.items():
@@ -166,6 +204,24 @@ def _record_fulltext(hit: dict[str, Any]) -> str:
             for sub_key, sub_value in value.items():
                 if isinstance(sub_value, (str, int, float)) and str(sub_value).strip():
                     lines.append(f"{key}.{sub_key}: {str(sub_value).strip()}")
+                elif sub_value not in (None, ""):
+                    audit_event(
+                        logger,
+                        "twinkle_record_field_skipped",
+                        data_id,
+                        field=f"{key}.{sub_key}",
+                        value_type=type(sub_value).__name__,
+                        reason="non-scalar field cannot be persisted as citation text",
+                    )
+        elif value not in (None, ""):
+            audit_event(
+                logger,
+                "twinkle_record_field_skipped",
+                data_id,
+                field=key,
+                value_type=type(value).__name__,
+                reason="non-scalar field cannot be persisted as citation text",
+            )
     return "\n".join(lines)
 
 
@@ -187,13 +243,21 @@ def _to_source(hit: dict[str, Any]) -> Source | None:
     level = str(meta.get("source_level") or "B")  # ★ metadata.source_level 否則 "B"
     doc_date = _first_text(hit, "date", "提案日期", "最新進度日期", "doc_date") or None
     source_id = _first_text(hit, "id", "bill_id", "議案編號") or url or title
-    similarity = _clamp_similarity(hit.get("similarity"))
+    similarity = _clamp_similarity(hit.get("similarity"), source_id)
+    content = _record_fulltext(hit, source_id)
+    if not content:
+        audit_event(
+            logger,
+            "twinkle_source_content_empty",
+            source_id,
+            reason="record contained no persistable scalar fields",
+        )
     return Source(
         id=source_id,
         title=title,
         url=url,
         level=level,  # type: ignore[arg-type]  # MVP 只產 A/B,此源恆 B
-        content=_record_fulltext(hit),          # ★ 全文,非截斷摘要
+        content=content,                         # ★ 全文,非截斷摘要
         fetched_date=date.today().isoformat(),  # ★ 今天 ISO
         doc_date=doc_date,                        # ★ 記錄有日期則帶,否則 None
         # TODO(校準): 0.6 魔數綁定上游 KB 快照分布(1-similarity 落 0.05-0.2,
@@ -214,10 +278,24 @@ class TwinkleClient:
 
     def search(self, query: str, n: int = 3) -> list[Source]:
         if not self.token or not isinstance(query, str) or not query.strip():
+            audit_event(
+                logger,
+                "twinkle_search_skipped",
+                query if isinstance(query, str) and query else "query:empty",
+                reason="missing token" if not self.token else "invalid/empty query",
+            )
             return []
         try:
             limit = min(max(int(n), 1), _MAX_RESULTS)
-        except (TypeError, ValueError):
+        except (TypeError, ValueError) as exc:
+            audit_event(
+                logger,
+                "twinkle_limit_defaulted",
+                query,
+                value=repr(n),
+                error=str(exc),
+                default=3,
+            )
             limit = 3
         try:
             data = TwinkleMCPClient(self.url, self.token, self.timeout).call_tool(
@@ -225,14 +303,43 @@ class TwinkleClient:
                 {"query": query.strip(), "limit": limit},
             )
         except Exception as exc:  # noqa: BLE001 - 外部服務不得中斷主流程
-            logger.warning("twinkle-hub query=%r 查詢失敗,降級為空結果: %s", query, exc)
+            audit_event(
+                logger,
+                "twinkle_search_failed",
+                query,
+                error=str(exc),
+                outcome="empty sources",
+            )
             return []
         sources: list[Source] = []
-        for raw_hit in _extract_hits(data):
+        hits = _extract_hits(data)
+        if not hits:
+            audit_event(
+                logger,
+                "twinkle_hits_empty",
+                query,
+                response_keys=sorted(data),
+            )
+        for raw_hit in hits:
             if not isinstance(raw_hit, dict):
-                logger.warning("twinkle-hub query=%r skipped non-object hit: %r", query, raw_hit)
+                audit_event(
+                    logger,
+                    "twinkle_hit_skipped",
+                    query,
+                    reason="non-object hit",
+                    hit=repr(raw_hit),
+                )
                 continue
             source = _to_source(raw_hit)
             if source:
                 sources.append(source)
+        if len(sources) > limit:
+            audit_event(
+                logger,
+                "twinkle_sources_truncated",
+                query,
+                level=logging.INFO,
+                kept=limit,
+                omitted_ids=[source.id for source in sources[limit:]],
+            )
         return sources[:limit]

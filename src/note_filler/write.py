@@ -11,6 +11,7 @@ import logging
 import re
 from dataclasses import dataclass
 
+from .audit import audit_event
 from .gap import Gap
 from .llm import LLMClient
 from .retrieve.models import Source
@@ -48,6 +49,13 @@ def write_supplement(gap: Gap, sources: list[Source], llm: LLMClient) -> Written
     raw = llm.complete([{"role": "user", "content": prompt}]).strip()
 
     if raw.startswith("【待補證】"):
+        audit_event(
+            logger,
+            "supplement_writing_deferred",
+            gap.question,
+            level=logging.INFO,
+            reason="LLM returned pending evidence marker",
+        )
         return WrittenSupplement(text=raw, used_source_ids=[])
 
     n = len(sources)
@@ -59,14 +67,31 @@ def write_supplement(gap: Gap, sources: list[Source], llm: LLMClient) -> Written
             sid = sources[idx - 1].id
             if sid not in used:            # 依出現序去重
                 used.append(sid)
+            else:
+                audit_event(
+                    logger,
+                    "citation_source_deduplicated",
+                    sid,
+                    level=logging.INFO,
+                    question=gap.question,
+                )
             return m.group(0)              # 有效標記保留
-        logger.warning(
-            "question=%r out-of-range citation marker [^%d] removed (only %d sources available)",
+        audit_event(
+            logger,
+            "out-of-range citation marker removed",
             gap.question,
-            idx,
-            n,
+            marker=idx,
+            available_sources=n,
         )
         return ""                          # 越界標記移除
 
     text = _MARKER.sub(_sub, raw)
+    if not used:
+        audit_event(
+            logger,
+            "supplement_has_no_forwardable_sources",
+            gap.question,
+            reason="generated text cited no valid source IDs",
+            outcome="pending_evidence",
+        )
     return WrittenSupplement(text=text, used_source_ids=used)

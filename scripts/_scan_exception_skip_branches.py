@@ -13,6 +13,7 @@ ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "src" / "note_filler"
 APP = ROOT / "app"
 OUT = ROOT / "docs" / "evidence" / "exception-skip-branch-scan-2026-07-24.json"
+TEXT_OUT = ROOT / "docs" / "evidence" / "exception-skip-branch-scan-2026-07-24.txt"
 
 
 class Visitor(ast.NodeVisitor):
@@ -66,6 +67,8 @@ class Visitor(ast.NodeVisitor):
                     ):
                         logs.append(f"logger.{s.func.attr}")
             if isinstance(s, ast.Call) and isinstance(s.func, ast.Name):
+                if s.func.id == "audit_event":
+                    logs.append("audit_event")
                 if s.func.id == "print":
                     logs.append("print")
 
@@ -174,16 +177,21 @@ def main() -> int:
     print("KIND_COUNTS", dict(counts))
     print("TOTAL", len(all_results))
     print("WROTE", OUT)
+    lines = [f"KIND_COUNTS {dict(counts)}", f"TOTAL {len(all_results)}"]
     for r in all_results:
         if r["kind"] == "except":
-            print(
+            line = (
                 f"except|{r['file']}:{r['line']}|{r['function']}|"
                 f"exc={r['exc_type']}|logs={r['logs']}|"
                 f"ret={r['has_return']}|cont={r['has_continue']}|raise={r['has_raise']}|"
                 f"{r['source'][:120]}"
             )
         else:
-            print(f"{r['kind']}|{r['file']}:{r['line']}|{r['function']}|{r['source'][:120]}")
+            line = f"{r['kind']}|{r['file']}:{r['line']}|{r['function']}|{r['source'][:120]}"
+        lines.append(line)
+        print(line)
+    TEXT_OUT.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    print("WROTE", TEXT_OUT)
     return 0
 
 

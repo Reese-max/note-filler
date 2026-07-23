@@ -45,10 +45,10 @@
     "exclusion_reason": "預設 -m 'not integration' 在 collection 階段排除；真跑需要 data/law_index.db、grok proxy 與 TWINKLE_HUB_TOKEN，任一前置條件不足即 skip",
     "exclusion_evidence": [
       {"source": "pyproject.toml:32", "anchor": "-m 'not integration'", "claim": "預設集合排除 integration marker"},
-      {"source": "tests/test_e2e_acceptance.py:244", "anchor": "@pytest.mark.integration", "claim": "目標測試標記為 integration"},
-      {"source": "tests/test_e2e_acceptance.py:247", "anchor": "if not LAW_DB.exists()", "claim": "缺法規資料庫時 runtime skip"},
+      {"source": "tests/test_e2e_acceptance.py:252", "anchor": "@pytest.mark.integration", "claim": "目標測試標記為 integration"},
+      {"source": "tests/test_e2e_acceptance.py:255", "anchor": "if not LAW_DB.exists()", "claim": "缺法規資料庫時 runtime skip"},
       {"source": "tests/test_e2e_acceptance.py:42", "anchor": "return bool(os.environ.get(\"TWINKLE_HUB_TOKEN\"))", "claim": "Twinkle token 是真跑前置條件"},
-      {"source": "tests/test_e2e_acceptance.py:251", "anchor": "if not (_grok_up() and _twinkle_ready())", "claim": "grok 或 Twinkle 未就緒時 runtime skip"}
+      {"source": "tests/test_e2e_acceptance.py:259", "anchor": "if not (_grok_up() and _twinkle_ready())", "claim": "grok 或 Twinkle 未就緒時 runtime skip"}
     ],
     "covered_function": "§12 端到端驗收: parse→domain→questions→gaps→retrieve→assemble→export; 5 個硬不變式",
     "substitute_tests": [
@@ -62,14 +62,14 @@
       "tests/test_excluded_failing_controls.py::test_control_02_e2e_offline_quality_gates"
     ],
     "substitute_evidence": [
-      {"test_id": "tests/test_e2e_acceptance.py::test_e2e_structural_invariants", "source": "tests/test_e2e_acceptance.py:170", "anchor": "_assert_immutable_original", "claim": "離線完整 pipeline 驗證原稿不可變、無來源閘、法條查核與輸出契約"},
-      {"test_id": "tests/test_e2e_acceptance.py::test_e2e_offline_supplement_quality_boundary", "source": "tests/test_e2e_acceptance.py:204", "anchor": "_assert_supplement_quality(doc)", "claim": "離線驗證 Level A 路由、非原始記錄倒出與註腳品質邊界"},
-      {"test_id": "tests/test_e2e_acceptance.py::test_e2e_minimal_quality_gates_offline_regression", "source": "tests/test_e2e_acceptance.py:223", "anchor": "_assert_immutable_original(doc, note_text)", "claim": "最小離線前置鎖定四項品質閘：原稿不可變、pending_evidence、只掛引用、法條離線查核"},
+      {"test_id": "tests/test_e2e_acceptance.py::test_e2e_structural_invariants", "source": "tests/test_e2e_acceptance.py:174", "anchor": "_assert_immutable_original", "claim": "離線完整 pipeline 驗證原稿不可變、無來源閘、法條查核與輸出契約"},
+      {"test_id": "tests/test_e2e_acceptance.py::test_e2e_offline_supplement_quality_boundary", "source": "tests/test_e2e_acceptance.py:212", "anchor": "_assert_supplement_quality(doc)", "claim": "離線驗證 Level A 路由、非原始記錄倒出與註腳品質邊界"},
+      {"test_id": "tests/test_e2e_acceptance.py::test_e2e_minimal_quality_gates_offline_regression", "source": "tests/test_e2e_acceptance.py:231", "anchor": "_assert_immutable_original(doc, note_text)", "claim": "最小離線前置鎖定四項品質閘：原稿不可變、pending_evidence、只掛引用、法條離線查核"},
       {"test_id": "tests/test_pipeline.py::test_run_pipeline_invariant", "source": "tests/test_pipeline.py:85", "anchor": "if not seg.sources", "claim": "pipeline C6：無來源補充必為 pending_evidence，雙來源補充為 verified"},
       {"test_id": "tests/test_pipeline.py::test_run_pipeline_malformed_gap_output_falls_back_to_pending", "source": "tests/test_pipeline.py:145", "anchor": "assert supplements[0].text.startswith", "claim": "畸形 gap 輸出保守降級為待補證且不掛來源"},
       {"test_id": "tests/test_pipeline.py::test_run_pipeline_law_domain_runs_citation_check", "source": "tests/test_pipeline.py:122", "anchor": "assert len(calls)", "claim": "law 領域每個補充段都觸發法規引用查核"},
       {"test_id": "tests/test_correction.py::test_retrieved_five_but_only_two_cited", "source": "tests/test_correction.py:82", "anchor": "assert [s.id for s in sup.sources]", "claim": "只掛實際引用來源，不把未引用的 retrieved source 帶入正文"},
-      {"test_id": "tests/test_excluded_failing_controls.py::test_control_02_e2e_offline_quality_gates", "source": "tests/test_excluded_failing_controls.py:145", "anchor": "assert seg.confidence == \"pending_evidence\"", "claim": "failing-first 對照：離線四硬閘（原稿/pending/引用/verified）"}
+      {"test_id": "tests/test_excluded_failing_controls.py::test_control_02_e2e_offline_quality_gates", "source": "tests/test_excluded_failing_controls.py:155", "anchor": "assert seg.confidence == \"pending_evidence\"", "claim": "failing-first 對照：離線四硬閘（原稿/pending/引用/verified）"}
     ],
     "coverage_gap": "真模型+真檢索下的 gap 偵測品質、補充寫作品質 (_assert_supplement_quality)、Level A 路由穩定性",
     "gap_mitigation_evidence": [
@@ -97,8 +97,8 @@
     "exclusion_reason": "預設 -m 'not integration' 在 collection 階段排除；需要真實 grok proxy (127.0.0.1:8318)，proxy 不可達時由 skipif 略過",
     "exclusion_evidence": [
       {"source": "pyproject.toml:32", "anchor": "-m 'not integration'", "claim": "預設集合排除 integration marker"},
-      {"source": "tests/test_gap.py:83", "anchor": "@pytest.mark.integration", "claim": "目標測試標記為 integration"},
-      {"source": "tests/test_gap.py:84", "anchor": "@pytest.mark.skipif", "claim": "grok proxy 不可達時 runtime skip"}
+      {"source": "tests/test_gap.py:84", "anchor": "@pytest.mark.integration", "claim": "目標測試標記為 integration"},
+      {"source": "tests/test_gap.py:85", "anchor": "@pytest.mark.skipif", "claim": "grok proxy 不可達時 runtime skip"}
     ],
     "covered_function": "note_filler.gap.detect_gaps — LLM 缺口偵測 (partial/missing 過濾)",
     "substitute_tests": [
@@ -107,7 +107,7 @@
     ],
     "substitute_evidence": [
       {"test_id": "tests/test_gap.py::test_detect_gaps_keeps_only_partial_and_missing", "source": "tests/test_gap.py:26", "anchor": "assert [g.status for g in gaps]", "claim": "FakeLLM 驗證 covered 過濾，只保留 partial/missing 並建立 Gap"},
-      {"test_id": "tests/test_excluded_failing_controls.py::test_control_03_gap_uncovered_question_must_surface", "source": "tests/test_excluded_failing_controls.py:175", "anchor": "assert any(\"裁量基準\" in g.question or \"罰鍰\" in g.question for g in gaps)", "claim": "failing-first 對照：明顯未涵蓋題必須進缺口清單"}
+      {"test_id": "tests/test_excluded_failing_controls.py::test_control_03_gap_uncovered_question_must_surface", "source": "tests/test_excluded_failing_controls.py:185", "anchor": "assert any(\"裁量基準\" in g.question or \"罰鍰\" in g.question for g in gaps)", "claim": "failing-first 對照：明顯未涵蓋題必須進缺口清單"}
     ],
     "coverage_gap": "真 grok 對法律文本的缺口判斷品質",
     "gap_mitigation_evidence": [
@@ -145,7 +145,7 @@
     ],
     "substitute_evidence": [
       {"test_id": "tests/test_llm.py::test_grokclient_builds_request_body", "source": "tests/test_llm.py:54", "anchor": "assert out == \"OK\"", "claim": "monkeypatch 驗證 request body、Bearer、POST endpoint、timeout 與 response parse"},
-      {"test_id": "tests/test_excluded_failing_controls.py::test_control_04_grok_client_parse_and_endpoint_contract", "source": "tests/test_excluded_failing_controls.py:211", "anchor": "assert \"PONG\" in out.upper()", "claim": "failing-first 對照：PONG 契約 + endpoint/model 鎖定"}
+      {"test_id": "tests/test_excluded_failing_controls.py::test_control_04_grok_client_parse_and_endpoint_contract", "source": "tests/test_excluded_failing_controls.py:221", "anchor": "assert \"PONG\" in out.upper()", "claim": "failing-first 對照：PONG 契約 + endpoint/model 鎖定"}
     ],
     "coverage_gap": "真實 TCP 連線到 proxy 的連通性、proxy 回應格式解析",
     "gap_mitigation_evidence": [
@@ -191,7 +191,7 @@
       {"test_id": "tests/test_pipeline.py::test_run_pipeline_law_domain_runs_citation_check", "source": "tests/test_pipeline.py:122", "anchor": "assert len(calls)", "claim": "law pipeline 會逐段執行 citation check"},
       {"test_id": "tests/test_pipeline.py::test_original_text_immutable_in_output", "source": "tests/test_pipeline.py:178", "anchor": "assert original_texts == expected_texts", "claim": "直接比對輸出原文段與原始筆記，防止「輸出資料已變但筆記內容未同步」的假綠情境"},
       {"test_id": "tests/test_correction.py::test_retrieved_five_but_only_two_cited", "source": "tests/test_correction.py:82", "anchor": "assert [s.id for s in sup.sources]", "claim": "組裝層只保留 writer 實際引用的來源"},
-      {"test_id": "tests/test_excluded_failing_controls.py::test_control_05_pipeline_c6_pending_when_no_sources", "source": "tests/test_excluded_failing_controls.py:274", "anchor": "assert seg.confidence == \"pending_evidence\"", "claim": "failing-first 對照：empty twinkle 路徑 C6 pending_evidence"}
+      {"test_id": "tests/test_excluded_failing_controls.py::test_control_05_pipeline_c6_pending_when_no_sources", "source": "tests/test_excluded_failing_controls.py:284", "anchor": "assert seg.confidence == \"pending_evidence\"", "claim": "failing-first 對照：empty twinkle 路徑 C6 pending_evidence"}
     ],
     "coverage_gap": "真 Grok 模型輸出的 domain/questions/gaps 正確性 + pipeline 穩定性",
     "gap_mitigation_evidence": [
@@ -233,7 +233,7 @@
       {"test_id": "tests/test_questions.py::test_generate_questions_splits_multiline_string", "source": "tests/test_questions.py:25", "anchor": "assert result ==", "claim": "FakeLLM 驗證多行回應切成乾淨問題清單"},
       {"test_id": "tests/test_questions.py::test_generate_questions_strips_and_drops_blank_lines", "source": "tests/test_questions.py:38", "anchor": "assert result ==", "claim": "FakeLLM 驗證 strip 與空行移除契約"},
       {"test_id": "tests/test_questions.py::test_generate_questions_strips_markdown_fence", "source": "tests/test_questions.py:104", "anchor": "assert result == [\"問題1?\", \"問題2?\"]", "claim": "FakeLLM 驗證 markdown 圍欄內的問題被正確解析,圍欄行不洩漏"},
-      {"test_id": "tests/test_excluded_failing_controls.py::test_control_06_questions_clean_list_contract", "source": "tests/test_excluded_failing_controls.py:292", "anchor": "assert not any(q.strip().startswith((\"[\", \"{\")) for q in result)", "claim": "failing-first 對照：非空乾淨清單且無 JSON 結構符"}
+      {"test_id": "tests/test_excluded_failing_controls.py::test_control_06_questions_clean_list_contract", "source": "tests/test_excluded_failing_controls.py:302", "anchor": "assert not any(q.strip().startswith((\"[\", \"{\")) for q in result)", "claim": "failing-first 對照：非空乾淨清單且無 JSON 結構符"}
     ],
     "coverage_gap": "真 Grok 對法律文本的問題生成品質",
     "gap_mitigation_evidence": [
@@ -289,8 +289,8 @@
       {"test_id": "tests/test_web.py::test_grade_valid_c_with_doc_date", "source": "tests/test_web.py:176", "anchor": "assert level == \"C\"", "claim": "直接驗證 _grade C/D/drop 分級、doc_date 解析與 malformed fallback，鎖定 other 領域 web 搜尋的 correctness 分支"},
       {"test_id": "tests/test_exclusion_correctness_blind_spot.py::test_deselected_retrieve_smoke_vacuous_pass_on_empty_is_blind_spot", "source": "tests/test_exclusion_correctness_blind_spot.py:68", "anchor": "_integration_smoke_asserts(empty)", "claim": "證明 deselected smoke 三斷言對 empty 仍 vacuous PASS，屬驗證盲區而非產品路徑通過"},
       {"test_id": "tests/test_exclusion_correctness_blind_spot.py::test_law_domain_retrieve_must_yield_level_a_not_vacuous_empty", "source": "tests/test_exclusion_correctness_blind_spot.py:87", "anchor": "assert out,", "claim": "離線 law+LawLookup 強制非空 Level A，攔截 smoke vacuous empty 無法看見的 correctness 缺口"},
-      {"test_id": "tests/test_excluded_failing_controls.py::test_control_07_retrieve_smoke_vacuous_empty_is_blind_spot", "source": "tests/test_excluded_failing_controls.py:314", "anchor": "_smoke_asserts(empty)", "claim": "failing-first 對照：#7 smoke 對 empty 仍綠（驗證層盲區）"},
-      {"test_id": "tests/test_excluded_failing_controls.py::test_control_07b_retrieve_law_level_a_not_vacuous", "source": "tests/test_excluded_failing_controls.py:326", "anchor": "assert out,", "claim": "failing-first 對照：law Level A 非空產品路徑"}
+      {"test_id": "tests/test_excluded_failing_controls.py::test_control_07_retrieve_smoke_vacuous_empty_is_blind_spot", "source": "tests/test_excluded_failing_controls.py:324", "anchor": "_smoke_asserts(empty)", "claim": "failing-first 對照：#7 smoke 對 empty 仍綠（驗證層盲區）"},
+      {"test_id": "tests/test_excluded_failing_controls.py::test_control_07b_retrieve_law_level_a_not_vacuous", "source": "tests/test_excluded_failing_controls.py:336", "anchor": "assert out,", "claim": "failing-first 對照：law Level A 非空產品路徑"}
     ],
     "coverage_gap": "真實 Twinkle Hub 服務 I/O 與真 Grok 關鍵字抽取品質；integration smoke 對 empty 的 vacuous pass（已由 exclusion_correctness_blind_spot 與 failing-controls 離線鎖定 Level A 非空；_grade 分級邏輯已由 test_web.py::test_grade_valid_c_with_doc_date 離線覆蓋）",
     "gap_mitigation_evidence": [
@@ -335,7 +335,7 @@
       {"test_id": "tests/test_twinkle.py::test_search_reuses_mcp_session", "source": "tests/test_twinkle.py:121", "anchor": "assert requests ==", "claim": "mock MCP 驗證 session header 在三次 RPC 間傳遞"},
       {"test_id": "tests/test_twinkle.py::test_search_transport_failure_returns_empty", "source": "tests/test_twinkle.py:134", "anchor": "assert TwinkleClient(token=\"fake-token\").search", "claim": "mock timeout 驗證網路失敗安全降級"},
       {"test_id": "tests/test_twinkle.py::test_search_mcp_protocol_error_returns_empty", "source": "tests/test_twinkle.py:164", "anchor": "assert TwinkleClient(token=\"fake-token\").search(\"酒駕 罰則\", n=3) == []", "claim": "mock MCP isError 驗證 MCP 協議錯誤安全降級為空結果"},
-      {"test_id": "tests/test_excluded_failing_controls.py::test_control_08_twinkle_parsed_source_contract", "source": "tests/test_excluded_failing_controls.py:408", "anchor": "assert src.content.strip()", "claim": "failing-first 對照：解析後 level∈A/B、content 非空、fetched_date 當日"}
+      {"test_id": "tests/test_excluded_failing_controls.py::test_control_08_twinkle_parsed_source_contract", "source": "tests/test_excluded_failing_controls.py:418", "anchor": "assert src.content.strip()", "claim": "failing-first 對照：解析後 level∈A/B、content 非空、fetched_date 當日"}
     ],
     "coverage_gap": "真實 Twinkle Hub 服務可用性、服務端 session 相容性與網路逾時",
     "gap_mitigation_evidence": [
@@ -398,8 +398,8 @@
     "exclusion_reason": "預設 -m 'not integration' 排除；covered/missing 語意矩陣需真實 grok proxy (127.0.0.1:8318)，proxy 不可達時由 skipif 略過",
     "exclusion_evidence": [
       {"source": "pyproject.toml:32", "anchor": "-m 'not integration'", "claim": "預設集合排除 integration marker"},
-      {"source": "tests/test_gap.py:106", "anchor": "@pytest.mark.integration", "claim": "真模型語意矩陣標記為 integration"},
-      {"source": "tests/test_gap.py:107", "anchor": "@pytest.mark.skipif", "claim": "grok proxy 不可達時 runtime skip"}
+      {"source": "tests/test_gap.py:107", "anchor": "@pytest.mark.integration", "claim": "真模型語意矩陣標記為 integration"},
+      {"source": "tests/test_gap.py:108", "anchor": "@pytest.mark.skipif", "claim": "grok proxy 不可達時 runtime skip"}
     ],
     "covered_function": "note_filler.gap.detect_gaps — 真 Grok covered/missing 對照語意",
     "substitute_tests": [
@@ -408,7 +408,7 @@
     ],
     "substitute_evidence": [
       {"test_id": "tests/test_gap.py::test_detect_gaps_keeps_only_partial_and_missing", "source": "tests/test_gap.py:26", "anchor": "assert [g.status for g in gaps]", "claim": "FakeLLM 鎖定 covered 過濾與 partial/missing 結構"},
-      {"test_id": "tests/test_excluded_failing_controls.py::test_control_03_gap_uncovered_question_must_surface", "source": "tests/test_excluded_failing_controls.py:175", "anchor": "assert any", "claim": "離線對照鎖定明顯未涵蓋題必須浮現"}
+      {"test_id": "tests/test_excluded_failing_controls.py::test_control_03_gap_uncovered_question_must_surface", "source": "tests/test_excluded_failing_controls.py:185", "anchor": "assert any", "claim": "離線對照鎖定明顯未涵蓋題必須浮現"}
     ],
     "coverage_gap": "真模型對筆記涵蓋度的語意判斷仍須 integration 執行；預設測試只覆蓋解析與過濾",
     "gap_mitigation_evidence": [

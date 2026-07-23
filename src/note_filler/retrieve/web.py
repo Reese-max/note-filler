@@ -13,6 +13,7 @@ import logging
 from datetime import date
 from typing import TYPE_CHECKING, Callable
 
+from ..audit import audit_event
 from .models import Source
 
 if TYPE_CHECKING:  # 僅型別檢查,避免執行期循環匯入
@@ -56,7 +57,15 @@ def _extract_query(gap: "Gap", llm: "LLMClient") -> str:
     try:
         raw = llm.complete([{"role": "user", "content": _QUERY_PROMPT.format(question=gap.question)}])
         query = _strip_fence(raw).strip().strip('"').strip()
-        return query or gap.question
+        if query:
+            return query
+        audit_event(
+            logger,
+            "web_query_defaulted",
+            gap.question,
+            reason="LLM returned empty query",
+        )
+        return gap.question
     except Exception as exc:  # 抽取失敗不致命,退回原問題
         logger.warning(
             "query extraction failed for question=%r, falling back to raw question: %s",
@@ -76,6 +85,13 @@ def _grade(llm: "LLMClient", gap: "Gap", text: str) -> tuple[str, str | None]:
         return "drop", None
     level = str(data.get("level", "drop")).strip().upper()
     if level not in ("C", "D"):
+        audit_event(
+            logger,
+            "web_grade_dropped",
+            gap.question,
+            level_value=level,
+            reason=str(data.get("reason") or "invalid/drop grade"),
+        )
         return "drop", None
     doc_date = data.get("doc_date")
     if doc_date in (None, "", "null"):
@@ -99,33 +115,104 @@ def search_web_sources(
         query = _extract_query(gap, llm)
         hits = search(query, max_results)  # search 拋錯 → 外層 except → []
     except Exception as exc:  # noqa: BLE001 - 外部服務不得中斷主流程,比照 twinkle 降級
-        logger.warning("開放網路搜尋失敗,降級為空結果: %s", exc)
+        audit_event(
+            logger,
+            "web_search_failed",
+            gap.question,
+            query=locals().get("query"),
+            error=str(exc),
+            outcome="empty sources",
+        )
         return []
 
     today = date.today().isoformat()
     sources: list[Source] = []
-    for i, hit in enumerate(list(hits)[:max_fetch]):
+    all_hits = list(hits)
+    if len(all_hits) > max_fetch:
+        audit_event(
+            logger,
+            "web_hits_truncated",
+            gap.question,
+            level=logging.INFO,
+            kept=max_fetch,
+            omitted=len(all_hits) - max_fetch,
+        )
+    for i, hit in enumerate(all_hits[:max_fetch]):
+        if not isinstance(hit, dict):
+            audit_event(
+                logger,
+                "web_hit_skipped",
+                f"{gap.question}:{i}",
+                reason="hit is not an object",
+                hit=repr(hit),
+            )
+            continue
         href = hit.get("href")
         if not href:
+            audit_event(
+                logger,
+                "web_hit_skipped",
+                f"{gap.question}:{i}",
+                reason="missing href",
+                title=hit.get("title"),
+            )
             continue
         try:
             text = fetch(href)  # 單頁 fetch 失敗只跳過該頁
         except Exception as exc:  # noqa: BLE001
-            logger.debug("fetch failed for %s, skipping: %s", href, exc)
+            audit_event(
+                logger,
+                "web_fetch_failed",
+                href,
+                question=gap.question,
+                error=str(exc),
+            )
             continue
         if not text or len(text) < _MIN_FULLTEXT:  # None/空/過短 → 跳過
+            audit_event(
+                logger,
+                "web_content_skipped",
+                href,
+                question=gap.question,
+                content_length=len(text or ""),
+                reason="empty or shorter than minimum full text",
+            )
             continue
         try:
             level, doc_date = _grade(llm, gap, text)
         except Exception as exc:  # 分級失敗(解析/呼叫)保守跳過該頁
-            logger.warning("grading failed for %s, skipping page: %s", href, exc)
+            audit_event(
+                logger,
+                "web_grading_failed",
+                href,
+                question=gap.question,
+                error=str(exc),
+            )
             continue
         if level not in ("C", "D"):  # drop → 不計入
+            audit_event(
+                logger,
+                "web_source_not_forwarded",
+                href,
+                question=gap.question,
+                reason="grade drop",
+            )
             continue
+        source_id = f"web:{hashlib.sha1(href.encode('utf-8')).hexdigest()[:10]}"
+        if len(text) > _CONTENT_CAP:
+            audit_event(
+                logger,
+                "web_content_truncated",
+                source_id,
+                level=logging.INFO,
+                url=href,
+                original_length=len(text),
+                kept=_CONTENT_CAP,
+            )
         content = text[:_CONTENT_CAP] + (_TRUNC_NOTE if len(text) > _CONTENT_CAP else "")
         sources.append(
             Source(
-                id=f"web:{hashlib.sha1(href.encode('utf-8')).hexdigest()[:10]}",
+                id=source_id,
                 title=str(hit.get("title") or href),
                 url=href,
                 level=level,  # type: ignore[arg-type]
@@ -158,6 +245,12 @@ def _fetch_fulltext(url: str) -> str | None:
 
         html = trafilatura.fetch_url(url)
         if not html:
+            audit_event(
+                logger,
+                "web_fetch_empty",
+                url,
+                reason="trafilatura.fetch_url returned no HTML",
+            )
             return None
         return trafilatura.extract(html, include_comments=False, include_tables=False)
     except Exception as exc:  # noqa: BLE001

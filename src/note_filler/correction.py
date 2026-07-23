@@ -6,6 +6,8 @@ import re
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Literal
 
+from note_filler.audit import audit_event
+
 if TYPE_CHECKING:                      # 僅型別提示,執行期零硬耦合(結構化 attr 讀取)
     from note_filler.parse import Document
     from note_filler.gap import Gap
@@ -97,9 +99,12 @@ def assemble_correction(doc, gaps, retrieved, written, validations) -> Correctio
         w = written.get(q)
         if w is None:
             # 不可靜默產生空補充:明確告警 + 可機器比對的【待補證】佔位
-            logger.warning(
-                "assemble_correction: gap 問題不在 written 字典,略過寫作結果並降為 pending_evidence: %r",
+            audit_event(
+                logger,
+                "written_supplement_missing",
                 q,
+                reason="gap question absent from written mapping",
+                outcome="pending_evidence",
             )
             text = MISSING_WRITTEN_TEXT
             used_ids: list = []
@@ -111,10 +116,12 @@ def assemble_correction(doc, gaps, retrieved, written, validations) -> Correctio
         used_sources = [by_id[sid] for sid in used_ids if sid in by_id]
         missing_ids = [sid for sid in used_ids if sid not in by_id]
         if missing_ids:
-            logger.warning(
-                "assemble_correction: question=%r used source IDs not found in retrieved: %s",
+            audit_event(
+                logger,
+                "used_sources_not_forwarded",
                 q,
-                missing_ids,
+                missing_source_ids=missing_ids,
+                reason="used source IDs not found in retrieved",
             )
 
         # confidence:【待補證】→ pending;否則一手源即 grounded(見 _grounded)
@@ -130,6 +137,14 @@ def assemble_correction(doc, gaps, retrieved, written, validations) -> Correctio
         v = validations.get(q)
         if v is not None and getattr(v, "conflict", False):
             conflict_note = getattr(v, "conflict_note", None)
+        elif v is None:
+            audit_event(
+                logger,
+                "validation_not_forwarded",
+                q,
+                reason="question absent from validations mapping",
+                outcome="pending_evidence" if confidence == "pending_evidence" else confidence,
+            )
 
         segments.append(
             Segment(

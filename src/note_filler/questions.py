@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import logging
 
+from note_filler.audit import audit_event
 from note_filler.domain import Domain
 from note_filler.llm import LLMClient
 
@@ -53,11 +54,22 @@ def generate_questions(full_text: str, domain: Domain, llm: LLMClient) -> list[s
             s = s.rstrip()[: s.rstrip().rindex("```")]
 
     if s.lstrip().startswith(("[", "{")):
-        logger.warning(
-            "questions: note %.50r received JSON wrapper instead of plain text, returning empty list",
-            full_text,
+        audit_event(
+            logger,
+            "question_generation_skipped",
+            full_text[:50] or "note:empty",
+            reason="received JSON wrapper instead of plain text",
+            outcome="empty list",
         )
         return []
 
     lines = [line.strip() for line in s.splitlines()]
-    return [line for line in lines if line]
+    questions = [line for line in lines if line]
+    if not questions:
+        audit_event(
+            logger,
+            "question_generation_empty",
+            full_text[:50] or "note:empty",
+            reason="LLM response contained no non-empty question lines",
+        )
+    return questions

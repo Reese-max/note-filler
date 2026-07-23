@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
+from ..audit import audit_event
 from ..gap import Gap
 from .law_search import search_law_sources
 from .models import Source
@@ -40,17 +41,25 @@ def retrieve_for_gap(
     if domain in _LAW_DOMAINS and law is not None and llm is not None:
         sources.extend(search_law_sources(gap, llm, law))
     elif domain in _LAW_DOMAINS and (law is None or llm is None):
-        logger.warning(
-            "retrieve_for_gap: question=%r domain=%s but law=%s/llm=%s, skipping law sources",
-            gap.question, domain, law is not None, llm is not None,
+        audit_event(
+            logger,
+            "law_source_retrieval_skipped",
+            gap.question,
+            domain=domain,
+            dependency_state=f"law={law is not None}/llm={llm is not None}",
+            reason="missing retrieval dependency",
         )
     elif domain == "other" and llm is not None:
         # 資安/IT/一般領域:加掛開放網路來源(Level C/D),不打 twinkle(立法院議案為噪音)
         sources.extend(search_web_sources(gap, llm))
     elif domain == "other":
-        logger.warning(
-            "retrieve_for_gap: question=%r domain=other but llm=False, skipping web sources",
+        audit_event(
+            logger,
+            "web_source_retrieval_skipped",
             gap.question,
+            domain="other",
+            dependency_state="llm=False",
+            reason="missing retrieval dependency",
         )
     if domain in _LAW_DOMAINS:  # twinkle(Level B)只對法制領域有意義,other 不打
         sources.extend(twinkle.search(gap.question))

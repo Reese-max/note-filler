@@ -11,6 +11,7 @@ import logging
 from dataclasses import dataclass
 from typing import Literal
 
+from .audit import audit_event
 from .llm import LLMClient
 
 logger = logging.getLogger(__name__)
@@ -59,6 +60,13 @@ def _all_missing(questions: list[str], reason: str) -> list[Gap]:
 
 def detect_gaps(questions: list[str], note_text: str, llm: LLMClient) -> list[Gap]:
     if not questions:
+        audit_event(
+            logger,
+            "gap_detection_skipped",
+            "questions:empty",
+            level=logging.INFO,
+            reason="no questions",
+        )
         return []
 
     questions_block = "\n".join(f"{i + 1}. {q}" for i, q in enumerate(questions))
@@ -82,21 +90,54 @@ def detect_gaps(questions: list[str], note_text: str, llm: LLMClient) -> list[Ga
         return _all_missing(questions, reason="LLM 回應解析失敗,保守標為 missing")
 
     gaps: list[Gap] = []
+    returned_questions: set[str] = set()
     for item in data:
         if not isinstance(item, dict):
-            logger.warning("gap item is not a dict, skipping: %r", item)
+            audit_event(
+                logger,
+                "gap_item_skipped",
+                repr(item),
+                reason="item is not a dict",
+            )
             continue
         status = item.get("status")
-        if status not in ("partial", "missing"):  # 只留缺口,covered 濾掉
-            continue
         question = str(item.get("question", "")).strip()
-        if not question:
-            logger.warning("gap item has no question, skipping: %r", item)
+        if status == "covered":  # 已涵蓋是預期排除，但仍留下問題識別碼
+            audit_event(
+                logger,
+                "gap_item_filtered",
+                question or repr(item),
+                level=logging.INFO,
+                reason="status covered",
+            )
+            returned_questions.add(question)
             continue
+        if status not in ("partial", "missing"):
+            audit_event(
+                logger,
+                "gap_item_skipped",
+                question or repr(item),
+                reason=f"invalid status: {status!r}",
+            )
+            continue
+        if not question:
+            audit_event(
+                logger,
+                "gap_item_skipped",
+                repr(item),
+                reason="gap item has no question",
+            )
+            continue
+        returned_questions.add(question)
         reason = str(item.get("reason", "")).strip()
         if not reason:
             reason = "LLM 未提供缺口原因"
-            logger.warning("gap %r has no reason; using recoverable reason: %s", question, reason)
+            audit_event(
+                logger,
+                "gap_reason_defaulted",
+                question,
+                reason=reason,
+            )
         gaps.append(
             Gap(
                 question=question,
@@ -104,4 +145,19 @@ def detect_gaps(questions: list[str], note_text: str, llm: LLMClient) -> list[Ga
                 reason=reason,
             )
         )
+    for question in questions:
+        if question not in returned_questions:
+            audit_event(
+                logger,
+                "gap_question_recovered",
+                question,
+                reason="LLM response omitted question; treating as missing",
+            )
+            gaps.append(
+                Gap(
+                    question=question,
+                    status="missing",
+                    reason="LLM 回應漏列問題，保守標為 missing",
+                )
+            )
     return gaps

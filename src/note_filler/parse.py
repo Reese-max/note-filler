@@ -5,6 +5,8 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
+from .audit import audit_event
+
 logger = logging.getLogger(__name__)
 
 
@@ -54,5 +56,10 @@ def parse_note(path: str) -> Document:
     )
     full_text = "\n".join(p.text for p in paragraphs)
     if not full_text.strip():
-        logger.warning("parse_note: file %s parsed to empty content", path)
+        audit_event(
+            logger,
+            "note_parsed_empty",
+            path,
+            reason="file parsed to empty content",
+        )
     return Document(source_path=path, paragraphs=paragraphs, full_text=full_text)

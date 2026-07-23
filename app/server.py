@@ -11,6 +11,7 @@ from fastapi.responses import HTMLResponse, PlainTextResponse
 from fastapi.templating import Jinja2Templates
 
 from note_filler.export import to_markdown
+from note_filler.audit import audit_event
 from note_filler.llm import GrokClient
 from note_filler.pipeline import run_pipeline
 from note_filler.knowledge.law_lookup import LawLookup
@@ -46,6 +47,7 @@ async def run(request: Request, file: UploadFile = File(...)) -> HTMLResponse:
     suffix = Path(file.filename or "note.txt").suffix or ".txt"
     data = await file.read()
     tmp_path = None
+    app.state.last_doc = None  # 本次失敗時不得讓 /export 轉送上一份成功結果
     try:
         with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
             tmp.write(data)
@@ -58,7 +60,15 @@ async def run(request: Request, file: UploadFile = File(...)) -> HTMLResponse:
         )
     except Exception as exc:
         tb = traceback.format_exc()
-        logger.error("pipeline failed for %s:\n%s", file.filename, tb)
+        audit_event(
+            logger,
+            "web_pipeline_failed",
+            file.filename or "upload:unnamed",
+            level=logging.ERROR,
+            error_type=type(exc).__name__,
+            error=str(exc),
+            traceback=tb,
+        )
         return TEMPLATES.TemplateResponse(
             request, "result.html",
             {
@@ -73,7 +83,13 @@ async def run(request: Request, file: UploadFile = File(...)) -> HTMLResponse:
             try:
                 os.unlink(tmp_path)
             except OSError as exc:
-                logger.warning("failed to clean up temp file %s: %s", tmp_path, exc)
+                audit_event(
+                    logger,
+                    "temp_file_cleanup_failed",
+                    file.filename or tmp_path,
+                    temp_path=tmp_path,
+                    error=str(exc),
+                )
 
 
 @app.get("/export")

@@ -33,7 +33,8 @@ def test_detect_gaps_calls_llm_exactly_once():
     """FakeLLM 只餵一個回應;若 detect_gaps 多次呼叫會把 responses pop 空 → IndexError。"""
     llm = FakeLLM(['[{"question":"q","status":"missing","reason":"r"}]'])
     gaps = detect_gaps(["q1", "q2", "q3"], "筆記", llm)
-    assert len(gaps) == 1  # 一次呼叫、一個 JSON 陣列回應
+    assert [gap.question for gap in gaps] == ["q", "q1", "q2", "q3"]
+    assert all(gap.status == "missing" for gap in gaps)
 
 
 def test_detect_gaps_parse_failure_marks_all_missing():

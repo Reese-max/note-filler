@@ -57,7 +57,19 @@ class _SequenceLLM:
         return value
 
 
-def test_cli_failure_receipt_keeps_input_identifier_and_reason(tmp_path, monkeypatch):
+def _audit_records(caplog) -> list[dict]:
+    records = []
+    for record in caplog.records:
+        try:
+            payload = json.loads(record.message)
+        except (json.JSONDecodeError, TypeError):
+            continue
+        if {"event", "data_id"} <= payload.keys():
+            records.append(payload)
+    return records
+
+
+def test_cli_failure_receipt_keeps_input_identifier_and_reason(tmp_path, monkeypatch, caplog):
     note = tmp_path / "case-CLI-04.txt"
     note.write_text("原稿", encoding="utf-8")
     out = tmp_path / "out"
@@ -74,9 +86,25 @@ def test_cli_failure_receipt_keeps_input_identifier_and_reason(tmp_path, monkeyp
     assert receipt["input_path"] == str(note)
     assert receipt["error"] == "RuntimeError: fault-CLI-04"
 
+    monkeypatch.setattr(
+        cli,
+        "write_delivery_receipt",
+        lambda *args, **kwargs: (_ for _ in ()).throw(OSError("fault-CLI-receipt")),
+    )
+    caplog.clear()
+    with caplog.at_level(logging.ERROR, logger="note_filler.__main__"):
+        assert cli.main([str(note), "-o", str(tmp_path / "out-2")]) == 1
+    failure = next(
+        row for row in _audit_records(caplog)
+        if row["event"] == "delivery_receipt_persist_failed"
+    )
+    assert failure["data_id"] == str(note)
+    assert failure["error"] == "fault-CLI-receipt"
+
 
 @pytest.mark.anyio
 async def test_web_pipeline_failure_returns_traceable_500(async_client, monkeypatch, caplog, tmp_path):
+    server.app.state.last_doc = CorrectionDoc(_doc(), [])
     monkeypatch.setattr(server, "_build_clients", lambda: (None, None, None))
     monkeypatch.setattr(
         server, "run_pipeline", lambda *args: (_ for _ in ()).throw(RuntimeError("fault-WEB-01"))
@@ -91,6 +119,7 @@ async def test_web_pipeline_failure_returns_traceable_500(async_client, monkeypa
     assert "case-WEB-01.txt" in response.text
     assert "RuntimeError: fault-WEB-01" in response.text
     assert "case-WEB-01.txt" in caplog.text and "fault-WEB-01" in caplog.text
+    assert (await async_client.get("/export")).status_code == 404
 
     temp_path = tmp_path / "case-WEB-04.tmp"
 
@@ -115,7 +144,13 @@ async def test_web_pipeline_failure_returns_traceable_500(async_client, monkeypa
             "/run", files={"file": ("case-WEB-04.txt", b"raw", "text/plain")}
         )
     assert response.status_code == 200
-    assert str(temp_path) in caplog.text and "fault-WEB-04" in caplog.text
+    cleanup = next(
+        row for row in _audit_records(caplog)
+        if row["event"] == "temp_file_cleanup_failed"
+    )
+    assert cleanup["data_id"] == "case-WEB-04.txt"
+    assert cleanup["temp_path"] == str(temp_path)
+    assert cleanup["error"] == "fault-WEB-04"
 
 
 def test_parse_domain_and_questions_degradations_are_identified(tmp_path, caplog):
@@ -131,9 +166,11 @@ def test_parse_domain_and_questions_degradations_are_identified(tmp_path, caplog
     assert parsed.full_text == "" and parsed.paragraphs == ()
     assert domain == "other"
     assert questions == []
-    assert str(note) in caplog.text
-    assert "unclassified-dom-03" in caplog.text
-    assert "case-Q-02" in caplog.text and "JSON" in caplog.text
+    records = _audit_records(caplog)
+    assert next(row for row in records if row["event"] == "note_parsed_empty")["data_id"] == str(note)
+    assert next(row for row in records if row["event"] == "domain_detection_defaulted")["data_id"] == "unclassified-dom-03"
+    question_event = next(row for row in records if row["event"] == "question_generation_skipped")
+    assert question_event["data_id"] == "case-Q-02" and "JSON" in question_event["reason"]
 
 
 def test_gap_anomalies_recover_or_keep_question_and_reason(caplog):
@@ -149,11 +186,17 @@ def test_gap_anomalies_recover_or_keep_question_and_reason(caplog):
         gaps = detect_gaps(["case-GAP-03", "case-GAP-05"], "note", FakeLLM([raw]))
 
     assert [(gap.question, gap.reason) for gap in gaps] == [
-        ("case-GAP-05", "LLM 未提供缺口原因")
+        ("case-GAP-05", "LLM 未提供缺口原因"),
+        ("case-GAP-03", "LLM 回應漏列問題，保守標為 missing"),
     ]
     assert "bad-GAP-03" in caplog.text
     assert "no question" in caplog.text
     assert "case-GAP-05" in caplog.text and "原因" in caplog.text
+    recovered_event = next(
+        row for row in _audit_records(caplog)
+        if row["event"] == "gap_question_recovered"
+    )
+    assert recovered_event["data_id"] == "case-GAP-03"
 
     caplog.clear()
     with caplog.at_level(logging.WARNING, logger="note_filler.gap"):
@@ -275,7 +318,11 @@ def test_twinkle_empty_content_bad_hit_and_transport_are_traceable(monkeypatch, 
             TwinkleMCPClient,
             "call_tool",
             lambda *args, **kwargs: {
-                "hits": ["bad-TW-14", {"id": "missing-title-TW-10"}, {"id": "ok", "title": "ok"}]
+                "hits": [
+                    "bad-TW-14",
+                    {"id": "missing-title-TW-10"},
+                    {"id": "ok", "title": "ok", "attachments": ["not-citation-text"]},
+                ]
             },
         )
         assert [source.id for source in TwinkleClient("token").search("case-TW-14")] == ["ok"]
@@ -292,6 +339,7 @@ def test_twinkle_empty_content_bad_hit_and_transport_are_traceable(monkeypatch, 
         "case-TW-07",
         "bad-TW-14",
         "missing-title-TW-10",
+        "twinkle_record_field_skipped",
         "case-TW-13",
         "fault-TW-13",
     ):
@@ -402,7 +450,12 @@ def test_law_index_skip_records_path_and_continues(tmp_path, caplog):
         counts = build_law_index(corpus, tmp_path / "law.db")
 
     assert counts == (1, 1)
-    assert str(bad) in caplog.text and "no pcode or articles" in caplog.text
+    skipped = next(
+        row for row in _audit_records(caplog)
+        if row["event"] == "law_index_file_skipped"
+    )
+    assert skipped["data_id"] == str(bad)
+    assert skipped["reason"] == "no pcode or articles parsed"
 
 
 def test_domain_fallback_to_other_cascades_to_web_retrieval(caplog):

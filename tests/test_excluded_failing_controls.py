@@ -116,14 +116,24 @@ def test_control_02_e2e_offline_quality_gates() -> None:
         [
             "law",
             "什麼是行政處分?\n行政程序法第92條的定義為何?\n訴願前置程序為何?",
-            json.dumps(
-                [
-                    {
-                        "question": "行政程序法第92條的定義為何?",
-                        "status": "missing",
-                        "reason": "筆記未展開條文定義",
-                    }
-                ],
+                json.dumps(
+                    [
+                        {
+                            "question": "什麼是行政處分?",
+                            "status": "covered",
+                            "reason": "原稿已說明",
+                        },
+                        {
+                            "question": "行政程序法第92條的定義為何?",
+                            "status": "missing",
+                            "reason": "筆記未展開條文定義",
+                        },
+                        {
+                            "question": "訴願前置程序為何?",
+                            "status": "covered",
+                            "reason": "原稿已說明",
+                        },
+                    ],
                 ensure_ascii=False,
             ),
             '{"keyword": "行政處分", "law_name": "行政程序法"}',

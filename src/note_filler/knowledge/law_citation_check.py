@@ -7,6 +7,7 @@
 import logging
 import re
 
+from note_filler.audit import audit_event
 from note_filler.knowledge.law_lookup import LawLookup, _normalize_article_no
 
 logger = logging.getLogger(__name__)
@@ -53,7 +54,13 @@ def check_law_citations(text: str, lookup: LawLookup) -> list[dict]:
         law = cite["law_name"]
         if law in _ANAPHORA:
             if not last_full:
-                logger.debug("anaphora '%s' skipped: no preceding full law name", law)
+                audit_event(
+                    logger,
+                    "law_citation_skipped",
+                    f"{law}:{cite['article_no']}",
+                    level=logging.INFO,
+                    reason="no preceding full law name",
+                )
                 continue
             law = last_full
         else:
@@ -73,7 +80,13 @@ def check_law_citations(text: str, lookup: LawLookup) -> list[dict]:
                 )
             else:
                 # 法規名不在庫（簡稱/未收錄）→ 不確定，不誤報
-                logger.debug("law citation '%s' skipped: law not found in DB", law)
+                audit_event(
+                    logger,
+                    "law_citation_skipped",
+                    f"{law}:{article}",
+                    level=logging.INFO,
+                    reason="law not found in DB",
+                )
             continue
 
         real_money = set(_MONEY_RE.findall(real))
@@ -101,6 +114,13 @@ def annotate_law_mismatches(draft: str, lookup) -> str:
     for issue in issues:
         key = (issue["law_name"], issue["article_no"], issue["kind"], issue["detail"])
         if key in seen:
+            audit_event(
+                logger,
+                "law_issue_deduplicated",
+                f"{issue['law_name']}:{issue['article_no']}:{issue['kind']}",
+                level=logging.INFO,
+                detail=issue["detail"],
+            )
             continue
         seen.add(key)
         lines.append(f"> - {issue['detail']}\n")

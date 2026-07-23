@@ -6,6 +6,7 @@ import datetime
 import json
 import logging
 
+from ..audit import audit_event
 from ..gap import Gap
 from ..llm import LLMClient
 from .models import Source
@@ -63,7 +64,12 @@ def search_law_sources(gap: Gap, llm: LLMClient, law, limit: int = 25) -> list[S
     raw = llm.complete([{"role": "user", "content": _PROMPT.format(question=gap.question)}])
     keywords, law_name = _parse_llm(raw)
     if not keywords:
-        logger.warning("law search: question=%r produced no keywords; returning empty", gap.question)
+        audit_event(
+            logger,
+            "law_search_skipped",
+            gap.question,
+            reason="no keywords; returning empty",
+        )
         return []
 
     seen: set[tuple[str, str]] = set()
@@ -73,14 +79,26 @@ def search_law_sources(gap: Gap, llm: LLMClient, law, limit: int = 25) -> list[S
         for r in law.search_articles(kw, limit, law_name):
             key = (r["pcode"], r["article_no"])
             if key in seen:
+                audit_event(
+                    logger,
+                    "law_source_deduplicated",
+                    f"law:{key[0]}:{key[1]}",
+                    level=logging.INFO,
+                    question=gap.question,
+                    keyword=kw,
+                )
                 continue
             seen.add(key)
             rows.append(r)
     if len(rows) > 20:
-        logger.info(
-            "law search: question=%r found %d hits, keeping top 20",
+        audit_event(
+            logger,
+            "law_sources_truncated",
             gap.question,
-            len(rows),
+            level=logging.INFO,
+            found=len(rows),
+            kept=20,
+            omitted_ids=[f"law:{r['pcode']}:{r['article_no']}" for r in rows[20:]],
         )
     rows = rows[:20]  # ponytail: 上限 20 條夠 MVP;真爆量再分頁
 

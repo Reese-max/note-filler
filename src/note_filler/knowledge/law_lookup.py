@@ -6,6 +6,8 @@ import re
 import sqlite3
 from pathlib import Path
 
+from note_filler.audit import audit_event
+
 logger = logging.getLogger(__name__)
 
 
@@ -120,7 +122,14 @@ def build_law_index(corpus_dir, db_path) -> tuple:
         for md_path in corpus_path.glob("*.md"):
             pcode, law_name, articles = parse_law_md(md_path.read_text(encoding="utf-8"))
             if not pcode or not articles:
-                logger.warning("skipping %s: no pcode or articles parsed", md_path)
+                audit_event(
+                    logger,
+                    "law_index_file_skipped",
+                    md_path,
+                    reason="no pcode or articles parsed",
+                    pcode_present=bool(pcode),
+                    article_count=len(articles),
+                )
                 continue
 
             law_count += 1

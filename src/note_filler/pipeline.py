@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 
+from .audit import audit_event
 from .parse import parse_note                 # T2
 from .domain import detect_domain              # T3
 from .questions import generate_questions      # T4
@@ -33,6 +34,16 @@ def run_pipeline(path, llm, twinkle, law):
         sources = retrieve_for_gap(gap, domain, twinkle, law, llm)  # T9(law+llm 啟用 Level A)
         w = write_supplement(gap, sources, llm)            # Q3(寫出補充,解析 [^n])
         used = [s for s in sources if s.id in w.used_source_ids]
+        omitted_ids = [s.id for s in sources if s.id not in w.used_source_ids]
+        if omitted_ids:
+            audit_event(
+                logger,
+                "sources_not_forwarded_to_validation",
+                gap.question,
+                level=logging.INFO,
+                source_ids=omitted_ids,
+                reason="not actually cited by generated supplement",
+            )
         retrieved[gap.question] = sources
         written[gap.question] = w
         validations[gap.question] = cross_validate(gap.question, used)  # T10(只驗 used)
@@ -54,7 +65,15 @@ def _verify_law_citations(correction, law):
         if seg.type != "supplement":
             continue
         findings = check_law_citations(text=seg.text, lookup=law)  # C2:第一參數用 text 名
-        if any(f.get("kind") == "article_not_found" for f in findings):
+        missing = [f for f in findings if f.get("kind") == "article_not_found"]
+        if missing:
+            audit_event(
+                logger,
+                "law_citation_not_forwarded_as_verified",
+                seg.text[:80],
+                findings=missing,
+                outcome="pending_evidence",
+            )
             seg.confidence = "pending_evidence"
         if any(f.get("kind") == "penalty_mismatch" for f in findings):
             logger.warning(

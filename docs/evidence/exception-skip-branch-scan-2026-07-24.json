@@ -2,21 +2,21 @@
   {
     "kind": "raise",
     "file": "src/note_filler/__main__.py",
-    "line": 116,
+    "line": 150,
     "function": "process_file",
     "source": "            raise RuntimeError(f\"訂正稿寫出失敗或為空,拒絕視為送達成功:{dest}\")"
   },
   {
     "kind": "raise",
     "file": "src/note_filler/__main__.py",
-    "line": 121,
+    "line": 155,
     "function": "process_file",
     "source": "            raise RuntimeError(f\"訂正稿內容為空,拒絕視為送達成功:{path}\")"
   },
   {
     "kind": "except",
     "file": "src/note_filler/__main__.py",
-    "line": 165,
+    "line": 199,
     "function": "main",
     "exc_type": "Exception",
     "has_raise": false,
@@ -24,14 +24,33 @@
     "has_continue": false,
     "has_pass": false,
     "logs": [
+      "audit_event",
+      "print",
+      "audit_event",
       "print"
     ],
     "source": "        except Exception as e:  # 單檔失敗不拖垮整批"
   },
   {
+    "kind": "except",
+    "file": "src/note_filler/__main__.py",
+    "line": 225,
+    "function": "main",
+    "exc_type": "Exception",
+    "has_raise": false,
+    "has_return": false,
+    "has_continue": false,
+    "has_pass": false,
+    "logs": [
+      "audit_event",
+      "print"
+    ],
+    "source": "            except Exception as receipt_error:  # 回執持久化失敗不得吞掉或中斷後續檔案"
+  },
+  {
     "kind": "raise",
     "file": "src/note_filler/__main__.py",
-    "line": 173,
+    "line": 245,
     "function": "<module>",
     "source": "    raise SystemExit(main())"
   },
@@ -45,139 +64,155 @@
   {
     "kind": "return_emptyish",
     "file": "src/note_filler/correction.py",
-    "line": 49,
+    "line": 52,
     "function": "_best_anchor",
     "source": "        return None"
   },
   {
     "kind": "return_emptyish",
     "file": "src/note_filler/correction.py",
-    "line": 67,
+    "line": 70,
     "function": "_grounded",
     "source": "        return True"
   },
   {
     "kind": "return_emptyish",
     "file": "src/note_filler/correction.py",
-    "line": 69,
+    "line": 72,
     "function": "_grounded",
     "source": "        return True"
   },
   {
     "kind": "continue",
     "file": "src/note_filler/export.py",
-    "line": 49,
+    "line": 50,
     "function": "to_markdown",
     "source": "            continue"
   },
   {
     "kind": "continue",
     "file": "src/note_filler/export.py",
-    "line": 87,
+    "line": 91,
     "function": "to_docx",
     "source": "            continue"
   },
   {
     "kind": "return_emptyish",
     "file": "src/note_filler/gap.py",
-    "line": 59,
+    "line": 70,
     "function": "detect_gaps",
     "source": "        return []"
   },
   {
     "kind": "raise",
     "file": "src/note_filler/gap.py",
-    "line": 70,
+    "line": 81,
     "function": "detect_gaps",
     "source": "            raise ValueError(\"回應不是 JSON 陣列\")"
   },
   {
     "kind": "except",
     "file": "src/note_filler/gap.py",
-    "line": 71,
+    "line": 82,
     "function": "detect_gaps",
     "exc_type": "Attribute(value=Name(id='json', ctx=Load()), attr='JSONDecodeError', ctx=Load())|ValueError",
     "has_raise": false,
     "has_return": true,
     "has_continue": false,
     "has_pass": false,
-    "logs": [],
-    "source": "    except (json.JSONDecodeError, ValueError):"
+    "logs": [
+      "logger.warning"
+    ],
+    "source": "    except (json.JSONDecodeError, ValueError) as exc:"
   },
   {
     "kind": "continue",
     "file": "src/note_filler/gap.py",
-    "line": 78,
+    "line": 102,
     "function": "detect_gaps",
     "source": "            continue"
   },
   {
     "kind": "continue",
     "file": "src/note_filler/gap.py",
-    "line": 81,
+    "line": 114,
+    "function": "detect_gaps",
+    "source": "            continue"
+  },
+  {
+    "kind": "continue",
+    "file": "src/note_filler/gap.py",
+    "line": 122,
+    "function": "detect_gaps",
+    "source": "            continue"
+  },
+  {
+    "kind": "continue",
+    "file": "src/note_filler/gap.py",
+    "line": 130,
     "function": "detect_gaps",
     "source": "            continue"
   },
   {
     "kind": "continue",
     "file": "src/note_filler/knowledge/law_citation_check.py",
-    "line": 53,
+    "line": 64,
     "function": "check_law_citations",
     "source": "                continue"
   },
   {
     "kind": "continue",
     "file": "src/note_filler/knowledge/law_citation_check.py",
-    "line": 71,
+    "line": 90,
     "function": "check_law_citations",
     "source": "            continue"
   },
   {
     "kind": "continue",
     "file": "src/note_filler/knowledge/law_citation_check.py",
-    "line": 98,
+    "line": 124,
     "function": "annotate_law_mismatches",
     "source": "            continue"
   },
   {
     "kind": "continue",
     "file": "src/note_filler/knowledge/law_lookup.py",
-    "line": 120,
+    "line": 133,
     "function": "build_law_index",
     "source": "                continue"
   },
   {
     "kind": "return_emptyish",
     "file": "src/note_filler/knowledge/law_lookup.py",
-    "line": 218,
+    "line": 231,
     "function": "fuzzy_find_law",
     "source": "        return None"
   },
   {
     "kind": "raise",
     "file": "src/note_filler/parse.py",
-    "line": 47,
+    "line": 52,
     "function": "parse_note",
     "source": "        raise ValueError(f\"不支援的筆記副檔名：{suffix!r}（僅支援 .txt / .docx）\")"
   },
   {
     "kind": "continue",
     "file": "src/note_filler/pipeline.py",
-    "line": 50,
+    "line": 66,
     "function": "_verify_law_citations",
     "source": "            continue"
   },
   {
     "kind": "return_emptyish",
     "file": "src/note_filler/questions.py",
-    "line": 52,
+    "line": 64,
     "function": "generate_questions",
     "source": "        return []"
   },
   {
     "kind": "except",
     "file": "src/note_filler/retrieve/law_search.py",
-    "line": 40,
+    "line": 44,
     "function": "_parse_llm",
     "exc_type": "Attribute(value=Name(id='json', ctx=Load()), attr='JSONDecodeError', ctx=Load())|ValueError",
     "has_raise": false,
@@ -190,173 +225,177 @@
   {
     "kind": "return_emptyish",
     "file": "src/note_filler/retrieve/law_search.py",
-    "line": 62,
+    "line": 73,
     "function": "search_law_sources",
     "source": "        return []"
   },
   {
     "kind": "continue",
     "file": "src/note_filler/retrieve/law_search.py",
-    "line": 71,
+    "line": 90,
     "function": "search_law_sources",
     "source": "                continue"
   },
   {
     "kind": "return_emptyish",
     "file": "src/note_filler/retrieve/twinkle.py",
-    "line": 39,
+    "line": 40,
     "function": "_decode_streamable_http",
     "source": "        return None"
   },
   {
     "kind": "raise",
     "file": "src/note_filler/retrieve/twinkle.py",
-    "line": 42,
+    "line": 43,
     "function": "_decode_streamable_http",
     "source": "        raise MCPProtocolError(\"MCP JSON-RPC 回應不是物件\")"
   },
   {
     "kind": "raise",
     "file": "src/note_filler/retrieve/twinkle.py",
-    "line": 44,
+    "line": 45,
     "function": "_decode_streamable_http",
     "source": "        raise MCPProtocolError(f\"MCP JSON-RPC 錯誤: {decoded['error']}\")"
   },
   {
     "kind": "raise",
     "file": "src/note_filler/retrieve/twinkle.py",
-    "line": 64,
+    "line": 65,
     "function": "_rpc",
     "source": "            raise MCPProtocolError(\"缺少 twinkle-hub 存取權杖\")"
   },
   {
     "kind": "return_emptyish",
     "file": "src/note_filler/retrieve/twinkle.py",
-    "line": 90,
+    "line": 91,
     "function": "_ensure_session",
     "source": "            return"
   },
   {
     "kind": "return_emptyish",
     "file": "src/note_filler/retrieve/twinkle.py",
-    "line": 105,
+    "line": 112,
     "function": "call_tool",
     "source": "            return {}"
   },
   {
     "kind": "raise",
     "file": "src/note_filler/retrieve/twinkle.py",
-    "line": 108,
+    "line": 115,
     "function": "call_tool",
     "source": "            raise MCPProtocolError(\"MCP tools/call 缺少 result\")"
   },
   {
     "kind": "raise",
     "file": "src/note_filler/retrieve/twinkle.py",
-    "line": 110,
+    "line": 117,
     "function": "call_tool",
     "source": "            raise MCPProtocolError(f\"MCP 工具回報失敗: {result.get('content', '')}\")"
   },
   {
     "kind": "raise",
     "file": "src/note_filler/retrieve/twinkle.py",
-    "line": 116,
+    "line": 123,
     "function": "call_tool",
     "source": "            raise MCPProtocolError(\"MCP tools/call 缺少 content\")"
   },
   {
     "kind": "continue",
     "file": "src/note_filler/retrieve/twinkle.py",
-    "line": 119,
+    "line": 134,
     "function": "call_tool",
     "source": "                continue"
   },
   {
     "kind": "continue",
     "file": "src/note_filler/retrieve/twinkle.py",
-    "line": 122,
+    "line": 143,
     "function": "call_tool",
     "source": "                continue"
   },
   {
     "kind": "return_emptyish",
     "file": "src/note_filler/retrieve/twinkle.py",
-    "line": 126,
+    "line": 160,
     "function": "call_tool",
     "source": "        return {}"
   },
   {
     "kind": "return_emptyish",
     "file": "src/note_filler/retrieve/twinkle.py",
-    "line": 135,
+    "line": 169,
     "function": "_first_text",
     "source": "    return \"\""
   },
   {
     "kind": "except",
     "file": "src/note_filler/retrieve/twinkle.py",
-    "line": 141,
+    "line": 175,
     "function": "_clamp_similarity",
     "exc_type": "TypeError|ValueError",
     "has_raise": false,
     "has_return": true,
     "has_continue": false,
     "has_pass": false,
-    "logs": [],
-    "source": "    except (TypeError, ValueError):"
+    "logs": [
+      "audit_event"
+    ],
+    "source": "    except (TypeError, ValueError) as exc:"
   },
   {
     "kind": "return_emptyish",
     "file": "src/note_filler/retrieve/twinkle.py",
-    "line": 142,
+    "line": 183,
     "function": "_clamp_similarity",
     "source": "        return 0.0"
   },
   {
     "kind": "return_emptyish",
     "file": "src/note_filler/retrieve/twinkle.py",
-    "line": 151,
+    "line": 192,
     "function": "_extract_hits",
     "source": "    return []"
   },
   {
     "kind": "continue",
     "file": "src/note_filler/retrieve/twinkle.py",
-    "line": 159,
+    "line": 200,
     "function": "_record_fulltext",
     "source": "            continue"
   },
   {
     "kind": "return_emptyish",
     "file": "src/note_filler/retrieve/twinkle.py",
-    "line": 177,
+    "line": 236,
     "function": "_to_source",
     "source": "        return None"
   },
   {
     "kind": "return_emptyish",
     "file": "src/note_filler/retrieve/twinkle.py",
-    "line": 214,
+    "line": 287,
     "function": "search",
     "source": "            return []"
   },
   {
     "kind": "except",
     "file": "src/note_filler/retrieve/twinkle.py",
-    "line": 217,
+    "line": 290,
     "function": "search",
     "exc_type": "TypeError|ValueError",
     "has_raise": false,
     "has_return": false,
     "has_continue": false,
     "has_pass": false,
-    "logs": [],
-    "source": "        except (TypeError, ValueError):"
+    "logs": [
+      "audit_event"
+    ],
+    "source": "        except (TypeError, ValueError) as exc:"
   },
   {
     "kind": "except",
     "file": "src/note_filler/retrieve/twinkle.py",
-    "line": 224,
+    "line": 305,
     "function": "search",
     "exc_type": "Exception",
     "has_raise": false,
@@ -364,54 +403,58 @@
     "has_continue": false,
     "has_pass": false,
     "logs": [
-      "logger.warning"
+      "audit_event"
     ],
     "source": "        except Exception as exc:  # noqa: BLE001 - 外部服務不得中斷主流程"
   },
   {
     "kind": "return_emptyish",
     "file": "src/note_filler/retrieve/twinkle.py",
-    "line": 226,
+    "line": 313,
     "function": "search",
     "source": "            return []"
   },
   {
     "kind": "continue",
     "file": "src/note_filler/retrieve/twinkle.py",
-    "line": 230,
+    "line": 332,
     "function": "search",
     "source": "                continue"
   },
   {
     "kind": "except",
     "file": "src/note_filler/retrieve/web.py",
-    "line": 60,
+    "line": 69,
     "function": "_extract_query",
     "exc_type": "Exception",
     "has_raise": false,
     "has_return": true,
     "has_continue": false,
     "has_pass": false,
-    "logs": [],
-    "source": "    except Exception:  # noqa: BLE001 - 抽取失敗不致命,退回原問題"
+    "logs": [
+      "logger.warning"
+    ],
+    "source": "    except Exception as exc:  # 抽取失敗不致命,退回原問題"
   },
   {
     "kind": "except",
     "file": "src/note_filler/retrieve/web.py",
-    "line": 69,
+    "line": 83,
     "function": "_grade",
     "exc_type": "Attribute(value=Name(id='json', ctx=Load()), attr='JSONDecodeError', ctx=Load())|ValueError",
     "has_raise": false,
     "has_return": true,
     "has_continue": false,
     "has_pass": false,
-    "logs": [],
-    "source": "    except (json.JSONDecodeError, ValueError):"
+    "logs": [
+      "logger.warning"
+    ],
+    "source": "    except (json.JSONDecodeError, ValueError) as exc:"
   },
   {
     "kind": "except",
     "file": "src/note_filler/retrieve/web.py",
-    "line": 95,
+    "line": 117,
     "function": "search_web_sources",
     "exc_type": "Exception",
     "has_raise": false,
@@ -419,82 +462,93 @@
     "has_continue": false,
     "has_pass": false,
     "logs": [
-      "logger.warning"
+      "audit_event"
     ],
     "source": "    except Exception as exc:  # noqa: BLE001 - 外部服務不得中斷主流程,比照 twinkle 降級"
   },
   {
     "kind": "return_emptyish",
     "file": "src/note_filler/retrieve/web.py",
-    "line": 97,
+    "line": 126,
     "function": "search_web_sources",
     "source": "        return []"
   },
   {
     "kind": "continue",
     "file": "src/note_filler/retrieve/web.py",
-    "line": 104,
+    "line": 149,
+    "function": "search_web_sources",
+    "source": "            continue"
+  },
+  {
+    "kind": "continue",
+    "file": "src/note_filler/retrieve/web.py",
+    "line": 159,
     "function": "search_web_sources",
     "source": "            continue"
   },
   {
     "kind": "except",
     "file": "src/note_filler/retrieve/web.py",
-    "line": 107,
+    "line": 162,
     "function": "search_web_sources",
     "exc_type": "Exception",
     "has_raise": false,
     "has_return": false,
     "has_continue": true,
     "has_pass": false,
-    "logs": [],
-    "source": "        except Exception:  # noqa: BLE001"
+    "logs": [
+      "audit_event"
+    ],
+    "source": "        except Exception as exc:  # noqa: BLE001"
   },
   {
     "kind": "continue",
     "file": "src/note_filler/retrieve/web.py",
-    "line": 108,
+    "line": 170,
     "function": "search_web_sources",
     "source": "            continue"
   },
   {
     "kind": "continue",
     "file": "src/note_filler/retrieve/web.py",
-    "line": 110,
+    "line": 180,
     "function": "search_web_sources",
     "source": "            continue"
   },
   {
     "kind": "except",
     "file": "src/note_filler/retrieve/web.py",
-    "line": 113,
+    "line": 183,
     "function": "search_web_sources",
     "exc_type": "Exception",
     "has_raise": false,
     "has_return": false,
     "has_continue": true,
     "has_pass": false,
-    "logs": [],
-    "source": "        except Exception:  # noqa: BLE001 - 分級失敗(解析/呼叫)保守跳過該頁"
+    "logs": [
+      "audit_event"
+    ],
+    "source": "        except Exception as exc:  # 分級失敗(解析/呼叫)保守跳過該頁"
   },
   {
     "kind": "continue",
     "file": "src/note_filler/retrieve/web.py",
-    "line": 114,
+    "line": 191,
     "function": "search_web_sources",
     "source": "            continue"
   },
   {
     "kind": "continue",
     "file": "src/note_filler/retrieve/web.py",
-    "line": 116,
+    "line": 200,
     "function": "search_web_sources",
     "source": "            continue"
   },
   {
     "kind": "except",
     "file": "src/note_filler/retrieve/web.py",
-    "line": 141,
+    "line": 236,
     "function": "_ddg_search",
     "exc_type": "Exception",
     "has_raise": false,
@@ -509,21 +563,21 @@
   {
     "kind": "return_emptyish",
     "file": "src/note_filler/retrieve/web.py",
-    "line": 143,
+    "line": 238,
     "function": "_ddg_search",
     "source": "        return []"
   },
   {
     "kind": "return_emptyish",
     "file": "src/note_filler/retrieve/web.py",
-    "line": 153,
+    "line": 254,
     "function": "_fetch_fulltext",
     "source": "            return None"
   },
   {
     "kind": "except",
     "file": "src/note_filler/retrieve/web.py",
-    "line": 155,
+    "line": 256,
     "function": "_fetch_fulltext",
     "exc_type": "Exception",
     "has_raise": false,
@@ -538,15 +592,45 @@
   {
     "kind": "return_emptyish",
     "file": "src/note_filler/retrieve/web.py",
-    "line": 157,
+    "line": 258,
     "function": "_fetch_fulltext",
     "source": "        return None"
   },
   {
     "kind": "return_emptyish",
     "file": "src/note_filler/write.py",
-    "line": 60,
+    "line": 86,
     "function": "_sub",
     "source": "        return \"\"                          # 越界標記移除"
+  },
+  {
+    "kind": "except",
+    "file": "app/server.py",
+    "line": 61,
+    "function": "run",
+    "exc_type": "Exception",
+    "has_raise": false,
+    "has_return": true,
+    "has_continue": false,
+    "has_pass": false,
+    "logs": [
+      "audit_event"
+    ],
+    "source": "    except Exception as exc:"
+  },
+  {
+    "kind": "except",
+    "file": "app/server.py",
+    "line": 85,
+    "function": "run",
+    "exc_type": "OSError",
+    "has_raise": false,
+    "has_return": false,
+    "has_continue": false,
+    "has_pass": false,
+    "logs": [
+      "audit_event"
+    ],
+    "source": "            except OSError as exc:"
   }
 ]
