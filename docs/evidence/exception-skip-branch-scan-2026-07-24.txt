@@ -1,0 +1,69 @@
+KIND_COUNTS {'raise': 11, 'except': 13, 'return_emptyish': 23, 'continue': 19}
+TOTAL 66
+WROTE D:\Users\Administrator\Desktop\autodev-ng\data\note-filler\worktrees\5d9457cd\docs\evidence\exception-skip-branch-scan-2026-07-24.json
+raise|src/note_filler/__main__.py:116|process_file|            raise RuntimeError(f"訂正稿寫出失敗或為空,拒絕視為送達成功:{dest}")
+raise|src/note_filler/__main__.py:121|process_file|            raise RuntimeError(f"訂正稿內容為空,拒絕視為送達成功:{path}")
+except|src/note_filler/__main__.py:165|main|exc=Exception|logs=['print']|ret=False|cont=False|raise=False|        except Exception as e:  # 單檔失敗不拖垮整批
+raise|src/note_filler/__main__.py:173|<module>|    raise SystemExit(main())
+return_emptyish|src/note_filler/citation_formatter.py:40|build_reference_block|        return ""
+return_emptyish|src/note_filler/correction.py:49|_best_anchor|        return None
+return_emptyish|src/note_filler/correction.py:67|_grounded|        return True
+return_emptyish|src/note_filler/correction.py:69|_grounded|        return True
+continue|src/note_filler/export.py:49|to_markdown|            continue
+continue|src/note_filler/export.py:87|to_docx|            continue
+return_emptyish|src/note_filler/gap.py:59|detect_gaps|        return []
+raise|src/note_filler/gap.py:70|detect_gaps|            raise ValueError("回應不是 JSON 陣列")
+except|src/note_filler/gap.py:71|detect_gaps|exc=Attribute(value=Name(id='json', ctx=Load()), attr='JSONDecodeError', ctx=Load())|ValueError|logs=[]|ret=True|cont=False|raise=False|    except (json.JSONDecodeError, ValueError):
+continue|src/note_filler/gap.py:78|detect_gaps|            continue
+continue|src/note_filler/gap.py:81|detect_gaps|            continue
+continue|src/note_filler/knowledge/law_citation_check.py:53|check_law_citations|                continue
+continue|src/note_filler/knowledge/law_citation_check.py:71|check_law_citations|            continue
+continue|src/note_filler/knowledge/law_citation_check.py:98|annotate_law_mismatches|            continue
+continue|src/note_filler/knowledge/law_lookup.py:120|build_law_index|                continue
+return_emptyish|src/note_filler/knowledge/law_lookup.py:218|fuzzy_find_law|        return None
+raise|src/note_filler/parse.py:47|parse_note|        raise ValueError(f"不支援的筆記副檔名：{suffix!r}（僅支援 .txt / .docx）")
+continue|src/note_filler/pipeline.py:50|_verify_law_citations|            continue
+return_emptyish|src/note_filler/questions.py:52|generate_questions|        return []
+except|src/note_filler/retrieve/law_search.py:40|_parse_llm|exc=Attribute(value=Name(id='json', ctx=Load()), attr='JSONDecodeError', ctx=Load())|ValueError|logs=[]|ret=False|cont=False|raise=False|    except (json.JSONDecodeError, ValueError):
+return_emptyish|src/note_filler/retrieve/law_search.py:62|search_law_sources|        return []
+continue|src/note_filler/retrieve/law_search.py:71|search_law_sources|                continue
+return_emptyish|src/note_filler/retrieve/twinkle.py:39|_decode_streamable_http|        return None
+raise|src/note_filler/retrieve/twinkle.py:42|_decode_streamable_http|        raise MCPProtocolError("MCP JSON-RPC 回應不是物件")
+raise|src/note_filler/retrieve/twinkle.py:44|_decode_streamable_http|        raise MCPProtocolError(f"MCP JSON-RPC 錯誤: {decoded['error']}")
+raise|src/note_filler/retrieve/twinkle.py:64|_rpc|            raise MCPProtocolError("缺少 twinkle-hub 存取權杖")
+return_emptyish|src/note_filler/retrieve/twinkle.py:90|_ensure_session|            return
+return_emptyish|src/note_filler/retrieve/twinkle.py:105|call_tool|            return {}
+raise|src/note_filler/retrieve/twinkle.py:108|call_tool|            raise MCPProtocolError("MCP tools/call 缺少 result")
+raise|src/note_filler/retrieve/twinkle.py:110|call_tool|            raise MCPProtocolError(f"MCP 工具回報失敗: {result.get('content', '')}")
+raise|src/note_filler/retrieve/twinkle.py:116|call_tool|            raise MCPProtocolError("MCP tools/call 缺少 content")
+continue|src/note_filler/retrieve/twinkle.py:119|call_tool|                continue
+continue|src/note_filler/retrieve/twinkle.py:122|call_tool|                continue
+return_emptyish|src/note_filler/retrieve/twinkle.py:126|call_tool|        return {}
+return_emptyish|src/note_filler/retrieve/twinkle.py:135|_first_text|    return ""
+except|src/note_filler/retrieve/twinkle.py:141|_clamp_similarity|exc=TypeError|ValueError|logs=[]|ret=True|cont=False|raise=False|    except (TypeError, ValueError):
+return_emptyish|src/note_filler/retrieve/twinkle.py:142|_clamp_similarity|        return 0.0
+return_emptyish|src/note_filler/retrieve/twinkle.py:151|_extract_hits|    return []
+continue|src/note_filler/retrieve/twinkle.py:159|_record_fulltext|            continue
+return_emptyish|src/note_filler/retrieve/twinkle.py:177|_to_source|        return None
+return_emptyish|src/note_filler/retrieve/twinkle.py:214|search|            return []
+except|src/note_filler/retrieve/twinkle.py:217|search|exc=TypeError|ValueError|logs=[]|ret=False|cont=False|raise=False|        except (TypeError, ValueError):
+except|src/note_filler/retrieve/twinkle.py:224|search|exc=Exception|logs=['logger.warning']|ret=True|cont=False|raise=False|        except Exception as exc:  # noqa: BLE001 - 外部服務不得中斷主流程
+return_emptyish|src/note_filler/retrieve/twinkle.py:226|search|            return []
+continue|src/note_filler/retrieve/twinkle.py:230|search|                continue
+except|src/note_filler/retrieve/web.py:60|_extract_query|exc=Exception|logs=[]|ret=True|cont=False|raise=False|    except Exception:  # noqa: BLE001 - 抽取失敗不致命,退回原問題
+except|src/note_filler/retrieve/web.py:69|_grade|exc=Attribute(value=Name(id='json', ctx=Load()), attr='JSONDecodeError', ctx=Load())|ValueError|logs=[]|ret=True|cont=False|raise=False|    except (json.JSONDecodeError, ValueError):
+except|src/note_filler/retrieve/web.py:95|search_web_sources|exc=Exception|logs=['logger.warning']|ret=True|cont=False|raise=False|    except Exception as exc:  # noqa: BLE001 - 外部服務不得中斷主流程,比照 twinkle 降級
+return_emptyish|src/note_filler/retrieve/web.py:97|search_web_sources|        return []
+continue|src/note_filler/retrieve/web.py:104|search_web_sources|            continue
+except|src/note_filler/retrieve/web.py:107|search_web_sources|exc=Exception|logs=[]|ret=False|cont=True|raise=False|        except Exception:  # noqa: BLE001
+continue|src/note_filler/retrieve/web.py:108|search_web_sources|            continue
+continue|src/note_filler/retrieve/web.py:110|search_web_sources|            continue
+except|src/note_filler/retrieve/web.py:113|search_web_sources|exc=Exception|logs=[]|ret=False|cont=True|raise=False|        except Exception:  # noqa: BLE001 - 分級失敗(解析/呼叫)保守跳過該頁
+continue|src/note_filler/retrieve/web.py:114|search_web_sources|            continue
+continue|src/note_filler/retrieve/web.py:116|search_web_sources|            continue
+except|src/note_filler/retrieve/web.py:141|_ddg_search|exc=Exception|logs=['logger.warning']|ret=True|cont=False|raise=False|    except Exception as exc:  # noqa: BLE001
+return_emptyish|src/note_filler/retrieve/web.py:143|_ddg_search|        return []
+return_emptyish|src/note_filler/retrieve/web.py:153|_fetch_fulltext|            return None
+except|src/note_filler/retrieve/web.py:155|_fetch_fulltext|exc=Exception|logs=['logger.warning']|ret=True|cont=False|raise=False|    except Exception as exc:  # noqa: BLE001
+return_emptyish|src/note_filler/retrieve/web.py:157|_fetch_fulltext|        return None
+return_emptyish|src/note_filler/write.py:60|_sub|        return ""                          # 越界標記移除
