@@ -9,8 +9,8 @@
     "command": "D:/Users/Administrator/Desktop/筆記補齊/.venv/Scripts/python.exe -X utf8 -m pytest -m 'not integration' -q --color=no",
     "collection_command": "D:/Users/Administrator/Desktop/筆記補齊/.venv/Scripts/python.exe -X utf8 -m pytest --collect-only -q --deselected-details --color=no",
     "expected_collection": {
-      "collected": 222,
-      "default_selected": 211,
+      "collected": 230,
+      "default_selected": 219,
       "deselected": 11
     }
   },

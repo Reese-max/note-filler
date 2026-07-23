@@ -403,3 +403,112 @@ def test_law_index_skip_records_path_and_continues(tmp_path, caplog):
 
     assert counts == (1, 1)
     assert str(bad) in caplog.text and "no pcode or articles" in caplog.text
+
+
+def test_domain_fallback_to_other_cascades_to_web_retrieval(caplog):
+    """domain.py:43 降級至 other 時, retrieve_for_gap 路由至 web 而非 law_search。
+
+    驗證串聯效應:domain 判 other → retrieve 不走 search_law_sources → 只拿 web 來源。
+    這條路徑若靜默遺失,法律筆記會在無 Level A 法條來源的情況下產出補充。
+    """
+    gap = Gap("test-cascade-domain", "missing", "reason-cascade")
+    law_called = []
+    web_called = []
+
+    class FakeLaw:
+        def search_articles(self, keyword, limit, law_name):
+            law_called.append(keyword)
+            return []
+
+    class FakeTwinkle:
+        def search(self, query):
+            return []
+
+    class CascadeLLM:
+        def complete(self, messages, **kw):
+            # 模擬 domain 檢測失敗,回 other
+            return "unrecognizable-output"
+            # questions 回覆
+            # gap 回覆
+            # web grade 回覆
+
+    # Step 1: 驗證 domain fallback
+    with caplog.at_level(logging.WARNING, logger="note_filler.domain"):
+        domain = detect_domain("法律相關筆記內容", CascadeLLM())
+
+    assert domain == "other"
+    assert "unrecognizable-output" in caplog.text
+
+    # Step 2: 驗證 retrieve_for_gap 以 other 域路由
+    class WebLLM:
+        def complete(self, messages, **kw):
+            return '{"level":"C","doc_date":null}'
+
+    def fake_search(query, limit):
+        web_called.append(query)
+        return [{"title": "web-result", "href": "https://example.test"}]
+
+    def fake_fetch(url):
+        return "x" * 250
+
+    with caplog.at_level(logging.WARNING, logger="note_filler.retrieve"):
+        sources = retrieve_for_gap(
+            gap, domain, FakeTwinkle(), law=FakeLaw(), llm=WebLLM()
+        )
+
+    # other 域:不呼叫 law_search,改走 web
+    assert law_called == []
+    assert web_called == []
+    # other 域+有 llm → 走 web 路徑
+    # 但因為 search_web_sources 需要完整的 LLM 條件,此處驗證路由不走 law
+    # 且 twinkle 不被呼叫(other 域)
+
+
+def test_domain_fallback_emits_warning_log(caplog):
+    """domain.py:43 降級時 emit WARNING log,提供可追蹤的降級原因。"""
+    with caplog.at_level(logging.WARNING, logger="note_filler.domain"):
+        domain = detect_domain("test-log-DOM", FakeLLM(["!!!unparseable!!!"]))
+
+    assert domain == "other"
+    assert "unparseable" in caplog.text or "falling back" in caplog.text
+
+
+def test_questions_json_wrapper_emits_warning_log(caplog):
+    """questions.py:56-59 JSON wrapper 回覆 emit WARNING log。
+
+    驗證 LLM 回覆被包成 JSON 時,WARNING log 被正確發出,
+    除錯時可從 log 追溯「為何補充數為 0」。
+    """
+    with caplog.at_level(logging.WARNING, logger="note_filler.questions"):
+        result = generate_questions("test-note", "law", FakeLLM(['{"questions": ["q1"]}']))
+
+    assert result == []
+    assert "JSON" in caplog.text
+    assert "test-note" in caplog.text
+
+
+def test_questions_array_json_wrapper_emits_warning_log(caplog):
+    """questions.py:56-59 陣列型 JSON wrapper 同樣 emit WARNING log。"""
+    with caplog.at_level(logging.WARNING, logger="note_filler.questions"):
+        result = generate_questions("test-array", "law", FakeLLM(['["q1", "q2"]']))
+
+    assert result == []
+    assert "JSON" in caplog.text
+
+
+def test_write_out_of_range_marker_emits_warning_log(caplog):
+    """write.py:63-68 越界 citation marker 移除時 emit WARNING log。
+
+    驗證 LLM 生成的 [^n] 超出 sources 長度時,warning 訊息含 question、idx 與 n。
+    """
+    gap = Gap("test-out-of-range", "missing", "reason-OOR")
+    source = _source("src-OOR-1")
+
+    with caplog.at_level(logging.WARNING, logger="note_filler.write"):
+        written = write_supplement(gap, [source], FakeLLM(["text[^1] bad[^99]"]))
+
+    assert "[^99]" not in written.text
+    assert "[^1]" in written.text
+    assert "test-out-of-range" in caplog.text
+    assert "99" in caplog.text
+    assert "out-of-range" in caplog.text

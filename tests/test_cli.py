@@ -150,3 +150,73 @@ def test_main_partial_delivery_failure_returns_failure(tmp_path, monkeypatch, ca
     assert code == 1
     assert "完成 1/2 檔" in captured.out
     assert "訂正稿內容為空" in captured.err
+
+
+def test_main_missing_token_warns_to_stderr(tmp_path, monkeypatch, capsys):
+    """缺 TWINKLE_HUB_TOKEN 時 stderr 警告,twinkle 降級為空,但 pipeline 仍繼續。
+
+    __main__.py:157-158:只 warn 不 abort, Level B 來源降級。
+    """
+    note = tmp_path / "note.txt"
+    note.write_text("一、標題\n內容", encoding="utf-8")
+    monkeypatch.setattr(cli, "process_file", lambda *a, **k: {
+        "input": str(note), "output": "ok.md", "supplements": 0, "verified": 0,
+    })
+    monkeypatch.setattr(cli, "GrokClient", lambda: None)
+    monkeypatch.setattr(cli, "TwinkleClient", lambda token="": None)
+    monkeypatch.setattr(cli, "LawLookup", lambda db: None)
+    # 確保環境變數也不設定
+    monkeypatch.delenv("TWINKLE_HUB_TOKEN", raising=False)
+
+    code = cli.main([str(note), "--db", str(tmp_path / "no.db"), "--token", ""])
+    captured = capsys.readouterr()
+
+    assert code == 0
+    assert "警告" in captured.err
+    assert "TWINKLE_HUB_TOKEN" in captured.err
+    assert "Level B" in captured.err
+
+
+def test_main_missing_db_warns_to_stderr(tmp_path, monkeypatch, capsys):
+    """缺法條 DB 時 stderr 警告,Level A 查無結果,但 pipeline 仍繼續。
+
+    __main__.py:159-160:只 warn 不 abort, Level A 來源降級。
+    """
+    note = tmp_path / "note.txt"
+    note.write_text("一、標題\n內容", encoding="utf-8")
+    monkeypatch.setattr(cli, "process_file", lambda *a, **k: {
+        "input": str(note), "output": "ok.md", "supplements": 0, "verified": 0,
+    })
+    monkeypatch.setattr(cli, "GrokClient", lambda: None)
+    monkeypatch.setattr(cli, "TwinkleClient", lambda token="": None)
+    monkeypatch.setattr(cli, "LawLookup", lambda db: None)
+
+    nonexistent_db = str(tmp_path / "nonexistent.db")
+    code = cli.main([str(note), "--db", nonexistent_db])
+    captured = capsys.readouterr()
+
+    assert code == 0
+    assert "警告" in captured.err
+    assert "法條 DB 不存在" in captured.err
+    assert nonexistent_db in captured.err
+
+
+def test_main_missing_token_and_db_both_warn(tmp_path, monkeypatch, capsys):
+    """同時缺 token 與 DB 時兩條警告都出現,pipeline 仍繼續執行。"""
+    note = tmp_path / "note.txt"
+    note.write_text("一、標題\n內容", encoding="utf-8")
+    monkeypatch.setattr(cli, "process_file", lambda *a, **k: {
+        "input": str(note), "output": "ok.md", "supplements": 0, "verified": 0,
+    })
+    monkeypatch.setattr(cli, "GrokClient", lambda: None)
+    monkeypatch.setattr(cli, "TwinkleClient", lambda token="": None)
+    monkeypatch.setattr(cli, "LawLookup", lambda db: None)
+    monkeypatch.delenv("TWINKLE_HUB_TOKEN", raising=False)
+
+    nonexistent_db = str(tmp_path / "no_such_db.db")
+    code = cli.main([str(note), "--db", nonexistent_db, "--token", ""])
+    captured = capsys.readouterr()
+
+    assert code == 0
+    assert "TWINKLE_HUB_TOKEN" in captured.err
+    assert "法條 DB 不存在" in captured.err
