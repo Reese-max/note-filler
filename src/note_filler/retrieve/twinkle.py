@@ -169,6 +169,11 @@ def _record_fulltext(hit: dict[str, Any]) -> str:
 def _to_source(hit: dict[str, Any]) -> Source | None:
     title = _first_text(hit, "title", "議案名稱", "name")
     if not title:
+        logger.warning(
+            "twinkle-hub hit 缺 title 欄位,略過: id=%s url=%s",
+            hit.get("id", "?"),
+            hit.get("url", "?"),
+        )
         return None
     meta = hit.get("metadata") if isinstance(hit.get("metadata"), dict) else {}
     url = (

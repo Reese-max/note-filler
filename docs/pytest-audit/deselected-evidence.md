@@ -175,11 +175,11 @@
     - 測試輸出：`tests/test_retrieve.py::test_retrieve_for_gap_law_domain_puts_level_A_before_B PASSED [ 69%]`
   - `tests/test_law_search.py::test_search_law_sources_returns_level_A_law_articles` — `tests/test_law_search.py:35` — `assert all(s.level == "A"`：離線 law_index 查詢產生合法 Level A 法條 Source — **PASSED**
     - 測試輸出：`tests/test_law_search.py::test_search_law_sources_returns_level_A_law_articles PASSED [ 52%]`
-  - `tests/test_twinkle.py::test_search_parses_source_with_full_content` — `tests/test_twinkle.py:77` — `assert "現行條文對累犯之處罰不足"`：mock MCP/SSE 驗證全文與 Source metadata 映射 — **PASSED**
+  - `tests/test_twinkle.py::test_search_parses_source_with_full_content` — `tests/test_twinkle.py:78` — `assert "現行條文對累犯之處罰不足"`：mock MCP/SSE 驗證全文與 Source metadata 映射 — **PASSED**
     - 測試輸出：`tests/test_twinkle.py::test_search_parses_source_with_full_content PASSED [ 74%]`
-  - `tests/test_twinkle.py::test_search_reuses_mcp_session` — `tests/test_twinkle.py:101` — `assert requests ==`：mock MCP 驗證 initialize、initialized、tools/call 共用 session — **PASSED**
+  - `tests/test_twinkle.py::test_search_reuses_mcp_session` — `tests/test_twinkle.py:102` — `assert requests ==`：mock MCP 驗證 initialize、initialized、tools/call 共用 session — **PASSED**
     - 測試輸出：`tests/test_twinkle.py::test_search_reuses_mcp_session PASSED             [ 76%]`
-  - `tests/test_twinkle.py::test_search_transport_failure_returns_empty` — `tests/test_twinkle.py:114` — `assert TwinkleClient(token="fake-token").search`：mock timeout 驗證 transport failure 安全降級為空結果 — **PASSED**
+  - `tests/test_twinkle.py::test_search_transport_failure_returns_empty` — `tests/test_twinkle.py:115` — `assert TwinkleClient(token="fake-token").search`：mock timeout 驗證 transport failure 安全降級為空結果 — **PASSED**
     - 測試輸出：`tests/test_twinkle.py::test_search_transport_failure_returns_empty PASSED [ 76%]`
   - `tests/test_exclusion_correctness_blind_spot.py::test_deselected_retrieve_smoke_vacuous_pass_on_empty_is_blind_spot` — `tests/test_exclusion_correctness_blind_spot.py:68` — `_integration_smoke_asserts(empty)`：證明 deselected smoke 三斷言對 empty 仍 vacuous PASS，屬驗證盲區而非產品路徑通過 — **PASSED**
     - 測試輸出：`tests/test_exclusion_correctness_blind_spot.py::test_deselected_retrieve_smoke_vacuous_pass_on_empty_is_blind_spot PASSED [ 27%]`
@@ -197,15 +197,15 @@
 - 排除理由：預設 -m 'not integration' 在 collection 階段排除；真跑需要 TWINKLE_HUB_TOKEN，缺 token 時由函式內 pytest.skip 略過
 - 排除程式碼證據：
   - `pyproject.toml:32` — `-m 'not integration'`：預設集合排除 integration marker
-  - `tests/test_twinkle.py:122` — `@pytest.mark.integration`：目標測試標記為 integration
-  - `tests/test_twinkle.py:126` — `TWINKLE_HUB_TOKEN`：真跑讀取 Twinkle token
-  - `tests/test_twinkle.py:127` — `if not token`：缺 token 時 runtime skip
+  - `tests/test_twinkle.py:123` — `@pytest.mark.integration`：目標測試標記為 integration
+  - `tests/test_twinkle.py:127` — `TWINKLE_HUB_TOKEN`：真跑讀取 Twinkle token
+  - `tests/test_twinkle.py:128` — `if not token`：缺 token 時 runtime skip
 - 替代測試證據（單獨結果，非彙總）：
-  - `tests/test_twinkle.py::test_search_parses_source_with_full_content` — `tests/test_twinkle.py:77` — `assert "現行條文對累犯之處罰不足"`：mock MCP/SSE 驗證全文 Source 與 metadata — **PASSED**
+  - `tests/test_twinkle.py::test_search_parses_source_with_full_content` — `tests/test_twinkle.py:78` — `assert "現行條文對累犯之處罰不足"`：mock MCP/SSE 驗證全文 Source 與 metadata — **PASSED**
     - 測試輸出：`tests/test_twinkle.py::test_search_parses_source_with_full_content PASSED [ 74%]`
-  - `tests/test_twinkle.py::test_search_reuses_mcp_session` — `tests/test_twinkle.py:101` — `assert requests ==`：mock MCP 驗證 session header 在三次 RPC 間傳遞 — **PASSED**
+  - `tests/test_twinkle.py::test_search_reuses_mcp_session` — `tests/test_twinkle.py:102` — `assert requests ==`：mock MCP 驗證 session header 在三次 RPC 間傳遞 — **PASSED**
     - 測試輸出：`tests/test_twinkle.py::test_search_reuses_mcp_session PASSED             [ 76%]`
-  - `tests/test_twinkle.py::test_search_transport_failure_returns_empty` — `tests/test_twinkle.py:114` — `assert TwinkleClient(token="fake-token").search`：mock timeout 驗證網路失敗安全降級 — **PASSED**
+  - `tests/test_twinkle.py::test_search_transport_failure_returns_empty` — `tests/test_twinkle.py:115` — `assert TwinkleClient(token="fake-token").search`：mock timeout 驗證網路失敗安全降級 — **PASSED**
     - 測試輸出：`tests/test_twinkle.py::test_search_transport_failure_returns_empty PASSED [ 76%]`
 - 單獨 live 執行結果：`pass` (exit=0, wall_s=4.58, source=`docs/pytest-audit/deselected-individual-results-2026-07-19.json`)
 - 失敗／NOT-REPRODUCIBLE 證據：（無；替代測試 PASSED，剩餘為外部依賴邊界）

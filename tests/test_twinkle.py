@@ -1,4 +1,5 @@
 import json
+import logging
 from datetime import date
 
 import pytest
@@ -161,6 +162,24 @@ def test_search_mcp_protocol_error_returns_empty(monkeypatch):
     """MCP 回報 isError → 安全降級為空結果,不拋例外。"""
     monkeypatch.setattr(twinkle.urllib.request, "urlopen", _make_fake_urlopen_error())
     assert TwinkleClient(token="fake-token").search("酒駕 罰則", n=3) == []
+
+
+def test_search_skips_records_without_title(monkeypatch, caplog):
+    """缺 title 的記錄被略過且有 log 告警,非靜默吞掉。
+
+    對照 #8 test_search_real_twinkle_hub 的 vacuous pass 風險:
+    若 Twinkle Hub 回傳記錄全缺 title,結果會空掉但斷言仍 vacuous PASS。
+    此回歸確保略過時有明確告警,可供維運察覺「API 欄位可能不相容」。
+    """
+    no_title = {k: v for k, v in _BILL.items() if k != "title"}
+    monkeypatch.setattr(twinkle.urllib.request, "urlopen", _make_fake_urlopen([no_title]))
+    caplog.set_level(logging.WARNING)
+    results = TwinkleClient(token="fake-token").search("酒駕 罰則", n=3)
+    assert results == [], "缺 title 的記錄應全數略過"
+    assert any(
+        "缺 title" in rec.message and "twinkle-hub" in rec.message
+        for rec in caplog.records
+    ), "應有 warning 告警缺 title 被略過"
 
 
 @pytest.mark.integration
