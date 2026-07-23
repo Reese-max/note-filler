@@ -166,7 +166,7 @@ def main(argv: list[str] | None = None) -> int:
             print(f"❌ {f}:{type(e).__name__}: {e}", file=sys.stderr)
 
     print(f"完成 {ok}/{len(files)} 檔。")
-    return 0 if ok else 1
+    return 0 if ok == len(files) else 1
 
 
 if __name__ == "__main__":

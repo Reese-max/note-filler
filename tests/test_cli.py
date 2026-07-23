@@ -126,3 +126,27 @@ def test_main_delivery_failure_not_counted_as_success(tmp_path, monkeypatch, cap
     assert "完成 0/1 檔" in captured.out
     assert "delivery channel down" in captured.err
     assert "OSError" in captured.err
+
+
+def test_main_partial_delivery_failure_returns_failure(tmp_path, monkeypatch, capsys):
+    """批次中任一檔未送達時，即使其他檔成功也不得回傳成功。"""
+    notes = [tmp_path / "ok.txt", tmp_path / "empty.txt"]
+    for note in notes:
+        note.write_text("內容", encoding="utf-8")
+
+    def _process(path, *args, **kwargs):
+        if path.name == "empty.txt":
+            raise RuntimeError("訂正稿內容為空")
+        return {"input": str(path), "output": "ok.md", "supplements": 0, "verified": 0}
+
+    monkeypatch.setattr(cli, "process_file", _process)
+    monkeypatch.setattr(cli, "GrokClient", lambda: None)
+    monkeypatch.setattr(cli, "TwinkleClient", lambda token="": None)
+    monkeypatch.setattr(cli, "LawLookup", lambda db: None)
+
+    code = cli.main([*(str(note) for note in notes), "--db", str(tmp_path / "no.db")])
+    captured = capsys.readouterr()
+
+    assert code == 1
+    assert "完成 1/2 檔" in captured.out
+    assert "訂正稿內容為空" in captured.err
