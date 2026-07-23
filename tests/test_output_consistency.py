@@ -453,16 +453,7 @@ class TestConsistencyBypassRegression:
     """Regression tests that detect bypass attempts where output differs from source but other checks pass."""
 
     def test_modified_correctiondoc_original_segment_detected_in_json_export(self, tmp_path):
-        """If CorrectionDoc.original segments are silently modified, JSON export must detect the mismatch.
-        
-        This test simulates a bypass scenario where:
-        1. An intermediate layer modifies CorrectionDoc.segments[i].text for an 'original' segment
-        2. Other pipeline checks pass because they only verify structure, not content
-        3. The direct comparison in to_json export should catch this mismatch
-        
-        This ensures that even if someone bypasses pipeline checks, the output consistency
-        verification will still catch the inconsistency between source note and output.
-        """
+        """A direct source-note/JSON comparison must fail with both sides identified."""
         note_content = "行政程序法要求行政行為應遵守正當程序。\n\n本筆記僅記錄部分重點,尚未展開。"
         note_path = _note_fixture(tmp_path, note_content)
         llm, twinkle, law = _pipeline_canned()
@@ -476,29 +467,23 @@ class TestConsistencyBypassRegression:
                 # Introduce a subtle change that other checks might miss
                 seg.text = seg.text.replace("正當程序", "正當法律程序")  # Silent modification
 
-        # Export to JSON - the direct comparison should detect this mismatch
         data = to_json(doc)
-
-        # Get original segments from JSON
         original_segments = [s for s in data["segments"] if s["type"] == "original"]
         original_texts = [s["text"] for s in original_segments]
-
-        # Parse the original note to get ground truth
         expected_paras = [p.strip() for p in note_content.split("\n\n") if p.strip()]
 
-        # This should FAIL because we modified the segment text
-        # The test validates that the inconsistency is detected
-        mismatch_found = False
-        for i, (actual, expected) in enumerate(zip(original_texts, expected_paras)):
-            if actual != expected:
-                mismatch_found = True
-                break
-
-        assert mismatch_found, (
-            "Bypass detection failed: modified original segment was not detected in JSON export. "
-            "This means if someone silently modifies CorrectionDoc.original segments, "
-            "the output consistency check would not catch it."
+        failure_message = (
+            "來源筆記與 JSON 產物不一致：\n"
+            f"來源筆記：{expected_paras!r}\n"
+            f"JSON 產物：{original_texts!r}"
         )
+        with pytest.raises(AssertionError) as error:
+            assert original_texts == expected_paras, failure_message
+
+        error_text = str(error.value)
+        assert "來源筆記與 JSON 產物不一致" in error_text
+        assert repr(expected_paras) in error_text
+        assert repr(original_texts) in error_text
 
 
 class TestConsistencyEdgeCases:
