@@ -9,8 +9,8 @@
     "command": "D:/Users/Administrator/Desktop/筆記補齊/.venv/Scripts/python.exe -X utf8 -m pytest -m 'not integration' -q --color=no",
     "collection_command": "D:/Users/Administrator/Desktop/筆記補齊/.venv/Scripts/python.exe -X utf8 -m pytest --collect-only -q --deselected-details --color=no",
     "expected_collection": {
-      "collected": 190,
-      "default_selected": 179,
+      "collected": 195,
+      "default_selected": 184,
       "deselected": 11
     }
   },
@@ -24,8 +24,8 @@
     "observed": {
       "coverage_matrix": "2 passed",
       "blind_spot_and_controls": "12 passed",
-      "default_suite": "179 passed, 11 deselected",
-      "deselection_guard": "updated with anti-leak gate counts 190/179/11"
+      "default_suite": "184 passed, 11 deselected",
+      "deselection_guard": "updated with anti-leak gate counts 195/184/11"
     }
   },
   "paths": [
@@ -195,6 +195,7 @@
         "tests/test_twinkle.py::test_search_parses_source_with_full_content",
         "tests/test_twinkle.py::test_search_reuses_mcp_session",
         "tests/test_twinkle.py::test_search_transport_failure_returns_empty",
+        "tests/test_web.py::test_grade_valid_c_with_doc_date",
         "tests/test_exclusion_correctness_blind_spot.py::test_law_domain_retrieve_must_yield_level_a_not_vacuous_empty",
         "tests/test_excluded_failing_controls.py::test_control_07b_retrieve_law_level_a_not_vacuous"
       ],

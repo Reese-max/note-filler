@@ -64,7 +64,10 @@ def _extract_query(gap: "Gap", llm: "LLMClient") -> str:
 def _grade(llm: "LLMClient", gap: "Gap", text: str) -> tuple[str, str | None]:
     """回 (level, doc_date);level ∈ {C,D,drop};解析失敗保守當 drop。"""
     raw = llm.complete([{"role": "user", "content": _GRADE_PROMPT.format(question=gap.question, text=text)}])
-    data = json.loads(_strip_fence(raw))
+    try:
+        data = json.loads(_strip_fence(raw))
+    except (json.JSONDecodeError, ValueError):
+        return "drop", None
     level = str(data.get("level", "drop")).strip().upper()
     if level not in ("C", "D"):
         return "drop", None

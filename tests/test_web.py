@@ -159,3 +159,51 @@ def test_retrieve_law_domain_does_not_call_web(monkeypatch):
         GAP, "law", _FakeTwinkle(), law=_FakeLaw(),
         llm=FakeLLM(['{"keyword":"SSRF","law_name":null}']),
     )
+
+
+# ---------------------------------------------------------------------------
+# _grade 正確性分支: C/D/drop 分級 + doc_date 解析 + malformed fallback
+# 鎖定 integration-only coverage gap：其他領域 web 搜尋的分級邏輯
+# 只有整合測試透過 search_web_sources 間接執行 _grade；此處直接驗證
+# ---------------------------------------------------------------------------
+from note_filler.retrieve.web import _grade
+
+
+def test_grade_valid_c_with_doc_date():
+    """_grade 解析合法 C 級回應並保留 doc_date。"""
+    llm = FakeLLM(['{"level":"C","doc_date":"2024-01-15","reason":"官方文件"}'])
+    level, doc_date = _grade(llm, GAP, "OWASP 官方全文內容")
+    assert level == "C"
+    assert doc_date == "2024-01-15"
+
+
+def test_grade_valid_d_with_null_date():
+    """_grade 解析合法 D 級回應；null doc_date → None。"""
+    llm = FakeLLM(['{"level":"D","doc_date":null,"reason":"技術部落格"}'])
+    level, doc_date = _grade(llm, GAP, "技術整理全文")
+    assert level == "D"
+    assert doc_date is None
+
+
+def test_grade_malformed_json_drops_source():
+    """_grade 解析失敗時保守回 drop，不得拋錯導致整體中斷。"""
+    llm = FakeLLM(["這不是 JSON"])
+    level, doc_date = _grade(llm, GAP, "某頁全文")
+    assert level == "drop"
+    assert doc_date is None
+
+
+def test_grade_invalid_level_drops_source():
+    """_grade 收到非 C/D 的 level（如 "E"）時回 drop。"""
+    llm = FakeLLM(['{"level":"E","doc_date":"2024-06-01","reason":"未知"}'])
+    level, doc_date = _grade(llm, GAP, "某頁全文")
+    assert level == "drop"
+    assert doc_date is None
+
+
+def test_grade_empty_string_level_drops():
+    """_grade 收到空字串 level 時回 drop。"""
+    llm = FakeLLM(['{"level":"","doc_date":null,"reason":"空"}'])
+    level, doc_date = _grade(llm, GAP, "某頁全文")
+    assert level == "drop"
+    assert doc_date is None
