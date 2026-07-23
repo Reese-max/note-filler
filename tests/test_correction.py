@@ -209,3 +209,33 @@ def test_anchor_none_when_no_overlap():
     cd = assemble_correction(doc, gaps=[gap], retrieved={}, written=written, validations={})
     sup = next(s for s in cd.segments if s.type == "supplement")
     assert sup.anchor_idx is None
+
+
+def test_missing_written_entry_is_trackable_and_logged(caplog):
+    """gap 問題不在 written 時不得靜默空字串:須 warning +【待補證】+ pending_evidence。
+
+    對照 docs/silent-data-loss-audit.md #1:written.get(q) 為 None 時先前以
+    text=\"\" / sources=[] 產生補充段且無 log,屬高風險靜默資料遺失。
+    """
+    import logging
+
+    from note_filler.correction import MISSING_WRITTEN_TEXT
+
+    doc = _doc(["行政處分之定義。"])
+    q = "訴願期間多久?"
+    gap = Gap(question=q, status="missing", reason="原文未提及")
+    with caplog.at_level(logging.WARNING, logger="note_filler.correction"):
+        cd = assemble_correction(
+            doc, gaps=[gap], retrieved={}, written={}, validations={}
+        )
+    sup = next(s for s in cd.segments if s.type == "supplement")
+    assert sup.text == MISSING_WRITTEN_TEXT
+    assert sup.text.startswith("【待補證】")
+    assert "written" in sup.text
+    assert sup.confidence == "pending_evidence"
+    assert sup.sources == []
+    assert any(
+        "written" in rec.message and "pending_evidence" in rec.message
+        for rec in caplog.records
+        if rec.levelno >= logging.WARNING
+    ), "缺 written 時應有 warning 告警,不得靜默吞掉"

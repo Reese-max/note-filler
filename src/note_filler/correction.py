@@ -1,6 +1,7 @@
 # src/note_filler/correction.py
 from __future__ import annotations
 
+import logging
 import re
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Literal
@@ -11,6 +12,11 @@ if TYPE_CHECKING:                      # 僅型別提示,執行期零硬耦合(�
     from note_filler.retrieve.models import Source
     from note_filler.verify import Validation
     from note_filler.write import WrittenSupplement
+
+logger = logging.getLogger(__name__)
+
+# gap 在 written 字典中找不到時的可追蹤佔位文;以【待補證】開頭以觸發 pending_evidence
+MISSING_WRITTEN_TEXT = "【待補證】寫作結果缺失：gap 問題不在 written 字典中"
 
 
 @dataclass
@@ -88,10 +94,19 @@ def assemble_correction(doc, gaps, retrieved, written, validations) -> Correctio
     for gap in gaps:
         q = gap.question
         w = written.get(q)
-        text = w.text if w else ""
+        if w is None:
+            # 不可靜默產生空補充:明確告警 + 可機器比對的【待補證】佔位
+            logger.warning(
+                "assemble_correction: gap 問題不在 written 字典,略過寫作結果並降為 pending_evidence: %r",
+                q,
+            )
+            text = MISSING_WRITTEN_TEXT
+            used_ids: list = []
+        else:
+            text = w.text
+            used_ids = w.used_source_ids
         # 由 id 從 retrieved 找回 Source 物件,只保留 used 且找得到者(依 used 序)
         by_id = {s.id: s for s in retrieved.get(q, [])}
-        used_ids = w.used_source_ids if w else []
         used_sources = [by_id[sid] for sid in used_ids if sid in by_id]
 
         # confidence:【待補證】→ pending;否則一手源即 grounded(見 _grounded)
