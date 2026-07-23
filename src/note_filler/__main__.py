@@ -53,8 +53,14 @@ def process_file(path: Path, llm, twinkle, law, out_dir: Path | None, fmt: str) 
     dest = dest_dir / f"{path.stem}.訂正稿.{fmt}"
     if fmt == "docx":
         to_docx(doc, str(dest))
+        # 送達後再驗：空檔不得當成功（digest 已生成但未真正送達）
+        if not dest.is_file() or dest.stat().st_size == 0:
+            raise RuntimeError(f"訂正稿寫出失敗或為空,拒絕視為送達成功:{dest}")
     else:
         body = json.dumps(to_json(doc), ensure_ascii=False, indent=2) if fmt == "json" else to_markdown(doc)
+        if not str(body).strip():
+            # digest 已由 pipeline 產出,但匯出體為空 → 不得回成功 dict
+            raise RuntimeError(f"訂正稿內容為空,拒絕視為送達成功:{path}")
         dest.write_text(body, encoding="utf-8", newline="\n")
     return {"input": str(path), "output": str(dest), "supplements": len(supp), "verified": ver}
 

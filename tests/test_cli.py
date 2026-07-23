@@ -3,6 +3,9 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from pathlib import Path
+
+import pytest
 
 from note_filler import __main__ as cli
 
@@ -61,3 +64,65 @@ def test_process_file_json_format_and_outdir(tmp_path, monkeypatch):
     dest = out / "note.訂正稿.json"
     assert dest.exists() and '"ok": true' in dest.read_text(encoding="utf-8")
     assert r["output"] == str(dest)
+
+
+def test_process_file_delivery_write_failure_does_not_return_success(tmp_path, monkeypatch):
+    """digest 已生成但寫出(送達)失敗時,不得回傳成功 dict。
+
+    鎖定失敗語義:pipeline 成功後發送端 OSError 必須向上傳遞,
+    不可被吞掉成看似完成的統計結果(L039/L036)。
+    """
+    note = tmp_path / "note.txt"
+    note.write_text("一、標題\n內容", encoding="utf-8")
+    monkeypatch.setattr(cli, "run_pipeline", lambda *a, **k: _Doc())
+    monkeypatch.setattr(cli, "to_markdown", lambda doc: "# 訂正稿\n內容")
+
+    def _boom_write(self, *args, **kwargs):
+        raise OSError("simulated delivery failure: disk full")
+
+    monkeypatch.setattr(Path, "write_text", _boom_write)
+
+    with pytest.raises(OSError, match="delivery failure|disk full"):
+        cli.process_file(note, None, None, None, out_dir=None, fmt="md")
+
+    # 失敗後不得留下「成功輸出路徑」假象(寫出未完成)
+    assert not (tmp_path / "note.訂正稿.md").exists()
+
+
+def test_process_file_empty_export_body_does_not_return_success(tmp_path, monkeypatch):
+    """digest 已生成但匯出體為空時,不得回傳成功 dict。
+
+    鎖定:發送端回傳空結果仍標成功的回歸洞(L035/L036/L039)。
+    """
+    note = tmp_path / "note.txt"
+    note.write_text("一、標題\n內容", encoding="utf-8")
+    monkeypatch.setattr(cli, "run_pipeline", lambda *a, **k: _Doc())
+    monkeypatch.setattr(cli, "to_markdown", lambda doc: "   \n\t  ")  # 空/空白結果
+
+    with pytest.raises(RuntimeError, match="為空|送達"):
+        cli.process_file(note, None, None, None, out_dir=None, fmt="md")
+
+    assert not (tmp_path / "note.訂正稿.md").exists()
+
+
+def test_main_delivery_failure_not_counted_as_success(tmp_path, monkeypatch, capsys):
+    """main 批次層:單檔送達失敗不得計入 ok,exit≠0,stderr 含失敗原因。"""
+    note = tmp_path / "note.txt"
+    note.write_text("一、標題\n內容", encoding="utf-8")
+
+    def _fail_process(*args, **kwargs):
+        raise OSError("delivery channel down")
+
+    monkeypatch.setattr(cli, "process_file", _fail_process)
+    monkeypatch.setattr(cli, "GrokClient", lambda: None)
+    monkeypatch.setattr(cli, "TwinkleClient", lambda token="": None)
+    monkeypatch.setattr(cli, "LawLookup", lambda db: None)
+
+    code = cli.main([str(note), "--db", str(tmp_path / "no.db")])
+    captured = capsys.readouterr()
+
+    assert code == 1
+    assert "✅" not in captured.out
+    assert "完成 0/1 檔" in captured.out
+    assert "delivery channel down" in captured.err
+    assert "OSError" in captured.err
