@@ -73,7 +73,12 @@ def detect_gaps(questions: list[str], note_text: str, llm: LLMClient) -> list[Ga
             raise ValueError("回應不是 JSON 陣列")
     except (json.JSONDecodeError, ValueError) as exc:
         # 保守 fallback:全部當 missing。
-        logger.warning("gap detection: LLM response parse failed, treating all questions as missing. raw=%.200s error=%s", raw, exc)
+        logger.warning(
+            "gap detection for questions=%r failed, treating all as missing. raw=%.200s error=%s",
+            questions,
+            raw,
+            exc,
+        )
         return _all_missing(questions, reason="LLM 回應解析失敗,保守標為 missing")
 
     gaps: list[Gap] = []
@@ -84,11 +89,19 @@ def detect_gaps(questions: list[str], note_text: str, llm: LLMClient) -> list[Ga
         status = item.get("status")
         if status not in ("partial", "missing"):  # 只留缺口,covered 濾掉
             continue
+        question = str(item.get("question", "")).strip()
+        if not question:
+            logger.warning("gap item has no question, skipping: %r", item)
+            continue
+        reason = str(item.get("reason", "")).strip()
+        if not reason:
+            reason = "LLM 未提供缺口原因"
+            logger.warning("gap %r has no reason; using recoverable reason: %s", question, reason)
         gaps.append(
             Gap(
-                question=str(item.get("question", "")),
+                question=question,
                 status=status,
-                reason=str(item.get("reason", "")),
+                reason=reason,
             )
         )
     return gaps

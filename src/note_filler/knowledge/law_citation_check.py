@@ -12,7 +12,7 @@ from note_filler.knowledge.law_lookup import LawLookup, _normalize_article_no
 logger = logging.getLogger(__name__)
 
 _LAW_CITE_RE = re.compile(
-    r"([一-鿿]{2,16}(?:法|條例|細則|辦法|規則|準則|自治條例))第(\S{1,8})條"
+    r"((?:同|本|該|前)法|[一-鿿]{2,16}(?:法|條例|細則|辦法|規則|準則|自治條例))第(\S{1,8})條"
 )
 _LEAD_VERB_RE = re.compile(r"^(?:依據|違反|觸犯|有違|牴觸|依|按|據|稱)")
 _MONEY_RE = re.compile(
@@ -71,8 +71,9 @@ def check_law_citations(text: str, lookup: LawLookup) -> list[dict]:
                         "detail": f"《{law}》查無第 {article} 條（疑似條號幻覺）",
                     }
                 )
-            # 法規名不在庫（簡稱/未收錄）→ 不確定，不誤報
-            logger.debug("law citation '%s' skipped: law not found in DB", law)
+            else:
+                # 法規名不在庫（簡稱/未收錄）→ 不確定，不誤報
+                logger.debug("law citation '%s' skipped: law not found in DB", law)
             continue
 
         real_money = set(_MONEY_RE.findall(real))

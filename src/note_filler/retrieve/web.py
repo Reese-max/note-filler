@@ -58,7 +58,11 @@ def _extract_query(gap: "Gap", llm: "LLMClient") -> str:
         query = _strip_fence(raw).strip().strip('"').strip()
         return query or gap.question
     except Exception as exc:  # 抽取失敗不致命,退回原問題
-        logger.warning("query extraction failed, falling back to raw question: %s", exc)
+        logger.warning(
+            "query extraction failed for question=%r, falling back to raw question: %s",
+            gap.question,
+            exc,
+        )
         return gap.question
 
 

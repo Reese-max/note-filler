@@ -27,6 +27,9 @@
 </head>
 <body>
   <h1>訂正結果</h1>
+  {% if error %}
+  <p class="pending">{{ input_id }}：{{ error }}</p>
+  {% else %}
   <p><a href="/export">下載 Markdown 訂正稿</a></p>
   <div class="cols">
     <div class="col" id="original">
@@ -65,5 +68,6 @@
       {% endfor %}
     </div>
   </div>
+  {% endif %}
 </body>
 </html>

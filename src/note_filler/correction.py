@@ -112,7 +112,8 @@ def assemble_correction(doc, gaps, retrieved, written, validations) -> Correctio
         missing_ids = [sid for sid in used_ids if sid not in by_id]
         if missing_ids:
             logger.warning(
-                "assemble_correction: used source IDs not found in retrieved: %s",
+                "assemble_correction: question=%r used source IDs not found in retrieved: %s",
+                q,
                 missing_ids,
             )
 

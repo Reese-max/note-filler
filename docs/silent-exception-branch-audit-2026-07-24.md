@@ -63,11 +63,12 @@
 
 ## 測試驗證
 
-```
-199 passed, 11 deselected in 47.31s
+```text
+D:/Users/Administrator/Desktop/筆記補齊/.venv/Scripts/python.exe -X utf8 -m pytest -q
+211 passed, 11 deselected in 46.81s
 ```
 
-所有既有測試通過,包含:
+新增 `tests/test_exception_skip_traceability.py` 共 12 個離線測試，注入並逐項驗證：CLI/Web 失敗回執、暫存檔清理失敗、空稿與無法分類、問題／缺口格式異常、檢索依賴缺失、法條檢索降級／去重／截斷、Web/Twinkle 單筆異常、引用越界／來源遺失、衝突轉送至三種匯出，以及法條跳過／罰則不符／建庫跳過。完整測試亦包含：
 - `test_correction.py::test_missing_written_entry_is_trackable_and_logged` — 確認靜默資料遺失已被攔截
 - `test_pipeline.py` — 確認 pipeline 整體不變式
 - `test_export.py` — 確認匯出格式正確（含新增 conflict_note 欄位）

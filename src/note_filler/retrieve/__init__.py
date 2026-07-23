@@ -41,12 +41,17 @@ def retrieve_for_gap(
         sources.extend(search_law_sources(gap, llm, law))
     elif domain in _LAW_DOMAINS and (law is None or llm is None):
         logger.warning(
-            "retrieve_for_gap: domain=%s but law=%s/llm=%s, skipping law sources",
-            domain, law is not None, llm is not None,
+            "retrieve_for_gap: question=%r domain=%s but law=%s/llm=%s, skipping law sources",
+            gap.question, domain, law is not None, llm is not None,
         )
     elif domain == "other" and llm is not None:
         # 資安/IT/一般領域:加掛開放網路來源(Level C/D),不打 twinkle(立法院議案為噪音)
         sources.extend(search_web_sources(gap, llm))
+    elif domain == "other":
+        logger.warning(
+            "retrieve_for_gap: question=%r domain=other but llm=False, skipping web sources",
+            gap.question,
+        )
     if domain in _LAW_DOMAINS:  # twinkle(Level B)只對法制領域有意義,other 不打
         sources.extend(twinkle.search(gap.question))
     return sorted(sources, key=lambda s: (_LEVEL_RANK.get(s.level, 99), s.distance))

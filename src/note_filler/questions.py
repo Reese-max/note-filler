@@ -53,7 +53,10 @@ def generate_questions(full_text: str, domain: Domain, llm: LLMClient) -> list[s
             s = s.rstrip()[: s.rstrip().rindex("```")]
 
     if s.lstrip().startswith(("[", "{")):
-        logger.warning("questions: LLM returned JSON wrapper instead of plain text, returning empty list")
+        logger.warning(
+            "questions: note %.50r received JSON wrapper instead of plain text, returning empty list",
+            full_text,
+        )
         return []
 
     lines = [line.strip() for line in s.splitlines()]

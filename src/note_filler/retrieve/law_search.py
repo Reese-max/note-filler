@@ -63,6 +63,7 @@ def search_law_sources(gap: Gap, llm: LLMClient, law, limit: int = 25) -> list[S
     raw = llm.complete([{"role": "user", "content": _PROMPT.format(question=gap.question)}])
     keywords, law_name = _parse_llm(raw)
     if not keywords:
+        logger.warning("law search: question=%r produced no keywords; returning empty", gap.question)
         return []
 
     seen: set[tuple[str, str]] = set()
@@ -76,7 +77,11 @@ def search_law_sources(gap: Gap, llm: LLMClient, law, limit: int = 25) -> list[S
             seen.add(key)
             rows.append(r)
     if len(rows) > 20:
-        logger.info("law search: %d hits found, keeping top 20", len(rows))
+        logger.info(
+            "law search: question=%r found %d hits, keeping top 20",
+            gap.question,
+            len(rows),
+        )
     rows = rows[:20]  # ponytail: 上限 20 條夠 MVP;真爆量再分頁
 
     today = datetime.date.today().isoformat()

@@ -61,15 +61,19 @@ async def run(request: Request, file: UploadFile = File(...)) -> HTMLResponse:
         logger.error("pipeline failed for %s:\n%s", file.filename, tb)
         return TEMPLATES.TemplateResponse(
             request, "result.html",
-            {"doc": None, "error": f"{type(exc).__name__}: {exc}"},
+            {
+                "doc": None,
+                "error": f"{type(exc).__name__}: {exc}",
+                "input_id": file.filename,
+            },
             status_code=500,
         )
     finally:
         if tmp_path and os.path.exists(tmp_path):
             try:
                 os.unlink(tmp_path)
-            except OSError:
-                logger.warning("failed to clean up temp file: %s", tmp_path)
+            except OSError as exc:
+                logger.warning("failed to clean up temp file %s: %s", tmp_path, exc)
 
 
 @app.get("/export")

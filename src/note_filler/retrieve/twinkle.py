@@ -225,11 +225,12 @@ class TwinkleClient:
                 {"query": query.strip(), "limit": limit},
             )
         except Exception as exc:  # noqa: BLE001 - 外部服務不得中斷主流程
-            logger.warning("twinkle-hub 查詢失敗,降級為空結果: %s", exc)
+            logger.warning("twinkle-hub query=%r 查詢失敗,降級為空結果: %s", query, exc)
             return []
         sources: list[Source] = []
         for raw_hit in _extract_hits(data):
             if not isinstance(raw_hit, dict):
+                logger.warning("twinkle-hub query=%r skipped non-object hit: %r", query, raw_hit)
                 continue
             source = _to_source(raw_hit)
             if source:

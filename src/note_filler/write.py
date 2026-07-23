@@ -60,7 +60,12 @@ def write_supplement(gap: Gap, sources: list[Source], llm: LLMClient) -> Written
             if sid not in used:            # 依出現序去重
                 used.append(sid)
             return m.group(0)              # 有效標記保留
-        logger.warning("out-of-range citation marker [^%d] removed (only %d sources available)", idx, n)
+        logger.warning(
+            "question=%r out-of-range citation marker [^%d] removed (only %d sources available)",
+            gap.question,
+            idx,
+            n,
+        )
         return ""                          # 越界標記移除
 
     text = _MARKER.sub(_sub, raw)
