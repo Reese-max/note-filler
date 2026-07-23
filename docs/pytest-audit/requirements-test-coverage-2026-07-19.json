@@ -9,8 +9,8 @@
     "command": "D:/Users/Administrator/Desktop/筆記補齊/.venv/Scripts/python.exe -X utf8 -m pytest -m 'not integration' -q --color=no",
     "collection_command": "D:/Users/Administrator/Desktop/筆記補齊/.venv/Scripts/python.exe -X utf8 -m pytest --collect-only -q --deselected-details --color=no",
     "expected_collection": {
-      "collected": 189,
-      "default_selected": 178,
+      "collected": 190,
+      "default_selected": 179,
       "deselected": 11
     }
   },
@@ -24,8 +24,8 @@
     "observed": {
       "coverage_matrix": "2 passed",
       "blind_spot_and_controls": "12 passed",
-      "default_suite": "178 passed, 11 deselected",
-      "deselection_guard": "updated with anti-leak gate counts 189/178/11"
+      "default_suite": "179 passed, 11 deselected",
+      "deselection_guard": "updated with anti-leak gate counts 190/179/11"
     }
   },
   "paths": [
@@ -246,6 +246,7 @@
       "covered_by": [
         "tests/test_correction.py::test_original_segments_verbatim_and_immutable",
         "tests/test_pipeline.py::test_original_text_immutable_in_output",
+        "tests/test_output_consistency.py::TestConsistencyBypassRegression::test_modified_correctiondoc_original_segment_detected_in_json_export",
         "tests/test_e2e_acceptance.py::test_e2e_structural_invariants",
         "tests/test_excluded_failing_controls.py::test_control_02_e2e_offline_quality_gates"
       ],
