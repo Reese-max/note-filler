@@ -2,12 +2,15 @@
 最後依 C5 排序(A 先於 B、distance 小先)。"""
 from __future__ import annotations
 
+import logging
 from typing import TYPE_CHECKING
 
 from ..gap import Gap
 from .law_search import search_law_sources
 from .models import Source
 from .web import search_web_sources
+
+logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:  # 僅型別檢查用,避免執行期循環匯入
     from ..domain import Domain
@@ -36,6 +39,11 @@ def retrieve_for_gap(
     sources: list[Source] = []
     if domain in _LAW_DOMAINS and law is not None and llm is not None:
         sources.extend(search_law_sources(gap, llm, law))
+    elif domain in _LAW_DOMAINS and (law is None or llm is None):
+        logger.warning(
+            "retrieve_for_gap: domain=%s but law=%s/llm=%s, skipping law sources",
+            domain, law is not None, llm is not None,
+        )
     elif domain == "other" and llm is not None:
         # 資安/IT/一般領域:加掛開放網路來源(Level C/D),不打 twinkle(立法院議案為噪音)
         sources.extend(search_web_sources(gap, llm))

@@ -4,9 +4,12 @@
 直擊 AI 公文最致命的失敗模式——引用錯誤法條（如把「一千二百~六千」罰則掛到不相干的條號）。
 """
 
+import logging
 import re
 
 from note_filler.knowledge.law_lookup import LawLookup, _normalize_article_no
+
+logger = logging.getLogger(__name__)
 
 _LAW_CITE_RE = re.compile(
     r"([一-鿿]{2,16}(?:法|條例|細則|辦法|規則|準則|自治條例))第(\S{1,8})條"
@@ -50,6 +53,7 @@ def check_law_citations(text: str, lookup: LawLookup) -> list[dict]:
         law = cite["law_name"]
         if law in _ANAPHORA:
             if not last_full:
+                logger.debug("anaphora '%s' skipped: no preceding full law name", law)
                 continue
             law = last_full
         else:
@@ -68,6 +72,7 @@ def check_law_citations(text: str, lookup: LawLookup) -> list[dict]:
                     }
                 )
             # 法規名不在庫（簡稱/未收錄）→ 不確定，不誤報
+            logger.debug("law citation '%s' skipped: law not found in DB", law)
             continue
 
         real_money = set(_MONEY_RE.findall(real))

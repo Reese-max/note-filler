@@ -4,10 +4,13 @@ from __future__ import annotations
 
 import datetime
 import json
+import logging
 
 from ..gap import Gap
 from ..llm import LLMClient
 from .models import Source
+
+logger = logging.getLogger(__name__)
 
 _PROMPT = """你是法律檢索助手。閱讀下面的問題,抽出「2~4 個」最適合拿去對法條全文做\
 關鍵詞檢索的中文關鍵詞(名詞優先,並涵蓋問題的不同面向/同義詞,例如聽證相關題可給\
@@ -49,6 +52,7 @@ def _parse_llm(raw: str) -> tuple[list[str], str | None]:
         ln = data.get("law_name")
         law_name = str(ln).strip() if ln else None
     else:  # 非 JSON/非 dict:整串當單一關鍵詞
+        logger.warning("law_search LLM parse: non-JSON response treated as keyword: %.100s", raw)
         raw_kws = [raw.strip()]
     keywords = list(dict.fromkeys(k for k in (str(x).strip() for x in raw_kws) if k))
     return keywords, law_name
@@ -71,6 +75,8 @@ def search_law_sources(gap: Gap, llm: LLMClient, law, limit: int = 25) -> list[S
                 continue
             seen.add(key)
             rows.append(r)
+    if len(rows) > 20:
+        logger.info("law search: %d hits found, keeping top 20", len(rows))
     rows = rows[:20]  # ponytail: 上限 20 條夠 MVP;真爆量再分頁
 
     today = datetime.date.today().isoformat()

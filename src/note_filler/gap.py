@@ -7,10 +7,13 @@
 from __future__ import annotations
 
 import json
+import logging
 from dataclasses import dataclass
 from typing import Literal
 
 from .llm import LLMClient
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -68,13 +71,15 @@ def detect_gaps(questions: list[str], note_text: str, llm: LLMClient) -> list[Ga
         data = json.loads(_strip_fence(raw))
         if not isinstance(data, list):
             raise ValueError("回應不是 JSON 陣列")
-    except (json.JSONDecodeError, ValueError):
+    except (json.JSONDecodeError, ValueError) as exc:
         # 保守 fallback:全部當 missing。
+        logger.warning("gap detection: LLM response parse failed, treating all questions as missing. raw=%.200s error=%s", raw, exc)
         return _all_missing(questions, reason="LLM 回應解析失敗,保守標為 missing")
 
     gaps: list[Gap] = []
     for item in data:
         if not isinstance(item, dict):
+            logger.warning("gap item is not a dict, skipping: %r", item)
             continue
         status = item.get("status")
         if status not in ("partial", "missing"):  # 只留缺口,covered 濾掉

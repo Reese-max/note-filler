@@ -23,6 +23,7 @@ def to_json(doc: CorrectionDoc) -> dict:
                 "text": seg.text,
                 "anchor_idx": seg.anchor_idx,
                 "confidence": seg.confidence,
+                "conflict_note": getattr(seg, "conflict_note", None),
                 "sources": [_source_to_dict(s) for s in seg.sources],
             }
             for seg in doc.segments
@@ -58,6 +59,9 @@ def to_markdown(doc: CorrectionDoc) -> str:
         prefix = "> 【補充】"
         if seg.confidence == "pending_evidence":
             prefix += "⚠待補證 "
+        conflict = getattr(seg, "conflict_note", None)
+        if conflict:
+            body.append(f"> ⚠️ **衝突告警**: {conflict}")
         body.append(f"{prefix}{seg.text}{marks}")
 
     md = "\n\n".join(body)
@@ -90,6 +94,11 @@ def to_docx(doc: CorrectionDoc, path: str) -> None:
             counter += 1
             cited.append(src)
             marks += f"[^{counter}]"
+        conflict = getattr(seg, "conflict_note", None)
+        if conflict:
+            p_conflict = out.add_paragraph()
+            run_conflict = p_conflict.add_run(f"⚠️ 衝突告警: {conflict}")
+            run_conflict.bold = True
         prefix = "【補充】" + ("⚠待補證 " if seg.confidence == "pending_evidence" else "")
         p = out.add_paragraph()
         run = p.add_run(f"{prefix}{seg.text}{marks}")

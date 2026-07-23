@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import logging
 import os
 import tempfile
+import traceback
 from pathlib import Path
 
 from fastapi import FastAPI, File, Request, UploadFile
@@ -13,6 +15,8 @@ from note_filler.llm import GrokClient
 from note_filler.pipeline import run_pipeline
 from note_filler.knowledge.law_lookup import LawLookup
 from note_filler.retrieve.twinkle import TwinkleClient
+
+logger = logging.getLogger(__name__)
 
 BASE_DIR = Path(__file__).resolve().parent
 TEMPLATES = Jinja2Templates(directory=str(BASE_DIR / "templates"))
@@ -41,15 +45,31 @@ def index(request: Request) -> HTMLResponse:
 async def run(request: Request, file: UploadFile = File(...)) -> HTMLResponse:
     suffix = Path(file.filename or "note.txt").suffix or ".txt"
     data = await file.read()
-    with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
-        tmp.write(data)
-        tmp_path = tmp.name
-    llm, twinkle, law = _build_clients()
-    doc = run_pipeline(tmp_path, llm, twinkle, law)
-    app.state.last_doc = doc  # 供 /export 使用
-    return TEMPLATES.TemplateResponse(
-        request, "result.html", {"doc": doc}
-    )
+    tmp_path = None
+    try:
+        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
+            tmp.write(data)
+            tmp_path = tmp.name
+        llm, twinkle, law = _build_clients()
+        doc = run_pipeline(tmp_path, llm, twinkle, law)
+        app.state.last_doc = doc  # 供 /export 使用
+        return TEMPLATES.TemplateResponse(
+            request, "result.html", {"doc": doc}
+        )
+    except Exception as exc:
+        tb = traceback.format_exc()
+        logger.error("pipeline failed for %s:\n%s", file.filename, tb)
+        return TEMPLATES.TemplateResponse(
+            request, "result.html",
+            {"doc": None, "error": f"{type(exc).__name__}: {exc}"},
+            status_code=500,
+        )
+    finally:
+        if tmp_path and os.path.exists(tmp_path):
+            try:
+                os.unlink(tmp_path)
+            except OSError:
+                logger.warning("failed to clean up temp file: %s", tmp_path)
 
 
 @app.get("/export")

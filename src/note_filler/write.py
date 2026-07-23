@@ -7,12 +7,15 @@
 
 from __future__ import annotations
 
+import logging
 import re
 from dataclasses import dataclass
 
 from .gap import Gap
 from .llm import LLMClient
 from .retrieve.models import Source
+
+logger = logging.getLogger(__name__)
 
 _MARKER = re.compile(r"\[\^(\d+)\]")
 
@@ -57,6 +60,7 @@ def write_supplement(gap: Gap, sources: list[Source], llm: LLMClient) -> Written
             if sid not in used:            # 依出現序去重
                 used.append(sid)
             return m.group(0)              # 有效標記保留
+        logger.warning("out-of-range citation marker [^%d] removed (only %d sources available)", idx, n)
         return ""                          # 越界標記移除
 
     text = _MARKER.sub(_sub, raw)

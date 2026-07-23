@@ -1,9 +1,12 @@
 # -*- coding: utf-8 -*-
 """法規名＋條號精確查詢索引，供核對公文引用法條之正確性。"""
 
+import logging
 import re
 import sqlite3
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 
 def _cn_to_arabic(s: str) -> str:
@@ -117,6 +120,7 @@ def build_law_index(corpus_dir, db_path) -> tuple:
         for md_path in corpus_path.glob("*.md"):
             pcode, law_name, articles = parse_law_md(md_path.read_text(encoding="utf-8"))
             if not pcode or not articles:
+                logger.warning("skipping %s: no pcode or articles parsed", md_path)
                 continue
 
             law_count += 1

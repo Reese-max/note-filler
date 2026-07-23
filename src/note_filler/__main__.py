@@ -12,8 +12,10 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import logging
 import os
 import sys
+import traceback
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -22,6 +24,8 @@ from .knowledge.law_lookup import LawLookup
 from .llm import GrokClient
 from .pipeline import run_pipeline
 from .retrieve.twinkle import TwinkleClient
+
+logger = logging.getLogger(__name__)
 
 _SUFFIXES = {".txt", ".docx"}
 
@@ -37,6 +41,7 @@ def write_delivery_receipt(
     fmt: str = "md",
     supplements: int = 0,
     verified: int = 0,
+    error: str | None = None,
 ) -> Path:
     """寫出 delivery_manifest.json,作為可查詢的交付回執。
 
@@ -48,6 +53,7 @@ def write_delivery_receipt(
       - content_hash: 輸出內容 sha256 前 16 碼
       - format: 輸出格式
       - supplements / verified: 計數
+      - error: 失敗時的錯誤訊息(僅 status=failed)
     使用者可透過讀取此 manifest 確認交付已完成,而非只依賴本機檔案存在。
     """
     manifest_dir = output_path.parent
@@ -67,6 +73,8 @@ def write_delivery_receipt(
         "supplements": supplements,
         "verified": verified,
     }
+    if error is not None:
+        receipt["error"] = error
 
     manifest_path.write_text(
         json.dumps(receipt, ensure_ascii=False, indent=2),
@@ -163,7 +171,22 @@ def main(argv: list[str] | None = None) -> int:
             ok += 1
             print(f"✅ {r['input']} → {r['output']}(補充 {r['supplements']}、verified {r['verified']})")
         except Exception as e:  # 單檔失敗不拖垮整批
+            tb = traceback.format_exc()
+            logger.error("處理 %s 時失敗:\n%s", f, tb)
             print(f"❌ {f}:{type(e).__name__}: {e}", file=sys.stderr)
+            # 寫 delivery_manifest 失敗回執,讓下游可查詢交付狀態
+            dest_dir = out_dir if out_dir is not None else f.parent
+            dest_dir.mkdir(parents=True, exist_ok=True)
+            dest = dest_dir / f"{f.stem}.訂正稿.{args.format}"
+            write_delivery_receipt(
+                dest, f,
+                status="failed",
+                content=None,
+                fmt=args.format,
+                supplements=0,
+                verified=0,
+                error=f"{type(e).__name__}: {e}",
+            )
 
     print(f"完成 {ok}/{len(files)} 檔。")
     return 0 if ok == len(files) else 1

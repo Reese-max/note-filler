@@ -1,8 +1,12 @@
 """研究問題生成:依主題與領域,請 LLM 產出該主題應涵蓋的關鍵問題清單。"""
 from __future__ import annotations
 
+import logging
+
 from note_filler.domain import Domain
 from note_filler.llm import LLMClient
+
+logger = logging.getLogger(__name__)
 
 _DOMAIN_LABEL: dict[str, str] = {
     "law": "法律法規",
@@ -49,6 +53,7 @@ def generate_questions(full_text: str, domain: Domain, llm: LLMClient) -> list[s
             s = s.rstrip()[: s.rstrip().rindex("```")]
 
     if s.lstrip().startswith(("[", "{")):
+        logger.warning("questions: LLM returned JSON wrapper instead of plain text, returning empty list")
         return []
 
     lines = [line.strip() for line in s.splitlines()]

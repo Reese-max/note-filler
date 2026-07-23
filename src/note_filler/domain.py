@@ -1,6 +1,9 @@
+import logging
 from typing import Literal
 
 from note_filler.llm import LLMClient
+
+logger = logging.getLogger(__name__)
 
 Domain = Literal["law", "admin", "exam", "other"]
 
@@ -37,4 +40,5 @@ def detect_domain(text: str, llm: LLMClient) -> Domain:
             return label
 
     # 3) 完全無法辨識 → 無來源閘精神:不硬猜,回 "other"
+    logger.warning("domain detection: LLM response unparseable '%.50s', falling back to 'other'", token)
     return "other"

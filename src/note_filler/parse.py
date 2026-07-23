@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+import logging
 import re
 from dataclasses import dataclass
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -50,4 +53,6 @@ def parse_note(path: str) -> Document:
         Paragraph(idx=i, text=t) for i, t in enumerate(texts)
     )
     full_text = "\n".join(p.text for p in paragraphs)
+    if not full_text.strip():
+        logger.warning("parse_note: file %s parsed to empty content", path)
     return Document(source_path=path, paragraphs=paragraphs, full_text=full_text)

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import logging
+
 from .parse import parse_note                 # T2
 from .domain import detect_domain              # T3
 from .questions import generate_questions      # T4
@@ -9,6 +11,8 @@ from .write import write_supplement            # Q3
 from .verify import cross_validate            # T10
 from .knowledge.law_citation_check import check_law_citations   # T8
 from .correction import assemble_correction       # T12
+
+logger = logging.getLogger(__name__)
 
 
 def run_pipeline(path, llm, twinkle, law):
@@ -44,10 +48,18 @@ def run_pipeline(path, llm, twinkle, law):
 def _verify_law_citations(correction, law):
     """law 領域:對每個補充段跑法規引用檢查;引用之法條在離線庫找不到時,
     保守把該段降為 pending_evidence(C6:只降級、保留不刪,絕不升級)。
+    penalty_mismatch 同樣降級,因為罰則金額與法規庫不符時不可聲稱 verified。
     """
     for seg in correction.segments:
         if seg.type != "supplement":
             continue
         findings = check_law_citations(text=seg.text, lookup=law)  # C2:第一參數用 text 名
         if any(f.get("kind") == "article_not_found" for f in findings):
+            seg.confidence = "pending_evidence"
+        if any(f.get("kind") == "penalty_mismatch" for f in findings):
+            logger.warning(
+                "penalty_mismatch in segment for '%s': %s",
+                seg.text[:80],
+                [f["detail"] for f in findings if f.get("kind") == "penalty_mismatch"],
+            )
             seg.confidence = "pending_evidence"

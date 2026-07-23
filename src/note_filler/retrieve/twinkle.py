@@ -102,6 +102,7 @@ class TwinkleMCPClient:
         self._ensure_session()
         response = self._rpc("tools/call", {"name": name, "arguments": arguments})
         if not response:
+            logger.warning("twinkle MCP returned empty response for tool=%s", name)
             return {}
         result = response.get("result")
         if not isinstance(result, dict):
@@ -116,6 +117,7 @@ class TwinkleMCPClient:
             raise MCPProtocolError("MCP tools/call 缺少 content")
         for item in content:
             if not isinstance(item, dict) or item.get("type") not in (None, "text"):
+                logger.debug("twinkle MCP: skipping non-text content item type=%s", item.get("type") if isinstance(item, dict) else type(item).__name__)
                 continue
             text = item.get("text")
             if not isinstance(text, str) or not text.strip():
@@ -123,6 +125,7 @@ class TwinkleMCPClient:
             decoded = json.loads(text)
             if isinstance(decoded, dict):
                 return decoded
+        logger.warning("twinkle MCP: no parseable JSON found in content items for tool=%s", name)
         return {}
 
 

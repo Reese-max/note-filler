@@ -26,6 +26,7 @@ class Segment:
     anchor_idx: int | None
     sources: list
     confidence: Literal["verified", "pending_evidence"]
+    conflict_note: str | None = None
 
 
 @dataclass
@@ -108,6 +109,12 @@ def assemble_correction(doc, gaps, retrieved, written, validations) -> Correctio
         # 由 id 從 retrieved 找回 Source 物件,只保留 used 且找得到者(依 used 序)
         by_id = {s.id: s for s in retrieved.get(q, [])}
         used_sources = [by_id[sid] for sid in used_ids if sid in by_id]
+        missing_ids = [sid for sid in used_ids if sid not in by_id]
+        if missing_ids:
+            logger.warning(
+                "assemble_correction: used source IDs not found in retrieved: %s",
+                missing_ids,
+            )
 
         # confidence:【待補證】→ pending;否則一手源即 grounded(見 _grounded)
         if text.startswith("【待補證】"):
@@ -117,6 +124,12 @@ def assemble_correction(doc, gaps, retrieved, written, validations) -> Correctio
         else:
             confidence = "pending_evidence"
 
+        # 從 validations 取 conflict_note,確保衝突資訊不被丟棄
+        conflict_note: str | None = None
+        v = validations.get(q)
+        if v is not None and getattr(v, "conflict", False):
+            conflict_note = getattr(v, "conflict_note", None)
+
         segments.append(
             Segment(
                 type="supplement",
@@ -124,6 +137,7 @@ def assemble_correction(doc, gaps, retrieved, written, validations) -> Correctio
                 anchor_idx=_best_anchor(q, doc.paragraphs),
                 sources=used_sources,
                 confidence=confidence,
+                conflict_note=conflict_note,
             )
         )
 

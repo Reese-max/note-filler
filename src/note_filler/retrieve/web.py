@@ -57,7 +57,8 @@ def _extract_query(gap: "Gap", llm: "LLMClient") -> str:
         raw = llm.complete([{"role": "user", "content": _QUERY_PROMPT.format(question=gap.question)}])
         query = _strip_fence(raw).strip().strip('"').strip()
         return query or gap.question
-    except Exception:  # noqa: BLE001 - 抽取失敗不致命,退回原問題
+    except Exception as exc:  # 抽取失敗不致命,退回原問題
+        logger.warning("query extraction failed, falling back to raw question: %s", exc)
         return gap.question
 
 
@@ -66,7 +67,8 @@ def _grade(llm: "LLMClient", gap: "Gap", text: str) -> tuple[str, str | None]:
     raw = llm.complete([{"role": "user", "content": _GRADE_PROMPT.format(question=gap.question, text=text)}])
     try:
         data = json.loads(_strip_fence(raw))
-    except (json.JSONDecodeError, ValueError):
+    except (json.JSONDecodeError, ValueError) as exc:
+        logger.warning("grade JSON parse failed: %s | raw=%.200s", exc, raw)
         return "drop", None
     level = str(data.get("level", "drop")).strip().upper()
     if level not in ("C", "D"):
@@ -104,13 +106,15 @@ def search_web_sources(
             continue
         try:
             text = fetch(href)  # 單頁 fetch 失敗只跳過該頁
-        except Exception:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001
+            logger.debug("fetch failed for %s, skipping: %s", href, exc)
             continue
         if not text or len(text) < _MIN_FULLTEXT:  # None/空/過短 → 跳過
             continue
         try:
             level, doc_date = _grade(llm, gap, text)
-        except Exception:  # noqa: BLE001 - 分級失敗(解析/呼叫)保守跳過該頁
+        except Exception as exc:  # 分級失敗(解析/呼叫)保守跳過該頁
+            logger.warning("grading failed for %s, skipping page: %s", href, exc)
             continue
         if level not in ("C", "D"):  # drop → 不計入
             continue
