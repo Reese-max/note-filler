@@ -28,13 +28,14 @@ def test_iter_inputs_expands_dir_filters_suffix_and_dedups(tmp_path):
 class _Seg:
     type: str
     confidence: str = "verified"
+    text: str = "可追溯筆記內容"
 
 
 class _Doc:
     segments = [
-        _Seg("original"),
-        _Seg("supplement", "verified"),
-        _Seg("supplement", "pending_evidence"),
+        _Seg("original", text="原文段落"),
+        _Seg("supplement", "verified", text="補充段落 verified"),
+        _Seg("supplement", "pending_evidence", text="補充段落 pending"),
     ]
 
 

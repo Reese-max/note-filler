@@ -16,11 +16,62 @@ from .correction import assemble_correction       # T12
 logger = logging.getLogger(__name__)
 
 
+def require_non_empty_note_product(correction, *, source: object = "pipeline") -> None:
+    """硬性產出檢查：補齊流程完成後必須有至少一份可追溯、非空實際筆記內容。
+
+    通過條件：至少一個 original 或 supplement 段的 text 去空白後非空。
+    失敗條件（表面成功但無成品）：
+      - 無 segments / 全文與段皆空白
+      - 僅空白段、無實質筆記文字（等同空白或僅稽核摘要）
+    失敗時寫 note_product_empty 稽核事件並 raise RuntimeError（含明確原因）。
+    """
+    segments = list(getattr(correction, "segments", None) or [])
+    note_types: list[str] = []
+    for seg in segments:
+        text = getattr(seg, "text", None)
+        if not isinstance(text, str) or not text.strip():
+            continue
+        stype = getattr(seg, "type", None)
+        if stype in ("original", "supplement"):
+            note_types.append(stype)
+
+    if note_types:
+        return
+
+    original = getattr(correction, "original", None)
+    full_text = ""
+    if original is not None:
+        full_text = (getattr(original, "full_text", None) or "").strip()
+    data_id = getattr(original, "source_path", None) if original is not None else source
+    if data_id is None or data_id == "":
+        data_id = source
+
+    if not segments and not full_text:
+        reason = "結果為空白（無任何 original/supplement 段與原文）"
+    elif not full_text:
+        reason = "結果無實質筆記內容（空白段或僅稽核摘要）"
+    else:
+        # full_text 有值但未進入任何非空 original/supplement 段 → 組裝/轉送缺口
+        reason = "原文未轉送為可追溯筆記段（僅有內部狀態/稽核、無成品段）"
+
+    audit_event(
+        logger,
+        "note_product_empty",
+        data_id,
+        reason=reason,
+        segment_count=len(segments),
+        outcome="failed",
+    )
+    raise RuntimeError(
+        f"補齊流程完成但未產生非空實際筆記：{reason}；拒絕視為成功"
+    )
+
+
 def run_pipeline(path, llm, twinkle, law):
     """串 parse→domain→questions→gaps→(每 gap)retrieve→write→cross_validate→assemble。
     每個 gap:傳 law+llm 給 retrieve_for_gap 啟用法條 Level A;寫作產 written;
     validations 只跑實際引用(used)之來源。law 領域對補充段再跑 check_law_citations。
-    回傳 CorrectionDoc。
+    回傳 CorrectionDoc。補齊完成後硬性檢查至少一份非空實際筆記，否則失敗。
     """
     doc = parse_note(path)                                  # T2
     domain = detect_domain(doc.full_text, llm)             # T3(1 次 llm.complete)
@@ -53,6 +104,8 @@ def run_pipeline(path, llm, twinkle, law):
     if domain == "law":
         _verify_law_citations(correction, law)
 
+    # 硬性產出閘：空白或僅稽核摘要不得表面成功
+    require_non_empty_note_product(correction, source=path)
     return correction
 
 

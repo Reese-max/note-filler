@@ -23,7 +23,7 @@ from .audit import audit_event
 from .export import to_docx, to_json, to_markdown
 from .knowledge.law_lookup import LawLookup
 from .llm import GrokClient
-from .pipeline import run_pipeline
+from .pipeline import require_non_empty_note_product, run_pipeline
 from .retrieve.twinkle import TwinkleClient
 
 logger = logging.getLogger(__name__)
@@ -135,6 +135,8 @@ def process_file(path: Path, llm, twinkle, law, out_dir: Path | None, fmt: str) 
     使用者可讀取 manifest 確認交付狀態,而非只依賴本機檔案存在。
     """
     doc = run_pipeline(str(path), llm, twinkle, law)
+    # 防禦層：即使 pipeline 被 stub，交付前仍硬性要求非空實際筆記
+    require_non_empty_note_product(doc, source=path)
     supp = [s for s in doc.segments if s.type == "supplement"]
     ver = sum(1 for s in supp if s.confidence == "verified")
 
