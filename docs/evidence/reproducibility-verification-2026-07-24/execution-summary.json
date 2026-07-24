@@ -1,0 +1,51 @@
+{
+  "task": "連續多次執行主流程並保存各次非空成品與結果，證明產出流程可穩定重現",
+  "execution_date": "2026-07-24",
+  "environment": {
+    "python": "system python (3.11.9)",
+    "command": "python -X utf8 -m note_filler tests/fixtures/real_note.txt -o output/reproducibility-run-N --db data/law_index.db --format md",
+    "llm": "http://127.0.0.1:8318/v1 model=grok-4.3",
+    "input_file": "tests/fixtures/real_note.txt"
+  },
+  "runs": [
+    {
+      "run_id": 1,
+      "output_dir": "output/reproducibility-run-1",
+      "exit_code": 0,
+      "status": "success",
+      "supplements": 7,
+      "verified": 4,
+      "product_size_bytes": 14031,
+      "content_hash": "d42453ac3a824b3a",
+      "timestamp": "2026-07-24T05:19:39.146347+00:00"
+    },
+    {
+      "run_id": 2,
+      "output_dir": "output/reproducibility-run-2",
+      "exit_code": 0,
+      "status": "success",
+      "supplements": 9,
+      "verified": 6,
+      "product_size_bytes": 23731,
+      "content_hash": "fe8cd5c319772348",
+      "timestamp": "2026-07-24T05:23:17.682648+00:00"
+    },
+    {
+      "run_id": 3,
+      "output_dir": "output/reproducibility-run-3",
+      "exit_code": 0,
+      "status": "success",
+      "supplements": 6,
+      "verified": 3,
+      "product_size_bytes": 8717,
+      "content_hash": "e01c484370b29c47",
+      "timestamp": "2026-07-24T05:25:37.171341+00:00"
+    }
+  ],
+  "verification": {
+    "all_runs_successful": true,
+    "all_products_non_empty": true,
+    "all_manifests_delivered": true,
+    "reproducibility_assessment": "流程可穩定執行並產出非空成品，但每次執行的補充數量與內容長度有差異，這是由於 LLM 生成的不確定性所致"
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "output_path": "output\\reproducibility-run-2\\real_note.訂正稿.md",
+  "input_path": "tests\\fixtures\\real_note.txt",
+  "status": "delivered",
+  "timestamp": "2026-07-24T05:23:17.682648+00:00",
+  "content_hash": "fe8cd5c319772348",
+  "format": "md",
+  "supplements": 9,
+  "verified": 6
+}
