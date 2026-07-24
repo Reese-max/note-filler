@@ -29,7 +29,7 @@ from note_filler.questions import generate_questions
 from note_filler.retrieve import retrieve_for_gap
 from note_filler.retrieve.law_search import search_law_sources
 from note_filler.retrieve.models import Source
-from note_filler.retrieve.twinkle import TwinkleClient, TwinkleMCPClient
+from note_filler.retrieve.twinkle import TwinkleClient, TwinkleMCPClient, _to_source
 from note_filler.retrieve.web import search_web_sources, _extract_query, _grade
 from note_filler.verify import Validation
 from note_filler.write import WrittenSupplement, write_supplement
@@ -695,3 +695,226 @@ class TestEndToEndFaultInjection:
         assert server.app.state.last_doc is None
         export_resp = await async_client.get("/export")
         assert export_resp.status_code == 404
+
+
+# ===========================================================================
+# §7  未覆蓋 audit_event 補齊：覆蓋所有可能造成資料未處理/未持久化/未轉送/未記錄之路徑
+# ===========================================================================
+
+class TestUncoveredAuditEvents:
+    """補齊既有測試未覆蓋之 audit_event 路徑，確保每條異常/跳過分支均有非靜默處置。"""
+
+    def test_delivery_receipt_replaced(self, caplog):
+        """__main__.py:63-71 已有 manifest 時再次寫入 → delivery_receipt_replaced。"""
+        from note_filler.__main__ import write_delivery_receipt, MANIFEST_NAME
+        import tempfile, os
+        with tempfile.TemporaryDirectory() as td:
+            manifest = os.path.join(td, MANIFEST_NAME)
+            Path(manifest).write_text("{}", encoding="utf-8")
+            caplog.clear()
+            with caplog.at_level(logging.INFO, logger="note_filler.__main__"):
+                write_delivery_receipt(
+                    Path(os.path.join(td, "out.md")),
+                    Path("note.txt"),
+                    status="delivered",
+                    content="test",
+                )
+            records = _audit_records(caplog)
+            assert any(r["event"] == "delivery_receipt_replaced" for r in records), \
+                "應觸發 delivery_receipt_replaced 事件"
+
+    def test_input_directory_skipped(self, caplog, tmp_path):
+        """__main__.py:108-114 資料夾無 .txt/.docx → input_directory_skipped。"""
+        empty_dir = tmp_path / "empty_dir"
+        empty_dir.mkdir()
+        (empty_dir / "readme.md").write_text("not a note", encoding="utf-8")
+        caplog.clear()
+        with caplog.at_level(logging.WARNING, logger="note_filler.__main__"):
+            result = cli._iter_inputs([str(empty_dir)])
+        assert result == []
+        records = _audit_records(caplog)
+        assert any(r["event"] == "input_directory_skipped" for r in records), \
+            "應觸發 input_directory_skipped 事件"
+
+    def test_input_file_deduplicated(self, caplog, tmp_path):
+        """__main__.py:120-127 同一檔案重複出現 → input_file_deduplicated。"""
+        note = tmp_path / "dup.txt"
+        note.write_text("content", encoding="utf-8")
+        caplog.clear()
+        with caplog.at_level(logging.INFO, logger="note_filler.__main__"):
+            result = cli._iter_inputs([str(note), str(note)])
+        assert len(result) == 1
+        records = _audit_records(caplog)
+        assert any(r["event"] == "input_file_deduplicated" for r in records), \
+            "應觸發 input_file_deduplicated 事件"
+
+    def test_citation_source_deduplicated(self, caplog):
+        """write.py:70-77 同一 [^n] 出現兩次 → citation_source_deduplicated。"""
+        gap = Gap("q-dedup-cite", "missing", "reason")
+        src = _source("src-dedup-1")
+        with caplog.at_level(logging.INFO, logger="note_filler.write"):
+            written = write_supplement(gap, [src], FakeLLM(["text[^1] again[^1]"]))
+        assert written.used_source_ids == ["src-dedup-1"]
+        records = _audit_records(caplog)
+        assert any(r["event"] == "citation_source_deduplicated" for r in records), \
+            "應觸發 citation_source_deduplicated 事件"
+
+    def test_supplement_has_no_forwardable_sources(self, caplog):
+        """write.py:89-96 文字有有效 [^n] 但全部越界，最終 used 為空 → supplement_has_no_forwardable_sources。"""
+        gap = Gap("q-no-fwd", "missing", "reason")
+        with caplog.at_level(logging.WARNING, logger="note_filler.write"):
+            written = write_supplement(gap, [_source("s1")], FakeLLM(["text[^99]"]))
+        assert written.used_source_ids == []
+        assert "【待補證】" not in written.text
+        records = _audit_records(caplog)
+        assert any(r["event"] == "supplement_has_no_forwardable_sources" for r in records), \
+            "應觸發 supplement_has_no_forwardable_sources 事件"
+
+    def test_web_query_defaulted(self, caplog):
+        """web.py:61-68 LLM 回傳空 query → web_query_defaulted → 退回 gap.question。"""
+        gap = Gap("q-query-def", "missing", "reason")
+        with caplog.at_level(logging.WARNING, logger="note_filler.retrieve.web"):
+            query = _extract_query(gap, FakeLLM([""]))
+        assert query == "q-query-def"
+        records = _audit_records(caplog)
+        assert any(r["event"] == "web_query_defaulted" for r in records), \
+            "應觸發 web_query_defaulted 事件"
+
+    def test_web_hits_truncated(self, caplog):
+        """web.py:131-139 hits 超過 max_fetch → web_hits_truncated。"""
+        gap = Gap("q-trunc", "missing", "reason")
+        hits = [{"title": f"h{i}", "href": f"https://{i}.test"} for i in range(10)]
+        # _extract_query = 1 call, then 3 grades for 3 hits
+        llm = _SequenceLLM(["query", '{"level":"C","doc_date":null}', '{"level":"C","doc_date":null}', '{"level":"C","doc_date":null}'])
+        with caplog.at_level(logging.INFO, logger="note_filler.retrieve.web"):
+            sources = search_web_sources(
+                gap, llm, search=lambda q, n: hits, fetch=lambda u: "x" * 250,
+                max_fetch=3
+            )
+        assert len(sources) == 3
+        records = _audit_records(caplog)
+        assert any(r["event"] == "web_hits_truncated" and r.get("omitted") == 7 for r in records), \
+            "應觸發 web_hits_truncated 事件且 omitted=7"
+
+    def test_web_fetch_empty(self, caplog):
+        """web.py:247-254 trafilatura.fetch_url 回傳 falsy → web_fetch_empty。"""
+        from note_filler.retrieve.web import _fetch_fulltext
+        mock_trafilatura = MagicMock()
+        mock_trafilatura.fetch_url.return_value = None
+        with patch.dict("sys.modules", {"trafilatura": mock_trafilatura}):
+            caplog.clear()
+            with caplog.at_level(logging.WARNING, logger="note_filler.retrieve.web"):
+                result = _fetch_fulltext("https://empty.test")
+            assert result is None
+            records = _audit_records(caplog)
+            assert any(r["event"] == "web_fetch_empty" for r in records), \
+                "應觸發 web_fetch_empty 事件"
+
+    def test_twinkle_source_content_empty(self, caplog):
+        """twinkle.py:248-254 hit 有 title 但 _record_fulltext 回傳空 → twinkle_source_content_empty。"""
+        hit = {"title": "valid-title", "id": "tw-id"}
+        caplog.clear()
+        with patch("note_filler.retrieve.twinkle._record_fulltext", return_value=""):
+            with caplog.at_level(logging.WARNING, logger="note_filler.retrieve.twinkle"):
+                src = _to_source(hit)
+        assert src is not None
+        assert src.title == "valid-title"
+        records = _audit_records(caplog)
+        assert any(r["event"] == "twinkle_source_content_empty" for r in records), \
+            "應觸發 twinkle_source_content_empty 事件"
+
+    def test_twinkle_limit_defaulted(self, caplog):
+        """twinkle.py:290-299 n 為非數字 → twinkle_limit_defaulted → limit=3。"""
+        caplog.clear()
+        with caplog.at_level(logging.WARNING, logger="note_filler.retrieve.twinkle"):
+            client = TwinkleClient(token="fake-token")
+            with patch.object(TwinkleMCPClient, "call_tool", return_value={"hits": []}):
+                result = client.search("q-limit", n="not-a-number")
+        records = _audit_records(caplog)
+        assert any(r["event"] == "twinkle_limit_defaulted" for r in records), \
+            "應觸發 twinkle_limit_defaulted 事件"
+
+    def test_twinkle_hits_empty(self, caplog):
+        """twinkle.py:316-322 MCP 回傳成功但無 hits → twinkle_hits_empty。"""
+        caplog.clear()
+        with caplog.at_level(logging.WARNING, logger="note_filler.retrieve.twinkle"):
+            client = TwinkleClient(token="fake-token")
+            with patch.object(TwinkleMCPClient, "call_tool", return_value={"data": "ok"}):
+                result = client.search("q-empty")
+        assert result == []
+        records = _audit_records(caplog)
+        assert any(r["event"] == "twinkle_hits_empty" for r in records), \
+            "應觸發 twinkle_hits_empty 事件"
+
+    def test_twinkle_sources_truncated(self, caplog):
+        """twinkle.py:336-344 sources 數量超限 → twinkle_sources_truncated。"""
+        hits = [
+            {"title": f"bill-{i}", "id": f"id-{i}", "similarity": 0.9}
+            for i in range(5)
+        ]
+        caplog.clear()
+        with caplog.at_level(logging.INFO, logger="note_filler.retrieve.twinkle"):
+            client = TwinkleClient(token="fake-token")
+            with patch.object(TwinkleMCPClient, "call_tool", return_value={"hits": hits}):
+                result = client.search("q-trunc", n=2)
+        assert len(result) == 2
+        records = _audit_records(caplog)
+        assert any(r["event"] == "twinkle_sources_truncated" for r in records), \
+            "應觸發 twinkle_sources_truncated 事件"
+
+    def test_law_issue_deduplicated(self, caplog, monkeypatch):
+        """law_citation_check.py:116-124 annotate_law_mismatches 含重複 issue → law_issue_deduplicated。"""
+        from note_filler.knowledge.law_citation_check import annotate_law_mismatches
+        duplicate = {
+            "law_name": "測試法",
+            "article_no": "1",
+            "kind": "article_not_found",
+            "detail": "重複-DUP-ISSUE",
+        }
+        monkeypatch.setattr(
+            law_citation_check, "check_law_citations",
+            lambda draft, lookup: [duplicate, duplicate],
+        )
+        caplog.clear()
+        with caplog.at_level(logging.INFO, logger="note_filler.knowledge.law_citation_check"):
+            result = annotate_law_mismatches("draft", MagicMock())
+        assert result.count("重複-DUP-ISSUE") == 1
+        records = _audit_records(caplog)
+        assert any(r["event"] == "law_issue_deduplicated" for r in records), \
+            "應觸發 law_issue_deduplicated 事件"
+
+    def test_law_sources_truncated(self, caplog):
+        """law_search.py:93-102 超過 20 筆 unique rows → law_sources_truncated。"""
+        gap = Gap("q-law-trunc", "missing", "reason")
+        call_count = [0]
+
+        class FakeLaw:
+            def search_articles(self, kw, lim, ln):
+                call_count[0] += 1
+                if call_count[0] == 1:
+                    return [
+                        {
+                            "pcode": "P1",
+                            "law_name": "法A",
+                            "article_no": str(i),
+                            "article_text": f"text-{i}",
+                        }
+                        for i in range(1, 16)
+                    ]
+                return [
+                    {
+                        "pcode": "P2",
+                        "law_name": "法B",
+                        "article_no": str(i),
+                        "article_text": f"text-b-{i}",
+                    }
+                    for i in range(1, 12)
+                ]
+
+        caplog.clear()
+        with caplog.at_level(logging.INFO, logger="note_filler.retrieve.law_search"):
+            sources = search_law_sources(gap, FakeLLM(['{"keywords": ["k1", "k2"]}']), FakeLaw())
+        assert len(sources) == 20
+        records = _audit_records(caplog)
+        assert any(r["event"] == "law_sources_truncated" and r.get("found") == 26 for r in records), \
+            "應觸發 law_sources_truncated 事件且 found=26"
