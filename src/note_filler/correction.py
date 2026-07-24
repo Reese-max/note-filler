@@ -30,6 +30,7 @@ class Segment:
     confidence: Literal["verified", "pending_evidence"]
     conflict_note: str | None = None
     traceability: list[dict] = field(default_factory=list)
+    source_id: str = ""
 
 
 @dataclass
@@ -97,6 +98,7 @@ def assemble_correction(doc, gaps, retrieved, written, validations) -> Correctio
                         "paragraph_idx": p.idx,
                     }
                 ],
+                source_id=f"input:{doc.source_path}#p{p.idx}",
             )
         )
 
@@ -154,6 +156,12 @@ def assemble_correction(doc, gaps, retrieved, written, validations) -> Correctio
                 outcome="pending_evidence" if confidence == "pending_evidence" else confidence,
             )
 
+        source_id: str
+        if used_ids:
+            source_id = f"sources:{','.join(used_ids)}"
+        else:
+            source_id = f"pending:gap:{gap_idx}"
+
         segments.append(
             Segment(
                 type="supplement",
@@ -173,6 +181,7 @@ def assemble_correction(doc, gaps, retrieved, written, validations) -> Correctio
                         }
                     ]
                 ),
+                source_id=source_id,
             )
         )
 

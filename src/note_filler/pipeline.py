@@ -80,6 +80,7 @@ def require_traceable_note_product(correction, *, source: object = "pipeline") -
         if not isinstance(getattr(seg, "text", None), str) or not seg.text.strip():
             continue
         refs = getattr(seg, "traceability", None) or []
+        sid = getattr(seg, "source_id", None) or ""
         if seg.type == "original":
             paragraph = paragraphs.get(seg.anchor_idx)
             expected = {
@@ -87,18 +88,24 @@ def require_traceable_note_product(correction, *, source: object = "pipeline") -
                 "id": source_path,
                 "paragraph_idx": seg.anchor_idx,
             }
+            expected_sid = f"input:{source_path}#p{seg.anchor_idx}"
             if paragraph is None or seg.text != paragraph.text or refs != [expected]:
                 errors.append(f"segment[{index}] original_input 對應失敗")
+            elif sid != expected_sid:
+                errors.append(f"segment[{index}] source_id 應為 {expected_sid!r} 實際 {sid!r}")
             continue
 
         source_ids = [item.id for item in seg.sources]
         if source_ids:
             expected = [{"kind": "source", "id": source_id} for source_id in source_ids]
+            expected_sid = f"sources:{','.join(source_ids)}"
             if (
                 refs != expected
                 or not all(isinstance(source_id, str) and source_id.strip() for source_id in source_ids)
             ):
                 errors.append(f"segment[{index}] source ID 對應失敗")
+            elif sid != expected_sid:
+                errors.append(f"segment[{index}] source_id 應為 {expected_sid!r} 實際 {sid!r}")
         elif (
             seg.confidence != "pending_evidence"
             or len(refs) != 1
@@ -109,6 +116,8 @@ def require_traceable_note_product(correction, *, source: object = "pipeline") -
             or refs[0].get("outcome") != seg.confidence
         ):
             errors.append(f"segment[{index}] processing_record 對應失敗")
+        elif not sid.startswith("pending:gap:"):
+            errors.append(f"segment[{index}] source_id 應以 pending:gap: 開頭 實際 {sid!r}")
 
     if errors:
         audit_event(

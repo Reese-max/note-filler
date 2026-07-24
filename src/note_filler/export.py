@@ -19,6 +19,9 @@ def _trace_text(seg) -> str:
         "processing_record": "處理紀錄",
     }
     items: list[str] = []
+    source_id = getattr(seg, "source_id", None)
+    if source_id:
+        items.append(f"來源ID {source_id}")
     for ref in getattr(seg, "traceability", []):
         ref_id = ref.get("id")
         if ref.get("kind") == "original_input":
@@ -39,6 +42,7 @@ def to_json(doc: CorrectionDoc) -> dict:
                 "anchor_idx": seg.anchor_idx,
                 "confidence": seg.confidence,
                 "conflict_note": getattr(seg, "conflict_note", None),
+                "source_id": getattr(seg, "source_id", ""),
                 "traceability": list(getattr(seg, "traceability", [])),
                 "sources": [_source_to_dict(s) for s in seg.sources],
             }

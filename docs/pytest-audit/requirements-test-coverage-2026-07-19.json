@@ -9,8 +9,8 @@
     "command": "D:/Users/Administrator/Desktop/筆記補齊/.venv/Scripts/python.exe -X utf8 -m pytest -m 'not integration' -q --color=no",
     "collection_command": "D:/Users/Administrator/Desktop/筆記補齊/.venv/Scripts/python.exe -X utf8 -m pytest --collect-only -q --deselected-details --color=no",
 "expected_collection": {
-    "collected": 298,
-    "default_selected": 287,
+    "collected": 310,
+    "default_selected": 299,
     "deselected": 11
   }
   },
@@ -24,7 +24,7 @@
     "observed": {
       "coverage_matrix": "2 passed",
       "blind_spot_and_controls": "12 passed",
-      "default_suite": "278 passed, 11 deselected",
+      "default_suite": "299 passed, 11 deselected",
       "deselection_guard": "updated with anti-leak gate counts 289/278/11"
     }
   },
@@ -98,6 +98,17 @@
         "tests/test_correction.py::test_retrieved_five_but_only_two_cited",
         "tests/test_traceability.py::test_product_content_has_verifiable_traceability_in_all_exports",
         "tests/test_traceability.py::test_traceability_gate_rejects_source_id_drift",
+        "tests/test_traceability.py::test_every_segment_has_source_id",
+        "tests/test_traceability.py::test_source_id_format_original",
+        "tests/test_traceability.py::test_source_id_format_supplement_sourced",
+        "tests/test_traceability.py::test_source_id_format_supplement_pending",
+        "tests/test_traceability.py::test_source_id_in_json_export",
+        "tests/test_traceability.py::test_source_id_in_markdown_export",
+        "tests/test_traceability.py::test_source_id_in_docx_export",
+        "tests/test_traceability.py::test_source_id_gate_rejects_wrong_original_source_id",
+        "tests/test_traceability.py::test_source_id_gate_rejects_wrong_supplement_source_id",
+        "tests/test_traceability.py::test_source_id_gate_rejects_missing_pending_prefix",
+        "tests/test_traceability.py::test_traceability_maintains_multi_paragraph_input",
         "tests/test_excluded_failing_controls.py::test_control_02_e2e_offline_quality_gates"
       ],
       "verification_gap_tests": [],
@@ -161,6 +172,7 @@
         "tests/test_correction.py::test_retrieved_five_but_only_two_cited",
         "tests/test_traceability.py::test_product_content_has_verifiable_traceability_in_all_exports",
         "tests/test_traceability.py::test_traceability_gate_rejects_source_id_drift",
+        "tests/test_traceability.py::test_traceability_full_pipeline",
         "tests/test_excluded_failing_controls.py::test_control_05_pipeline_c6_pending_when_no_sources"
       ],
       "verification_gap_tests": [],
@@ -304,7 +316,19 @@
       "critical_path": "P2",
       "covered_by": [
         "tests/test_traceability.py::test_product_content_has_verifiable_traceability_in_all_exports",
-        "tests/test_traceability.py::test_traceability_gate_rejects_source_id_drift"
+        "tests/test_traceability.py::test_traceability_gate_rejects_source_id_drift",
+        "tests/test_traceability.py::test_every_segment_has_source_id",
+        "tests/test_traceability.py::test_source_id_format_original",
+        "tests/test_traceability.py::test_source_id_format_supplement_sourced",
+        "tests/test_traceability.py::test_source_id_format_supplement_pending",
+        "tests/test_traceability.py::test_source_id_in_json_export",
+        "tests/test_traceability.py::test_source_id_in_markdown_export",
+        "tests/test_traceability.py::test_source_id_in_docx_export",
+        "tests/test_traceability.py::test_source_id_gate_rejects_wrong_original_source_id",
+        "tests/test_traceability.py::test_source_id_gate_rejects_wrong_supplement_source_id",
+        "tests/test_traceability.py::test_source_id_gate_rejects_missing_pending_prefix",
+        "tests/test_traceability.py::test_traceability_maintains_multi_paragraph_input",
+        "tests/test_traceability.py::test_traceability_full_pipeline"
       ],
       "status": "covered_by_default"
     },
