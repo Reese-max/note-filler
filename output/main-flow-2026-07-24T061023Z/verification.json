@@ -1,0 +1,9 @@
+{
+  "ok": true,
+  "errors": [],
+  "note_product_exists": true,
+  "note_product_non_empty": true,
+  "manifest_exists": true,
+  "manifest_delivered": true,
+  "hash_match": true
+}

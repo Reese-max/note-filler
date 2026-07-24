@@ -1,0 +1,19 @@
+{
+  "timestamp_start": "2026-07-24T06:10:23.122176+00:00",
+  "timestamp_end": "2026-07-24T06:13:29.644272+00:00",
+  "duration_seconds": 186.5,
+  "input": "tests\\fixtures\\real_note.txt",
+  "output_dir": "output\\main-flow-2026-07-24T061023Z",
+  "db": "data\\law_index.db",
+  "format": "md",
+  "exit_code": 0,
+  "error": null,
+  "note_product_file": "output\\main-flow-2026-07-24T061023Z\\real_note.訂正稿.md",
+  "note_product_size": 8691,
+  "note_product_hash": "348d48b4729d5aa4",
+  "manifest_exists": true,
+  "manifest_status": "delivered",
+  "supplements": 8,
+  "verified": 4,
+  "command": "python -X utf8 -m note_filler tests/fixtures/real_note.txt -o output\\main-flow-2026-07-24T061023Z --db data/law_index.db --format md"
+}
