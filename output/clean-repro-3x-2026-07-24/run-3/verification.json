@@ -1,0 +1,30 @@
+{
+  "run": 3,
+  "ok": true,
+  "errors": [],
+  "notes": [
+    "pending_markers=5",
+    "footnotes_defs=21 body_refs=21",
+    "moj_urls=21",
+    "supplement_markers=8",
+    "content_hash=9bd2282ae0ea161a",
+    "log_size=915",
+    "duration=185.5s"
+  ],
+  "output_dir": "output/clean-repro-3x-2026-07-24/run-3",
+  "note_product": "output/clean-repro-3x-2026-07-24/run-3/real_note.訂正稿.md",
+  "note_product_size": 13915,
+  "manifest_status": "delivered",
+  "manifest_supplements": 8,
+  "manifest_verified": 3,
+  "manifest_content_hash": "9bd2282ae0ea161a",
+  "quality_gates": {
+    "original_verbatim": true,
+    "non_empty_product": true,
+    "delivered_manifest": true,
+    "hash_aligned": true,
+    "footnotes_consistent": true,
+    "pending_evidence_when_no_source": true,
+    "law_citations_level_a_moj": true
+  }
+}

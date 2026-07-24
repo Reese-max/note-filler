@@ -1,0 +1,20 @@
+{
+  "run": 3,
+  "timestamp_start": "2026-07-24T09:04:26.3992496Z",
+  "timestamp_end": "2026-07-24T09:07:31.9458066Z",
+  "duration_seconds": 185.5,
+  "exit_code": 0,
+  "command": "D:/Users/Administrator/Desktop/筆記補齊/.venv/Scripts/python.exe -X utf8 -m note_filler tests/fixtures/real_note.txt -o output\\clean-repro-3x-2026-07-24\\run-3 --db data/law_index.db --format md",
+  "input": "tests/fixtures/real_note.txt",
+  "output_dir": "output\\clean-repro-3x-2026-07-24\\run-3",
+  "db": "data/law_index.db",
+  "python": "D:/Users/Administrator/Desktop/筆記補齊/.venv/Scripts/python.exe",
+  "note_product": "output/clean-repro-3x-2026-07-24/run-3/real_note.訂正稿.md",
+  "note_product_size": 13915,
+  "note_product_hash": "9bd2282ae0ea161a",
+  "manifest_status": "delivered",
+  "manifest_content_hash": "9bd2282ae0ea161a",
+  "supplements": 8,
+  "verified": 3,
+  "log": "docs\\evidence\\clean-repro-3x-2026-07-24\\run-3.log"
+}

@@ -1,0 +1,61 @@
+{
+  "task": "clean-env consecutive main-flow x3",
+  "python": "D:/Users/Administrator/Desktop/筆記補齊/.venv/Scripts/python.exe -X utf8",
+  "llm": "http://127.0.0.1:8318/v1 / grok-4.3",
+  "db": "data/law_index.db",
+  "input": "tests/fixtures/real_note.txt",
+  "all_ok": true,
+  "runs": [
+    {
+      "run": 1,
+      "exit_code": 0,
+      "duration_seconds": 165.1,
+      "timestamp_start": "2026-07-24T08:58:32.2136458Z",
+      "timestamp_end": "2026-07-24T09:01:17.3013716Z",
+      "command": "D:/Users/Administrator/Desktop/筆記補齊/.venv/Scripts/python.exe -X utf8 -m note_filler tests/fixtures/real_note.txt -o output\\clean-repro-3x-2026-07-24\\run-1 --db data/law_index.db --format md",
+      "note_product": "output/clean-repro-3x-2026-07-24/run-1/real_note.訂正稿.md",
+      "note_product_size": 16240,
+      "note_product_hash": "53f20577f21d5b9f",
+      "manifest_status": "delivered",
+      "manifest_content_hash": "53f20577f21d5b9f",
+      "supplements": 7,
+      "verified": 3,
+      "verification_ok": true,
+      "log": "docs/evidence/clean-repro-3x-2026-07-24/run-1.log"
+    },
+    {
+      "run": 2,
+      "exit_code": 0,
+      "duration_seconds": 188.5,
+      "timestamp_start": "2026-07-24T09:01:17.8062874Z",
+      "timestamp_end": "2026-07-24T09:04:26.3051779Z",
+      "command": "D:/Users/Administrator/Desktop/筆記補齊/.venv/Scripts/python.exe -X utf8 -m note_filler tests/fixtures/real_note.txt -o output\\clean-repro-3x-2026-07-24\\run-2 --db data/law_index.db --format md",
+      "note_product": "output/clean-repro-3x-2026-07-24/run-2/real_note.訂正稿.md",
+      "note_product_size": 19254,
+      "note_product_hash": "111f995a7bbe8f06",
+      "manifest_status": "delivered",
+      "manifest_content_hash": "111f995a7bbe8f06",
+      "supplements": 8,
+      "verified": 3,
+      "verification_ok": true,
+      "log": "docs/evidence/clean-repro-3x-2026-07-24/run-2.log"
+    },
+    {
+      "run": 3,
+      "exit_code": 0,
+      "duration_seconds": 185.5,
+      "timestamp_start": "2026-07-24T09:04:26.3992496Z",
+      "timestamp_end": "2026-07-24T09:07:31.9458066Z",
+      "command": "D:/Users/Administrator/Desktop/筆記補齊/.venv/Scripts/python.exe -X utf8 -m note_filler tests/fixtures/real_note.txt -o output\\clean-repro-3x-2026-07-24\\run-3 --db data/law_index.db --format md",
+      "note_product": "output/clean-repro-3x-2026-07-24/run-3/real_note.訂正稿.md",
+      "note_product_size": 13915,
+      "note_product_hash": "9bd2282ae0ea161a",
+      "manifest_status": "delivered",
+      "manifest_content_hash": "9bd2282ae0ea161a",
+      "supplements": 8,
+      "verified": 3,
+      "verification_ok": true,
+      "log": "docs/evidence/clean-repro-3x-2026-07-24/run-3.log"
+    }
+  ]
+}

@@ -1,0 +1,18 @@
+START=2026-07-24T09:01:17.8062874Z
+END=2026-07-24T09:04:26.3051779Z
+DURATION_SECONDS=188.5
+EXIT=0
+CMD=D:/Users/Administrator/Desktop/筆記補齊/.venv/Scripts/python.exe -X utf8 -m note_filler tests/fixtures/real_note.txt -o output\clean-repro-3x-2026-07-24\run-2 --db data/law_index.db --format md
+PYTHON=D:/Users/Administrator/Desktop/筆記補齊/.venv/Scripts/python.exe
+INPUT=tests/fixtures/real_note.txt
+OUTPUT_DIR=output\clean-repro-3x-2026-07-24\run-2
+DB=data/law_index.db
+---
+CLI_SIGNAL: processed tests/fixtures/real_note.txt -> output/clean-repro-3x-2026-07-24/run-2/real_note.訂正稿.md
+CLI_SIGNAL: supplements=8 verified=3
+CLI_SIGNAL: 完成 1/1 檔
+ARTIFACT: note_product=output/clean-repro-3x-2026-07-24/run-2/real_note.訂正稿.md size=19254
+ARTIFACT: content_hash=111f995a7bbe8f06
+ARTIFACT: manifest_status=delivered
+ARTIFACT: manifest_timestamp=2026-07-24T09:04:26.249279+00:00
+STATUS=SUCCESS
