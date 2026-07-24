@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import logging
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Literal
 
 from note_filler.audit import audit_event
@@ -29,6 +29,7 @@ class Segment:
     sources: list
     confidence: Literal["verified", "pending_evidence"]
     conflict_note: str | None = None
+    traceability: list[dict] = field(default_factory=list)
 
 
 @dataclass
@@ -89,12 +90,19 @@ def assemble_correction(doc, gaps, retrieved, written, validations) -> Correctio
                 anchor_idx=p.idx,
                 sources=[],
                 confidence="verified",
+                traceability=[
+                    {
+                        "kind": "original_input",
+                        "id": doc.source_path,
+                        "paragraph_idx": p.idx,
+                    }
+                ],
             )
         )
 
     # 2) 每個 gap 一個 supplement 段(overlay 疊加):text 取寫作結果,
     #    sources 只掛實際引用到(used_source_ids)的 Source。
-    for gap in gaps:
+    for gap_idx, gap in enumerate(gaps):
         q = gap.question
         w = written.get(q)
         if w is None:
@@ -154,6 +162,17 @@ def assemble_correction(doc, gaps, retrieved, written, validations) -> Correctio
                 sources=used_sources,
                 confidence=confidence,
                 conflict_note=conflict_note,
+                traceability=(
+                    [{"kind": "source", "id": source.id} for source in used_sources]
+                    or [
+                        {
+                            "kind": "processing_record",
+                            "id": f"gap:{gap_idx}",
+                            "question": q,
+                            "outcome": confidence,
+                        }
+                    ]
+                ),
             )
         )
 

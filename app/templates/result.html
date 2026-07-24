@@ -23,6 +23,7 @@
     }
     details.sources { margin-top: .35rem; font-size: .9em; }
     details.sources ul { margin: .3rem 0 0; padding-left: 1.2rem; }
+    .traceability { color: #555; font-size: .85em; margin-top: .35rem; }
   </style>
 </head>
 <body>
@@ -61,9 +62,15 @@
             </ul>
           </details>
           {% endif %}
+          {% if seg.traceability %}
+          <div class="traceability">追溯：{% for ref in seg.traceability %}{{ ref.kind }} {{ ref.id }}{% if ref.kind == "original_input" %}#paragraph-{{ ref.paragraph_idx }}{% endif %}{% if not loop.last %}、{% endif %}{% endfor %}</div>
+          {% endif %}
         </div>
         {% else %}
         <p class="seg">{{ seg.text }}</p>
+        {% if seg.traceability %}
+        <div class="traceability">追溯：{% for ref in seg.traceability %}{{ ref.kind }} {{ ref.id }}{% if ref.kind == "original_input" %}#paragraph-{{ ref.paragraph_idx }}{% endif %}{% if not loop.last %}、{% endif %}{% endfor %}</div>
+        {% endif %}
         {% endif %}
       {% endfor %}
     </div>

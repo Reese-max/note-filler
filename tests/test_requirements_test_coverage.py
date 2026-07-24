@@ -124,15 +124,15 @@ def test_coverage_matrix_classifies_all_eight_and_has_no_missing_requirement() -
     assert matrix["summary"] == {
         "excluded_tests": 8,
         "classified_tests": 8,
-        "requirements": 13,
-        "requirements_covered_by_default": 13,
+        "requirements": 14,
+        "requirements_covered_by_default": 14,
         "requirements_missing": 0,
         "equivalent_coverage_complete": True,
         "verification_design_gaps_explicitly_tracked": 1,
     }
 
     requirements = {row["id"]: row for row in matrix["requirements"]}
-    assert len(requirements) == 13
+    assert len(requirements) == 14
     assert all(row["status"] == "covered_by_default" for row in requirements.values())
 
     for row in rows:

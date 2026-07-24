@@ -9,8 +9,8 @@
     "command": "D:/Users/Administrator/Desktop/筆記補齊/.venv/Scripts/python.exe -X utf8 -m pytest -m 'not integration' -q --color=no",
     "collection_command": "D:/Users/Administrator/Desktop/筆記補齊/.venv/Scripts/python.exe -X utf8 -m pytest --collect-only -q --deselected-details --color=no",
     "expected_collection": {
-      "collected": 286,
-      "default_selected": 276,
+      "collected": 289,
+      "default_selected": 278,
       "deselected": 11
     }
   },
@@ -24,8 +24,8 @@
     "observed": {
       "coverage_matrix": "2 passed",
       "blind_spot_and_controls": "12 passed",
-      "default_suite": "184 passed, 11 deselected",
-      "deselection_guard": "updated with anti-leak gate counts 195/184/11"
+      "default_suite": "278 passed, 11 deselected",
+      "deselection_guard": "updated with anti-leak gate counts 289/278/11"
     }
   },
   "paths": [
@@ -85,7 +85,8 @@
         "REQ-ORIGINAL-IMMUTABLE",
         "REQ-NO-SOURCE-PENDING",
         "REQ-USED-SOURCES-ONLY",
-        "REQ-LAW-CITATION-OFFLINE"
+        "REQ-LAW-CITATION-OFFLINE",
+        "REQ-NOTE-TRACEABILITY"
       ],
       "equivalent_default_tests": [
         "tests/test_e2e_acceptance.py::test_e2e_structural_invariants",
@@ -95,6 +96,8 @@
         "tests/test_pipeline.py::test_run_pipeline_malformed_gap_output_falls_back_to_pending",
         "tests/test_pipeline.py::test_run_pipeline_law_domain_runs_citation_check",
         "tests/test_correction.py::test_retrieved_five_but_only_two_cited",
+        "tests/test_traceability.py::test_product_content_has_verifiable_traceability_in_all_exports",
+        "tests/test_traceability.py::test_traceability_gate_rejects_source_id_drift",
         "tests/test_excluded_failing_controls.py::test_control_02_e2e_offline_quality_gates"
       ],
       "verification_gap_tests": [],
@@ -147,7 +150,8 @@
         "REQ-NO-SOURCE-PENDING",
         "REQ-USED-SOURCES-ONLY",
         "REQ-LAW-CITATION-OFFLINE",
-        "REQ-PIPELINE-ORCHESTRATION"
+        "REQ-PIPELINE-ORCHESTRATION",
+        "REQ-NOTE-TRACEABILITY"
       ],
       "equivalent_default_tests": [
         "tests/test_pipeline.py::test_run_pipeline_invariant",
@@ -155,6 +159,8 @@
         "tests/test_pipeline.py::test_run_pipeline_law_domain_runs_citation_check",
         "tests/test_pipeline.py::test_original_text_immutable_in_output",
         "tests/test_correction.py::test_retrieved_five_but_only_two_cited",
+        "tests/test_traceability.py::test_product_content_has_verifiable_traceability_in_all_exports",
+        "tests/test_traceability.py::test_traceability_gate_rejects_source_id_drift",
         "tests/test_excluded_failing_controls.py::test_control_05_pipeline_c6_pending_when_no_sources"
       ],
       "verification_gap_tests": [],
@@ -292,6 +298,17 @@
       "status": "covered_by_default"
     },
     {
+      "id": "REQ-NOTE-TRACEABILITY",
+      "statement": "每個非空原稿或補充段必須逐項回指原始輸入段、實際引用來源識別碼，或無來源時的處理紀錄。",
+      "risk": "高",
+      "critical_path": "P2",
+      "covered_by": [
+        "tests/test_traceability.py::test_product_content_has_verifiable_traceability_in_all_exports",
+        "tests/test_traceability.py::test_traceability_gate_rejects_source_id_drift"
+      ],
+      "status": "covered_by_default"
+    },
+    {
       "id": "REQ-GAP-FILTER",
       "statement": "缺口偵測只保留 partial／missing，且明顯未涵蓋問題必須出現在缺口清單。",
       "risk": "高",
@@ -387,8 +404,8 @@
   "summary": {
     "excluded_tests": 8,
     "classified_tests": 8,
-    "requirements": 13,
-    "requirements_covered_by_default": 13,
+    "requirements": 14,
+    "requirements_covered_by_default": 14,
     "requirements_missing": 0,
     "equivalent_coverage_complete": true,
     "verification_design_gaps_explicitly_tracked": 1

@@ -12,6 +12,21 @@ def _source_to_dict(src: Source) -> dict:
     return asdict(src)
 
 
+def _trace_text(seg) -> str:
+    labels = {
+        "original_input": "原始輸入",
+        "source": "來源識別碼",
+        "processing_record": "處理紀錄",
+    }
+    items: list[str] = []
+    for ref in getattr(seg, "traceability", []):
+        ref_id = ref.get("id")
+        if ref.get("kind") == "original_input":
+            ref_id = f"{ref_id}#paragraph-{ref.get('paragraph_idx')}"
+        items.append(f"{labels.get(ref.get('kind'), ref.get('kind'))} {ref_id}")
+    return "、".join(items)
+
+
 def to_json(doc: CorrectionDoc) -> dict:
     """序列化整份 CorrectionDoc；原文 immutable，僅讀不改。"""
     return {
@@ -24,6 +39,7 @@ def to_json(doc: CorrectionDoc) -> dict:
                 "anchor_idx": seg.anchor_idx,
                 "confidence": seg.confidence,
                 "conflict_note": getattr(seg, "conflict_note", None),
+                "traceability": list(getattr(seg, "traceability", [])),
                 "sources": [_source_to_dict(s) for s in seg.sources],
             }
             for seg in doc.segments
@@ -42,12 +58,19 @@ def to_markdown(doc: CorrectionDoc) -> str:
     """
     body: list[str] = []
     cited: list[Source] = []
+    original_traces: list[str] = []
     counter = 0
 
     for seg in doc.segments:
         if seg.type == "original":
             body.append(seg.text)
+            if trace := _trace_text(seg):
+                original_traces.append(f"> 追溯：{trace}")
             continue
+
+        if original_traces:
+            body.extend(original_traces)
+            original_traces.clear()
 
         # supplement：依序為每個來源配一個 footnote，並蒐集到 cited
         marks = ""
@@ -63,6 +86,10 @@ def to_markdown(doc: CorrectionDoc) -> str:
         if conflict:
             body.append(f"> ⚠️ **衝突告警**: {conflict}")
         body.append(f"{prefix}{seg.text}{marks}")
+        if trace := _trace_text(seg):
+            body.append(f"> 追溯：{trace}")
+
+    body.extend(original_traces)
 
     md = "\n\n".join(body)
 
@@ -83,12 +110,19 @@ def to_docx(doc: CorrectionDoc, path: str) -> None:
 
     out = DocxDocument()
     cited: list[Source] = []
+    original_traces: list[str] = []
     counter = 0
 
     for seg in doc.segments:
         if seg.type == "original":
             out.add_paragraph(seg.text)
+            if trace := _trace_text(seg):
+                original_traces.append(trace)
             continue
+        if original_traces:
+            for trace in original_traces:
+                out.add_paragraph(f"追溯：{trace}")
+            original_traces.clear()
         marks = ""
         for src in seg.sources:
             counter += 1
@@ -103,6 +137,11 @@ def to_docx(doc: CorrectionDoc, path: str) -> None:
         p = out.add_paragraph()
         run = p.add_run(f"{prefix}{seg.text}{marks}")
         run.italic = True  # 補充段視覺區隔於原文
+        if trace := _trace_text(seg):
+            out.add_paragraph(f"追溯：{trace}")
+
+    for trace in original_traces:
+        out.add_paragraph(f"追溯：{trace}")
 
     ref_lines = build_reference_lines(cited).splitlines()
     if ref_lines:

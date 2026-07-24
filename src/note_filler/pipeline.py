@@ -67,6 +67,60 @@ def require_non_empty_note_product(correction, *, source: object = "pipeline") -
     )
 
 
+def require_traceable_note_product(correction, *, source: object = "pipeline") -> None:
+    """逐段確認成品可回指原始輸入、實際來源 ID 或 gap 處理紀錄。"""
+    errors: list[str] = []
+    paragraphs = {
+        paragraph.idx: paragraph
+        for paragraph in getattr(getattr(correction, "original", None), "paragraphs", ())
+    }
+    source_path = getattr(getattr(correction, "original", None), "source_path", None)
+
+    for index, seg in enumerate(getattr(correction, "segments", ())):
+        if not isinstance(getattr(seg, "text", None), str) or not seg.text.strip():
+            continue
+        refs = getattr(seg, "traceability", None) or []
+        if seg.type == "original":
+            paragraph = paragraphs.get(seg.anchor_idx)
+            expected = {
+                "kind": "original_input",
+                "id": source_path,
+                "paragraph_idx": seg.anchor_idx,
+            }
+            if paragraph is None or seg.text != paragraph.text or refs != [expected]:
+                errors.append(f"segment[{index}] original_input 對應失敗")
+            continue
+
+        source_ids = [item.id for item in seg.sources]
+        if source_ids:
+            expected = [{"kind": "source", "id": source_id} for source_id in source_ids]
+            if (
+                refs != expected
+                or not all(isinstance(source_id, str) and source_id.strip() for source_id in source_ids)
+            ):
+                errors.append(f"segment[{index}] source ID 對應失敗")
+        elif (
+            seg.confidence != "pending_evidence"
+            or len(refs) != 1
+            or not isinstance(refs[0], dict)
+            or refs[0].get("kind") != "processing_record"
+            or not refs[0].get("id")
+            or not refs[0].get("question")
+            or refs[0].get("outcome") != seg.confidence
+        ):
+            errors.append(f"segment[{index}] processing_record 對應失敗")
+
+    if errors:
+        audit_event(
+            logger,
+            "note_traceability_failed",
+            source,
+            errors=errors,
+            outcome="failed",
+        )
+        raise RuntimeError(f"成品筆記來源追溯驗證失敗：{'；'.join(errors)}")
+
+
 def run_pipeline(path, llm, twinkle, law):
     """串 parse→domain→questions→gaps→(每 gap)retrieve→write→cross_validate→assemble。
     每個 gap:傳 law+llm 給 retrieve_for_gap 啟用法條 Level A;寫作產 written;
@@ -106,6 +160,7 @@ def run_pipeline(path, llm, twinkle, law):
 
     # 硬性產出閘：空白或僅稽核摘要不得表面成功
     require_non_empty_note_product(correction, source=path)
+    require_traceable_note_product(correction, source=path)
     return correction
 
 

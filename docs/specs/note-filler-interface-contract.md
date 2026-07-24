@@ -79,6 +79,8 @@
   - `anchor_idx: int|None`
   - `sources: list`
   - `confidence: "verified" | "pending_evidence"`
+  - `traceability: [{kind, id, ...}]`：逐段回指 `original_input`（含 `paragraph_idx`）、實際引用 `source` ID，或無來源補充的 `processing_record`（含問題與結果）。
+- pipeline 在交付前執行逐段追溯硬閘；原稿文字／段號、實際 `sources` ID 或處理紀錄任一漂移即拒絕成功。
 - **實作錨點**：`src/note_filler/correction.py`
 
 ## 4) 交付對照表（回到「對照項目」）

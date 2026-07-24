@@ -38,9 +38,12 @@ def _fixed_doc() -> CorrectionDoc:
     seg_original = Segment(
         type="original",
         text="行政處分之定義。",
-        anchor_idx=None,
+        anchor_idx=0,
         sources=[],
         confidence="verified",
+        traceability=[
+            {"kind": "original_input", "id": "/tmp/note.txt", "paragraph_idx": 0}
+        ],
     )
     seg_supp_ok = Segment(
         type="supplement",
@@ -48,6 +51,7 @@ def _fixed_doc() -> CorrectionDoc:
         anchor_idx=0,
         sources=[src],
         confidence="verified",
+        traceability=[{"kind": "source", "id": "s1"}],
     )
     seg_supp_pending = Segment(
         type="supplement",
@@ -55,6 +59,14 @@ def _fixed_doc() -> CorrectionDoc:
         anchor_idx=0,
         sources=[],
         confidence="pending_evidence",
+        traceability=[
+            {
+                "kind": "processing_record",
+                "id": "gap:1",
+                "question": "另有學說補充？",
+                "outcome": "pending_evidence",
+            }
+        ],
     )
     return CorrectionDoc(
         original=doc,
@@ -86,6 +98,11 @@ async def test_run_renders_two_columns(async_client, monkeypatch):
     # 無來源 supplement 標 pending 警示
     assert 'class="pending"' in body
     assert "待補依據" in body
+    # 每個主要內容顯示可追溯識別碼
+    assert 'class="traceability"' in body
+    assert "/tmp/note.txt" in body
+    assert "source s1" in body
+    assert "processing_record gap:1" in body
 
 
 @pytest.mark.anyio

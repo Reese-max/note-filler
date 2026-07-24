@@ -369,6 +369,9 @@ class TestOutputConsistency:
             # Skip supplement lines (start with > 【補充】)
             if stripped.startswith("> 【補充】"):
                 continue
+            # 追溯 metadata 是成品資訊，不是原稿內容。
+            if stripped.startswith("> 追溯："):
+                continue
             # Skip reference block lines (start with [^N]:)
             if stripped.startswith("[^") and "]:" in stripped:
                 continue
