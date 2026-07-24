@@ -19,6 +19,7 @@ from docx import Document as DocxDocument
 
 from note_filler import __main__ as cli
 from note_filler.correction import CorrectionDoc, Segment
+from note_filler.export import to_markdown
 from note_filler.llm import FakeLLM
 from note_filler.parse import Document, Paragraph
 from note_filler.pipeline import require_non_empty_note_product, run_pipeline
@@ -203,6 +204,87 @@ def test_run_pipeline_produces_non_empty_traceable_notes(tmp_path):
     supplements = [s for s in doc.segments if s.type == "supplement" and s.text.strip()]
     assert originals, "原文段應保留"
     assert supplements, "應有補充成品"
+
+
+def test_main_flow_actual_note_has_traceable_source_and_extension(tmp_path):
+    """最小回歸：直接跑主流程，產出非空白實際筆記，且同時含可追溯來源與延伸論點。
+
+    鎖定失敗語義（精準失敗以鎖定缺口）：
+    - 空輸出 / 僅空白段
+    - 僅測試稽核或【待補證】占位、無實質延伸論點
+    - 有文字但無可追溯來源（無 sources、匯出無 [^n]/參考列）
+
+    不改弱既有品質閘：原稿 immutable、pending_evidence、只掛實際引用、法條離線查核。
+    離線 FakeLLM/FakeTwinkle；非 integration。
+    """
+    note = _docx(
+        tmp_path,
+        "note.docx",
+        "行政程序法要求行政行為應遵守正當程序。",
+        "本筆記僅記錄部分重點,尚未展開。",
+    )
+    llm = _full_canned_llm()
+    twinkle = FakeTwinkle(
+        [
+            [],
+            [_src("s1"), _src("s2")],
+        ]
+    )
+    doc = run_pipeline(str(note), llm, twinkle, FakeLaw())
+    md = to_markdown(doc)
+
+    assert isinstance(md, str) and md.strip(), (
+        "主流程回空輸出：未產出非空白實際筆記；拒絕視為成功"
+    )
+    assert "note_product_empty" not in md, (
+        "輸出疑似測試稽核事件字串而非實際筆記"
+    )
+
+    note_segments = [
+        s
+        for s in doc.segments
+        if s.type in ("original", "supplement") and (s.text or "").strip()
+    ]
+    assert note_segments, (
+        "主流程僅有空段/稽核狀態、無非空白實際筆記內容"
+    )
+
+    # 可追溯來源：至少一補充段掛實際 sources，且匯出可對到 [^n] 或參考列
+    traced = [
+        s
+        for s in doc.segments
+        if s.type == "supplement" and s.sources and (s.text or "").strip()
+    ]
+    assert traced, (
+        "實際筆記缺少可追溯來源：無任何掛 sources 的補充段"
+        "（若流程只回待補證/稽核則在此精準失敗）"
+    )
+    for seg in traced:
+        for src in seg.sources:
+            assert src.id, f"來源缺 id，無法追溯: {src!r}"
+            assert src.title or src.url, f"來源缺 title/url: {src!r}"
+    assert "[^" in md, (
+        "匯出 markdown 缺少 [^n] 註腳/參考列，來源不可從成品追溯"
+    )
+
+    # 至少一個延伸論點：實質補充文字，非僅【待補證】占位
+    extensions = [
+        s
+        for s in doc.segments
+        if s.type == "supplement"
+        and (s.text or "").strip()
+        and not (s.text or "").strip().startswith("【待補證】")
+    ]
+    assert extensions, (
+        "實際筆記缺少延伸論點：補充段全為【待補證】/稽核占位、無實質延伸"
+    )
+    assert any(len(s.text.strip()) >= 10 for s in extensions), (
+        "延伸論點內容過短，疑似非實質補充"
+    )
+    # 延伸論點應出現在匯出正文（非僅內部狀態）
+    assert any(ext.text.strip()[:20] in md for ext in extensions), (
+        "延伸論點未進入匯出成品（僅內部狀態/稽核）"
+    )
 
 
 def test_run_pipeline_empty_input_and_no_gaps_fails_product_gate(tmp_path, caplog):
