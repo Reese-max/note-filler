@@ -1,0 +1,13 @@
+=== main-flow run meta ===
+started_at=2026-07-24T11:04:09+08:00
+finished_at=2026-07-24T11:08:09+08:00
+cwd=D:\Users\Administrator\Desktop\autodev-ng\data\note-filler\worktrees\4ec8b012
+python=D:/Users/Administrator/Desktop/筆記補齊/.venv/Scripts/python.exe
+input=tests/fixtures/real_note.txt
+outdir=output/main-flow-2026-07-24
+db=data/law_index.db
+format=md
+llm=http://127.0.0.1:8318/v1 model=grok-4.3
+twinkle_token_set=true
+command=python -X utf8 -m note_filler tests/fixtures/real_note.txt -o output/main-flow-2026-07-24 --db data/law_index.db --format md
+exit_code=0

@@ -1,0 +1,28 @@
+=== execution log ===
+started_at=2026-07-24T11:04:09+08:00
+finished_at=2026-07-24T11:08:09+08:00
+exit_code=0
+cwd=D:\Users\Administrator\Desktop\autodev-ng\data\note-filler\worktrees\4ec8b012
+python=D:/Users/Administrator/Desktop/筆記補齊/.venv/Scripts/python.exe -X utf8
+command=python -X utf8 -m note_filler tests/fixtures/real_note.txt -o output/main-flow-2026-07-24 --db data/law_index.db --format md
+llm=http://127.0.0.1:8318/v1 model=grok-4.3
+db=data/law_index.db
+twinkle_token_set=true
+--- STDOUT (reconstructed; original console capture had Windows codepage mojibake) ---
+✅ tests\fixtures\real_note.txt → output\main-flow-2026-07-24\real_note.訂正稿.md(補充 8、verified 3)
+完成 1/1 檔。
+--- STDERR ---
+(empty)
+--- END ---
+--- post-run verification (python) ---
+product_path=output/main-flow-2026-07-24/real_note.訂正稿.md
+product_bytes=7269
+product_chars=3187
+product_non_empty=true
+body_sha256_16=be7dede59bf5bb90
+manifest.status=delivered
+manifest.content_hash=be7dede59bf5bb90
+manifest.supplements=8
+manifest.verified=3
+verification.ok=true
+--- END verification ---
