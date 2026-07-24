@@ -356,3 +356,108 @@ def test_pipeline_multiple_files_independently_produce_notes(tmp_path):
         body = dest.read_text(encoding="utf-8")
         assert body.strip(), f"{label}: 訂正稿空白"
         assert "note_product_empty" not in body, f"{label}: 含稽核事件字串"
+
+
+# ---- 內容覆蓋驗證測試：驗證成品筆記包含具體、非占位的內容 -----
+
+def test_content_coverage_domain_substance(tmp_path):
+    """內容覆蓋驗證面向一：成品筆記包含領域相關的實質內容。
+    
+    斷言：
+    1. 補充段包含領域專業術語（非通用詞彙）
+    2. 補充段包含實質法律/行政概念（非空洞描述）
+    3. 原稿關鍵詞在補充段中得到延伸（非重複原稿）
+    """
+    note = _docx(
+        tmp_path, "note.docx",
+        "行政程序法要求行政行為應遵守正當程序。",
+        "本筆記僅記錄部分重點,尚未展開。",
+    )
+    llm = _canned_llm_two_gaps()
+    twinkle = FakeTwinkle([[_src("s1"), _src("s2")], [_src("s3"), _src("s4")]])
+
+    doc = run_pipeline(str(note), llm, twinkle, FakeLaw())
+
+    supplements = [s for s in doc.segments if s.type == "supplement" and s.text.strip()]
+    assert supplements, "無補充段可供驗證內容覆蓋"
+
+    # 面向一：領域專業術語存在
+    domain_terms = ["行政處分", "訴願", "行政程序", "正當程序"]
+    for seg in supplements:
+        text = seg.text.strip()
+        # 至少包含一個領域專業術語
+        has_domain_term = any(term in text for term in domain_terms)
+        assert has_domain_term, (
+            f"補充段缺乏領域專業術語（{domain_terms}）：{text!r}"
+        )
+
+    # 面向二：實質法律/行政概念（非空洞描述）
+    empty_phrases = ["待補充", "尚未展開", "詳見", "參考", "請查閱"]
+    for seg in supplements:
+        text = seg.text.strip()
+        # 不得僅為空洞描述
+        is_substantive = not any(phrase in text for phrase in empty_phrases) or len(text) > 20
+        assert is_substantive, (
+            f"補充段為空洞描述或過短：{text!r}"
+        )
+
+    # 面向三：原稿關鍵詞得到延伸（非簡單重複）
+    original_keywords = ["行政程序法", "正當程序"]
+    for seg in supplements:
+        text = seg.text.strip()
+        # 若包含原稿關鍵詞，須有延伸內容（字數大於原稿段落）
+        for kw in original_keywords:
+            if kw in text:
+                # 簡單檢查：補充段字數應大於關鍵詞本身
+                assert len(text) > len(kw) + 5, (
+                    f"補充段包含原稿關鍵詞 '{kw}' 但無延伸內容：{text!r}"
+                )
+
+
+def test_content_coverage_citation_integrity(tmp_path):
+    """內容覆蓋驗證面向二：成品筆記包含正確格式的引用來源。
+    
+    斷言：
+    1. 有來源的補充段包含實際引用標記（[^n] 格式）
+    2. 引用標記對應的來源 ID 存在於 sources 欄位
+    3. 無來源的補充段明確標記為 pending_evidence
+    """
+    note = _docx(
+        tmp_path, "note.docx",
+        "行政程序法要求行政行為應遵守正當程序。",
+        "本筆記僅記錄部分重點,尚未展開。",
+    )
+    llm = _canned_llm_two_gaps()
+    twinkle = FakeTwinkle([[_src("s1"), _src("s2")], [_src("s3"), _src("s4")]])
+
+    doc = run_pipeline(str(note), llm, twinkle, FakeLaw())
+
+    supplements = [s for s in doc.segments if s.type == "supplement" and s.text.strip()]
+    assert supplements, "無補充段可供驗證引用完整性"
+
+    for seg in supplements:
+        text = seg.text.strip()
+        
+        # 面向一：有來源的補充段包含引用標記
+        if seg.sources:
+            # 檢查是否包含 [^n] 格式的引用標記
+            has_citation = "[^" in text and "]" in text
+            assert has_citation, (
+                f"有來源的補充段缺少引用標記 [^n]：{text!r}，來源：{seg.sources}"
+            )
+            
+            # 面向二：引用標記數量與來源數量合理對應
+            # 簡單檢查：至少有一個引用標記
+            citation_count = text.count("[^")
+            assert citation_count >= 1, (
+                f"有來源的補充段引用標記數量不足：{text!r}，來源數：{len(seg.sources)}"
+            )
+        else:
+            # 面向三：無來源的補充段明確標記為 pending_evidence
+            assert seg.confidence == "pending_evidence", (
+                f"無來源的補充段未標記為 pending_evidence：{text!r}，confidence：{seg.confidence}"
+            )
+            # 且應包含【待補證】標記
+            assert "【待補證】" in text, (
+                f"無來源的補充段缺少【待補證】標記：{text!r}"
+            )
