@@ -177,6 +177,57 @@ def test_e2e_structural_invariants():
     _assert_markdown_contract(doc)
 
 
+@pytest.mark.skipif(not LAW_DB.exists(), reason="缺 data/law_index.db,無法驗輸出非禁止模式")
+def test_e2e_output_not_forbidden_patterns():
+    """從真實輸入(real_note.txt)觸發主流程,斷言最終渲染輸出不是
+    稽核報告/空字串/佔位內容/僅含標題。
+
+    對應 §12 品質門檻:輸出必須是實際筆記訂正稿,
+    而非內部狀態傾印、稽核摘要、模板佔位或僅有標題。
+    """
+    note_text = FIXTURE.read_text(encoding="utf-8")
+    law = LawLookup(str(LAW_DB))
+    fake = FakeLLM([
+        "law",
+        "什麼是行政處分?\n行政程序法第92條的定義為何?\n訴願前置程序為何?",
+        json.dumps(
+            [
+                {"question": "什麼是行政處分?", "status": "covered", "reason": "原稿已說明"},
+                {"question": "行政程序法第92條的定義為何?",
+                 "status": "missing", "reason": "筆記未展開條文定義"},
+                {"question": "訴願前置程序為何?", "status": "covered", "reason": "原稿已說明"},
+            ],
+            ensure_ascii=False,
+        ),
+        '{"keyword": "行政處分", "law_name": "行政程序法"}',
+        "行政處分係指行政機關就公法上具體事件所為之對外發生法律效果之單方行政行為[^1][^2]。",
+    ])
+    doc = run_pipeline(str(FIXTURE), fake, _StubTwinkle(), law)
+    md = to_markdown(doc)
+
+    # (1) 不是空字串
+    assert md.strip(), "輸出不得為空字串"
+
+    # (2) 不是佔位內容:內部 MISSING_WRITTEN_TEXT 不得流出到最終渲染
+    assert "【待補證】" not in md, \
+        "輸出不得含內部佔位文(MISSING_WRITTEN_TEXT)"
+
+    # (3) 不是僅含標題:原文段落須完整輸出,而非只有標題列或空白架構
+    assert all(
+        p.text in md for p in doc.original.paragraphs
+    ), "原稿段落未全部出現在最終渲染輸出中,疑似僅含標題"
+
+    # (4) 不是稽核報告:輸出應為人類可讀的訂正稿,而非 JSON/技術摘要/稽核傾印
+    assert not md.lstrip().startswith("{"), "輸出不應為 JSON 格式"
+    assert not md.lstrip().startswith("```"), "輸出不應為 code block"
+    # 輸出應含實質筆記領域內容
+    assert any(kw in md for kw in ("行政處分", "行政程序法", "訴願")), \
+        "輸出應含實質筆記內容,而非技術稽核摘要"
+    # 輸出不含 note_product_empty 稽核事件文字
+    assert "note_product_empty" not in md, \
+        "輸出不應含稽核事件字串"
+
+
 def _offline_structural_doc():
     """與 test_e2e_structural_invariants 相同的最小離線前置(FakeLLM+_StubTwinkle+LawLookup)。"""
     law = LawLookup(str(LAW_DB))
