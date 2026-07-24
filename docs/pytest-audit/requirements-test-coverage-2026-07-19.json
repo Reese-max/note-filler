@@ -8,11 +8,11 @@
     "selector": "-m 'not integration'",
     "command": "D:/Users/Administrator/Desktop/筆記補齊/.venv/Scripts/python.exe -X utf8 -m pytest -m 'not integration' -q --color=no",
     "collection_command": "D:/Users/Administrator/Desktop/筆記補齊/.venv/Scripts/python.exe -X utf8 -m pytest --collect-only -q --deselected-details --color=no",
-    "expected_collection": {
-      "collected": 289,
-      "default_selected": 278,
-      "deselected": 11
-    }
+"expected_collection": {
+    "collected": 298,
+    "default_selected": 287,
+    "deselected": 11
+  }
   },
   "verification": {
     "commands": [
