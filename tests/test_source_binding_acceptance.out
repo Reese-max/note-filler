@@ -1,0 +1,22 @@
+============================= test session starts =============================
+collecting ... collected 17 items
+
+tests/test_source_binding_acceptance.py::test_one_to_one_single_source PASSED [  5%]
+tests/test_source_binding_acceptance.py::test_one_to_one_two_separate_gaps PASSED [ 11%]
+tests/test_source_binding_acceptance.py::test_one_to_many_three_sources PASSED [ 17%]
+tests/test_source_binding_acceptance.py::test_one_to_many_with_one_to_one_in_same_doc PASSED [ 23%]
+tests/test_source_binding_acceptance.py::test_no_omitted_source_all_used_ids_have_source_objects PASSED [ 29%]
+tests/test_source_binding_acceptance.py::test_no_omitted_source_multiple_ids PASSED [ 35%]
+tests/test_source_binding_acceptance.py::test_partial_usage_no_omitted PASSED [ 41%]
+tests/test_source_binding_acceptance.py::test_no_extra_sources_not_in_used PASSED [ 47%]
+tests/test_source_binding_acceptance.py::test_no_duplicate_sources PASSED [ 52%]
+tests/test_source_binding_acceptance.py::test_no_duplicate_traceability PASSED [ 58%]
+tests/test_source_binding_acceptance.py::test_all_supplement_segments_have_valid_binding PASSED [ 64%]
+tests/test_source_binding_acceptance.py::test_source_binding_survives_require_traceable_gate PASSED [ 70%]
+tests/test_source_binding_acceptance.py::test_failure_semantic_claim_exists_but_source_missing PASSED [ 76%]
+tests/test_source_binding_acceptance.py::test_failure_semantic_claim_exists_but_source_not_aligned PASSED [ 82%]
+tests/test_source_binding_acceptance.py::test_failure_semantic_source_trace_not_matched_to_sources PASSED [ 88%]
+tests/test_source_binding_acceptance.py::test_failure_semantic_binding_report_flags_missing_source PASSED [ 94%]
+tests/test_source_binding_acceptance.py::test_failure_semantic_missing_binding_blocks_pipeline_return PASSED [100%]
+
+============================= 17 passed in 0.35s ==============================
