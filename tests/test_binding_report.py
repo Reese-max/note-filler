@@ -231,6 +231,101 @@ def test_product_output_each_argument_has_ids_and_traceable_fragments():
     assert report["summary"]["all_arguments_ok"] is True
 
 
+def test_positive_acceptance_reads_binding_report_from_disk(tmp_path):
+    """正向驗收：直接讀取 binding_report.json 與成品 JSON，
+    逐項斷言每個論點至少一個來源、來源 ID 與片段／位置可對上、無重複遺漏。
+    """
+    import json
+
+    from note_filler.export import to_json
+
+    product = _assemble_mixed()
+    out_dir = tmp_path
+
+    product_path = out_dir / "note_product.json"
+    product_path.write_text(
+        json.dumps(to_json(product), ensure_ascii=False, indent=2),
+        encoding="utf-8",
+        newline="\n",
+    )
+    report_path = write_binding_report(out_dir / "out.md", product)
+
+    serialized = json.loads(product_path.read_text(encoding="utf-8"))
+    report = parse_binding_report(
+        json.loads(report_path.read_text(encoding="utf-8"))
+    )
+
+    assert report["summary"]["all_arguments_ok"] is True
+    assert report["summary"]["fail"] == 0
+    assert report["summary"]["pass"] == report["argument_count"]
+
+    source_usage = report["source_usage"]
+    seen_ids: list[str] = []
+
+    for arg in report["arguments"]:
+        seg = serialized["segments"][arg["segment_index"]]
+        assert seg["type"] == "supplement"
+
+        source_ids = list(arg["source_ids"])
+        trace_ids = list(arg["trace_source_ids"])
+        sources = list(seg["sources"])
+        trace_refs = [
+            t for t in seg["traceability"] if t.get("kind") == "source"
+        ]
+
+        # 至少一個來源
+        assert len(source_ids) >= 1
+        assert arg["checks"]["at_least_one_source"] is True
+
+        # 無重複
+        assert len(source_ids) == len(set(source_ids))
+        assert len(trace_ids) == len(set(trace_ids))
+        assert arg["checks"]["no_duplicate_sources"] is True
+
+        # 無遺漏／無多餘：source_ids ↔ sources ↔ trace 三向一致
+        obj_ids = [s["id"] for s in sources]
+        assert obj_ids == source_ids, (
+            f"位置不一致: {obj_ids} vs {source_ids}"
+        )
+        assert trace_ids == source_ids, (
+            f"追溯不一致: {trace_ids} vs {source_ids}"
+        )
+        assert [t["id"] for t in trace_refs] == source_ids
+        assert arg["checks"]["no_omitted_traces"] is True
+        assert arg["checks"]["no_extra_traces"] is True
+        assert arg["checks"]["source_traceable"] is True
+
+        # source_id 欄位一致
+        expected_field = f"sources:{','.join(source_ids)}"
+        assert seg["source_id"] == expected_field
+        assert arg["source_id_field"] == expected_field
+        assert arg["checks"]["source_id_field_aligned"] is True
+
+        # 每個位置：ID 一致、片段非空、反向索引正確
+        for pos, sid in enumerate(source_ids):
+            src_obj = sources[pos]
+            assert src_obj["id"] == sid, f"位置{pos}: ID 不一致"
+            assert trace_refs[pos]["id"] == sid, (
+                f"位置{pos}: trace 不一致"
+            )
+            fragment = src_obj.get("content") or ""
+            assert fragment.strip(), f"來源 {sid!r} content 為空"
+
+            assert sid in source_usage, f"source_usage 遺漏 {sid!r}"
+            assert arg["argument_index"] in source_usage[sid]
+            seen_ids.append(sid)
+
+        assert arg["binding_ok"] is True
+        assert arg["binding_status"] == "pass"
+        assert arg["source_count"] == len(source_ids)
+        assert arg["cardinality"] in ("one_to_one", "one_to_many")
+
+    # 全域：source_usage 覆蓋所有用過的來源（無重複遺漏）
+    assert set(source_usage) == set(seen_ids)
+    assert report["summary"]["one_to_one"] >= 1
+    assert report["summary"]["one_to_many"] >= 1
+
+
 # ---- pending / 無來源 -------------------------------------------------------
 
 def test_pending_evidence_has_none_cardinality_and_traceable_record():
