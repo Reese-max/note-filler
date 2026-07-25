@@ -44,6 +44,8 @@ def _fixed_doc() -> CorrectionDoc:
         traceability=[
             {"kind": "original_input", "id": "/tmp/note.txt", "paragraph_idx": 0}
         ],
+        functional_gap="",
+        user_value="",
     )
     seg_supp_ok = Segment(
         type="supplement",
@@ -52,6 +54,8 @@ def _fixed_doc() -> CorrectionDoc:
         sources=[src],
         confidence="verified",
         traceability=[{"kind": "source", "id": "s1"}],
+        functional_gap="",
+        user_value="",
     )
     seg_supp_pending = Segment(
         type="supplement",
@@ -67,6 +71,8 @@ def _fixed_doc() -> CorrectionDoc:
                 "outcome": "pending_evidence",
             }
         ],
+        functional_gap="",
+        user_value="",
     )
     return CorrectionDoc(
         original=doc,

@@ -224,7 +224,7 @@ class TestPersistenceFailure:
     def test_docx_export_failure_raises(self, tmp_path):
         """export.py:to_docx 寫入失敗應向上拋 OSError。"""
         doc = CorrectionDoc(_doc(), [
-            Segment("supplement", "test", 0, [_source()], "verified"),
+            Segment("supplement", "test", 0, [_source()], "verified", functional_gap="", user_value=""),
         ])
         with patch("docx.Document") as MockDocx:
             instance = MagicMock()

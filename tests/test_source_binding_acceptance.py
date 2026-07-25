@@ -605,6 +605,8 @@ def test_failure_semantic_missing_binding_blocks_pipeline_return(tmp_path, monke
                 confidence="verified",  # 非 pending_evidence → 閘應判 processing_record 失敗
                 traceability=[],
                 source_id="",
+                functional_gap="",
+                user_value="",
             )
         )
         return product

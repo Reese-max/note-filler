@@ -380,10 +380,30 @@ class TestOutputConsistency:
                 continue
             if stripped.startswith("> **來源清單**"):
                 continue
+            # Skip new functional_gap and user_value lines
+            if stripped.startswith("> **功能缺口**"):
+                continue
+            if stripped.startswith("> **使用者價值**"):
+                continue
             md_originals.append(stripped)
 
         # Original paragraphs from docx (first N paragraphs where N = original count)
-        docx_originals = docx_paras[:len(json_originals)]
+        # Filter out metadata lines (來源清單, 功能缺口, 使用者價值, 追溯)
+        docx_filtered = []
+        for para in docx_paras:
+            stripped = para.strip()
+            if not stripped:
+                continue
+            if stripped.startswith("來源清單："):
+                continue
+            if stripped.startswith("功能缺口："):
+                continue
+            if stripped.startswith("使用者價值："):
+                continue
+            if stripped.startswith("追溯："):
+                continue
+            docx_filtered.append(stripped)
+        docx_originals = docx_filtered[:len(json_originals)]
 
         # All three must have same count
         assert len(json_originals) == len(md_originals) == len(docx_originals), (
@@ -610,6 +630,8 @@ class TestExplicitFailureReporting:
                 anchor_idx=0,
                 sources=[],
                 confidence="verified",
+                functional_gap="",
+                user_value="",
             )
         ]
         corrupted_doc = CorrectionDoc(original=parsed, segments=corrupted_segments)

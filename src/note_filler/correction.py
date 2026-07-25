@@ -32,6 +32,8 @@ class Segment:
     traceability: list[dict] = field(default_factory=list)
     source_id: str = ""
     source_ids: list[str] = field(default_factory=list)
+    functional_gap: str = ""
+    user_value: str = ""
 
 
 @dataclass
@@ -101,6 +103,8 @@ def assemble_correction(doc, gaps, retrieved, written, validations) -> Correctio
                 ],
                 source_id=f"input:{doc.source_path}#p{p.idx}",
                 source_ids=[],
+                functional_gap="",
+                user_value="",
             )
         )
 
@@ -185,6 +189,8 @@ def assemble_correction(doc, gaps, retrieved, written, validations) -> Correctio
                 ),
                 source_id=source_id,
                 source_ids=list(used_ids) if used_ids else [],
+                functional_gap=gap.reason,
+                user_value="",
             )
         )
 

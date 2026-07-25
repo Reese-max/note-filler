@@ -41,6 +41,8 @@ def _sample_doc() -> CorrectionDoc:
             anchor_idx=0,
             sources=[],
             confidence="verified",
+            functional_gap="",
+            user_value="",
         ),
         Segment(
             type="supplement",
@@ -50,6 +52,8 @@ def _sample_doc() -> CorrectionDoc:
             confidence="verified",
             traceability=[{"kind": "source", "id": "s1"}, {"kind": "source", "id": "s2"}],
             source_id="sources:s1,s2",
+            functional_gap="",
+            user_value="",
         ),
         Segment(
             type="supplement",
@@ -62,6 +66,8 @@ def _sample_doc() -> CorrectionDoc:
                 "question": "細節待查", "outcome": "pending_evidence",
             }],
             source_id="pending:gap:1",
+            functional_gap="",
+            user_value="",
         ),
     ]
     return CorrectionDoc(original=original, segments=segments)
@@ -193,6 +199,10 @@ def test_to_json_contains_source_ids_per_segment():
         assert seg["cardinality"] in ("one_to_one", "one_to_many", "none"), (
             f"segment[{i}] cardinality 非法: {seg['cardinality']!r}"
         )
+        assert "functional_gap" in seg, f"segment[{i}] 缺少 functional_gap"
+        assert isinstance(seg["functional_gap"], str), f"segment[{i}] functional_gap 須為 str"
+        assert "user_value" in seg, f"segment[{i}] 缺少 user_value"
+        assert isinstance(seg["user_value"], str), f"segment[{i}] user_value 須為 str"
     # _sample_doc: seg[0]=original → none(0源), seg[1]=supplement 2源→ one_to_many
     assert data["segments"][0]["cardinality"] == "none"
     assert data["segments"][0]["source_ids"] == []

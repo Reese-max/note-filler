@@ -84,6 +84,8 @@ def to_json(doc: CorrectionDoc) -> dict:
                 "cardinality": _cardinality(len(_seg_source_ids(seg))),
                 "traceability": list(getattr(seg, "traceability", [])),
                 "sources": [_source_to_dict(s) for s in seg.sources],
+                "functional_gap": getattr(seg, "functional_gap", ""),
+                "user_value": getattr(seg, "user_value", ""),
             }
             for seg in doc.segments
         ],
@@ -141,6 +143,14 @@ def to_markdown(doc: CorrectionDoc) -> str:
             )
         elif seg.type == "supplement":
             body.append("> **來源清單**：pending（無來源）")
+
+        functional_gap = getattr(seg, "functional_gap", "")
+        if functional_gap:
+            body.append(f"> **功能缺口**：{functional_gap}")
+
+        user_value = getattr(seg, "user_value", "")
+        if user_value:
+            body.append(f"> **使用者價值**：{user_value}")
 
     body.extend(original_traces)
 
@@ -216,6 +226,14 @@ def to_docx(doc: CorrectionDoc, path: str) -> None:
             )
         elif seg.type == "supplement":
             out.add_paragraph("來源清單：pending（無來源）")
+
+        functional_gap = getattr(seg, "functional_gap", "")
+        if functional_gap:
+            out.add_paragraph(f"功能缺口：{functional_gap}")
+
+        user_value = getattr(seg, "user_value", "")
+        if user_value:
+            out.add_paragraph(f"使用者價值：{user_value}")
 
     for trace in original_traces:
         out.add_paragraph(f"追溯：{trace}")
