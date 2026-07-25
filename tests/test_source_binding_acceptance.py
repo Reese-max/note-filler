@@ -638,6 +638,86 @@ def test_failure_semantic_missing_binding_blocks_pipeline_return(tmp_path, monke
     assert not (tmp_path / "bind-fail.訂正稿.md").exists()
 
 
+def test_failure_semantic_source_id_mismatch_vs_sources(caplog):
+    """最小負例：論點有來源、source_ids 列表正確，但 source_id 欄位被竄改為不一致值。
+
+    模擬序列化漂移或人為覆寫：source_id 應為 sources:law:92,law:93，
+    實際卻寫成 sources:law:92,law:WRONG → 閘必須硬失敗並指出 source_id 未對上。
+    """
+    import logging
+
+    from note_filler.pipeline import require_traceable_note_product
+
+    src_a = _source("law:92", "行政程序法第 92 條")
+    src_b = _source("law:93", "行政程序法第 93 條", level="B")
+    gap = Gap("附款之限制為何？", "missing", "原稿未列")
+    claim = "附款不得違背行政處分之目的[^1][^2]。"
+    product = assemble_correction(
+        _doc(),
+        [gap],
+        {gap.question: [src_a, src_b]},
+        {gap.question: WrittenSupplement(claim, [src_a.id, src_b.id])},
+        {gap.question: cross_validate(gap.question, [src_a, src_b])},
+    )
+    seg = product.segments[-1]
+    # 驗證組裝正確後，人為竄改 source_id 欄位
+    assert seg.source_id == "sources:law:92,law:93"  # 正常值
+    seg.source_id = "sources:law:92,law:WRONG"       # 竄改
+    assert claim.split("[")[0] in seg.text or "附款" in seg.text
+    assert [s.id for s in seg.sources] == [src_a.id, src_b.id]
+    assert seg.traceability == [
+        {"kind": "source", "id": src_a.id},
+        {"kind": "source", "id": src_b.id},
+    ]
+
+    # 閘門必須攔截 source_id 不一致
+    with caplog.at_level(logging.WARNING):
+        with pytest.raises(RuntimeError, match="來源追溯驗證失敗") as ei:
+            require_traceable_note_product(product, source="fail-sourceid-mismatch")
+    msg = str(ei.value)
+    assert "source_id" in msg, f"應指出 source_id 未對上，實際：{msg!r}"
+    assert "note_traceability_failed" in caplog.text
+    assert "fail-sourceid-mismatch" in caplog.text
+    # 錯誤訊息應含期望值與實際值
+    assert "law:93" in msg or "WRONG" in msg
+
+
+def test_failure_semantic_source_id_mismatch_vs_source_ids_list(caplog):
+    """最小負例：source_ids 列表正確，但 source_id 欄位缺少其中一個 ID。
+
+    source_ids = [law:92, law:93]，source_id 應為 sources:law:92,law:93，
+    實際却為 sources:law:92 → 閘必須指出 source_id 欄位與 source_ids 不符。
+    """
+    import logging
+
+    from note_filler.pipeline import require_traceable_note_product
+
+    src_a = _source("law:92", "行政程序法第 92 條")
+    src_b = _source("law:93", "行政程序法第 93 條", level="B")
+    gap = Gap("附款之限制為何？", "missing", "原稿未列")
+    claim = "附款不得違背行政處分之目的[^1][^2]。"
+    product = assemble_correction(
+        _doc(),
+        [gap],
+        {gap.question: [src_a, src_b]},
+        {gap.question: WrittenSupplement(claim, [src_a.id, src_b.id])},
+        {gap.question: cross_validate(gap.question, [src_a, src_b])},
+    )
+    seg = product.segments[-1]
+    # 驗證組裝正確後，人為截斷 source_id 欄位
+    assert seg.source_id == "sources:law:92,law:93"
+    seg.source_id = "sources:law:92"                   # 缺少 law:93
+    assert [s.id for s in seg.sources] == [src_a.id, src_b.id]
+
+    with caplog.at_level(logging.WARNING):
+        with pytest.raises(RuntimeError, match="來源追溯驗證失敗") as ei:
+            require_traceable_note_product(product, source="fail-sourceid-truncated")
+    msg = str(ei.value)
+    assert "source_id" in msg, f"應指出 source_id 未對上，實際：{msg!r}"
+    assert "note_traceability_failed" in caplog.text
+    assert "fail-sourceid-truncated" in caplog.text
+
+
 def test_failure_semantic_source_fragment_empty(caplog):
     """最小負例：論點有文字、來源 ID 與追溯正確，但來源 content 為空白 → 片段缺失。
 
