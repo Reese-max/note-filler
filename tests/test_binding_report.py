@@ -1299,3 +1299,212 @@ def test_json_export_includes_angle_coverage():
             assert "relation" in ac
             assert ac["effective_angle_count"] in (0, 1)
             assert "duplicate_exclusion" in ac
+
+
+def _assemble_multi_angle_with_one_to_many():
+    """同主題 ≥2 個不同且不重複有效角度，且其中一則為一對多來源。"""
+    src_def = _source("law:92", "行政程序法第 92 條")
+    src_lim_a = _source("law:93", "行政程序法第 93 條")
+    src_lim_b = _source("law:94", "行政程序法第 94 條", level="B")
+    gap_def = Gap("行政處分如何定義？", "missing", "原稿未定義行政處分")
+    gap_lim = Gap("行政處分有何限制？", "missing", "原稿未說明附款限制")
+    return assemble_correction(
+        _doc(),
+        [gap_def, gap_lim],
+        {
+            gap_def.question: [src_def],
+            gap_lim.question: [src_lim_a, src_lim_b],
+        },
+        {
+            gap_def.question: WrittenSupplement(
+                "行政處分定義參照[^1]。", [src_def.id]
+            ),
+            gap_lim.question: WrittenSupplement(
+                "附款限制須兼顧目的[^1][^2]。",
+                [src_lim_a.id, src_lim_b.id],
+            ),
+        },
+        {
+            gap_def.question: cross_validate(gap_def.question, [src_def]),
+            gap_lim.question: cross_validate(
+                gap_lim.question, [src_lim_a, src_lim_b]
+            ),
+        },
+    )
+
+
+def test_positive_acceptance_multi_angle_and_one_to_many_count_consistency(
+    tmp_path,
+):
+    """正向驗收：直接讀最終成品／綁定報告。
+
+    斷言至少一則論點同時處於：
+      - 筆記層 ≥2 個不同且不重複的有效角度（definition + limitation）
+      - 該論點 cardinality=one_to_many 且 source_count≥2
+    並逐筆核對角度數與來源清單在成品 JSON、binding_report 兩端完全一致。
+    """
+    product = _assemble_multi_angle_with_one_to_many()
+    product_path = tmp_path / "note_product.json"
+    product_path.write_text(
+        json.dumps(to_json(product), ensure_ascii=False, indent=2),
+        encoding="utf-8",
+        newline="\n",
+    )
+    report_path = write_binding_report(tmp_path / "out.md", product)
+    assert product_path.is_file()
+    assert report_path.is_file()
+
+    # 只靠落盤輸出驗收，不依賴記憶體 product
+    serialized = json.loads(product_path.read_text(encoding="utf-8"))
+    report = parse_binding_report(
+        json.loads(report_path.read_text(encoding="utf-8"))
+    )
+
+    assert report["summary"]["all_arguments_ok"] is True
+    assert report["summary"]["fail"] == 0
+    assert report["argument_count"] == 2
+
+    # 兩個以上不同且不重複的有效角度（筆記層）
+    angle_summary = report["angle_coverage_summary"]
+    product_angle_summary = serialized["angle_coverage_summary"]
+    assert set(angle_summary["unique_angle_types"]) == {
+        "definition",
+        "limitation",
+    }
+    assert angle_summary["effective_angle_count"] >= 2
+    assert (
+        angle_summary["effective_angle_count"]
+        == product_angle_summary["effective_angle_count"]
+    )
+    assert angle_summary["required_effective_angle_count"] == 2
+    assert angle_summary["excluded_angle_count"] == 0
+    assert angle_summary["duplicate_pairs"] == []
+    assert angle_summary["synonym_pairs"] == []
+    assert angle_summary["has_sufficient_angles"] is True
+    assert angle_summary["coverage_ok"] is True
+    assert product_angle_summary["coverage_ok"] is True
+
+    # 至少一則一對多來源綁定
+    one_to_many_args = [
+        a for a in report["arguments"] if a["cardinality"] == "one_to_many"
+    ]
+    assert len(one_to_many_args) >= 1
+    assert report["summary"]["one_to_many"] == len(one_to_many_args)
+    assert report["summary"]["one_to_one"] + report["summary"]["one_to_many"] == (
+        report["argument_count"]
+    )
+
+    # 至少一個論點同時滿足：位於多有效角度集合內 + 一對多來源
+    multi_angle_keys = {
+        a["angle_coverage"]["angle_key"]
+        for a in report["arguments"]
+        if a["angle_coverage"]["effective_angle_count"] == 1
+        and a["angle_coverage"]["relation"]["kind"] == "unique"
+        and a["angle_coverage"]["duplicate_exclusion"]["excluded"] is False
+    }
+    assert len(multi_angle_keys) >= 2, (
+        f"有效且不重複角度不足: {sorted(multi_angle_keys)}"
+    )
+    simultaneous = [
+        a
+        for a in one_to_many_args
+        if a["angle_coverage"]["angle_key"] in multi_angle_keys
+        and a["source_count"] >= 2
+        and a["binding_ok"] is True
+        and a["binding_status"] == "pass"
+    ]
+    assert simultaneous, (
+        "須至少一則論點同時滿足「多有效角度集合中」與「一對多來源綁定」"
+    )
+    otm = simultaneous[0]
+    assert otm["source_ids"] == ["law:93", "law:94"]
+    assert otm["angle_coverage"]["angle_type"] == "limitation"
+
+    # 逐筆核對：角度數與來源清單一致（成品 segments ↔ binding_report.arguments）
+    summed_effective = 0
+    summed_valid = 0
+    summed_deduped = 0
+    seen_angle_types: set[str] = set()
+    seen_angle_keys: set[str] = set()
+    for arg in report["arguments"]:
+        seg = serialized["segments"][arg["segment_index"]]
+        assert seg["type"] == "supplement"
+        assert seg["argument_id"] == arg["argument_id"] == (
+            f"argument:{arg['argument_index']}"
+        )
+
+        # --- 角度數：報告 ↔ 成品 ↔ 內部欄位 ---
+        ac_report = arg["angle_coverage"]
+        ac_product = seg["angle_coverage"]
+        assert arg["valid_angle_count"] == seg["valid_angle_count"]
+        assert arg["deduped_angle_count"] == seg["deduped_angle_count"]
+        assert arg["angle_tags"] == seg["angle_tags"] == ac_report["angle_labels"]
+        assert list(ac_report["angle_labels"]) == list(ac_product["angle_labels"])
+        assert ac_report["angle_type"] == ac_product["angle_type"] == seg["angle_type"]
+        assert ac_report["angle_key"] == ac_product["angle_key"] == seg["angle_key"]
+        assert ac_report["effective_angle_count"] == ac_product["effective_angle_count"]
+        assert ac_report["effective_angle_count"] in (0, 1)
+        assert arg["valid_angle_count"] in (0, 1)
+        assert arg["deduped_angle_count"] in (0, 1)
+        # 去重後保留者：valid 與 deduped 皆為 1，且 effective_angle_count=1
+        if ac_report["duplicate_exclusion"]["excluded"] is False:
+            assert arg["valid_angle_count"] == 1
+            assert arg["deduped_angle_count"] == 1
+            assert ac_report["effective_angle_count"] == 1
+            assert ac_report["relation"]["kind"] == "unique"
+            seen_angle_types.add(ac_report["angle_type"])
+            seen_angle_keys.add(ac_report["angle_key"])
+        else:
+            assert arg["deduped_angle_count"] == 0
+            assert ac_report["effective_angle_count"] == 0
+        summed_effective += int(ac_report["effective_angle_count"])
+        summed_valid += int(arg["valid_angle_count"])
+        summed_deduped += int(arg["deduped_angle_count"])
+        assert arg["checks"]["has_angle_coverage"] is True
+        assert arg["checks"]["meets_angle_coverage_threshold"] is True
+        assert arg["checks"]["angle_facet_complete"] is True
+
+        # --- 來源清單：報告 ↔ 成品 ↔ 計數欄位 ---
+        source_ids = list(arg["source_ids"])
+        assert source_ids == list(seg["source_ids"])
+        assert source_ids == list(arg["trace_source_ids"])
+        # 成品無獨立 source_count 欄位：以清單長度與報告計數對齊
+        assert arg["source_count"] == len(source_ids) == len(seg["source_ids"])
+        assert arg["cardinality"] == seg["cardinality"]
+        assert len(source_ids) == len(set(source_ids)), (
+            f"論點[{arg['argument_index']}] source_ids 重複: {source_ids}"
+        )
+        sources = list(seg["sources"])
+        assert [s["id"] for s in sources] == source_ids
+        assert len(sources) == arg["source_count"]
+        expected_field = f"sources:{','.join(source_ids)}"
+        assert arg["source_id_field"] == seg["source_id"] == expected_field
+        if arg["cardinality"] == "one_to_many":
+            assert arg["source_count"] >= 2
+        elif arg["cardinality"] == "one_to_one":
+            assert arg["source_count"] == 1
+        for pos, sid in enumerate(source_ids):
+            assert sources[pos]["id"] == sid
+            fragment = sources[pos].get("content") or ""
+            assert fragment.strip(), f"來源 {sid!r} 片段空白"
+        assert arg["checks"]["at_least_one_source"] is True
+        assert arg["checks"]["source_traceable"] is True
+        assert arg["checks"]["no_duplicate_sources"] is True
+        assert arg["checks"]["no_omitted_traces"] is True
+        assert arg["checks"]["no_extra_traces"] is True
+        assert arg["checks"]["source_id_field_aligned"] is True
+        assert arg["binding_ok"] is True
+        assert arg["binding_status"] == "pass"
+        assert all(arg["checks"].values())
+
+    # 彙總角度數 = 逐筆加總；跨論點角度真的不同且不重複
+    assert summed_effective == angle_summary["effective_angle_count"]
+    assert summed_deduped == angle_summary["effective_angle_count"]
+    assert summed_valid == report["argument_count"]
+    assert seen_angle_types == {"definition", "limitation"}
+    assert len(seen_angle_keys) == 2
+    assert report["source_usage"] == {
+        "law:92": [0],
+        "law:93": [1],
+        "law:94": [1],
+    }
