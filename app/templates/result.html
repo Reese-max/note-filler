@@ -69,6 +69,14 @@
             <dd>{{ seg.functional_gap or "未提供" }}</dd>
             <dt>user_value（使用者價值）</dt>
             <dd>{{ seg.user_value or "未提供" }}</dd>
+            <dt>來源清單</dt>
+            <dd>
+              {% if seg.sources %}
+              {{ seg.sources|length }} 個來源
+              {% else %}
+              pending（無來源）
+              {% endif %}
+            </dd>
             <dt>角度清單</dt>
             <dd>
               {% if seg.angle_labels %}

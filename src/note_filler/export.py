@@ -196,6 +196,16 @@ def to_markdown(doc: CorrectionDoc) -> str:
         body.append(f"{prefix}{seg.text}{marks}")
         if trace := _trace_text(seg):
             body.append(f"> 追溯：{trace}")
+
+        # 多層面必要性區塊：functional_gap → user_value → 來源清單 → 角度清單
+        functional_gap = getattr(seg, "functional_gap", "")
+        if functional_gap:
+            body.append(f"> **功能缺口**：{functional_gap}")
+
+        user_value = getattr(seg, "user_value", "")
+        if user_value:
+            body.append(f"> **使用者價值**：{user_value}")
+
         source_ids = list(getattr(seg, "source_ids", None) or [])
         if not source_ids:
             source_ids = [s.id for s in getattr(seg, "sources", [])]
@@ -207,20 +217,12 @@ def to_markdown(doc: CorrectionDoc) -> str:
         elif seg.type == "supplement":
             body.append("> **來源清單**：pending（無來源）")
 
-        functional_gap = getattr(seg, "functional_gap", "")
-        if functional_gap:
-            body.append(f"> **功能缺口**：{functional_gap}")
-
-        user_value = getattr(seg, "user_value", "")
-        if user_value:
-            body.append(f"> **使用者價值**：{user_value}")
+        if argument := argument_by_seg_index.get(seg_index):
+            body.append(f"> **角度覆蓋**：{_argument_coverage_text(argument)}")
 
         argument_id = getattr(seg, "argument_id", "")
         if argument_id:
             body.append(f"> **論點ID**：{argument_id}")
-
-        if argument := argument_by_seg_index.get(seg_index):
-            body.append(f"> **角度覆蓋**：{_argument_coverage_text(argument)}")
 
     body.extend(original_traces)
 
@@ -300,6 +302,16 @@ def to_docx(doc: CorrectionDoc, path: str) -> None:
         run.italic = True  # 補充段視覺區隔於原文
         if trace := _trace_text(seg):
             out.add_paragraph(f"追溯：{trace}")
+
+        # 多層面必要性區塊：functional_gap → user_value → 來源清單 → 角度清單
+        functional_gap = getattr(seg, "functional_gap", "")
+        if functional_gap:
+            out.add_paragraph(f"功能缺口：{functional_gap}")
+
+        user_value = getattr(seg, "user_value", "")
+        if user_value:
+            out.add_paragraph(f"使用者價值：{user_value}")
+
         source_ids = list(getattr(seg, "source_ids", None) or [])
         if not source_ids:
             source_ids = [s.id for s in getattr(seg, "sources", [])]
@@ -311,20 +323,12 @@ def to_docx(doc: CorrectionDoc, path: str) -> None:
         elif seg.type == "supplement":
             out.add_paragraph("來源清單：pending（無來源）")
 
-        functional_gap = getattr(seg, "functional_gap", "")
-        if functional_gap:
-            out.add_paragraph(f"功能缺口：{functional_gap}")
-
-        user_value = getattr(seg, "user_value", "")
-        if user_value:
-            out.add_paragraph(f"使用者價值：{user_value}")
+        if argument := argument_by_seg_index.get(seg_index):
+            out.add_paragraph(f"角度覆蓋：{_argument_coverage_text(argument)}")
 
         argument_id = getattr(seg, "argument_id", "")
         if argument_id:
             out.add_paragraph(f"論點ID：{argument_id}")
-
-        if argument := argument_by_seg_index.get(seg_index):
-            out.add_paragraph(f"角度覆蓋：{_argument_coverage_text(argument)}")
 
     for trace in original_traces:
         out.add_paragraph(f"追溯：{trace}")
