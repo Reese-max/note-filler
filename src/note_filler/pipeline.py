@@ -106,6 +106,9 @@ def require_traceable_note_product(correction, *, source: object = "pipeline") -
                 errors.append(f"segment[{index}] source ID 對應失敗")
             elif sid != expected_sid:
                 errors.append(f"segment[{index}] source_id 應為 {expected_sid!r} 實際 {sid!r}")
+            empty_fragments = [item.id for item in seg.sources if not getattr(item, 'content', '').strip()]
+            if empty_fragments:
+                errors.append(f"segment[{index}] 來源片段缺失：{','.join(empty_fragments)}")
         elif (
             seg.confidence != "pending_evidence"
             or len(refs) != 1

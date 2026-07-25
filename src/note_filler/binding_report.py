@@ -57,6 +57,7 @@ REQUIRED_CHECK_KEYS = frozenset(
         "no_omitted_traces",
         "no_extra_traces",
         "source_id_field_aligned",
+        "no_empty_fragments",
     }
 )
 REQUIRED_SUMMARY_KEYS = frozenset(
@@ -80,6 +81,18 @@ def _source_ids(seg) -> list[str]:
         if isinstance(sid, str) and sid.strip():
             ids.append(sid)
     return ids
+
+
+def _no_empty_fragments(seg) -> bool:
+    """來源有 ID 但 content 為空白 → False。"""
+    for src in getattr(seg, "sources", None) or []:
+        sid = getattr(src, "id", None)
+        if not isinstance(sid, str) or not sid.strip():
+            continue
+        content = getattr(src, "content", None) or ""
+        if not content.strip():
+            return False
+    return True
 
 
 def _trace_source_ids(seg) -> list[str]:
@@ -153,6 +166,8 @@ def _evaluate_argument(seg, *, argument_index: int, segment_index: int) -> dict[
         no_omitted = True
         no_extra = True
 
+    no_empty_fragments = _no_empty_fragments(seg)
+
     checks = {
         "at_least_one_source": at_least_one,
         "source_traceable": source_traceable,
@@ -160,9 +175,10 @@ def _evaluate_argument(seg, *, argument_index: int, segment_index: int) -> dict[
         "no_omitted_traces": no_omitted,
         "no_extra_traces": no_extra,
         "source_id_field_aligned": source_id_aligned,
+        "no_empty_fragments": no_empty_fragments,
     }
 
-    # 有來源：三項核心 + 對齊皆須通過
+    # 有來源：三項核心 + 對齊 + 片段非空皆須通過
     if source_ids:
         binding_ok = all(
             (
@@ -172,6 +188,7 @@ def _evaluate_argument(seg, *, argument_index: int, segment_index: int) -> dict[
                 checks["no_omitted_traces"],
                 checks["no_extra_traces"],
                 checks["source_id_field_aligned"],
+                checks["no_empty_fragments"],
             )
         )
         status: BindingStatus = "pass" if binding_ok else "fail"

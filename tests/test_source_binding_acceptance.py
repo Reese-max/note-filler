@@ -638,6 +638,65 @@ def test_failure_semantic_missing_binding_blocks_pipeline_return(tmp_path, monke
     assert not (tmp_path / "bind-fail.訂正稿.md").exists()
 
 
+def test_failure_semantic_source_fragment_empty(caplog):
+    """最小負例：論點有文字、來源 ID 與追溯正確，但來源 content 為空白 → 片段缺失。
+
+    必須：
+    1) 綁定報告 no_empty_fragments 為 False、binding_status 為 fail
+    2) require_traceable_note_product 明確 raise 並指出缺失片段
+    """
+    import logging
+
+    from note_filler.binding_report import build_binding_report, parse_binding_report
+    from note_filler.pipeline import require_traceable_note_product
+
+    gap = Gap("行政處分之要件為何？", "missing", "原稿未展開")
+    claim = "行政處分應符合法定要件。"
+    src_empty = Source(
+        id="law:empty-frag",
+        title="行政程序法第 92 條",
+        url=None, level="A",
+        content="",
+        fetched_date="2026-07-25",
+        doc_date=None, distance=0.5,
+    )
+    with caplog.at_level(logging.WARNING):
+        product = assemble_correction(
+            _doc(), [gap],
+            {gap.question: [src_empty]},
+            {gap.question: WrittenSupplement(claim, [src_empty.id])},
+            {gap.question: cross_validate(gap.question, [src_empty])},
+        )
+    seg = product.segments[-1]
+    assert seg.type == "supplement"
+    assert claim in seg.text
+    assert len(seg.sources) == 1
+    assert seg.sources[0].id == "law:empty-frag"
+    assert not seg.sources[0].content.strip()
+
+    # 綁定報告必須明確標示 fail（來源片段缺失）
+    report = parse_binding_report(build_binding_report(product))
+    arg = report["arguments"][0]
+    assert arg["binding_status"] == "fail", (
+        f"空片段來源之 binding_status 應為 fail，實際：{arg['binding_status']!r}"
+    )
+    assert arg["binding_ok"] is False
+    assert arg["checks"]["no_empty_fragments"] is False
+    assert report["summary"]["fail"] == 1
+    assert report["summary"]["all_arguments_ok"] is False
+
+    # 閘門必須明確 raise 且錯誤指向缺失片段
+    with caplog.at_level(logging.WARNING):
+        with pytest.raises(RuntimeError, match="來源追溯驗證失敗") as ei:
+            require_traceable_note_product(product, source="fail-empty-frag")
+    msg = str(ei.value)
+    assert "片段缺失" in msg, (
+        f"失敗訊息應指出片段缺失，實際：{msg!r}"
+    )
+    assert "note_traceability_failed" in caplog.text
+    assert "fail-empty-frag" in caplog.text
+
+
 # ---- 最小驗收：直接讀序列化成品，逐筆論點↔來源 ID／片段／位置 ---------------
 
 

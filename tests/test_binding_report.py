@@ -315,6 +315,35 @@ def test_duplicate_source_ids_fail_no_duplicate_check():
     assert arg["binding_ok"] is False
 
 
+def test_empty_source_fragment_fails():
+    """最小負例：來源 ID 正確但 content 空白 → no_empty_fragments False。"""
+    from note_filler.retrieve.models import Source
+
+    src = Source(
+        id="law:empty",
+        title="行政程序法第 92 條",
+        url=None, level="A",
+        content="",  # 片段為空
+        fetched_date="2026-07-25",
+        doc_date=None, distance=0.5,
+    )
+    gap = Gap("定義？", "missing", "未說明")
+    product = assemble_correction(
+        _doc(),
+        [gap],
+        {gap.question: [src]},
+        {gap.question: WrittenSupplement("定義[^1]。", [src.id])},
+        {gap.question: cross_validate(gap.question, [src])},
+    )
+    report = parse_binding_report(build_binding_report(product))
+    arg = report["arguments"][0]
+    assert arg["checks"]["no_empty_fragments"] is False
+    assert arg["binding_status"] == "fail"
+    assert arg["binding_ok"] is False
+    assert report["summary"]["fail"] == 1
+    assert report["summary"]["all_arguments_ok"] is False
+
+
 # ---- CLI 落盤 ---------------------------------------------------------------
 
 def test_process_file_writes_binding_report(tmp_path, monkeypatch):
