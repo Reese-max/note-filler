@@ -12,6 +12,8 @@ Segment.sources / Segment.traceability / Segment.source_id 之間的不變式。
 """
 from __future__ import annotations
 
+import re
+
 import pytest
 
 from note_filler.binding_report import (
@@ -1282,3 +1284,366 @@ def test_positive_disk_product_multi_angle_and_one_to_many_four_way_consistency(
         "law:93": [1],
         "law:94": [1],
     }
+
+
+# ---- 三元驗收：摘要 + 功能缺口 + 使用者價值 同論點同來源呼應 ---------------
+
+
+_RE_VISIBLE_SUMMARY = re.compile(
+    r"argument_id=(?P<argument_id>[^；]+)"
+    r"；摘要=(?P<summary>.*?)"
+    r"；functional_gap=(?P<functional_gap>.*?)"
+    r"；user_value=(?P<user_value>.*)$"
+)
+_RE_SOURCE_LIST = re.compile(
+    # Markdown 可能為 **來源清單**：ids（card）— 冒號前允許粗體星號
+    r"來源清單\*{0,2}[：:]\s*(?P<ids>[^（(]+)"
+    r"(?:[（(](?P<cardinality>[^）)]+)[）)])?"
+)
+
+
+def _parse_md_argument_blocks(md: str) -> list[dict[str, str]]:
+    """從人類可讀 Markdown 逐段解析補充論點的三元與來源。"""
+    blocks: list[dict[str, str]] = []
+    current: dict[str, str] | None = None
+    for raw in md.splitlines():
+        line = raw.strip()
+        if line.startswith("> 【補充】") or line.startswith("【補充】"):
+            if current is not None:
+                blocks.append(current)
+            current = {
+                "summary": "",
+                "functional_gap": "",
+                "user_value": "",
+                "source_ids": "",
+                "cardinality": "",
+                "argument_id": "",
+                "visible_summary": "",
+            }
+            # 去掉前綴與 footnote 標記，留下摘要正文
+            body = re.sub(r"^>\s*", "", line)
+            body = re.sub(r"^【補充】(?:⚠待補證\s*)?", "", body)
+            body = re.sub(r"\[\^\d+\]", "", body).strip()
+            current["summary"] = body
+            continue
+        if current is None:
+            continue
+        plain = re.sub(r"^>\s*", "", line)
+        if plain.startswith("**功能缺口**：") or plain.startswith("功能缺口："):
+            current["functional_gap"] = plain.split("：", 1)[1].strip()
+        elif plain.startswith("**使用者價值**：") or plain.startswith("使用者價值："):
+            current["user_value"] = plain.split("：", 1)[1].strip()
+        elif plain.startswith("**來源清單**：") or plain.startswith("來源清單"):
+            m = _RE_SOURCE_LIST.search(plain)
+            if m:
+                current["source_ids"] = m.group("ids").strip()
+                current["cardinality"] = (m.group("cardinality") or "").strip()
+        elif plain.startswith("**摘要可見**：") or plain.startswith("摘要可見："):
+            visible = plain.split("：", 1)[1].strip()
+            current["visible_summary"] = visible
+            vm = _RE_VISIBLE_SUMMARY.fullmatch(visible)
+            assert vm is not None, f"摘要可見格式不可解析: {visible!r}"
+            # 以摘要可見內嵌三元覆寫，確保同列一致
+            current["argument_id"] = vm.group("argument_id").strip()
+            current["summary"] = vm.group("summary").strip()
+            current["functional_gap"] = vm.group("functional_gap").strip()
+            current["user_value"] = vm.group("user_value").strip()
+        elif plain.startswith("**論點ID**：") or plain.startswith("論點ID："):
+            current["argument_id"] = plain.split("：", 1)[1].strip()
+    if current is not None:
+        blocks.append(current)
+    return blocks
+
+
+def _shared_topic_token(summary: str, functional_gap: str, user_value: str) -> str | None:
+    """找出三元文字共同出現的關鍵詞（至少 2 字），作為互相呼應的最小證據。"""
+    runs = re.findall(r"[\u4e00-\u9fff]+", f"{functional_gap} {user_value}")
+    candidates: list[str] = []
+    seen: set[str] = set()
+    for run in runs:
+        # 由長到短產生 2..min(8,len) 的子字串，避免整段貪婪匹配吞掉主題詞
+        for n in range(min(8, len(run)), 1, -1):
+            for i in range(0, len(run) - n + 1):
+                token = run[i : i + n]
+                if token not in seen:
+                    seen.add(token)
+                    candidates.append(token)
+    candidates.sort(key=len, reverse=True)
+    for token in candidates:
+        if token in summary and token in functional_gap and token in user_value:
+            return token
+    return None
+
+
+def test_final_output_each_argument_triad_coheres_with_same_source_and_argument(
+    tmp_path,
+):
+    """最終輸出：每個論點同時含摘要、功能缺口、使用者價值，三者呼應且同來源。
+
+    只讀落盤成品（note_product.json / binding_report.json / .md），
+    逐筆對應同一 argument_id 與 source_ids；涵蓋 1:1 與 1:N。
+    """
+    import json
+    from pathlib import Path
+
+    from note_filler.export import to_json, to_markdown
+    from note_filler.pipeline import require_traceable_note_product
+
+    src_a = Source(
+        id="law:92",
+        title="行政程序法第 92 條",
+        url=None,
+        level="A",
+        content="【片段:law:92】行政處分，係指行政機關就公法上具體事件所為之決定。",
+        fetched_date="2026-07-26",
+        doc_date=None,
+        distance=0.1,
+    )
+    src_b1 = Source(
+        id="law:93",
+        title="行政程序法第 93 條",
+        url=None,
+        level="A",
+        content="【片段:law:93】行政機關作成行政處分有裁量權時，得為附款。",
+        fetched_date="2026-07-26",
+        doc_date=None,
+        distance=0.2,
+    )
+    src_b2 = Source(
+        id="law:94",
+        title="行政程序法第 94 條",
+        url=None,
+        level="B",
+        content="【片段:law:94】前條之附款不得違背行政處分之目的。",
+        fetched_date="2026-07-26",
+        doc_date=None,
+        distance=0.3,
+    )
+    gap_a = Gap("行政處分如何定義？", "missing", "原稿未定義行政處分")
+    gap_b = Gap("附款有何限制？", "missing", "原稿未說明附款限制")
+    claim_a = "行政處分定義參照[^1]。"
+    claim_b = "附款限制須兼顧目的[^1][^2]。"
+    product = assemble_correction(
+        _doc(),
+        [gap_a, gap_b],
+        {gap_a.question: [src_a], gap_b.question: [src_b1, src_b2]},
+        {
+            gap_a.question: WrittenSupplement(claim_a, [src_a.id]),
+            gap_b.question: WrittenSupplement(claim_b, [src_b1.id, src_b2.id]),
+        },
+        {
+            gap_a.question: cross_validate(gap_a.question, [src_a]),
+            gap_b.question: cross_validate(gap_b.question, [src_b1, src_b2]),
+        },
+    )
+    # 鎖定三元期望值（摘要去掉 footnote 標記後與 argument_text 對齊）
+    expected = [
+        {
+            "argument_id": "argument:0",
+            "summary": "行政處分定義參照。",
+            "functional_gap": "原稿未定義行政處分",
+            "user_value": "補齊讀者對「行政處分如何定義？」所需的說明",
+            "source_ids": ["law:92"],
+            "cardinality": "one_to_one",
+            "topic": "行政處分",
+        },
+        {
+            "argument_id": "argument:1",
+            "summary": "附款限制須兼顧目的。",
+            "functional_gap": "原稿未說明附款限制",
+            "user_value": "補齊讀者對「附款有何限制？」所需的說明",
+            "source_ids": ["law:93", "law:94"],
+            "cardinality": "one_to_many",
+            "topic": "附款",
+        },
+    ]
+    for segment, exp in zip(product.segments[1:], expected, strict=True):
+        segment.functional_gap = exp["functional_gap"]
+        segment.user_value = exp["user_value"]
+        assert segment.argument_id == exp["argument_id"]
+
+    require_traceable_note_product(product, source="triad-coherence-acceptance")
+
+    out_dir = Path(tmp_path)
+    product_path = out_dir / "note_product.json"
+    md_path = out_dir / "note_product.md"
+    product_path.write_text(
+        json.dumps(to_json(product), ensure_ascii=False, indent=2),
+        encoding="utf-8",
+        newline="\n",
+    )
+    md_path.write_text(to_markdown(product), encoding="utf-8", newline="\n")
+    report_path = write_binding_report(md_path, product)
+    assert product_path.is_file()
+    assert md_path.is_file()
+    assert report_path.is_file()
+
+    # ---- 只讀落盤 ----
+    serialized = json.loads(product_path.read_text(encoding="utf-8"))
+    report = parse_binding_report(
+        json.loads(report_path.read_text(encoding="utf-8"))
+    )
+    md = md_path.read_text(encoding="utf-8")
+    md_blocks = _parse_md_argument_blocks(md)
+
+    assert report["summary"]["all_arguments_ok"] is True
+    assert report["summary"]["fail"] == 0
+    assert report["argument_count"] == 2
+    assert report["summary"]["one_to_one"] == 1
+    assert report["summary"]["one_to_many"] == 1
+    assert len(md_blocks) == 2
+
+    for arg, exp, block in zip(report["arguments"], expected, md_blocks, strict=True):
+        seg = serialized["segments"][arg["segment_index"]]
+        assert seg["type"] == "supplement"
+        assert arg["argument_id"] == exp["argument_id"] == seg["argument_id"]
+        assert block["argument_id"] == exp["argument_id"]
+
+        # (1) 三元齊備：摘要 / 功能缺口 / 使用者價值
+        summary = (arg["argument_text"] or "").strip()
+        # 摘要以正文為準（可能含 footnote 標記）；比對時去掉 [^n]
+        summary_plain = re.sub(r"\[\^\d+\]", "", summary).strip()
+        fg = (arg["functional_gap"] or "").strip()
+        uv = (arg["user_value"] or "").strip()
+        assert summary_plain, f"{exp['argument_id']} 缺少摘要"
+        assert fg, f"{exp['argument_id']} 缺少功能缺口"
+        assert uv, f"{exp['argument_id']} 缺少使用者價值"
+        assert "（未提供）" not in fg and "（未提供）" not in uv
+
+        # 成品 segment ↔ binding_report 同論點一致
+        assert re.sub(r"\[\^\d+\]", "", seg["text"]).strip() == summary_plain
+        assert seg["functional_gap"] == fg == exp["functional_gap"]
+        assert seg["user_value"] == uv == exp["user_value"]
+        assert arg["checks"]["has_functional_gap"] is True
+        assert arg["checks"]["has_user_value"] is True
+
+        # (2) 互相呼應：主題詞同時出現在三元中
+        assert exp["topic"] in summary_plain
+        assert exp["topic"] in fg
+        assert exp["topic"] in uv
+        shared = _shared_topic_token(summary_plain, fg, uv)
+        assert shared is not None, (
+            f"{exp['argument_id']} 三元無共同主題詞："
+            f"摘要={summary_plain!r} gap={fg!r} value={uv!r}"
+        )
+        # user_value 須回扣同一問題（與摘要／缺口同論點）
+        assert "補齊讀者對「" in uv and "」所需的說明" in uv
+
+        # (3) 同一來源：product / report / markdown 來源清單對齊
+        source_ids = list(arg["source_ids"])
+        assert source_ids == exp["source_ids"]
+        assert source_ids == list(seg["source_ids"])
+        assert source_ids == list(arg["trace_source_ids"])
+        assert [s["id"] for s in seg["sources"]] == source_ids
+        assert arg["cardinality"] == exp["cardinality"] == seg["cardinality"]
+        assert arg["source_count"] == len(source_ids)
+        assert arg["binding_ok"] is True
+        assert arg["binding_status"] == "pass"
+        assert arg["checks"]["at_least_one_source"] is True
+        assert arg["checks"]["source_traceable"] is True
+
+        # Markdown 摘要可見列內嵌三元，且與獨立欄位同值同論點
+        block_summary_plain = re.sub(r"\[\^\d+\]", "", block["summary"]).strip()
+        assert block_summary_plain == summary_plain
+        assert block_summary_plain == exp["summary"]
+        assert block["functional_gap"] == fg
+        assert block["user_value"] == uv
+        assert block["source_ids"].replace(" ", "") == ",".join(source_ids)
+        assert "（未提供）" not in block["visible_summary"]
+        assert f"argument_id={exp['argument_id']}" in block["visible_summary"]
+        # 摘要可見可能保留 footnote 標記；去掉後須與論點正文一致
+        vis_summary_m = re.search(r"；摘要=(.*?)；functional_gap=", block["visible_summary"])
+        assert vis_summary_m is not None
+        assert re.sub(r"\[\^\d+\]", "", vis_summary_m.group(1)).strip() == summary_plain
+        assert f"functional_gap={fg}" in block["visible_summary"]
+        assert f"user_value={uv}" in block["visible_summary"]
+
+    # 反向：來源用法無重複遺漏
+    assert report["source_usage"] == {
+        "law:92": [0],
+        "law:93": [1],
+        "law:94": [1],
+    }
+
+
+@pytest.mark.parametrize(
+    "missing_field",
+    ["functional_gap", "user_value", "summary"],
+)
+def test_final_output_triad_missing_any_field_fails_explicitly(
+    missing_field: str,
+    tmp_path,
+):
+    """負例：來源綁定存在，但摘要／功能缺口／使用者價值缺一即明確失敗。
+
+    - functional_gap / user_value 空欄 → binding_ok=fail，checks 點名缺失，
+      write_binding_report 以角度有效性驗收失敗拒絕（訊息含缺欄名）
+    - 摘要（argument_text）空白 → parse/write 拒絕空欄 argument_text，
+      不得默默產出可通過的最終報告
+    """
+    from pathlib import Path
+
+    src = _source("law:92", "行政程序法第 92 條")
+    gap = Gap("行政處分如何定義？", "missing", "原稿未定義行政處分")
+    product = assemble_correction(
+        _doc(),
+        [gap],
+        {gap.question: [src]},
+        {gap.question: WrittenSupplement("行政處分定義[^1]。", [src.id])},
+        {gap.question: cross_validate(gap.question, [src])},
+    )
+    seg = product.segments[1]
+    assert seg.type == "supplement"
+    assert [s.id for s in seg.sources] == ["law:92"]
+
+    if missing_field == "functional_gap":
+        seg.functional_gap = ""
+    elif missing_field == "user_value":
+        seg.user_value = "   "
+    else:
+        seg.text = "   "
+
+    raw_report = build_binding_report(product)
+    arg = raw_report["arguments"][0]
+    # 來源層仍可追溯（避免只驗來源而漏掉必要性／摘要）
+    assert arg["checks"]["at_least_one_source"] is True
+    assert arg["source_ids"] == ["law:92"]
+
+    out = Path(tmp_path) / "out.md"
+
+    if missing_field == "functional_gap":
+        assert arg["checks"]["has_functional_gap"] is False
+        assert arg["binding_ok"] is False
+        assert arg["binding_status"] == "fail"
+        assert raw_report["summary"]["all_arguments_ok"] is False
+        assert not (arg["functional_gap"] or "").strip()
+        assert (arg["argument_text"] or "").strip()
+        assert (arg["user_value"] or "").strip()
+        # 仍可 parse（空 functional_gap 以 checks 標 fail，非 schema 拒收）
+        parsed = parse_binding_report(raw_report)
+        assert parsed["arguments"][0]["checks"]["has_functional_gap"] is False
+        with pytest.raises(RuntimeError, match="角度有效性驗收失敗|functional_gap") as ei:
+            write_binding_report(out, product)
+        assert "functional_gap" in str(ei.value)
+    elif missing_field == "user_value":
+        assert arg["checks"]["has_user_value"] is False
+        assert arg["binding_ok"] is False
+        assert arg["binding_status"] == "fail"
+        assert raw_report["summary"]["all_arguments_ok"] is False
+        assert not (arg["user_value"] or "").strip()
+        assert (arg["argument_text"] or "").strip()
+        assert (arg["functional_gap"] or "").strip()
+        parsed = parse_binding_report(raw_report)
+        assert parsed["arguments"][0]["checks"]["has_user_value"] is False
+        with pytest.raises(RuntimeError, match="角度有效性驗收失敗|user_value") as ei:
+            write_binding_report(out, product)
+        assert "user_value" in str(ei.value)
+    else:
+        # 摘要空白：schema 層拒絕 argument_text 空欄
+        assert not (arg["argument_text"] or "").strip()
+        assert (arg["functional_gap"] or "").strip()
+        assert (arg["user_value"] or "").strip()
+        with pytest.raises(ValueError, match="argument_text 不可為空欄"):
+            parse_binding_report(raw_report)
+        with pytest.raises(ValueError, match="argument_text 不可為空欄"):
+            write_binding_report(out, product)
