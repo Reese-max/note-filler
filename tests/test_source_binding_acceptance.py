@@ -1055,3 +1055,230 @@ def test_product_output_each_argument_has_binding_and_dual_necessity_views(
         "law:93": [1],
         "law:94": [1],
     }
+
+
+def test_positive_disk_product_multi_angle_and_one_to_many_four_way_consistency(
+    tmp_path,
+):
+    """正向：直接讀成品／綁定報告，至少一則論點同時滿足多有效角度與一對多來源。
+
+    驗收條件：
+      1. 落盤後只靠 JSON 讀回（不依賴記憶體 product）
+      2. 筆記層有 ≥2 個不同且不重複的有效角度（definition + limitation）
+      3. 至少一則論點 cardinality=one_to_many 且 source_count≥2
+      4. 工具鏈可逐筆核對：角度、來源、功能缺口、使用者價值 四者
+         在成品 segments 與 binding_report.arguments 完全一致
+    """
+    import json
+    from pathlib import Path
+
+    from note_filler.export import to_json
+    from note_filler.pipeline import require_traceable_note_product
+
+    src_def = Source(
+        id="law:92",
+        title="行政程序法第 92 條",
+        url=None,
+        level="A",
+        content="【片段:law:92】行政處分，係指行政機關就公法上具體事件所為之決定。",
+        fetched_date="2026-07-26",
+        doc_date=None,
+        distance=0.1,
+    )
+    src_lim_a = Source(
+        id="law:93",
+        title="行政程序法第 93 條",
+        url=None,
+        level="A",
+        content="【片段:law:93】行政機關作成行政處分有裁量權時，得為附款。",
+        fetched_date="2026-07-26",
+        doc_date=None,
+        distance=0.2,
+    )
+    src_lim_b = Source(
+        id="law:94",
+        title="行政程序法第 94 條",
+        url=None,
+        level="B",
+        content="【片段:law:94】前條之附款不得違背行政處分之目的。",
+        fetched_date="2026-07-26",
+        doc_date=None,
+        distance=0.3,
+    )
+    # 同一主題「行政處分」：定義角度（1:1）＋限制角度且一對多來源（1:N）
+    gap_def = Gap("行政處分如何定義？", "missing", "原稿未定義行政處分")
+    gap_lim = Gap("行政處分有何限制？", "missing", "原稿未說明附款限制")
+    product = assemble_correction(
+        _doc(),
+        [gap_def, gap_lim],
+        {
+            gap_def.question: [src_def],
+            gap_lim.question: [src_lim_a, src_lim_b],
+        },
+        {
+            gap_def.question: WrittenSupplement(
+                "行政處分定義參照[^1]。", [src_def.id]
+            ),
+            gap_lim.question: WrittenSupplement(
+                "附款限制須兼顧目的[^1][^2]。",
+                [src_lim_a.id, src_lim_b.id],
+            ),
+        },
+        {
+            gap_def.question: cross_validate(gap_def.question, [src_def]),
+            gap_lim.question: cross_validate(
+                gap_lim.question, [src_lim_a, src_lim_b]
+            ),
+        },
+    )
+    # 鎖定明確的功能缺口／使用者價值，便於逐筆四向比對
+    expected_necessity = [
+        (
+            "原稿未定義行政處分",
+            "補齊讀者對「行政處分如何定義？」所需的說明",
+        ),
+        (
+            "原稿未說明附款限制",
+            "補齊讀者對「行政處分有何限制？」所需的說明",
+        ),
+    ]
+    for segment, (fg, uv) in zip(product.segments[1:], expected_necessity, strict=True):
+        segment.functional_gap = fg
+        segment.user_value = uv
+
+    require_traceable_note_product(
+        product, source="positive-multi-angle-one-to-many"
+    )
+
+    out_dir = Path(tmp_path)
+    product_path = out_dir / "note_product.json"
+    product_path.write_text(
+        json.dumps(to_json(product), ensure_ascii=False, indent=2),
+        encoding="utf-8",
+        newline="\n",
+    )
+    report_path = write_binding_report(out_dir / "out.md", product)
+    assert product_path.is_file()
+    assert report_path.is_file()
+
+    # ---- 只讀落盤：成品 JSON + binding_report.json ----
+    serialized = json.loads(product_path.read_text(encoding="utf-8"))
+    report = parse_binding_report(
+        json.loads(report_path.read_text(encoding="utf-8"))
+    )
+
+    assert report["summary"]["all_arguments_ok"] is True
+    assert report["summary"]["fail"] == 0
+    assert report["argument_count"] == 2
+
+    # 多個不同且不重複的有效角度（筆記層）
+    angle_summary = report["angle_coverage_summary"]
+    assert set(angle_summary["unique_angle_types"]) == {"definition", "limitation"}
+    assert angle_summary["effective_angle_count"] == 2
+    assert angle_summary["required_effective_angle_count"] == 2
+    assert angle_summary["excluded_angle_count"] == 0
+    assert angle_summary["duplicate_pairs"] == []
+    assert angle_summary["synonym_pairs"] == []
+    assert angle_summary["has_sufficient_angles"] is True
+    assert angle_summary["coverage_ok"] is True
+    assert serialized["angle_coverage_summary"]["coverage_ok"] is True
+    assert serialized["angle_coverage_summary"]["effective_angle_count"] == 2
+
+    # 至少一則論點為來源一對多
+    one_to_many_args = [
+        a for a in report["arguments"] if a["cardinality"] == "one_to_many"
+    ]
+    assert len(one_to_many_args) >= 1, "須至少一則論點為 one_to_many"
+    assert report["summary"]["one_to_many"] >= 1
+    for otm in one_to_many_args:
+        assert otm["source_count"] >= 2
+        assert len(otm["source_ids"]) >= 2
+        assert len(otm["source_ids"]) == len(set(otm["source_ids"]))
+        assert otm["binding_ok"] is True
+        assert otm["binding_status"] == "pass"
+
+    # 該一對多論點同時位於多有效角度集合中（限制角度 + 多源）
+    otm = one_to_many_args[0]
+    assert otm["angle_coverage"]["angle_type"] == "limitation"
+    assert otm["angle_coverage"]["relation"]["kind"] == "unique"
+    assert otm["angle_coverage"]["effective_angle_count"] == 1
+    assert otm["source_ids"] == ["law:93", "law:94"]
+
+    # 逐筆核對：角度、來源、功能缺口、使用者價值 四者一致
+    angle_types_seen: set[str] = set()
+    angle_keys_seen: set[str] = set()
+    for arg in report["arguments"]:
+        seg = serialized["segments"][arg["segment_index"]]
+        assert seg["type"] == "supplement"
+        ac_report = arg["angle_coverage"]
+        ac_product = seg["angle_coverage"]
+
+        # (1) 角度：成品 ↔ 報告
+        assert ac_report["angle_type"] == ac_product["angle_type"] == seg["angle_type"]
+        assert ac_report["angle_key"] == ac_product["angle_key"] == seg["angle_key"]
+        assert list(ac_report["angle_labels"]) == list(ac_product["angle_labels"])
+        assert list(ac_report["angle_labels"]) == list(seg["angle_labels"])
+        assert list(ac_report["covered_facets"]) == list(ac_product["covered_facets"])
+        assert "angle:" + ac_report["angle_type"] in ac_report["covered_facets"]
+        assert "necessity:functional_gap" in ac_report["covered_facets"]
+        assert "necessity:user_value" in ac_report["covered_facets"]
+        assert "question" in ac_report["covered_facets"]
+        assert ac_report["relation"]["kind"] == "unique"
+        assert ac_report["effective_angle_count"] == 1
+        assert ac_report["duplicate_exclusion"]["excluded"] is False
+        assert arg["checks"]["has_angle_coverage"] is True
+        assert arg["checks"]["meets_angle_coverage_threshold"] is True
+        assert arg["checks"]["angle_facet_complete"] is True
+        angle_types_seen.add(ac_report["angle_type"])
+        angle_keys_seen.add(ac_report["angle_key"])
+
+        # (2) 來源：成品 ↔ 報告（含片段／位置）
+        source_ids = list(arg["source_ids"])
+        assert source_ids == list(seg["source_ids"])
+        assert source_ids == list(arg["trace_source_ids"])
+        assert arg["cardinality"] == seg["cardinality"]
+        assert arg["source_count"] == len(source_ids) >= 1
+        sources = list(seg["sources"])
+        assert [s["id"] for s in sources] == source_ids
+        for pos, sid in enumerate(source_ids):
+            assert sources[pos]["id"] == sid
+            fragment = sources[pos].get("content") or ""
+            assert fragment.strip(), f"來源 {sid!r} 片段空白"
+            assert f"【片段:{sid}】" in fragment
+        assert arg["checks"]["at_least_one_source"] is True
+        assert arg["checks"]["source_traceable"] is True
+        assert arg["checks"]["no_duplicate_sources"] is True
+        assert arg["checks"]["no_omitted_traces"] is True
+        assert arg["checks"]["no_extra_traces"] is True
+        assert arg["checks"]["no_empty_fragments"] is True
+
+        # (3) 功能缺口 + (4) 使用者價值：成品 ↔ 報告
+        assert arg["functional_gap"] == seg["functional_gap"]
+        assert arg["user_value"] == seg["user_value"]
+        assert arg["functional_gap"].strip()
+        assert arg["user_value"].strip()
+        assert arg["checks"]["has_functional_gap"] is True
+        assert arg["checks"]["has_user_value"] is True
+        assert arg["checks"]["angle_functional_gap_present"] is True
+        assert arg["checks"]["angle_user_value_present"] is True
+
+        # 四者齊備且綁定通過
+        assert arg["binding_ok"] is True
+        assert arg["binding_status"] == "pass"
+        assert all(arg["checks"].values())
+
+    # 跨論點：有效角度真的不同且不重複
+    assert angle_types_seen == {"definition", "limitation"}
+    assert len(angle_keys_seen) == 2
+
+    # 必要性具體值與寫入時一致
+    for arg, (fg, uv) in zip(report["arguments"], expected_necessity, strict=True):
+        assert arg["functional_gap"] == fg
+        assert arg["user_value"] == uv
+
+    # 反向索引：一對多來源皆指向限制論點
+    assert report["source_usage"] == {
+        "law:92": [0],
+        "law:93": [1],
+        "law:94": [1],
+    }
