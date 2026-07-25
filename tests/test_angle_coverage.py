@@ -10,6 +10,7 @@ from note_filler.angle_coverage import (
     is_angle_coverage_complete,
     normalize_angle_text,
     summarize_angle_coverage,
+    validate_argument_angle,
 )
 
 
@@ -250,3 +251,108 @@ def test_incomplete_coverage_rejected():
             "angle_key": "definition:x",
         }
     ) is False
+
+
+def test_validate_argument_angle_single_argument_missing_facets():
+    """單一論點缺少必要 facet 時驗證失敗，並指出具體缺失的 argument_id。"""
+    # 僅有 angle type facet，缺少 functional_gap、user_value、question
+    cov = {
+        "angle_type": "definition",
+        "angle_labels": ["definition"],
+        "covered_facets": ["angle:definition"],
+        "angle_key": "definition:test",
+    }
+    valid, missing = validate_argument_angle(cov, argument_id="argument:0")
+    assert valid is False
+    assert any("functional_gap" in m for m in missing)
+    assert any("user_value" in m for m in missing)
+    assert any("question" in m for m in missing)
+    assert all("argument:0" in m for m in missing)
+
+
+def test_validate_argument_angle_missing_functional_gap():
+    """缺少 functional_gap facet 時驗證失敗並明確指出。"""
+    cov = {
+        "angle_type": "definition",
+        "angle_labels": ["definition", "user_value"],
+        "covered_facets": ["angle:definition", "necessity:user_value", "question"],
+        "angle_key": "definition:test",
+    }
+    valid, missing = validate_argument_angle(cov, argument_id="argument:1")
+    assert valid is False
+    assert any("functional_gap" in m for m in missing)
+    assert all("argument:1" in m for m in missing)
+
+
+def test_validate_argument_angle_missing_user_value():
+    """缺少 user_value facet 時驗證失敗並明確指出。"""
+    cov = {
+        "angle_type": "definition",
+        "angle_labels": ["definition", "functional_gap"],
+        "covered_facets": ["angle:definition", "necessity:functional_gap", "question"],
+        "angle_key": "definition:test",
+    }
+    valid, missing = validate_argument_angle(cov, argument_id="argument:2")
+    assert valid is False
+    assert any("user_value" in m for m in missing)
+    assert all("argument:2" in m for m in missing)
+
+
+def test_validate_argument_angle_missing_question():
+    """缺少 question facet 時驗證失敗並明確指出。"""
+    cov = {
+        "angle_type": "definition",
+        "angle_labels": ["definition", "functional_gap", "user_value"],
+        "covered_facets": ["angle:definition", "necessity:functional_gap", "necessity:user_value"],
+        "angle_key": "definition:test",
+    }
+    valid, missing = validate_argument_angle(cov, argument_id="argument:3")
+    assert valid is False
+    assert any("question" in m for m in missing)
+    assert all("argument:3" in m for m in missing)
+
+
+def test_validate_argument_angle_complete_passes():
+    """具備四類必要 facet 時驗證通過。"""
+    cov = {
+        "angle_type": "definition",
+        "angle_labels": ["definition", "functional_gap", "user_value"],
+        "covered_facets": [
+            "angle:definition",
+            "necessity:functional_gap",
+            "necessity:user_value",
+            "question",
+        ],
+        "angle_key": "definition:test",
+    }
+    valid, missing = validate_argument_angle(cov, argument_id="argument:4")
+    assert valid is True
+    assert missing == []
+
+
+def test_validate_argument_angle_missing_angle_type():
+    """angle_type 為空時驗證失敗。"""
+    cov = {
+        "angle_type": "",
+        "angle_labels": [],
+        "covered_facets": ["necessity:functional_gap", "necessity:user_value", "question"],
+        "angle_key": "other:test",
+    }
+    valid, missing = validate_argument_angle(cov, argument_id="argument:5")
+    assert valid is False
+    assert any("angle type facet" in m for m in missing)
+    assert all("argument:5" in m for m in missing)
+
+
+def test_validate_argument_angle_mismatched_angle_type_facet():
+    """angle_type 與 angle:{type} facet 不符時驗證失敗。"""
+    cov = {
+        "angle_type": "definition",
+        "angle_labels": ["definition", "functional_gap", "user_value"],
+        "covered_facets": ["angle:limitation", "necessity:functional_gap", "necessity:user_value", "question"],
+        "angle_key": "definition:test",
+    }
+    valid, missing = validate_argument_angle(cov, argument_id="argument:6")
+    assert valid is False
+    assert any("angle:definition" in m for m in missing)
+    assert all("argument:6" in m for m in missing)

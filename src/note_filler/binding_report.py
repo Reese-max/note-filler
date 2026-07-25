@@ -21,6 +21,7 @@ from note_filler.angle_coverage import (
     coverage_from_segment,
     is_angle_coverage_complete,
     summarize_angle_coverage,
+    validate_argument_angle,
 )
 
 SCHEMA_ID = "note_filler.binding_report.v1"
@@ -75,6 +76,11 @@ REQUIRED_CHECK_KEYS = frozenset(
         # 角度覆蓋：論點須具備可機器讀的角度標籤／面向
         "has_angle_coverage",
         "meets_angle_coverage_threshold",
+        # 角度有效性：每個 argument 必須具備完整四類 facet（angle type、functional_gap、user_value、question）
+        "angle_facet_complete",
+        "angle_functional_gap_present",
+        "angle_user_value_present",
+        "angle_question_present",
     }
 )
 REQUIRED_SUMMARY_KEYS = frozenset(
@@ -242,6 +248,16 @@ def _evaluate_argument(seg, *, argument_index: int, segment_index: int) -> dict[
     angle_coverage = coverage_from_segment(seg)
     has_angle_coverage = is_angle_coverage_complete(angle_coverage)
 
+    # 論點 ID（用於錯誤訊息定位）
+    argument_id = getattr(seg, "argument_id", None) or f"argument:{argument_index}"
+
+    # 角度有效性驗證：每個 argument 必須具備四類必要 facet
+    angle_valid, angle_missing = validate_argument_angle(angle_coverage, argument_id=argument_id)
+    angle_facet_complete = angle_valid
+    angle_functional_gap_present = not any("functional_gap" in m for m in angle_missing)
+    angle_user_value_present = not any("user_value" in m for m in angle_missing)
+    angle_question_present = not any("question" in m for m in angle_missing)
+
     no_dup = len(source_ids) == len(set(source_ids))
     # 追溯側亦不得重複
     no_dup_trace = len(trace_ids) == len(set(trace_ids))
@@ -282,12 +298,17 @@ def _evaluate_argument(seg, *, argument_index: int, segment_index: int) -> dict[
         "has_functional_gap": has_functional_gap,
         "has_user_value": has_user_value,
         "has_angle_coverage": has_angle_coverage,
+        # 角度有效性檢查
+        "angle_facet_complete": angle_facet_complete,
+        "angle_functional_gap_present": angle_functional_gap_present,
+        "angle_user_value_present": angle_user_value_present,
+        "angle_question_present": angle_question_present,
         # 跨論點量測完成後覆寫。
         "meets_angle_coverage_threshold": True,
     }
 
     necessity_ok = has_functional_gap and has_user_value
-    angle_ok = has_angle_coverage
+    angle_ok = has_angle_coverage and angle_facet_complete
 
     # 有來源：核心綁定 + 對齊 + 片段非空 + 必要性雙視角 + 角度覆蓋皆須通過
     if source_ids:
@@ -620,6 +641,46 @@ def parse_binding_report(data: Any) -> dict[str, Any]:
             raise ValueError(
                 f"arguments[{i}] angle_coverage 完整但 checks.has_angle_coverage 未標 True"
             )
+
+        # 角度有效性檢查：每個 argument 必須具備完整四類 facet
+        if checks.get("angle_facet_complete") is not True:
+            if checks.get("angle_facet_complete") is not False:
+                raise ValueError(
+                    f"arguments[{i}] angle_facet_complete 應為 bool"
+                )
+            if arg["binding_ok"] is not False:
+                raise ValueError(
+                    f"arguments[{i}] angle_facet_complete 為 False 但 binding_ok 未標 False"
+                )
+            if arg["binding_status"] == "pass":
+                raise ValueError(
+                    f"arguments[{i}] angle_facet_complete 為 False 但 binding_status 為 pass"
+                )
+            # angle_facet_complete 為 False 時，至少有一個子檢查應為 False
+            sub_checks = [
+                checks.get("angle_functional_gap_present", True),
+                checks.get("angle_user_value_present", True),
+                checks.get("angle_question_present", True),
+            ]
+            if all(sub_checks):
+                raise ValueError(
+                    f"arguments[{i}] angle_facet_complete 為 False 但所有子檢查皆為 True，不一致"
+                )
+        elif checks.get("angle_facet_complete") is not True:
+            raise ValueError(
+                f"arguments[{i}] angle_facet_complete 為 True 但未正確標記"
+            )
+        else:
+            # angle_facet_complete 為 True 時，所有子檢查必須為 True
+            for sub_key in (
+                "angle_functional_gap_present",
+                "angle_user_value_present",
+                "angle_question_present",
+            ):
+                if checks.get(sub_key) is not True:
+                    raise ValueError(
+                        f"arguments[{i}] angle_facet_complete 為 True 但 {sub_key} 未標 True"
+                    )
 
     # 重新量測原始角度欄位，拒絕 relation／排除／有效數被竄改。
     base_coverages = [

@@ -6,6 +6,7 @@
 - 以 angle_key 判定 exact 重複；以 type + token 重疊判定同義
 - 依首次出現保留有效角度，輸出排除結果與筆記層門檻摘要
 - 純函式、無 LLM、可 deterministically 重現
+- 單一論點必須具備完整角度面向（angle type、functional_gap、user_value、question），缺一即判定失敗
 """
 from __future__ import annotations
 
@@ -14,6 +15,9 @@ import unicodedata
 from typing import Any, Literal
 
 AngleRelationKind = Literal["unique", "duplicate", "synonym"]
+
+# 必要角度面向：每個 argument 都必須包含這四類 facet
+REQUIRED_FACETS = frozenset({"angle_type", "functional_gap", "user_value", "question"})
 
 # 角度類型：順序即優先匹配順序（越具體越前）
 _ANGLE_TYPE_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
@@ -349,3 +353,59 @@ def is_angle_coverage_complete(cov: dict[str, Any] | None) -> bool:
     if not isinstance(key, str) or not key.strip():
         return False
     return True
+
+
+def validate_argument_angle(
+    cov: dict[str, Any] | None,
+    *,
+    argument_id: str,
+) -> tuple[bool, list[str]]:
+    """驗證單一 argument 的角度面向完整性。
+
+    每個 argument 必須具備四類必要 facet：
+      - angle:{type}       → 主角度類型
+      - necessity:functional_gap → 功能缺口
+      - necessity:user_value   → 使用者價值
+      - question             → 追問來源
+
+    回傳 (is_valid, missing_facets_list)。缺失時 missing_facets 列出缺少的 facet 識別碼。
+    """
+    missing: list[str] = []
+    if not isinstance(cov, dict):
+        return False, [f"{argument_id}: angle_coverage 缺失或非 dict"]
+
+    facets = cov.get("covered_facets")
+    if not isinstance(facets, list):
+        return False, [f"{argument_id}: covered_facets 缺失或非 list"]
+
+    facet_set = set(facets)
+
+    # 檢查 angle:{type} facet
+    at = cov.get("angle_type")
+    if not isinstance(at, str) or not at.strip():
+        missing.append(f"{argument_id}: 缺少 angle type facet (angle:...)")
+    elif f"angle:{at}" not in facet_set:
+        missing.append(f"{argument_id}: 缺少 angle type facet (angle:{at})")
+
+    # 檢查必要性雙視角 facet
+    if "necessity:functional_gap" not in facet_set:
+        missing.append(f"{argument_id}: 缺少 functional_gap facet (necessity:functional_gap)")
+    if "necessity:user_value" not in facet_set:
+        missing.append(f"{argument_id}: 缺少 user_value facet (necessity:user_value)")
+
+    # 檢查 question facet
+    if "question" not in facet_set:
+        missing.append(f"{argument_id}: 缺少 question facet")
+
+    # 檢查 functional_gap 與 user_value 來源欄位非空
+    fg = cov.get("angle_labels", [])
+    if not any(lbl == "functional_gap" for lbl in fg if isinstance(lbl, str)):
+        # angle_labels 應包含 functional_gap（由 build_angle_coverage 依 functional_gap 字串非空決定）
+        if not (cov.get("functional_gap") or "").strip():
+            missing.append(f"{argument_id}: functional_gap 欄位為空")
+
+    if not any(lbl == "user_value" for lbl in fg if isinstance(lbl, str)):
+        if not (cov.get("user_value") or "").strip():
+            missing.append(f"{argument_id}: user_value 欄位為空")
+
+    return len(missing) == 0, missing
