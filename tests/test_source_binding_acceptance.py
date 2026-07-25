@@ -14,7 +14,11 @@ from __future__ import annotations
 
 import pytest
 
-from note_filler.binding_report import build_binding_report, parse_binding_report
+from note_filler.binding_report import (
+    build_binding_report,
+    parse_binding_report,
+    write_binding_report,
+)
 from note_filler.correction import assemble_correction
 from note_filler.gap import Gap
 from note_filler.parse import Document, Paragraph
@@ -632,3 +636,199 @@ def test_failure_semantic_missing_binding_blocks_pipeline_return(tmp_path, monke
     assert "note_traceability_failed" in caplog.text
     # 不得在失敗後仍以為成功（無回傳值可 assert；raise 即為攔截）
     assert not (tmp_path / "bind-fail.訂正稿.md").exists()
+
+
+# ---- 最小驗收：直接讀序列化成品，逐筆論點↔來源 ID／片段／位置 ---------------
+
+
+def test_serialized_product_each_argument_source_id_maps_1to1_fragment_position(
+    tmp_path,
+):
+    """最小驗收：直接讀取成品序列化輸出，逐筆斷言來源綁定。
+
+    對每個論點（supplement）：
+      1. 至少一個來源
+      2. 來源 ID 與來源片段（content）／位置（list index）一一對上
+      3. sources / traceability / source_id 欄位無重複、無遺漏
+    不依賴 LLM／網路；只讀落盤 JSON + binding_report.json。
+    """
+    import json
+    from pathlib import Path
+
+    from note_filler.export import to_json
+    from note_filler.pipeline import require_traceable_note_product
+
+    # 每個來源 content 含可機器比對的唯一片段標記，便於 ID↔片段對位
+    src_a = Source(
+        id="law:92",
+        title="行政程序法第 92 條",
+        url=None,
+        level="A",
+        content="【片段:law:92】行政處分，係指行政機關就公法上具體事件所為之決定。",
+        fetched_date="2026-07-25",
+        doc_date=None,
+        distance=0.1,
+    )
+    src_b1 = Source(
+        id="law:93",
+        title="行政程序法第 93 條",
+        url=None,
+        level="A",
+        content="【片段:law:93】行政機關作成行政處分有裁量權時，得為附款。",
+        fetched_date="2026-07-25",
+        doc_date=None,
+        distance=0.2,
+    )
+    src_b2 = Source(
+        id="law:94",
+        title="行政程序法第 94 條",
+        url=None,
+        level="B",
+        content="【片段:law:94】前條之附款不得違背行政處分之目的。",
+        fetched_date="2026-07-25",
+        doc_date=None,
+        distance=0.3,
+    )
+    gap_a = Gap("定義？", "missing", "未說明")
+    gap_b = Gap("附款限制？", "missing", "未說明")
+    product = assemble_correction(
+        _doc(),
+        [gap_a, gap_b],
+        {gap_a.question: [src_a], gap_b.question: [src_b1, src_b2]},
+        {
+            gap_a.question: WrittenSupplement("定義[^1]。", [src_a.id]),
+            gap_b.question: WrittenSupplement(
+                "限制[^1][^2]。", [src_b1.id, src_b2.id]
+            ),
+        },
+        {
+            gap_a.question: cross_validate(gap_a.question, [src_a]),
+            gap_b.question: cross_validate(gap_b.question, [src_b1, src_b2]),
+        },
+    )
+    require_traceable_note_product(product, source="serialized-1to1-acceptance")
+
+    # 落盤：成品 JSON + 綁定報告（模擬交付後的序列化輸出）
+    out_dir = Path(tmp_path)
+    product_path = out_dir / "note_product.json"
+    product_path.write_text(
+        json.dumps(to_json(product), ensure_ascii=False, indent=2),
+        encoding="utf-8",
+        newline="\n",
+    )
+    report_path = write_binding_report(out_dir / "out.md", product)
+    assert report_path.is_file()
+    assert product_path.is_file()
+
+    # ---- 直接讀取序列化輸出（不再使用記憶體中的 product 物件）----
+    serialized = json.loads(product_path.read_text(encoding="utf-8"))
+    report = parse_binding_report(
+        json.loads(report_path.read_text(encoding="utf-8"))
+    )
+
+    segments = serialized["segments"]
+    arguments = report["arguments"]
+    assert len(arguments) >= 1, "至少一個論點"
+    assert report["summary"]["all_arguments_ok"] is True
+    assert report["summary"]["fail"] == 0
+
+    # 反向索引：每個來源 ID 應能對回至少一個論點 index
+    source_usage = report["source_usage"]
+    seen_source_ids: list[str] = []
+
+    for arg in arguments:
+        seg = segments[arg["segment_index"]]
+        assert seg["type"] == "supplement"
+        assert arg["argument_text"] == seg["text"]
+
+        source_ids = list(arg["source_ids"])
+        trace_ids = list(arg["trace_source_ids"])
+        sources = list(seg["sources"])
+        trace_refs = [
+            t for t in seg["traceability"] if t.get("kind") == "source"
+        ]
+
+        # (1) 每個論點至少一個來源
+        assert len(source_ids) >= 1, (
+            f"論點[{arg['argument_index']}] 缺少來源: {arg['argument_text']!r}"
+        )
+        assert arg["checks"]["at_least_one_source"] is True
+        assert len(sources) >= 1
+
+        # (2) 無重複
+        assert len(source_ids) == len(set(source_ids)), (
+            f"論點[{arg['argument_index']}] source_ids 重複: {source_ids}"
+        )
+        assert len(trace_ids) == len(set(trace_ids)), (
+            f"論點[{arg['argument_index']}] trace_source_ids 重複: {trace_ids}"
+        )
+        obj_ids = [s["id"] for s in sources]
+        assert len(obj_ids) == len(set(obj_ids)), (
+            f"論點[{arg['argument_index']}] sources 物件 id 重複: {obj_ids}"
+        )
+        assert arg["checks"]["no_duplicate_sources"] is True
+
+        # (3) 無遺漏／無多餘：source_ids ↔ sources ↔ trace 集合與順序一致
+        assert obj_ids == source_ids, (
+            f"論點[{arg['argument_index']}] sources 物件序與 source_ids 不一致: "
+            f"{obj_ids} vs {source_ids}"
+        )
+        assert trace_ids == source_ids, (
+            f"論點[{arg['argument_index']}] trace_source_ids 與 source_ids 不一致: "
+            f"{trace_ids} vs {source_ids}"
+        )
+        assert [t["id"] for t in trace_refs] == source_ids
+        assert arg["checks"]["no_omitted_traces"] is True
+        assert arg["checks"]["no_extra_traces"] is True
+        assert arg["checks"]["source_traceable"] is True
+
+        # source_id 欄位與 ID 列表對齊
+        expected_field = f"sources:{','.join(source_ids)}"
+        assert seg["source_id"] == expected_field
+        assert arg["source_id_field"] == expected_field
+        assert arg["checks"]["source_id_field_aligned"] is True
+
+        # (4) 來源 ID ↔ 來源片段／位置 一一對上
+        #     位置 = list index；片段 = Source.content 中的唯一標記
+        for pos, sid in enumerate(source_ids):
+            src_obj = sources[pos]
+            assert src_obj["id"] == sid, (
+                f"位置 {pos}：期望 id={sid!r}，實際 {src_obj['id']!r}"
+            )
+            assert trace_refs[pos]["id"] == sid, (
+                f"位置 {pos}：trace 未對上 id={sid!r}"
+            )
+            fragment = src_obj.get("content") or ""
+            assert fragment.strip(), (
+                f"來源 {sid!r} 缺少可驗證片段 content"
+            )
+            # 片段標記必須含自身 ID，確保 ID↔片段可對位、不與其他來源混淆
+            assert f"【片段:{sid}】" in fragment, (
+                f"來源 {sid!r} 的片段未含自身標記；content={fragment!r}"
+            )
+            # 不得誤掛其他來源的片段標記
+            for other in source_ids:
+                if other == sid:
+                    continue
+                assert f"【片段:{other}】" not in fragment, (
+                    f"來源 {sid!r} 片段誤含其他 id 標記 {other!r}"
+                )
+
+            # 反向索引：此 source_id 的 usage 必須包含本論點
+            assert sid in source_usage, f"source_usage 遺漏 {sid!r}"
+            assert arg["argument_index"] in source_usage[sid], (
+                f"source_usage[{sid!r}] 未含 argument_index="
+                f"{arg['argument_index']}"
+            )
+            seen_source_ids.append(sid)
+
+        assert arg["binding_ok"] is True
+        assert arg["binding_status"] == "pass"
+        assert arg["source_count"] == len(source_ids)
+        assert arg["cardinality"] in ("one_to_one", "one_to_many")
+
+    # 全域：source_usage 的 key 集合 = 所有論點用過的來源（無重複遺漏）
+    assert set(source_usage) == set(seen_source_ids)
+    # 一對一 + 一對多各至少一筆（混合情境鎖定）
+    assert report["summary"]["one_to_one"] >= 1
+    assert report["summary"]["one_to_many"] >= 1
