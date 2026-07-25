@@ -388,6 +388,9 @@ class TestOutputConsistency:
             # Skip new argument_id line
             if stripped.startswith("> **論點ID**"):
                 continue
+            # Skip angle coverage line
+            if stripped.startswith("> **角度覆蓋**"):
+                continue
             md_originals.append(stripped)
 
         # Original paragraphs from docx (first N paragraphs where N = original count)
@@ -402,6 +405,10 @@ class TestOutputConsistency:
             if stripped.startswith("功能缺口："):
                 continue
             if stripped.startswith("使用者價值："):
+                continue
+            if stripped.startswith("論點ID："):
+                continue
+            if stripped.startswith("角度覆蓋："):
                 continue
             if stripped.startswith("追溯："):
                 continue

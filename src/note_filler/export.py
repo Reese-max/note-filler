@@ -4,6 +4,7 @@ from dataclasses import asdict
 
 from typing import Literal
 
+from note_filler.angle_coverage import coverage_from_segment
 from note_filler.binding_report import build_binding_report
 from note_filler.citation_formatter import build_reference_lines
 from note_filler.correction import CorrectionDoc
@@ -68,10 +69,35 @@ def to_json(doc: CorrectionDoc) -> dict:
             ids = [s.id for s in getattr(seg, "sources", [])]
         return ids
 
+    # 以 binding_report 的 angle_coverage（含 relation）對齊 segment 輸出
+    angle_by_seg_index: dict[int, dict] = {
+        a["segment_index"]: a["angle_coverage"] for a in report["arguments"]
+    }
+
+    def _seg_angle_coverage(seg, seg_index: int) -> dict:
+        if seg_index in angle_by_seg_index:
+            return angle_by_seg_index[seg_index]
+        # original 等無論點：仍輸出可解析空結構
+        if getattr(seg, "type", None) != "supplement":
+            return {
+                "angle_type": getattr(seg, "angle_type", "") or "",
+                "angle_labels": list(getattr(seg, "angle_labels", None) or []),
+                "covered_facets": [],
+                "angle_key": getattr(seg, "angle_key", "") or "",
+                "relation": {
+                    "kind": "unique",
+                    "related_argument_indices": [],
+                    "duplicate_of": [],
+                    "synonym_of": [],
+                },
+            }
+        return coverage_from_segment(seg)
+
     return {
         "source_path": doc.original.source_path,
         "full_text": doc.original.full_text,
         "binding_summary": binding_summary,
+        "angle_coverage_summary": dict(report.get("angle_coverage_summary") or {}),
         "segments": [
             {
                 "type": seg.type,
@@ -87,8 +113,12 @@ def to_json(doc: CorrectionDoc) -> dict:
                 "functional_gap": getattr(seg, "functional_gap", ""),
                 "user_value": getattr(seg, "user_value", ""),
                 "argument_id": getattr(seg, "argument_id", ""),
+                "angle_type": getattr(seg, "angle_type", "") or "",
+                "angle_labels": list(getattr(seg, "angle_labels", None) or []),
+                "angle_key": getattr(seg, "angle_key", "") or "",
+                "angle_coverage": _seg_angle_coverage(seg, i),
             }
-            for seg in doc.segments
+            for i, seg in enumerate(doc.segments)
         ],
     }
 
@@ -156,6 +186,17 @@ def to_markdown(doc: CorrectionDoc) -> str:
         argument_id = getattr(seg, "argument_id", "")
         if argument_id:
             body.append(f"> **論點ID**：{argument_id}")
+
+        angle_type = getattr(seg, "angle_type", "") or ""
+        angle_labels = list(getattr(seg, "angle_labels", None) or [])
+        angle_key = getattr(seg, "angle_key", "") or ""
+        if angle_type or angle_labels or angle_key:
+            labels_s = ",".join(angle_labels) if angle_labels else ""
+            body.append(
+                f"> **角度覆蓋**：type={angle_type}"
+                f"；labels={labels_s}"
+                f"；key={angle_key}"
+            )
 
     body.extend(original_traces)
 
@@ -243,6 +284,17 @@ def to_docx(doc: CorrectionDoc, path: str) -> None:
         argument_id = getattr(seg, "argument_id", "")
         if argument_id:
             out.add_paragraph(f"論點ID：{argument_id}")
+
+        angle_type = getattr(seg, "angle_type", "") or ""
+        angle_labels = list(getattr(seg, "angle_labels", None) or [])
+        angle_key = getattr(seg, "angle_key", "") or ""
+        if angle_type or angle_labels or angle_key:
+            labels_s = ",".join(angle_labels) if angle_labels else ""
+            out.add_paragraph(
+                f"角度覆蓋：type={angle_type}"
+                f"；labels={labels_s}"
+                f"；key={angle_key}"
+            )
 
     for trace in original_traces:
         out.add_paragraph(f"追溯：{trace}")

@@ -16,6 +16,13 @@ import json
 from pathlib import Path
 from typing import Any, Literal
 
+from note_filler.angle_coverage import (
+    attach_relations,
+    coverage_from_segment,
+    is_angle_coverage_complete,
+    summarize_angle_coverage,
+)
+
 SCHEMA_ID = "note_filler.binding_report.v1"
 BINDING_REPORT_NAME = "binding_report.json"
 
@@ -31,6 +38,7 @@ REQUIRED_TOP_KEYS = frozenset(
         "summary",
         "arguments",
         "source_usage",
+        "angle_coverage_summary",
     }
 )
 REQUIRED_ARGUMENT_KEYS = frozenset(
@@ -49,6 +57,7 @@ REQUIRED_ARGUMENT_KEYS = frozenset(
         "binding_ok",
         "functional_gap",
         "user_value",
+        "angle_coverage",
     }
 )
 REQUIRED_CHECK_KEYS = frozenset(
@@ -63,6 +72,8 @@ REQUIRED_CHECK_KEYS = frozenset(
         # 必要性雙視角：來源可追溯仍不得遺失功能缺口／使用者價值
         "has_functional_gap",
         "has_user_value",
+        # 角度覆蓋：論點須具備可機器讀的角度標籤／面向
+        "has_angle_coverage",
     }
 )
 REQUIRED_SUMMARY_KEYS = frozenset(
@@ -75,6 +86,32 @@ REQUIRED_SUMMARY_KEYS = frozenset(
         "pending_evidence",
         "all_sourced_arguments_ok",
         "all_arguments_ok",
+    }
+)
+REQUIRED_ANGLE_COVERAGE_KEYS = frozenset(
+    {
+        "angle_type",
+        "angle_labels",
+        "covered_facets",
+        "angle_key",
+        "relation",
+    }
+)
+REQUIRED_ANGLE_RELATION_KEYS = frozenset(
+    {
+        "kind",
+        "related_argument_indices",
+        "duplicate_of",
+        "synonym_of",
+    }
+)
+REQUIRED_ANGLE_SUMMARY_KEYS = frozenset(
+    {
+        "unique_angle_types",
+        "covered_facets_union",
+        "duplicate_pairs",
+        "synonym_pairs",
+        "argument_count_with_angles",
     }
 )
 
@@ -163,6 +200,10 @@ def _evaluate_argument(seg, *, argument_index: int, segment_index: int) -> dict[
     has_functional_gap = bool(functional_gap.strip())
     has_user_value = bool(user_value.strip())
 
+    # 角度覆蓋（暫不含 relation；整份 arguments 組齊後再 attach）
+    angle_coverage = coverage_from_segment(seg)
+    has_angle_coverage = is_angle_coverage_complete(angle_coverage)
+
     no_dup = len(source_ids) == len(set(source_ids))
     # 追溯側亦不得重複
     no_dup_trace = len(trace_ids) == len(set(trace_ids))
@@ -202,11 +243,13 @@ def _evaluate_argument(seg, *, argument_index: int, segment_index: int) -> dict[
         "no_empty_fragments": no_empty_fragments,
         "has_functional_gap": has_functional_gap,
         "has_user_value": has_user_value,
+        "has_angle_coverage": has_angle_coverage,
     }
 
     necessity_ok = has_functional_gap and has_user_value
+    angle_ok = has_angle_coverage
 
-    # 有來源：核心綁定 + 對齊 + 片段非空 + 必要性雙視角皆須通過
+    # 有來源：核心綁定 + 對齊 + 片段非空 + 必要性雙視角 + 角度覆蓋皆須通過
     if source_ids:
         binding_ok = all(
             (
@@ -218,16 +261,18 @@ def _evaluate_argument(seg, *, argument_index: int, segment_index: int) -> dict[
                 checks["source_id_field_aligned"],
                 checks["no_empty_fragments"],
                 necessity_ok,
+                angle_ok,
             )
         )
         status: BindingStatus = "pass" if binding_ok else "fail"
     else:
-        # 無來源：必須為 pending 且 processing_record 可追溯，且必要性視角仍在
+        # 無來源：必須為 pending 且 processing_record 可追溯，且必要性／角度仍在
         intentional_pending = (
             confidence == "pending_evidence"
             and source_traceable
             and source_id_aligned
             and necessity_ok
+            and angle_ok
         )
         binding_ok = intentional_pending
         status = "pending_evidence" if intentional_pending else "fail"
@@ -247,6 +292,7 @@ def _evaluate_argument(seg, *, argument_index: int, segment_index: int) -> dict[
         "binding_ok": binding_ok,
         "functional_gap": functional_gap,
         "user_value": user_value,
+        "angle_coverage": angle_coverage,
     }
 
 
@@ -268,6 +314,14 @@ def build_binding_report(correction) -> dict[str, Any]:
             _evaluate_argument(seg, argument_index=arg_i, segment_index=seg_i)
         )
         arg_i += 1
+
+    # 角度覆蓋：跨論點判定重複／同義，並寫回 relation
+    bare_coverages = [dict(a["angle_coverage"]) for a in arguments]
+    with_relations = attach_relations(bare_coverages)
+    for a, cov in zip(arguments, with_relations):
+        a["angle_coverage"] = cov
+        # relation 不影響 binding_ok；僅 has_angle_coverage 結構完整性為閘
+    angle_summary = summarize_angle_coverage(with_relations)
 
     one_to_one = sum(1 for a in arguments if a["cardinality"] == "one_to_one")
     one_to_many = sum(1 for a in arguments if a["cardinality"] == "one_to_many")
@@ -305,6 +359,7 @@ def build_binding_report(correction) -> dict[str, Any]:
         },
         "arguments": arguments,
         "source_usage": source_usage,
+        "angle_coverage_summary": angle_summary,
     }
 
 
@@ -435,6 +490,81 @@ def parse_binding_report(data: Any) -> dict[str, Any]:
                     f"arguments[{i}] user_value 為空欄但 binding_status 為 pass"
                 )
 
+        # 角度覆蓋：固定結構 + 空欄語意
+        ac = arg.get("angle_coverage")
+        _reject_key_drift(
+            ac, REQUIRED_ANGLE_COVERAGE_KEYS, where=f"arguments[{i}].angle_coverage"
+        )
+        if not isinstance(ac.get("angle_type"), str) or not ac["angle_type"].strip():
+            raise ValueError(f"arguments[{i}].angle_coverage.angle_type 不可為空欄")
+        if not isinstance(ac.get("angle_labels"), list) or not all(
+            isinstance(x, str) and x.strip() for x in ac["angle_labels"]
+        ):
+            raise ValueError(
+                f"arguments[{i}].angle_coverage.angle_labels 必須為非空 list[str]"
+            )
+        if not ac["angle_labels"]:
+            raise ValueError(
+                f"arguments[{i}].angle_coverage.angle_labels 不可為空清單"
+            )
+        if not isinstance(ac.get("covered_facets"), list) or not all(
+            isinstance(x, str) and x.strip() for x in ac["covered_facets"]
+        ):
+            raise ValueError(
+                f"arguments[{i}].angle_coverage.covered_facets 必須為非空 list[str]"
+            )
+        if not ac["covered_facets"]:
+            raise ValueError(
+                f"arguments[{i}].angle_coverage.covered_facets 不可為空清單"
+            )
+        if not isinstance(ac.get("angle_key"), str) or not ac["angle_key"].strip():
+            raise ValueError(f"arguments[{i}].angle_coverage.angle_key 不可為空欄")
+        rel = ac.get("relation")
+        _reject_key_drift(
+            rel,
+            REQUIRED_ANGLE_RELATION_KEYS,
+            where=f"arguments[{i}].angle_coverage.relation",
+        )
+        if rel.get("kind") not in ("unique", "duplicate", "synonym"):
+            raise ValueError(
+                f"arguments[{i}].angle_coverage.relation.kind 非法: {rel.get('kind')!r}"
+            )
+        for rk in (
+            "related_argument_indices",
+            "duplicate_of",
+            "synonym_of",
+        ):
+            rv = rel.get(rk)
+            if not isinstance(rv, list) or not all(isinstance(x, int) for x in rv):
+                raise ValueError(
+                    f"arguments[{i}].angle_coverage.relation.{rk} 必須為 list[int]"
+                )
+        complete = is_angle_coverage_complete(
+            {
+                "angle_type": ac["angle_type"],
+                "angle_labels": ac["angle_labels"],
+                "covered_facets": ac["covered_facets"],
+                "angle_key": ac["angle_key"],
+            }
+        )
+        if not complete:
+            if checks.get("has_angle_coverage") is not False:
+                raise ValueError(
+                    f"arguments[{i}] angle_coverage 不完整但 checks.has_angle_coverage 未標 False"
+                )
+            if arg["binding_ok"] is not False:
+                raise ValueError(
+                    f"arguments[{i}] angle_coverage 不完整但 binding_ok 未標 False"
+                )
+            if arg["binding_status"] == "pass":
+                raise ValueError(
+                    f"arguments[{i}] angle_coverage 不完整但 binding_status 為 pass"
+                )
+        elif checks.get("has_angle_coverage") is not True:
+            raise ValueError(
+                f"arguments[{i}] angle_coverage 完整但 checks.has_angle_coverage 未標 True"
+            )
+
     # 校驗 source_usage 反向索引
     su = data.get("source_usage")
     if not isinstance(su, dict):
@@ -447,6 +577,29 @@ def parse_binding_report(data: Any) -> dict[str, Any]:
     if su != expected_su:
         raise ValueError(
             f"source_usage 與 arguments 不一致: 期望 {expected_su}，實際 {su}"
+        )
+
+    # 角度覆蓋摘要
+    acs = data.get("angle_coverage_summary")
+    _reject_key_drift(acs, REQUIRED_ANGLE_SUMMARY_KEYS, where="angle_coverage_summary")
+    if not isinstance(acs.get("unique_angle_types"), list):
+        raise ValueError("angle_coverage_summary.unique_angle_types 必須為 list")
+    if not isinstance(acs.get("covered_facets_union"), list):
+        raise ValueError("angle_coverage_summary.covered_facets_union 必須為 list")
+    if not isinstance(acs.get("duplicate_pairs"), list):
+        raise ValueError("angle_coverage_summary.duplicate_pairs 必須為 list")
+    if not isinstance(acs.get("synonym_pairs"), list):
+        raise ValueError("angle_coverage_summary.synonym_pairs 必須為 list")
+    if (
+        not isinstance(acs.get("argument_count_with_angles"), int)
+        or acs["argument_count_with_angles"] < 0
+    ):
+        raise ValueError(
+            "angle_coverage_summary.argument_count_with_angles 必須為非負整數"
+        )
+    if acs["argument_count_with_angles"] != data["argument_count"]:
+        raise ValueError(
+            "angle_coverage_summary.argument_count_with_angles 必須等於 argument_count"
         )
 
     return data

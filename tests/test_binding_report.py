@@ -467,6 +467,7 @@ def test_each_argument_exposes_three_core_checks():
             assert c["no_extra_traces"] is True
             assert c["has_functional_gap"] is True
             assert c["has_user_value"] is True
+            assert c["has_angle_coverage"] is True
 
 
 # ---- 負例：缺來源／來源未對上 → binding_ok False ----------------------------
@@ -684,3 +685,168 @@ def test_source_usage_rejects_invalid_indices():
     report["source_usage"] = {"law:92": [99]}
     with pytest.raises(ValueError, match="source_usage 與 arguments 不一致"):
         parse_binding_report(report)
+
+
+# ---- 角度覆蓋（angle_coverage）-----------------------------------------------
+
+
+def test_argument_exposes_angle_coverage_structure():
+    """每個論點必須含可機器解析的 angle_coverage（type／labels／facets／key／relation）。"""
+    from note_filler.binding_report import (
+        REQUIRED_ANGLE_COVERAGE_KEYS,
+        REQUIRED_ANGLE_RELATION_KEYS,
+        REQUIRED_ANGLE_SUMMARY_KEYS,
+    )
+
+    report = parse_binding_report(build_binding_report(_assemble_mixed()))
+    assert set(report["angle_coverage_summary"]) == set(REQUIRED_ANGLE_SUMMARY_KEYS)
+    assert report["angle_coverage_summary"]["argument_count_with_angles"] == 2
+
+    for arg in report["arguments"]:
+        ac = arg["angle_coverage"]
+        assert set(ac) == set(REQUIRED_ANGLE_COVERAGE_KEYS)
+        assert ac["angle_type"].strip()
+        assert isinstance(ac["angle_labels"], list) and ac["angle_labels"]
+        assert isinstance(ac["covered_facets"], list) and ac["covered_facets"]
+        assert ac["angle_key"].strip()
+        assert set(ac["relation"]) == set(REQUIRED_ANGLE_RELATION_KEYS)
+        assert ac["relation"]["kind"] in ("unique", "duplicate", "synonym")
+        assert arg["checks"]["has_angle_coverage"] is True
+
+
+def test_assemble_classifies_definition_and_limitation_angles():
+    """assemble 依問題關鍵詞寫入 angle_type／labels／key，可讀出不同面向。"""
+    product = _assemble_mixed()  # 定義？ / 附款限制？
+    supps = [s for s in product.segments if s.type == "supplement"]
+    assert supps[0].angle_type == "definition"
+    assert "definition" in supps[0].angle_labels
+    assert "functional_gap" in supps[0].angle_labels
+    assert "user_value" in supps[0].angle_labels
+    assert supps[0].angle_key.startswith("definition:")
+
+    assert supps[1].angle_type == "limitation"
+    assert "limitation" in supps[1].angle_labels
+    assert supps[1].angle_key.startswith("limitation:")
+
+    report = parse_binding_report(build_binding_report(product))
+    types = {a["angle_coverage"]["angle_type"] for a in report["arguments"]}
+    assert types == {"definition", "limitation"}
+    facets_union = report["angle_coverage_summary"]["covered_facets_union"]
+    assert "angle:definition" in facets_union
+    assert "angle:limitation" in facets_union
+    assert "necessity:functional_gap" in facets_union
+    assert "necessity:user_value" in facets_union
+
+
+def test_angle_duplicate_detection_same_key():
+    """相同 angle_key 的兩個論點 → relation.kind=duplicate，summary 有 pair。"""
+    src_a = _source("law:92", "行政程序法第 92 條")
+    src_b = _source("law:93", "行政程序法第 93 條")
+    # 標點差異會被 normalize 成同一 key（「？」vs「!」）
+    gap_a = Gap("行政處分如何定義？", "missing", "未說明 A")
+    gap_b = Gap("行政處分如何定義!", "missing", "未說明 B")
+    product = assemble_correction(
+        _doc(),
+        [gap_a, gap_b],
+        {gap_a.question: [src_a], gap_b.question: [src_b]},
+        {
+            gap_a.question: WrittenSupplement("定義 A[^1]。", [src_a.id]),
+            gap_b.question: WrittenSupplement("定義 B[^1]。", [src_b.id]),
+        },
+        {
+            gap_a.question: cross_validate(gap_a.question, [src_a]),
+            gap_b.question: cross_validate(gap_b.question, [src_b]),
+        },
+    )
+    supps = [s for s in product.segments if s.type == "supplement"]
+    assert len(supps) == 2
+    assert supps[0].angle_key == supps[1].angle_key
+    assert supps[0].angle_key.startswith("definition:")
+
+    report = parse_binding_report(build_binding_report(product))
+    assert (
+        report["arguments"][0]["angle_coverage"]["angle_key"]
+        == report["arguments"][1]["angle_coverage"]["angle_key"]
+    )
+    assert report["arguments"][0]["angle_coverage"]["relation"]["kind"] == "duplicate"
+    assert report["arguments"][1]["angle_coverage"]["relation"]["kind"] == "duplicate"
+    assert 1 in report["arguments"][0]["angle_coverage"]["relation"]["duplicate_of"]
+    assert 0 in report["arguments"][1]["angle_coverage"]["relation"]["duplicate_of"]
+    assert [0, 1] in report["angle_coverage_summary"]["duplicate_pairs"]
+
+
+def test_angle_synonym_detection_same_type_overlapping_tokens():
+    """同 angle_type、不同 key、高 token 重疊 → synonym。"""
+    src_a = _source("law:92", "行政程序法第 92 條")
+    src_b = _source("law:93", "行政程序法第 93 條")
+    gap_a = Gap("行政處分之定義為何？", "missing", "未說明定義")
+    gap_b = Gap("行政處分定義如何說明？", "missing", "未說明定義細節")
+    product = assemble_correction(
+        _doc(),
+        [gap_a, gap_b],
+        {gap_a.question: [src_a], gap_b.question: [src_b]},
+        {
+            gap_a.question: WrittenSupplement("定義一[^1]。", [src_a.id]),
+            gap_b.question: WrittenSupplement("定義二[^1]。", [src_b.id]),
+        },
+        {
+            gap_a.question: cross_validate(gap_a.question, [src_a]),
+            gap_b.question: cross_validate(gap_b.question, [src_b]),
+        },
+    )
+    report = parse_binding_report(build_binding_report(product))
+    a0 = report["arguments"][0]["angle_coverage"]
+    a1 = report["arguments"][1]["angle_coverage"]
+    assert a0["angle_type"] == a1["angle_type"] == "definition"
+    assert a0["angle_key"] != a1["angle_key"]
+    assert a0["relation"]["kind"] == "synonym"
+    assert a1["relation"]["kind"] == "synonym"
+    assert [0, 1] in report["angle_coverage_summary"]["synonym_pairs"]
+
+
+def test_parse_rejects_missing_angle_coverage_key():
+    """缺 angle_coverage 欄位 → 拒絕。"""
+    report = build_binding_report(_assemble_one_to_one())
+    del report["arguments"][0]["angle_coverage"]
+    with pytest.raises(ValueError, match="缺少欄位"):
+        parse_binding_report(report)
+
+
+def test_parse_rejects_missing_angle_coverage_summary():
+    """缺 angle_coverage_summary → 拒絕。"""
+    report = build_binding_report(_assemble_one_to_one())
+    del report["angle_coverage_summary"]
+    with pytest.raises(ValueError, match="缺少欄位"):
+        parse_binding_report(report)
+
+
+def test_parse_rejects_empty_angle_type():
+    """angle_type 空欄 → 拒絕。"""
+    report = build_binding_report(_assemble_one_to_one())
+    report["arguments"][0]["angle_coverage"]["angle_type"] = "  "
+    with pytest.raises(ValueError, match="angle_type 不可為空欄"):
+        parse_binding_report(report)
+
+
+def test_parse_rejects_angle_coverage_field_drift():
+    """angle_coverage 多出未知鍵 → 拒絕。"""
+    report = build_binding_report(_assemble_one_to_one())
+    report["arguments"][0]["angle_coverage"]["legacy_score"] = 1
+    with pytest.raises(ValueError, match="欄位漂移"):
+        parse_binding_report(report)
+
+
+def test_json_export_includes_angle_coverage():
+    """to_json 序列化每段含 angle_coverage，頂層含 angle_coverage_summary。"""
+    data = to_json(_assemble_mixed())
+    assert "angle_coverage_summary" in data
+    assert isinstance(data["angle_coverage_summary"].get("unique_angle_types"), list)
+    for seg in data["segments"]:
+        assert "angle_coverage" in seg
+        if seg["type"] == "supplement":
+            ac = seg["angle_coverage"]
+            assert ac["angle_type"].strip()
+            assert ac["angle_labels"]
+            assert ac["covered_facets"]
+            assert ac["angle_key"].strip()
+            assert "relation" in ac

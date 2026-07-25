@@ -6,6 +6,7 @@ import re
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Literal
 
+from note_filler.angle_coverage import build_angle_coverage
 from note_filler.audit import audit_event
 
 if TYPE_CHECKING:                      # 僅型別提示,執行期零硬耦合(結構化 attr 讀取)
@@ -35,6 +36,10 @@ class Segment:
     functional_gap: str = ""
     user_value: str = ""
     argument_id: str = ""
+    # 角度覆蓋：主類型／標籤／精確鍵（序列化時組成 angle_coverage）
+    angle_type: str = ""
+    angle_labels: list[str] = field(default_factory=list)
+    angle_key: str = ""
 
 
 @dataclass
@@ -107,6 +112,9 @@ def assemble_correction(doc, gaps, retrieved, written, validations) -> Correctio
                 functional_gap="",
                 user_value="",
                 argument_id="",
+                angle_type="",
+                angle_labels=[],
+                angle_key="",
             )
         )
 
@@ -172,6 +180,17 @@ def assemble_correction(doc, gaps, retrieved, written, validations) -> Correctio
 
         argument_id = f"argument:{arg_idx}"
 
+        # 必要性雙視角：功能缺口取 gap.reason；使用者價值由問題推導
+        functional_gap = gap.reason
+        user_value = f"補齊讀者對「{q}」所需的說明"
+        # 角度覆蓋：依問題文字分類類型／標籤／鍵，供重複／同義機器判定
+        angle_cov = build_angle_coverage(
+            question=q,
+            argument_text=text,
+            functional_gap=functional_gap,
+            user_value=user_value,
+        )
+
         segments.append(
             Segment(
                 type="supplement",
@@ -195,9 +214,12 @@ def assemble_correction(doc, gaps, retrieved, written, validations) -> Correctio
                 source_ids=list(used_ids) if used_ids else [],
                 # 必要性雙視角：功能缺口取 gap.reason；使用者價值由問題推導，
                 # 避免後續只掛來源卻遺失「為何需要此論點」的視角。
-                functional_gap=gap.reason,
-                user_value=f"補齊讀者對「{q}」所需的說明",
+                functional_gap=functional_gap,
+                user_value=user_value,
                 argument_id=argument_id,
+                angle_type=angle_cov["angle_type"],
+                angle_labels=list(angle_cov["angle_labels"]),
+                angle_key=angle_cov["angle_key"],
             )
         )
 

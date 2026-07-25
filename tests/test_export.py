@@ -208,6 +208,12 @@ def test_to_json_contains_source_ids_per_segment():
         assert isinstance(seg["user_value"], str), f"segment[{i}] user_value 須為 str"
         assert "argument_id" in seg, f"segment[{i}] 缺少 argument_id"
         assert isinstance(seg["argument_id"], str), f"segment[{i}] argument_id 須為 str"
+        assert "angle_coverage" in seg, f"segment[{i}] 缺少 angle_coverage"
+        assert isinstance(seg["angle_coverage"], dict), f"segment[{i}] angle_coverage 須為 dict"
+        assert "angle_type" in seg, f"segment[{i}] 缺少 angle_type"
+        assert "angle_labels" in seg, f"segment[{i}] 缺少 angle_labels"
+        assert "angle_key" in seg, f"segment[{i}] 缺少 angle_key"
+    assert "angle_coverage_summary" in data
     # _sample_doc: seg[0]=original → none(0源), seg[1]=supplement 2源→ one_to_many
     assert data["segments"][0]["cardinality"] == "none"
     assert data["segments"][0]["source_ids"] == []
@@ -243,6 +249,21 @@ def test_to_markdown_contains_machine_parseable_source_list():
     assert "pending（無來源）" in source_lines[1], (
         f"第二筆應標示 pending: {source_lines[1]!r}"
     )
+
+
+def test_to_markdown_contains_angle_coverage_line():
+    """Markdown 輸出：有角度欄位的 supplement 須含可解析角度覆蓋行。"""
+    doc = _sample_doc()
+    # 手建 fixture 預設無 angle_*；補上以驗證序列化輸出
+    doc.segments[1].angle_type = "definition"
+    doc.segments[1].angle_labels = ["definition", "functional_gap", "user_value"]
+    doc.segments[1].angle_key = "definition:行政處分如何定義"
+    md = to_markdown(doc)
+    angle_lines = [ln for ln in md.splitlines() if "> **角度覆蓋**" in ln]
+    assert len(angle_lines) >= 1
+    assert "type=definition" in angle_lines[0]
+    assert "labels=definition,functional_gap,user_value" in angle_lines[0]
+    assert "key=definition:" in angle_lines[0]
 
 
 def test_to_docx_contains_machine_parseable_source_list(tmp_path):
