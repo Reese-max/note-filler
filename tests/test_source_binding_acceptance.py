@@ -1375,6 +1375,28 @@ def _shared_topic_token(summary: str, functional_gap: str, user_value: str) -> s
     return None
 
 
+def _assert_triad_acceptance(
+    argument_id: str,
+    summary: str,
+    functional_gap: str,
+    user_value: str,
+) -> None:
+    """驗收三元必填且摘要確實呼應功能缺口與使用者價值。"""
+    fields = {
+        "summary": summary,
+        "functional_gap": functional_gap,
+        "user_value": user_value,
+    }
+    missing = [name for name, value in fields.items() if not value.strip()]
+    if missing:
+        raise AssertionError(f"{argument_id}：缺少欄位 {'、'.join(missing)}")
+    if _shared_topic_token(summary, functional_gap, user_value) is None:
+        raise AssertionError(
+            f"{argument_id}：內容不一致位置 summary 未反映 functional_gap／user_value；"
+            f"summary={summary!r}；functional_gap={functional_gap!r}；user_value={user_value!r}"
+        )
+
+
 def test_final_output_each_argument_triad_coheres_with_same_source_and_argument(
     tmp_path,
 ):
@@ -1505,9 +1527,7 @@ def test_final_output_each_argument_triad_coheres_with_same_source_and_argument(
         summary_plain = re.sub(r"\[\^\d+\]", "", summary).strip()
         fg = (arg["functional_gap"] or "").strip()
         uv = (arg["user_value"] or "").strip()
-        assert summary_plain, f"{exp['argument_id']} 缺少摘要"
-        assert fg, f"{exp['argument_id']} 缺少功能缺口"
-        assert uv, f"{exp['argument_id']} 缺少使用者價值"
+        _assert_triad_acceptance(exp["argument_id"], summary_plain, fg, uv)
         assert "（未提供）" not in fg and "（未提供）" not in uv
 
         # 成品 segment ↔ binding_report 同論點一致
@@ -1521,11 +1541,6 @@ def test_final_output_each_argument_triad_coheres_with_same_source_and_argument(
         assert exp["topic"] in summary_plain
         assert exp["topic"] in fg
         assert exp["topic"] in uv
-        shared = _shared_topic_token(summary_plain, fg, uv)
-        assert shared is not None, (
-            f"{exp['argument_id']} 三元無共同主題詞："
-            f"摘要={summary_plain!r} gap={fg!r} value={uv!r}"
-        )
         # user_value 須回扣同一問題（與摘要／缺口同論點）
         assert "補齊讀者對「" in uv and "」所需的說明" in uv
 
@@ -1647,3 +1662,29 @@ def test_final_output_triad_missing_any_field_fails_explicitly(
             parse_binding_report(raw_report)
         with pytest.raises(ValueError, match="argument_text 不可為空欄"):
             write_binding_report(out, product)
+
+
+def test_triad_acceptance_rejects_summary_with_missing_necessity_fields():
+    """負例：摘要存在，但功能缺口與使用者價值皆缺失。"""
+    with pytest.raises(AssertionError) as exc_info:
+        _assert_triad_acceptance("argument:0", "行政處分定義。", "", "   ")
+
+    assert str(exc_info.value) == (
+        "argument:0：缺少欄位 functional_gap、user_value"
+    )
+
+
+def test_triad_acceptance_rejects_summary_not_reflecting_both_perspectives():
+    """負例：兩個必要性視角存在，但摘要內容與兩者不一致。"""
+    with pytest.raises(AssertionError) as exc_info:
+        _assert_triad_acceptance(
+            "argument:0",
+            "咖啡豆保存方式。",
+            "原稿未定義行政處分",
+            "補齊讀者對行政處分定義及適用範圍的理解",
+        )
+
+    assert (
+        "argument:0：內容不一致位置 summary 未反映 functional_gap／user_value"
+        in str(exc_info.value)
+    )
