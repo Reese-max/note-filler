@@ -385,6 +385,8 @@ class TestOutputConsistency:
                 continue
             if stripped.startswith("> **使用者價值**"):
                 continue
+            if stripped.startswith("> **摘要可見**"):
+                continue
             # Skip new argument_id line
             if stripped.startswith("> **論點ID**"):
                 continue
@@ -407,6 +409,8 @@ class TestOutputConsistency:
             if stripped.startswith("功能缺口："):
                 continue
             if stripped.startswith("使用者價值："):
+                continue
+            if stripped.startswith("摘要可見："):
                 continue
             if stripped.startswith("論點ID："):
                 continue

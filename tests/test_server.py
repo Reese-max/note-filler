@@ -124,6 +124,17 @@ async def test_run_renders_two_columns(async_client, monkeypatch):
     assert "角度清單" in body
     assert "definition" in body
     assert "來源：pending（無來源）" in body
+    # 摘要、必要性雙視角與 ID 必須同卡顯示，不能只留在內部報告。
+    assert "摘要可見" in body
+    assert 'data-argument-id="argument:0"' in body
+    assert "argument_id" in body
+    summary_block = body.split('data-argument-id="argument:0"', 1)[1].split(
+        "</section>", 1
+    )[0]
+    assert "行政處分係指行政機關就公法上具體事件所為之單方決定。" in summary_block
+    assert "原稿未定義行政處分" in summary_block
+    assert "讓讀者辨識行政處分的適用範圍" in summary_block
+    assert "另有學說補充" not in summary_block
 
 
 @pytest.mark.anyio

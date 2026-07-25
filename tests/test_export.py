@@ -275,6 +275,42 @@ def test_to_markdown_contains_angle_coverage_line():
     assert "通過 ✓" in summary_lines[0]
 
 
+def test_human_readable_exports_show_argument_aligned_visible_summaries(tmp_path):
+    """每筆摘要必須與同一 argument_id 的必要性雙視角一起顯示。"""
+    expected = [
+        (
+            "argument_id=argument:0；"
+            "摘要=依行政程序法第92條，行政處分係指行政機關就公法上具體事件所為之決定。；"
+            "functional_gap=原稿未定義行政處分；"
+            "user_value=補齊讀者對「行政處分如何定義？」所需的說明"
+        ),
+        (
+            "argument_id=argument:1；"
+            "摘要=關於施行細節仍待查證。；"
+            "functional_gap=原稿未說明施行細節；"
+            "user_value=補齊讀者對「細節待查」所需的說明"
+        ),
+    ]
+
+    md_lines = [
+        line.removeprefix("> **摘要可見**：")
+        for line in to_markdown(_sample_doc()).splitlines()
+        if line.startswith("> **摘要可見**：")
+    ]
+    assert md_lines == expected
+
+    out = tmp_path / "visible-summaries.docx"
+    to_docx(_sample_doc(), str(out))
+    from docx import Document as DocxDocument
+
+    docx_lines = [
+        paragraph.text.removeprefix("摘要可見：")
+        for paragraph in DocxDocument(out).paragraphs
+        if paragraph.text.startswith("摘要可見：")
+    ]
+    assert docx_lines == expected
+
+
 def test_to_docx_contains_machine_parseable_source_list(tmp_path):
     """docx 輸出每個 supplement 段後須有機器可解析的來源清單行。"""
     from docx import Document as DocxDocument

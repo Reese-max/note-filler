@@ -67,6 +67,16 @@ def _argument_coverage_text(argument: dict) -> str:
     )
 
 
+def _visible_summary_text(argument: dict) -> str:
+    """同列顯示單一論點摘要與必要性雙視角。"""
+    return (
+        f"argument_id={argument['argument_id']}"
+        f"；摘要={argument['argument_text']}"
+        f"；functional_gap={argument['functional_gap'] or '（未提供）'}"
+        f"；user_value={argument['user_value'] or '（未提供）'}"
+    )
+
+
 def to_json(doc: CorrectionDoc) -> dict:
     """序列化整份 CorrectionDoc；原文 immutable，僅讀不改。
 
@@ -237,6 +247,7 @@ def to_markdown(doc: CorrectionDoc) -> str:
             body.append("> **來源清單**：pending（無來源）")
 
         if argument := argument_by_seg_index.get(seg_index):
+            body.append(f"> **摘要可見**：{_visible_summary_text(argument)}")
             body.append(f"> **角度覆蓋**：{_argument_coverage_text(argument)}")
 
         argument_id = getattr(seg, "argument_id", "")
@@ -343,6 +354,7 @@ def to_docx(doc: CorrectionDoc, path: str) -> None:
             out.add_paragraph("來源清單：pending（無來源）")
 
         if argument := argument_by_seg_index.get(seg_index):
+            out.add_paragraph(f"摘要可見：{_visible_summary_text(argument)}")
             out.add_paragraph(f"角度覆蓋：{_argument_coverage_text(argument)}")
 
         argument_id = getattr(seg, "argument_id", "")

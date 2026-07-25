@@ -44,6 +44,8 @@
       {% for seg in doc.segments %}
         {% if seg.type == "supplement" %}
         <div class="supplement">
+          <section class="summary-visible" data-argument-id="{{ seg.argument_id }}">
+            <h3>摘要可見</h3>
           <div class="seg"><strong>論點：</strong>{{ seg.text }}</div>
           {% if seg.confidence == "pending_evidence" %}
           <span class="pending">[待補依據]</span>
@@ -65,6 +67,8 @@
           <div class="source-status">來源：pending（無來源）</div>
           {% endif %}
           <dl class="argument-metadata">
+            <dt>argument_id</dt>
+            <dd>{{ seg.argument_id or "未提供" }}</dd>
             <dt>functional_gap（功能缺口）</dt>
             <dd>{{ seg.functional_gap or "未提供" }}</dd>
             <dt>user_value（使用者價值）</dt>
@@ -93,6 +97,7 @@
           {% if seg.traceability %}
           <div class="traceability">追溯：{% for ref in seg.traceability %}{{ ref.kind }} {{ ref.id }}{% if ref.kind == "original_input" %}#paragraph-{{ ref.paragraph_idx }}{% endif %}{% if not loop.last %}、{% endif %}{% endfor %}</div>
           {% endif %}
+          </section>
         </div>
         {% else %}
         <p class="seg">{{ seg.text }}</p>
