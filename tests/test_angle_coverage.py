@@ -129,6 +129,97 @@ def test_unique_when_different_types():
     assert summary["coverage_ok"] is True
 
 
+def test_same_topic_two_distinct_non_duplicate_angles_pass():
+    """同一主題但至少兩個不同且不重複的有效角度 → coverage_ok。
+
+    例：主題皆為「行政處分」，角度分別為定義／限制，key 不同、非 duplicate／synonym。
+    """
+    covs = [
+        build_angle_coverage(
+            question="行政處分如何定義？",
+            functional_gap="原稿未給定義",
+            user_value="補齊讀者對「行政處分如何定義？」所需的說明",
+        ),
+        build_angle_coverage(
+            question="行政處分有何限制？",
+            functional_gap="原稿未給限制",
+            user_value="補齊讀者對「行政處分有何限制？」所需的說明",
+        ),
+    ]
+    assert covs[0]["angle_type"] == "definition"
+    assert covs[1]["angle_type"] == "limitation"
+    assert covs[0]["angle_key"] != covs[1]["angle_key"]
+
+    with_rel = attach_relations(covs)
+    assert [c["relation"]["kind"] for c in with_rel] == ["unique", "unique"]
+    assert [c["effective_angle_count"] for c in with_rel] == [1, 1]
+    assert all(not c["duplicate_exclusion"]["excluded"] for c in with_rel)
+
+    summary = summarize_angle_coverage(with_rel)
+    assert summary["duplicate_pairs"] == []
+    assert summary["synonym_pairs"] == []
+    assert set(summary["unique_angle_types"]) == {"definition", "limitation"}
+    assert summary["effective_angle_count"] == 2
+    assert summary["required_effective_angle_count"] == 2
+    assert summary["excluded_angle_count"] == 0
+    assert summary["duplicate_ratio"] == 0.0
+    assert summary["has_sufficient_angles"] is True
+    assert summary["has_acceptable_duplicate_ratio"] is True
+    assert summary["coverage_ok"] is True
+    assert "angle:definition" in summary["covered_facets_union"]
+    assert "angle:limitation" in summary["covered_facets_union"]
+
+
+def test_single_or_duplicate_angles_fail_coverage_gate():
+    """只有單一有效角度（精確重複或同義去重後）→ 不合格。"""
+    # 精確重複：兩論點同一 angle_key → 僅 1 個有效角度
+    dup_covs = [
+        build_angle_coverage(
+            question="行政處分如何定義？",
+            functional_gap="gap-a",
+            user_value="value-a",
+        ),
+        build_angle_coverage(
+            question="行政處分如何定義!",
+            functional_gap="gap-b",
+            user_value="value-b",
+        ),
+    ]
+    assert dup_covs[0]["angle_key"] == dup_covs[1]["angle_key"]
+    dup_with = attach_relations(dup_covs)
+    dup_summary = summarize_angle_coverage(dup_with)
+    assert [c["relation"]["kind"] for c in dup_with] == ["duplicate", "duplicate"]
+    assert [c["effective_angle_count"] for c in dup_with] == [1, 0]
+    assert dup_summary["effective_angle_count"] == 1
+    assert dup_summary["required_effective_angle_count"] == 2
+    assert dup_summary["has_sufficient_angles"] is False
+    assert dup_summary["coverage_ok"] is False
+
+    # 同義重複：同 type、高 token 重疊 → 第二個被排除，僅 1 個有效角度
+    syn_covs = [
+        build_angle_coverage(
+            question="行政處分之定義為何？",
+            functional_gap="gap-a",
+            user_value="value-a",
+        ),
+        build_angle_coverage(
+            question="行政處分定義如何說明？",
+            functional_gap="gap-b",
+            user_value="value-b",
+        ),
+    ]
+    assert syn_covs[0]["angle_type"] == syn_covs[1]["angle_type"] == "definition"
+    assert syn_covs[0]["angle_key"] != syn_covs[1]["angle_key"]
+    syn_with = attach_relations(syn_covs)
+    syn_summary = summarize_angle_coverage(syn_with)
+    assert [c["relation"]["kind"] for c in syn_with] == ["synonym", "synonym"]
+    assert [c["effective_angle_count"] for c in syn_with] == [1, 0]
+    assert syn_summary["effective_angle_count"] == 1
+    assert syn_summary["required_effective_angle_count"] == 2
+    assert syn_summary["has_sufficient_angles"] is False
+    assert syn_summary["coverage_ok"] is False
+
+
 def test_excessive_duplicate_ratio_fails_coverage_gate():
     covs = [
         build_angle_coverage(

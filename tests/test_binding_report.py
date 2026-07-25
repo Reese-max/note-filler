@@ -133,6 +133,48 @@ def _assemble_repeated_angles(count: int = 2):
     )
 
 
+def _assemble_same_topic_distinct_angles():
+    """同一主題（行政處分）下兩個不同且不重複的有效角度：定義＋限制。"""
+    src_a = _source("law:92", "行政程序法第 92 條")
+    src_b = _source("law:93", "行政程序法第 93 條")
+    gap_a = Gap("行政處分如何定義？", "missing", "未說明定義")
+    gap_b = Gap("行政處分有何限制？", "missing", "未說明限制")
+    return assemble_correction(
+        _doc(),
+        [gap_a, gap_b],
+        {gap_a.question: [src_a], gap_b.question: [src_b]},
+        {
+            gap_a.question: WrittenSupplement("定義參照[^1]。", [src_a.id]),
+            gap_b.question: WrittenSupplement("限制參照[^1]。", [src_b.id]),
+        },
+        {
+            gap_a.question: cross_validate(gap_a.question, [src_a]),
+            gap_b.question: cross_validate(gap_b.question, [src_b]),
+        },
+    )
+
+
+def _assemble_synonym_angles():
+    """同主題、同定義角度、高 token 重疊 → 同義，有效角度塌縮為 1。"""
+    src_a = _source("law:92", "行政程序法第 92 條")
+    src_b = _source("law:93", "行政程序法第 93 條")
+    gap_a = Gap("行政處分之定義為何？", "missing", "未說明定義")
+    gap_b = Gap("行政處分定義如何說明？", "missing", "未說明定義細節")
+    return assemble_correction(
+        _doc(),
+        [gap_a, gap_b],
+        {gap_a.question: [src_a], gap_b.question: [src_b]},
+        {
+            gap_a.question: WrittenSupplement("定義一[^1]。", [src_a.id]),
+            gap_b.question: WrittenSupplement("定義二[^1]。", [src_b.id]),
+        },
+        {
+            gap_a.question: cross_validate(gap_a.question, [src_a]),
+            gap_b.question: cross_validate(gap_b.question, [src_b]),
+        },
+    )
+
+
 # ---- 格式可直接由測試解析 ---------------------------------------------------
 
 def test_schema_is_machine_parseable():
@@ -772,6 +814,57 @@ def test_assemble_classifies_definition_and_limitation_angles():
     assert "necessity:user_value" in facets_union
 
 
+def test_same_topic_two_distinct_valid_angles_pass_acceptance(tmp_path):
+    """正例：同一主題至少兩個不同且不重複的有效角度 → 驗收通過且可寫入。"""
+    product = _assemble_same_topic_distinct_angles()
+    supps = [s for s in product.segments if s.type == "supplement"]
+    assert len(supps) == 2
+    assert supps[0].angle_type == "definition"
+    assert supps[1].angle_type == "limitation"
+    assert supps[0].angle_key != supps[1].angle_key
+
+    report = parse_binding_report(build_binding_report(product))
+    summary = report["angle_coverage_summary"]
+    types = {a["angle_coverage"]["angle_type"] for a in report["arguments"]}
+    keys = {a["angle_coverage"]["angle_key"] for a in report["arguments"]}
+    assert types == {"definition", "limitation"}
+    assert len(keys) == 2
+    assert [
+        a["angle_coverage"]["relation"]["kind"] for a in report["arguments"]
+    ] == ["unique", "unique"]
+    assert [
+        a["angle_coverage"]["effective_angle_count"] for a in report["arguments"]
+    ] == [1, 1]
+    assert summary["effective_angle_count"] == 2
+    assert summary["required_effective_angle_count"] == 2
+    assert summary["excluded_angle_count"] == 0
+    assert summary["duplicate_pairs"] == []
+    assert summary["synonym_pairs"] == []
+    assert summary["has_sufficient_angles"] is True
+    assert summary["has_acceptable_duplicate_ratio"] is True
+    assert summary["coverage_ok"] is True
+    assert report["summary"]["all_arguments_ok"] is True
+    assert all(a["binding_status"] == "pass" for a in report["arguments"])
+    assert all(a["checks"]["meets_angle_coverage_threshold"] is True for a in report["arguments"])
+    assert all(a["checks"]["has_angle_coverage"] is True for a in report["arguments"])
+    # 必要性雙視角與來源綁定不得因角度門檻而弱化
+    for a in report["arguments"]:
+        assert a["checks"]["at_least_one_source"] is True
+        assert a["checks"]["source_traceable"] is True
+        assert a["checks"]["has_functional_gap"] is True
+        assert a["checks"]["has_user_value"] is True
+        assert a["functional_gap"].strip()
+        assert a["user_value"].strip()
+
+    report_path = write_binding_report(tmp_path / "out.md", product)
+    assert report_path.is_file()
+    persisted = parse_binding_report(
+        json.loads(report_path.read_text(encoding="utf-8"))
+    )
+    assert persisted["angle_coverage_summary"]["coverage_ok"] is True
+    assert persisted["angle_coverage_summary"]["effective_angle_count"] == 2
+
+
 def test_angle_duplicate_detection_same_key():
     """相同 angle_key 的兩個論點 → relation.kind=duplicate，summary 有 pair。"""
     product = _assemble_repeated_angles()
@@ -798,6 +891,49 @@ def test_angle_duplicate_detection_same_key():
     assert report["angle_coverage_summary"]["coverage_ok"] is False
     assert report["summary"]["all_arguments_ok"] is False
     assert all(arg["binding_status"] == "fail" for arg in report["arguments"])
+
+
+def test_single_or_duplicate_angles_fail_acceptance(tmp_path):
+    """負例：只有單一有效角度（精確重複或同義去重）→ 判定不合格並拒絕寫入驗收。"""
+    # 精確重複角度
+    dup_report = parse_binding_report(build_binding_report(_assemble_repeated_angles()))
+    dup_summary = dup_report["angle_coverage_summary"]
+    assert dup_summary["effective_angle_count"] == 1
+    assert dup_summary["required_effective_angle_count"] == 2
+    assert dup_summary["has_sufficient_angles"] is False
+    assert dup_summary["coverage_ok"] is False
+    assert dup_report["summary"]["all_arguments_ok"] is False
+    assert all(a["binding_status"] == "fail" for a in dup_report["arguments"])
+    assert all(
+        a["checks"]["meets_angle_coverage_threshold"] is False
+        for a in dup_report["arguments"]
+    )
+    with pytest.raises(RuntimeError, match="角度覆蓋驗收失敗"):
+        write_binding_report(tmp_path / "dup.md", _assemble_repeated_angles())
+    dup_path = tmp_path / BINDING_REPORT_NAME
+    assert dup_path.is_file()
+    persisted_dup = json.loads(dup_path.read_text(encoding="utf-8"))
+    assert persisted_dup["angle_coverage_summary"]["coverage_ok"] is False
+    assert persisted_dup["angle_coverage_summary"]["effective_angle_count"] == 1
+
+    # 同義／單一角度（兩論點塌縮為 1 個有效角度）
+    syn_product = _assemble_synonym_angles()
+    syn_report = parse_binding_report(build_binding_report(syn_product))
+    syn_summary = syn_report["angle_coverage_summary"]
+    assert [
+        a["angle_coverage"]["relation"]["kind"] for a in syn_report["arguments"]
+    ] == ["synonym", "synonym"]
+    assert [
+        a["angle_coverage"]["effective_angle_count"] for a in syn_report["arguments"]
+    ] == [1, 0]
+    assert syn_summary["effective_angle_count"] == 1
+    assert syn_summary["required_effective_angle_count"] == 2
+    assert syn_summary["has_sufficient_angles"] is False
+    assert syn_summary["coverage_ok"] is False
+    assert syn_report["summary"]["all_arguments_ok"] is False
+    assert all(a["binding_status"] == "fail" for a in syn_report["arguments"])
+    with pytest.raises(RuntimeError, match="角度覆蓋驗收失敗"):
+        write_binding_report(tmp_path / "syn.md", syn_product)
 
 
 def test_excessive_angle_repetition_fails_acceptance():
@@ -841,24 +977,8 @@ def test_write_binding_report_persists_metrics_then_fails_angle_gate(tmp_path):
 
 
 def test_angle_synonym_detection_same_type_overlapping_tokens():
-    """同 angle_type、不同 key、高 token 重疊 → synonym。"""
-    src_a = _source("law:92", "行政程序法第 92 條")
-    src_b = _source("law:93", "行政程序法第 93 條")
-    gap_a = Gap("行政處分之定義為何？", "missing", "未說明定義")
-    gap_b = Gap("行政處分定義如何說明？", "missing", "未說明定義細節")
-    product = assemble_correction(
-        _doc(),
-        [gap_a, gap_b],
-        {gap_a.question: [src_a], gap_b.question: [src_b]},
-        {
-            gap_a.question: WrittenSupplement("定義一[^1]。", [src_a.id]),
-            gap_b.question: WrittenSupplement("定義二[^1]。", [src_b.id]),
-        },
-        {
-            gap_a.question: cross_validate(gap_a.question, [src_a]),
-            gap_b.question: cross_validate(gap_b.question, [src_b]),
-        },
-    )
+    """同 angle_type、不同 key、高 token 重疊 → synonym，且有效角度不足而不合格。"""
+    product = _assemble_synonym_angles()
     report = parse_binding_report(build_binding_report(product))
     a0 = report["arguments"][0]["angle_coverage"]
     a1 = report["arguments"][1]["angle_coverage"]
@@ -867,6 +987,10 @@ def test_angle_synonym_detection_same_type_overlapping_tokens():
     assert a0["relation"]["kind"] == "synonym"
     assert a1["relation"]["kind"] == "synonym"
     assert [0, 1] in report["angle_coverage_summary"]["synonym_pairs"]
+    assert report["angle_coverage_summary"]["effective_angle_count"] == 1
+    assert report["angle_coverage_summary"]["has_sufficient_angles"] is False
+    assert report["angle_coverage_summary"]["coverage_ok"] is False
+    assert report["summary"]["all_arguments_ok"] is False
 
 
 def test_parse_rejects_missing_angle_coverage_key():
