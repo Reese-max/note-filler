@@ -974,3 +974,81 @@ def test_serialized_product_each_argument_source_id_maps_1to1_fragment_position(
     # 一對一 + 一對多各至少一筆（混合情境鎖定）
     assert report["summary"]["one_to_one"] >= 1
     assert report["summary"]["one_to_many"] >= 1
+
+
+def test_product_output_each_argument_has_binding_and_dual_necessity_views(
+    tmp_path,
+):
+    """成品逐筆保留來源綁定與功能缺口／使用者價值，並可解析 1:1、1:N。"""
+    import json
+
+    from note_filler.export import to_json
+
+    src_a = _source("law:92", "行政程序法第 92 條")
+    src_b = _source("law:93", "行政程序法第 93 條")
+    src_c = _source("law:94", "行政程序法第 94 條", level="B")
+    gap_a = Gap("行政處分如何定義？", "missing", "原稿未定義行政處分")
+    gap_b = Gap("附款有何限制？", "missing", "原稿未說明附款限制")
+    product = assemble_correction(
+        _doc(),
+        [gap_a, gap_b],
+        {gap_a.question: [src_a], gap_b.question: [src_b, src_c]},
+        {
+            gap_a.question: WrittenSupplement("行政處分定義[^1]。", [src_a.id]),
+            gap_b.question: WrittenSupplement(
+                "附款限制[^1][^2]。", [src_b.id, src_c.id]
+            ),
+        },
+        {
+            gap_a.question: cross_validate(gap_a.question, [src_a]),
+            gap_b.question: cross_validate(gap_b.question, [src_b, src_c]),
+        },
+    )
+    for segment, user_value in zip(
+        product.segments[1:],
+        ("讓讀者辨識行政處分的適用範圍", "讓讀者判斷附款是否合法"),
+        strict=True,
+    ):
+        segment.user_value = user_value
+
+    product_path = tmp_path / "note_product.json"
+    product_path.write_text(
+        json.dumps(to_json(product), ensure_ascii=False, indent=2),
+        encoding="utf-8",
+        newline="\n",
+    )
+    report_path = write_binding_report(tmp_path / "note_product.md", product)
+
+    serialized = json.loads(product_path.read_text(encoding="utf-8"))
+    report = parse_binding_report(
+        json.loads(report_path.read_text(encoding="utf-8"))
+    )
+    expected = [
+        ("one_to_one", ["law:92"]),
+        ("one_to_many", ["law:93", "law:94"]),
+    ]
+
+    assert report["argument_count"] == len(expected)
+    assert report["summary"]["one_to_one"] == 1
+    assert report["summary"]["one_to_many"] == 1
+    for argument, (cardinality, source_ids) in zip(
+        report["arguments"], expected, strict=True
+    ):
+        segment = serialized["segments"][argument["segment_index"]]
+        assert segment["argument_id"] == f"argument:{argument['argument_index']}"
+        assert argument["argument_text"] == segment["text"]
+        assert argument["cardinality"] == segment["cardinality"] == cardinality
+        assert argument["source_ids"] == segment["source_ids"] == source_ids
+        assert argument["binding_ok"] is True
+        assert all(argument["checks"].values())
+        for field in ("functional_gap", "user_value"):
+            assert argument[field] == segment[field]
+            assert argument[field].strip(), (
+                f"論點[{argument['argument_index']}] 缺少 {field}"
+            )
+
+    assert report["source_usage"] == {
+        "law:92": [0],
+        "law:93": [1],
+        "law:94": [1],
+    }
