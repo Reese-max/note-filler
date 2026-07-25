@@ -359,3 +359,224 @@ def test_source_binding_survives_require_traceable_gate():
     )
     _assert_source_binding_invariants(product.segments)
     require_traceable_note_product(product, source="binding-acceptance")
+
+
+# ---- 失敗語義：論點存在但來源缺失／來源未對上（最小負例） -------------------
+#
+# 鎖定：不得默默輸出「有論點、無／錯綁定」的不完整成品。
+# assemble 可能先留下稽核與不一致 state；末端 require_traceable 必須硬失敗，
+# 並在錯誤訊息／稽核中指出缺少或未對上的綁定。
+
+
+def test_failure_semantic_claim_exists_but_source_missing(caplog):
+    """最小負例：補充論點文字存在，但 used_source_ids 在 retrieved 完全找不到。
+
+    必須：
+    1) 稽核 used_sources_not_forwarded 列出 missing_source_ids
+    2) require_traceable_note_product 明確 raise（不得默默過關）
+    3) 錯誤語意指向綁定／source_id 缺口
+    """
+    import json
+    import logging
+
+    from note_filler.export import to_markdown
+    from note_filler.pipeline import require_traceable_note_product
+
+    gap = Gap("行政處分之要件為何？", "missing", "原稿未展開")
+    claim = "行政處分應符合法定要件，並保障當事人陳述意見之機會。"
+    missing_id = "missing-src-BOUND-01"
+    with caplog.at_level(logging.WARNING):
+        product = assemble_correction(
+            _doc(),
+            [gap],
+            {gap.question: []},  # 來源集合為空
+            {gap.question: WrittenSupplement(claim, [missing_id])},
+            {},
+        )
+        with pytest.raises(RuntimeError, match="來源追溯驗證失敗") as ei:
+            require_traceable_note_product(product, source="fail-bind-missing")
+    seg = product.segments[-1]
+    assert seg.type == "supplement"
+    assert claim in seg.text  # 論點存在
+    assert seg.sources == []  # 來源缺失
+    assert missing_id in seg.source_id  # 宣稱綁定了不存在的來源 → 不一致
+
+    # 若略過閘門，markdown 會帶論點卻無掛上 Source 物件 → 不完整輸出風險
+    md = to_markdown(product)
+    assert claim in md
+
+    msg = str(ei.value)
+    assert "source_id" in msg or "pending:gap:" in msg or "對應失敗" in msg, (
+        f"失敗訊息應指出綁定缺口，實際：{msg!r}"
+    )
+    assert "note_traceability_failed" in caplog.text
+    assert "fail-bind-missing" in caplog.text
+
+    # 組裝階段即應留下缺失來源稽核（可機器比對）
+    audit_events = []
+    for rec in caplog.records:
+        try:
+            payload = json.loads(rec.message)
+        except (json.JSONDecodeError, TypeError):
+            continue
+        if payload.get("event") == "used_sources_not_forwarded":
+            audit_events.append(payload)
+    assert audit_events, "應有 used_sources_not_forwarded 稽核"
+    assert any(
+        missing_id in json.dumps(p.get("missing_source_ids", []), ensure_ascii=False)
+        for p in audit_events
+    ), f"稽核應列出缺失綁定 id {missing_id!r}"
+
+
+def test_failure_semantic_claim_exists_but_source_not_aligned(caplog):
+    """最小負例：論點引用多個來源 id，但 retrieved 只對上一部分 → 來源未對上。
+
+    source_id 宣稱 a,b-missing，實際 sources 只有 a → 閘必須硬失敗並指出 source_id 不符。
+    """
+    import json
+    import logging
+
+    from note_filler.pipeline import require_traceable_note_product
+
+    gap = Gap("附款之限制為何？", "missing", "原稿未列")
+    present = _source("law:92", "行政程序法第 92 條")
+    missing_id = "law:ghost-BOUND-02"
+    claim = "附款不得違背行政處分之目的[^1][^2]。"
+    with caplog.at_level(logging.WARNING):
+        product = assemble_correction(
+            _doc(),
+            [gap],
+            {gap.question: [present]},
+            {gap.question: WrittenSupplement(claim, [present.id, missing_id])},
+            {gap.question: cross_validate(gap.question, [present])},
+        )
+        with pytest.raises(RuntimeError, match="來源追溯驗證失敗|source_id") as ei:
+            require_traceable_note_product(product, source="fail-bind-unaligned")
+    seg = product.segments[-1]
+    assert claim.split("[")[0] in seg.text or "附款" in seg.text
+    assert [s.id for s in seg.sources] == [present.id]
+    assert seg.source_id == f"sources:{present.id},{missing_id}"
+    assert seg.traceability == [{"kind": "source", "id": present.id}]
+
+    msg = str(ei.value)
+    assert "source_id" in msg, f"應指出 source_id 未對上，實際：{msg!r}"
+    assert present.id in msg
+    assert "note_traceability_failed" in caplog.text
+
+    missing_audits = []
+    for rec in caplog.records:
+        try:
+            payload = json.loads(rec.message)
+        except (json.JSONDecodeError, TypeError):
+            continue
+        if payload.get("event") == "used_sources_not_forwarded":
+            missing_audits.append(payload)
+    assert any(
+        missing_id in json.dumps(p.get("missing_source_ids", []), ensure_ascii=False)
+        for p in missing_audits
+    ), f"應回報缺失綁定 {missing_id!r}"
+
+
+def test_failure_semantic_source_trace_not_matched_to_sources(caplog):
+    """最小負例：論點已掛 Source 物件，但 traceability 指到另一 id → 來源未對上。
+
+    模擬綁定漂移；閘必須 raise「source ID 對應失敗」，不得匯出不一致成品。
+    """
+    import logging
+
+    from note_filler.export import to_markdown
+    from note_filler.pipeline import require_traceable_note_product
+
+    src = _source("law:92", "行政程序法第 92 條")
+    gap = Gap("定義？", "missing", "未說明")
+    claim = "行政處分之定義參照法定要件[^1]。"
+    product = assemble_correction(
+        _doc(),
+        [gap],
+        {gap.question: [src]},
+        {gap.question: WrittenSupplement(claim, [src.id])},
+        {gap.question: cross_validate(gap.question, [src])},
+    )
+    # 人為製造「來源未對上」：trace 指到不存在的綁定
+    product.segments[-1].traceability = [{"kind": "source", "id": "wrong-bound-id"}]
+    assert product.segments[-1].sources[0].id == src.id
+    assert "定義" in product.segments[-1].text or "行政處分" in product.segments[-1].text
+
+    # 證明若無閘門，不完整／不一致內容仍可序列化
+    md = to_markdown(product)
+    assert "行政處分" in md or "定義" in md
+
+    with caplog.at_level(logging.WARNING):
+        with pytest.raises(RuntimeError, match="source ID 對應失敗") as ei:
+            require_traceable_note_product(product, source="fail-bind-trace")
+    assert "來源追溯驗證失敗" in str(ei.value)
+    assert "note_traceability_failed" in caplog.text
+    assert "fail-bind-trace" in caplog.text
+
+
+def test_failure_semantic_missing_binding_blocks_pipeline_return(tmp_path, monkeypatch, caplog):
+    """主流程末端閘必須攔截缺綁定成品：run_pipeline 不得表面成功回傳。
+
+    以 monkeypatch 在 assemble 後注入「有論點、無對上來源」的 segment，
+    確認 RuntimeError 且無成功回傳（避免默默輸出不完整內容）。
+    """
+    import json
+    import logging
+
+    from docx import Document as DocxDocument
+
+    from note_filler.correction import Segment
+    from note_filler.llm import FakeLLM
+    from note_filler import pipeline as pl
+    from tests.test_pipeline import FakeLaw, FakeTwinkle
+
+    note = tmp_path / "bind-fail.docx"
+    d = DocxDocument()
+    d.add_paragraph("行政程序法要求行政行為應遵守正當程序。")
+    d.save(str(note))
+
+    real_assemble = pl.assemble_correction
+
+    def inject_broken_binding(*args, **kwargs):
+        product = real_assemble(*args, **kwargs)
+        # 附加：有實質論點、confidence 非 pending、無 sources／無合法 processing_record
+        product.segments.append(
+            Segment(
+                type="supplement",
+                text="此論點宣稱有據，但完全缺少來源綁定。",
+                anchor_idx=None,
+                sources=[],
+                confidence="verified",  # 非 pending_evidence → 閘應判 processing_record 失敗
+                traceability=[],
+                source_id="",
+            )
+        )
+        return product
+
+    monkeypatch.setattr(pl, "assemble_correction", inject_broken_binding)
+
+    llm = FakeLLM(
+        [
+            "admin",
+            "正當程序的要件為何?",
+            json.dumps(
+                [
+                    {
+                        "question": "正當程序的要件為何?",
+                        "status": "missing",
+                        "reason": "未展開",
+                    }
+                ],
+                ensure_ascii=False,
+            ),
+            '{"keyword": "正當程序", "law_name": null}',
+            "【待補證】尚待補充。",
+        ]
+    )
+
+    with caplog.at_level(logging.WARNING, logger="note_filler.pipeline"):
+        with pytest.raises(RuntimeError, match="來源追溯驗證失敗|processing_record|對應失敗"):
+            pl.run_pipeline(str(note), llm, FakeTwinkle([[]]), FakeLaw())
+    assert "note_traceability_failed" in caplog.text
+    # 不得在失敗後仍以為成功（無回傳值可 assert；raise 即為攔截）
+    assert not (tmp_path / "bind-fail.訂正稿.md").exists()
