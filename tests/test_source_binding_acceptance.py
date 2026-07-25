@@ -1004,12 +1004,15 @@ def test_product_output_each_argument_has_binding_and_dual_necessity_views(
             gap_b.question: cross_validate(gap_b.question, [src_b, src_c]),
         },
     )
+    # assemble 已寫入 functional_gap／user_value；此處覆寫為更具體的使用者價值敘述，
+    # 驗證序列化後雙視角仍完整保留（非空且與成品一致）。
     for segment, user_value in zip(
         product.segments[1:],
         ("讓讀者辨識行政處分的適用範圍", "讓讀者判斷附款是否合法"),
         strict=True,
     ):
         segment.user_value = user_value
+        assert segment.functional_gap.strip()
 
     product_path = tmp_path / "note_product.json"
     product_path.write_text(

@@ -53,8 +53,8 @@ def _sample_doc() -> CorrectionDoc:
             confidence="verified",
             traceability=[{"kind": "source", "id": "s1"}, {"kind": "source", "id": "s2"}],
             source_id="sources:s1,s2",
-            functional_gap="",
-            user_value="",
+            functional_gap="原稿未定義行政處分",
+            user_value="補齊讀者對「行政處分如何定義？」所需的說明",
             argument_id="argument:0",
         ),
         Segment(
@@ -68,8 +68,8 @@ def _sample_doc() -> CorrectionDoc:
                 "question": "細節待查", "outcome": "pending_evidence",
             }],
             source_id="pending:gap:1",
-            functional_gap="",
-            user_value="",
+            functional_gap="原稿未說明施行細節",
+            user_value="補齊讀者對「細節待查」所需的說明",
             argument_id="argument:1",
         ),
     ]

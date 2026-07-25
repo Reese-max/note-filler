@@ -118,7 +118,7 @@ def test_schema_is_machine_parseable():
 
 
 def test_parse_rejects_missing_keys():
-    with pytest.raises(ValueError, match="缺少頂層欄位"):
+    with pytest.raises(ValueError, match="缺少欄位"):
         parse_binding_report({"schema": SCHEMA_ID})
 
 
@@ -127,6 +127,116 @@ def test_parse_rejects_wrong_schema():
     report["schema"] = "other.v0"
     with pytest.raises(ValueError, match="schema 不符"):
         parse_binding_report(report)
+
+
+def test_parse_rejects_field_drift_extra_top_key():
+    """欄位漂移：頂層多出未知鍵 → 拒絕。"""
+    report = build_binding_report(_assemble_one_to_one())
+    report["unexpected_top"] = True
+    with pytest.raises(ValueError, match="欄位漂移"):
+        parse_binding_report(report)
+
+
+def test_parse_rejects_field_drift_extra_argument_key():
+    """欄位漂移：arguments 多出未知鍵 → 拒絕。"""
+    report = build_binding_report(_assemble_one_to_one())
+    report["arguments"][0]["legacy_score"] = 0.9
+    with pytest.raises(ValueError, match="欄位漂移"):
+        parse_binding_report(report)
+
+
+def test_parse_rejects_field_drift_extra_check_key():
+    """欄位漂移：checks 多出未知鍵 → 拒絕。"""
+    report = build_binding_report(_assemble_one_to_one())
+    report["arguments"][0]["checks"]["legacy_ok"] = True
+    with pytest.raises(ValueError, match="欄位漂移"):
+        parse_binding_report(report)
+
+
+def test_parse_rejects_missing_necessity_argument_keys():
+    """缺欄：去掉 functional_gap／user_value → 拒絕。"""
+    report = build_binding_report(_assemble_one_to_one())
+    del report["arguments"][0]["functional_gap"]
+    with pytest.raises(ValueError, match="缺少欄位"):
+        parse_binding_report(report)
+    report = build_binding_report(_assemble_one_to_one())
+    del report["arguments"][0]["user_value"]
+    with pytest.raises(ValueError, match="缺少欄位"):
+        parse_binding_report(report)
+
+
+def test_parse_rejects_empty_structural_string_fields():
+    """結構性空欄：confidence 空白 → 拒絕。"""
+    report = build_binding_report(_assemble_one_to_one())
+    report["arguments"][0]["confidence"] = "   "
+    with pytest.raises(ValueError, match="不可為空欄"):
+        parse_binding_report(report)
+
+
+def test_parse_rejects_empty_source_id_elements():
+    """結構性空欄：source_ids 含空字串 → 拒絕。"""
+    report = build_binding_report(_assemble_one_to_one())
+    report["arguments"][0]["source_ids"] = ["law:92", ""]
+    report["arguments"][0]["source_count"] = 2
+    # source_usage 一併改壞以免先被其他規則擋
+    report["source_usage"] = {"law:92": [0], "": [0]}
+    with pytest.raises(ValueError, match="不可含空字串"):
+        parse_binding_report(report)
+
+
+def test_empty_functional_gap_fails_even_when_sources_traceable():
+    """來源可追溯但 functional_gap 空欄 → binding_ok False，checks 點名缺失。"""
+    product = _assemble_one_to_one()
+    product.segments[1].functional_gap = ""
+    report = parse_binding_report(build_binding_report(product))
+    arg = report["arguments"][0]
+    assert arg["checks"]["at_least_one_source"] is True
+    assert arg["checks"]["source_traceable"] is True
+    assert arg["checks"]["has_functional_gap"] is False
+    assert arg["binding_ok"] is False
+    assert arg["binding_status"] == "fail"
+    assert report["summary"]["all_arguments_ok"] is False
+
+
+def test_empty_user_value_fails_even_when_sources_traceable():
+    """來源可追溯但 user_value 空欄 → binding_ok False，checks 點名缺失。"""
+    product = _assemble_one_to_one()
+    product.segments[1].user_value = "  "
+    report = parse_binding_report(build_binding_report(product))
+    arg = report["arguments"][0]
+    assert arg["checks"]["at_least_one_source"] is True
+    assert arg["checks"]["source_traceable"] is True
+    assert arg["checks"]["has_user_value"] is False
+    assert arg["binding_ok"] is False
+    assert arg["binding_status"] == "fail"
+
+
+def test_parse_rejects_empty_necessity_marked_as_pass():
+    """空欄卻標 pass／has_* True → 解析器拒絕（防止假完成報告）。"""
+    report = build_binding_report(_assemble_one_to_one())
+    report["arguments"][0]["functional_gap"] = ""
+    report["arguments"][0]["checks"]["has_functional_gap"] = True
+    report["arguments"][0]["binding_ok"] = True
+    report["arguments"][0]["binding_status"] = "pass"
+    with pytest.raises(ValueError, match="functional_gap 為空欄"):
+        parse_binding_report(report)
+
+
+def test_assembled_arguments_include_nonempty_necessity_views():
+    """assemble 產出的論點必須自帶非空必要性雙視角，避免後續遺失。"""
+    for product in (
+        _assemble_one_to_one(),
+        _assemble_one_to_many(),
+        _assemble_mixed(),
+        _assemble_pending(),
+    ):
+        report = parse_binding_report(build_binding_report(product))
+        for arg in report["arguments"]:
+            assert arg["functional_gap"].strip(), arg
+            assert arg["user_value"].strip(), arg
+            assert arg["checks"]["has_functional_gap"] is True
+            assert arg["checks"]["has_user_value"] is True
+            assert arg["binding_ok"] is True
 
 
 def test_roundtrip_json_still_parseable(tmp_path):
@@ -342,23 +452,21 @@ def test_pending_evidence_has_none_cardinality_and_traceable_record():
 # ---- 逐項三條件：至少一源、可追溯、無重複遺漏 --------------------------------
 
 def test_each_argument_exposes_three_core_checks():
+    from note_filler.binding_report import REQUIRED_CHECK_KEYS
+
     report = parse_binding_report(build_binding_report(_assemble_mixed()))
     for arg in report["arguments"]:
         c = arg["checks"]
-        assert set(c) >= {
-            "at_least_one_source",
-            "source_traceable",
-            "no_duplicate_sources",
-            "no_omitted_traces",
-            "no_extra_traces",
-        }
-        # 有來源的論點三項皆 True
+        assert set(c) == set(REQUIRED_CHECK_KEYS)
+        # 有來源的論點：綁定三項 + 必要性雙視角皆 True
         if arg["cardinality"] != "none":
             assert c["at_least_one_source"] is True
             assert c["source_traceable"] is True
             assert c["no_duplicate_sources"] is True
             assert c["no_omitted_traces"] is True
             assert c["no_extra_traces"] is True
+            assert c["has_functional_gap"] is True
+            assert c["has_user_value"] is True
 
 
 # ---- 負例：缺來源／來源未對上 → binding_ok False ----------------------------

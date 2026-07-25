@@ -193,8 +193,10 @@ def assemble_correction(doc, gaps, retrieved, written, validations) -> Correctio
                 ),
                 source_id=source_id,
                 source_ids=list(used_ids) if used_ids else [],
+                # 必要性雙視角：功能缺口取 gap.reason；使用者價值由問題推導，
+                # 避免後續只掛來源卻遺失「為何需要此論點」的視角。
                 functional_gap=gap.reason,
-                user_value="",
+                user_value=f"補齊讀者對「{q}」所需的說明",
                 argument_id=argument_id,
             )
         )

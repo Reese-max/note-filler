@@ -60,6 +60,9 @@ REQUIRED_CHECK_KEYS = frozenset(
         "no_extra_traces",
         "source_id_field_aligned",
         "no_empty_fragments",
+        # 必要性雙視角：來源可追溯仍不得遺失功能缺口／使用者價值
+        "has_functional_gap",
+        "has_user_value",
     }
 )
 REQUIRED_SUMMARY_KEYS = frozenset(
@@ -72,6 +75,17 @@ REQUIRED_SUMMARY_KEYS = frozenset(
         "pending_evidence",
         "all_sourced_arguments_ok",
         "all_arguments_ok",
+    }
+)
+
+# 結構性必填非空字串（枚舉／狀態）；source_id_field 可空（語意 fail，非結構錯誤）
+# functional_gap／user_value 空欄以 checks + binding_ok 拒絕，仍可解析以指出缺失項
+_ARGUMENT_NONEMPTY_STR_KEYS = frozenset(
+    {
+        "argument_text",
+        "confidence",
+        "cardinality",
+        "binding_status",
     }
 )
 
@@ -142,6 +156,12 @@ def _evaluate_argument(seg, *, argument_index: int, segment_index: int) -> dict[
     cardinality = _cardinality(len(source_ids))
     functional_gap = getattr(seg, "functional_gap", "") or ""
     user_value = getattr(seg, "user_value", "") or ""
+    if not isinstance(functional_gap, str):
+        functional_gap = str(functional_gap)
+    if not isinstance(user_value, str):
+        user_value = str(user_value)
+    has_functional_gap = bool(functional_gap.strip())
+    has_user_value = bool(user_value.strip())
 
     no_dup = len(source_ids) == len(set(source_ids))
     # 追溯側亦不得重複
@@ -180,9 +200,13 @@ def _evaluate_argument(seg, *, argument_index: int, segment_index: int) -> dict[
         "no_extra_traces": no_extra,
         "source_id_field_aligned": source_id_aligned,
         "no_empty_fragments": no_empty_fragments,
+        "has_functional_gap": has_functional_gap,
+        "has_user_value": has_user_value,
     }
 
-    # 有來源：三項核心 + 對齊 + 片段非空皆須通過
+    necessity_ok = has_functional_gap and has_user_value
+
+    # 有來源：核心綁定 + 對齊 + 片段非空 + 必要性雙視角皆須通過
     if source_ids:
         binding_ok = all(
             (
@@ -193,12 +217,18 @@ def _evaluate_argument(seg, *, argument_index: int, segment_index: int) -> dict[
                 checks["no_extra_traces"],
                 checks["source_id_field_aligned"],
                 checks["no_empty_fragments"],
+                necessity_ok,
             )
         )
         status: BindingStatus = "pass" if binding_ok else "fail"
     else:
-        # 無來源：必須為 pending 且 processing_record 可追溯
-        intentional_pending = confidence == "pending_evidence" and source_traceable and source_id_aligned
+        # 無來源：必須為 pending 且 processing_record 可追溯，且必要性視角仍在
+        intentional_pending = (
+            confidence == "pending_evidence"
+            and source_traceable
+            and source_id_aligned
+            and necessity_ok
+        )
         binding_ok = intentional_pending
         status = "pending_evidence" if intentional_pending else "fail"
 
@@ -278,17 +308,34 @@ def build_binding_report(correction) -> dict[str, Any]:
     }
 
 
+def _reject_key_drift(actual: Any, required: frozenset[str], *, where: str) -> None:
+    """鎖定欄位契約：缺欄或未知欄（欄位漂移）一律拒絕。"""
+    if not isinstance(actual, dict):
+        raise ValueError(f"{where} 必須為 dict")
+    keys = set(actual.keys())
+    missing = required - keys
+    if missing:
+        raise ValueError(f"{where} 缺少欄位: {sorted(missing)}")
+    extra = keys - required
+    if extra:
+        raise ValueError(f"{where} 含未知欄位（欄位漂移）: {sorted(extra)}")
+
+
 def parse_binding_report(data: Any) -> dict[str, Any]:
     """嚴格解析並校驗綁定報告結構；不符則 raise ValueError。
+
+    固定欄位契約：
+      - 缺欄／未知欄（欄位漂移）→ ValueError
+      - 結構性空欄（如 confidence、source_id 元素）→ ValueError
+      - 必要性空欄（functional_gap／user_value）以 checks 標記，
+        binding_ok 為 False（仍可解析，便於驗收指出缺失項）
 
     測試應以此函式解析報告，而非手寫鬆散 dict 存取。
     """
     if not isinstance(data, dict):
         raise ValueError(f"binding report 必須為 dict，實際: {type(data).__name__}")
 
-    missing = REQUIRED_TOP_KEYS - data.keys()
-    if missing:
-        raise ValueError(f"binding report 缺少頂層欄位: {sorted(missing)}")
+    _reject_key_drift(data, REQUIRED_TOP_KEYS, where="binding report")
 
     if data.get("schema") != SCHEMA_ID:
         raise ValueError(
@@ -297,13 +344,11 @@ def parse_binding_report(data: Any) -> dict[str, Any]:
 
     if not isinstance(data.get("argument_count"), int) or data["argument_count"] < 0:
         raise ValueError("argument_count 必須為非負整數")
+    if not isinstance(data.get("source_path"), str):
+        raise ValueError("source_path 必須為 str")
 
     summary = data.get("summary")
-    if not isinstance(summary, dict):
-        raise ValueError("summary 必須為 dict")
-    smissing = REQUIRED_SUMMARY_KEYS - summary.keys()
-    if smissing:
-        raise ValueError(f"summary 缺少欄位: {sorted(smissing)}")
+    _reject_key_drift(summary, REQUIRED_SUMMARY_KEYS, where="summary")
 
     arguments = data.get("arguments")
     if not isinstance(arguments, list):
@@ -316,15 +361,9 @@ def parse_binding_report(data: Any) -> dict[str, Any]:
     for i, arg in enumerate(arguments):
         if not isinstance(arg, dict):
             raise ValueError(f"arguments[{i}] 必須為 dict")
-        amissing = REQUIRED_ARGUMENT_KEYS - arg.keys()
-        if amissing:
-            raise ValueError(f"arguments[{i}] 缺少欄位: {sorted(amissing)}")
+        _reject_key_drift(arg, REQUIRED_ARGUMENT_KEYS, where=f"arguments[{i}]")
         checks = arg.get("checks")
-        if not isinstance(checks, dict):
-            raise ValueError(f"arguments[{i}].checks 必須為 dict")
-        cmissing = REQUIRED_CHECK_KEYS - checks.keys()
-        if cmissing:
-            raise ValueError(f"arguments[{i}].checks 缺少欄位: {sorted(cmissing)}")
+        _reject_key_drift(checks, REQUIRED_CHECK_KEYS, where=f"arguments[{i}].checks")
         for ck in REQUIRED_CHECK_KEYS:
             if not isinstance(checks[ck], bool):
                 raise ValueError(f"arguments[{i}].checks.{ck} 必須為 bool")
@@ -340,18 +379,61 @@ def parse_binding_report(data: Any) -> dict[str, Any]:
             isinstance(x, str) for x in arg["source_ids"]
         ):
             raise ValueError(f"arguments[{i}].source_ids 必須為 list[str]")
+        if any(not x.strip() for x in arg["source_ids"]):
+            raise ValueError(f"arguments[{i}].source_ids 不可含空字串（空欄）")
         if not isinstance(arg["trace_source_ids"], list) or not all(
             isinstance(x, str) for x in arg["trace_source_ids"]
         ):
             raise ValueError(f"arguments[{i}].trace_source_ids 必須為 list[str]")
+        if any(not x.strip() for x in arg["trace_source_ids"]):
+            raise ValueError(f"arguments[{i}].trace_source_ids 不可含空字串（空欄）")
         if arg.get("argument_index") != i:
             raise ValueError(
                 f"arguments[{i}].argument_index 應為 {i}，實際 {arg.get('argument_index')!r}"
             )
+        if not isinstance(arg.get("segment_index"), int) or arg["segment_index"] < 0:
+            raise ValueError(f"arguments[{i}].segment_index 必須為非負整數")
+        if not isinstance(arg.get("source_count"), int) or arg["source_count"] < 0:
+            raise ValueError(f"arguments[{i}].source_count 必須為非負整數")
+        if not isinstance(arg.get("binding_ok"), bool):
+            raise ValueError(f"arguments[{i}].binding_ok 必須為 bool")
+        for sk in _ARGUMENT_NONEMPTY_STR_KEYS:
+            val = arg.get(sk)
+            if not isinstance(val, str) or not val.strip():
+                raise ValueError(f"arguments[{i}].{sk} 不可為空欄")
+        if not isinstance(arg.get("source_id_field"), str):
+            raise ValueError(f"arguments[{i}].source_id_field 必須為 str")
         if not isinstance(arg.get("functional_gap"), str):
             raise ValueError(f"arguments[{i}].functional_gap 必須為 str")
         if not isinstance(arg.get("user_value"), str):
             raise ValueError(f"arguments[{i}].user_value 必須為 str")
+        # 必要性空欄：結構可解析，但必須在 checks 反映，且不得標為通過
+        if not arg["functional_gap"].strip():
+            if checks.get("has_functional_gap") is not False:
+                raise ValueError(
+                    f"arguments[{i}] functional_gap 為空欄但 checks.has_functional_gap 未標 False"
+                )
+            if arg["binding_ok"] is not False:
+                raise ValueError(
+                    f"arguments[{i}] functional_gap 為空欄但 binding_ok 未標 False"
+                )
+            if arg["binding_status"] == "pass":
+                raise ValueError(
+                    f"arguments[{i}] functional_gap 為空欄但 binding_status 為 pass"
+                )
+        if not arg["user_value"].strip():
+            if checks.get("has_user_value") is not False:
+                raise ValueError(
+                    f"arguments[{i}] user_value 為空欄但 checks.has_user_value 未標 False"
+                )
+            if arg["binding_ok"] is not False:
+                raise ValueError(
+                    f"arguments[{i}] user_value 為空欄但 binding_ok 未標 False"
+                )
+            if arg["binding_status"] == "pass":
+                raise ValueError(
+                    f"arguments[{i}] user_value 為空欄但 binding_status 為 pass"
+                )
 
     # 校驗 source_usage 反向索引
     su = data.get("source_usage")

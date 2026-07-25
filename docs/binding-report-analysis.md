@@ -47,7 +47,7 @@
 - `source_ids`：來源清單（任務要求）
 - `trace_source_ids`：追溯位置（任務要求）
 - `source_id_field`：source_id 欄位值
-- `checks`：驗證狀態（任務要求）
+- `checks`：驗證狀態（任務要求；欄位契約鎖定，缺欄／未知欄拒絕）
   - `at_least_one_source`：至少一個來源
   - `source_traceable`：來源可追溯
   - `no_duplicate_sources`：無重複來源
@@ -55,8 +55,11 @@
   - `no_extra_traces`：無多餘追溯
   - `source_id_field_aligned`：source_id 欄位對齊
   - `no_empty_fragments`：片段非空
+  - `has_functional_gap`：功能缺口非空（必要性視角）
+  - `has_user_value`：使用者價值非空（必要性視角）
+- `functional_gap`／`user_value`：必要性雙視角（來源可追溯仍不得為空通過）
 - `binding_status`：綁定狀態（pass/fail/pending_evidence）
-- `binding_ok`：整體綁定是否成功
+- `binding_ok`：整體綁定是否成功（含必要性）
 
 #### 來源反向索引（source_usage）
 ```json
