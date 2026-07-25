@@ -29,13 +29,63 @@ class _Seg:
     type: str
     confidence: str = "verified"
     text: str = "可追溯筆記內容"
+    sources: list | None = None
+    traceability: list | None = None
+    source_id: str = ""
+    angle_type: str = ""
+    angle_labels: list | None = None
+    angle_key: str = ""
+    functional_gap: str = ""
+    user_value: str = ""
+    argument_id: str = ""
+    angle_tags: list | None = None
+    valid_angle_count: int = 0
+    deduped_angle_count: int = 0
+    duplicate_angles: list | None = None
+
+    def __post_init__(self) -> None:
+        if self.sources is None:
+            self.sources = []
+        if self.traceability is None:
+            self.traceability = []
+        if self.angle_labels is None:
+            self.angle_labels = (
+                [self.angle_type, "functional_gap", "user_value"]
+                if self.angle_type
+                else []
+            )
+        if self.angle_tags is None:
+            self.angle_tags = list(self.angle_labels)
+        if self.duplicate_angles is None:
+            self.duplicate_angles = []
+        if self.angle_type and not self.valid_angle_count:
+            self.valid_angle_count = 1
+            self.deduped_angle_count = 1
 
 
 class _Doc:
+    """成功路徑 stub：兩個相異有效角度 + 必要性欄位，通過角度有效性閘。"""
+
     segments = [
         _Seg("original", text="原文段落"),
-        _Seg("supplement", "verified", text="補充段落 verified"),
-        _Seg("supplement", "pending_evidence", text="補充段落 pending"),
+        _Seg(
+            "supplement",
+            "verified",
+            text="行政處分如何定義之補充",
+            angle_type="definition",
+            angle_key="definition:行政處分如何定義",
+            functional_gap="原稿未定義行政處分",
+            user_value="補齊讀者對「行政處分如何定義？」所需的說明",
+        ),
+        _Seg(
+            "supplement",
+            "pending_evidence",
+            text="行政處分有何限制之補充",
+            angle_type="limitation",
+            angle_key="limitation:行政處分有何限制",
+            functional_gap="原稿未說明限制",
+            user_value="補齊讀者對「行政處分有何限制？」所需的說明",
+        ),
     ]
 
 

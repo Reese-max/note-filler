@@ -355,6 +355,50 @@ def is_angle_coverage_complete(cov: dict[str, Any] | None) -> bool:
     return True
 
 
+def list_missing_angle_fields(cov: dict[str, Any] | None) -> list[str]:
+    """回傳缺少的角度欄位名稱（canonical：angle_type / functional_gap / user_value / question）。
+
+    供驗收指出「缺哪個角度欄位」；順序固定以利 determinism。
+    """
+    missing_fields: list[str] = []
+    if not isinstance(cov, dict):
+        return ["angle_coverage"]
+
+    facets = cov.get("covered_facets")
+    facet_set = set(facets) if isinstance(facets, list) else set()
+    labels = cov.get("angle_labels") or []
+    label_set = {
+        lbl for lbl in labels if isinstance(lbl, str) and lbl.strip()
+    }
+
+    at = cov.get("angle_type")
+    if (
+        not isinstance(at, str)
+        or not at.strip()
+        or f"angle:{at}" not in facet_set
+    ):
+        missing_fields.append("angle_type")
+
+    has_fg_facet = "necessity:functional_gap" in facet_set
+    has_fg_label = "functional_gap" in label_set
+    has_fg_value = bool((cov.get("functional_gap") or "").strip())
+    if not has_fg_facet or (not has_fg_label and not has_fg_value):
+        if "functional_gap" not in missing_fields:
+            missing_fields.append("functional_gap")
+
+    has_uv_facet = "necessity:user_value" in facet_set
+    has_uv_label = "user_value" in label_set
+    has_uv_value = bool((cov.get("user_value") or "").strip())
+    if not has_uv_facet or (not has_uv_label and not has_uv_value):
+        if "user_value" not in missing_fields:
+            missing_fields.append("user_value")
+
+    if "question" not in facet_set:
+        missing_fields.append("question")
+
+    return missing_fields
+
+
 def validate_argument_angle(
     cov: dict[str, Any] | None,
     *,
@@ -409,6 +453,55 @@ def validate_argument_angle(
             missing.append(f"{argument_id}: user_value 欄位為空")
 
     return len(missing) == 0, missing
+
+
+def build_angle_field_issues(
+    cov: dict[str, Any] | None,
+    *,
+    argument_id: str,
+    angle_gate_ok: bool = True,
+    effective_angle_count: int | None = None,
+    required_effective_angle_count: int | None = None,
+) -> list[str]:
+    """組出可機器／人類共讀的角度有效性問題清單（缺少或被排除的角度欄位）。
+
+    - 角度缺失：列出 missing field（angle_type / functional_gap / user_value / question）
+    - 同義／重複排除：指出 excluded angle_key 與 reason
+    - 單一有效角度（跨論點門檻未過）：指出有效角度不足
+    """
+    issues: list[str] = []
+    missing_fields = list_missing_angle_fields(cov)
+    for field in missing_fields:
+        issues.append(f"{argument_id}: 缺少角度欄位 {field}")
+
+    if not isinstance(cov, dict):
+        return issues
+
+    exclusion = cov.get("duplicate_exclusion") or {}
+    if exclusion.get("excluded"):
+        reason = exclusion.get("reason") or "unknown"
+        kept = exclusion.get("kept_argument_index")
+        key = cov.get("angle_key") or ""
+        issues.append(
+            f"{argument_id}: 被排除的角度欄位 angle_key={key} "
+            f"(reason={reason}, kept_argument_index={kept})"
+        )
+
+    if (
+        not angle_gate_ok
+        and not exclusion.get("excluded")
+        and cov.get("effective_angle_count") == 1
+        and effective_angle_count is not None
+        and required_effective_angle_count is not None
+        and effective_angle_count < required_effective_angle_count
+    ):
+        issues.append(
+            f"{argument_id}: 僅單一有效角度 "
+            f"(effective_angle_count={effective_angle_count}/"
+            f"{required_effective_angle_count})"
+        )
+
+    return issues
 
 
 def build_argument_angle_fields(

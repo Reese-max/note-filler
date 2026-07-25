@@ -19,7 +19,11 @@ from note_filler import __main__ as cli
 
 
 class _FakeDoc:
-    """最小替身:含 2 個 segment,模擬 pipeline 產出。"""
+    """最小替身:含 2 個 segment,模擬 pipeline 產出。
+
+    成功路徑必須具備角度有效性必要欄位（functional_gap／user_value／相異角度），
+    否則 write_binding_report 角度有效性閘會明確拒絕。
+    """
     class _Seg:
         def __init__(
             self,
@@ -27,19 +31,51 @@ class _FakeDoc:
             confidence: str = "verified",
             angle_type: str = "",
             angle_key: str = "",
+            text: str = "test text",
+            functional_gap: str = "",
+            user_value: str = "",
         ):
             self.type = type_
             self.confidence = confidence
-            self.text = "test text"
+            self.text = text
             self.sources = []
+            self.traceability = []
+            self.source_id = ""
             self.angle_type = angle_type
-            self.angle_labels = [angle_type] if angle_type else []
+            self.angle_labels = (
+                [angle_type, "functional_gap", "user_value"]
+                if angle_type
+                else []
+            )
             self.angle_key = angle_key
+            self.functional_gap = functional_gap
+            self.user_value = user_value
+            self.argument_id = ""
+            self.angle_tags = list(self.angle_labels)
+            self.valid_angle_count = 1 if angle_type else 0
+            self.deduped_angle_count = 1 if angle_type else 0
+            self.duplicate_angles: list[str] = []
 
     segments = [
         _Seg("original"),
-        _Seg("supplement", "verified", "definition", "definition:test"),
-        _Seg("supplement", "pending_evidence", "limitation", "limitation:test"),
+        _Seg(
+            "supplement",
+            "verified",
+            "definition",
+            "definition:行政處分如何定義",
+            text="行政處分如何定義之補充",
+            functional_gap="原稿未定義行政處分",
+            user_value="補齊讀者對「行政處分如何定義？」所需的說明",
+        ),
+        _Seg(
+            "supplement",
+            "pending_evidence",
+            "limitation",
+            "limitation:行政處分有何限制",
+            text="行政處分有何限制之補充",
+            functional_gap="原稿未說明限制",
+            user_value="補齊讀者對「行政處分有何限制？」所需的說明",
+        ),
     ]
 
 

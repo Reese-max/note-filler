@@ -338,13 +338,20 @@ def test_process_file_success_requires_non_empty_body(tmp_path, monkeypatch):
             ),
             Segment(
                 type="supplement",
-                text="補充說明",
+                text="行政處分如何定義之補充說明",
                 anchor_idx=0,
                 sources=[],
                 confidence="pending_evidence",
-                functional_gap="",
-                user_value="",
+                functional_gap="原稿未定義行政處分",
+                user_value="補齊讀者對「行政處分如何定義？」所需的說明",
                 argument_id="argument:0",
+                angle_type="definition",
+                angle_labels=["definition", "functional_gap", "user_value"],
+                angle_key="definition:行政處分如何定義",
+                angle_tags=["definition", "functional_gap", "user_value"],
+                valid_angle_count=1,
+                deduped_angle_count=1,
+                duplicate_angles=[],
             ),
         ]
 

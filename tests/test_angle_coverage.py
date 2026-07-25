@@ -4,10 +4,12 @@ from __future__ import annotations
 from note_filler.angle_coverage import (
     attach_relations,
     build_angle_coverage,
+    build_angle_field_issues,
     build_angle_key,
     classify_angle_type,
     detect_angle_relation,
     is_angle_coverage_complete,
+    list_missing_angle_fields,
     normalize_angle_text,
     summarize_angle_coverage,
     validate_argument_angle,
@@ -356,3 +358,100 @@ def test_validate_argument_angle_mismatched_angle_type_facet():
     assert valid is False
     assert any("angle:definition" in m for m in missing)
     assert all("argument:6" in m for m in missing)
+
+
+def test_list_missing_angle_fields_reports_canonical_names():
+    """缺少 facet 時以固定欄位名回報，利於機器比對。"""
+    cov = {
+        "angle_type": "definition",
+        "angle_labels": ["definition"],
+        "covered_facets": ["angle:definition"],
+        "angle_key": "definition:test",
+    }
+    assert list_missing_angle_fields(cov) == [
+        "functional_gap",
+        "user_value",
+        "question",
+    ]
+    complete = build_angle_coverage(
+        question="行政處分如何定義？",
+        functional_gap="原稿未定義",
+        user_value="補齊讀者對「行政處分如何定義？」所需的說明",
+    )
+    assert list_missing_angle_fields(complete) == []
+
+
+def test_build_angle_field_issues_missing_and_excluded():
+    """角度缺失與同義／重複排除皆應產生可定位的 angle_field_issues。"""
+    missing_cov = {
+        "angle_type": "definition",
+        "angle_labels": ["definition"],
+        "covered_facets": ["angle:definition"],
+        "angle_key": "definition:x",
+        "effective_angle_count": 1,
+        "duplicate_exclusion": {
+            "excluded": False,
+            "reason": None,
+            "kept_argument_index": 0,
+        },
+    }
+    missing_issues = build_angle_field_issues(
+        missing_cov, argument_id="argument:0", angle_gate_ok=True
+    )
+    assert any("缺少角度欄位 functional_gap" in i for i in missing_issues)
+    assert any("缺少角度欄位 user_value" in i for i in missing_issues)
+    assert any("缺少角度欄位 question" in i for i in missing_issues)
+
+    excluded_cov = {
+        "angle_type": "definition",
+        "angle_labels": ["definition", "functional_gap", "user_value"],
+        "covered_facets": [
+            "angle:definition",
+            "necessity:functional_gap",
+            "necessity:user_value",
+            "question",
+        ],
+        "angle_key": "definition:dup",
+        "effective_angle_count": 0,
+        "duplicate_exclusion": {
+            "excluded": True,
+            "reason": "duplicate",
+            "kept_argument_index": 0,
+        },
+    }
+    excluded_issues = build_angle_field_issues(
+        excluded_cov,
+        argument_id="argument:1",
+        angle_gate_ok=False,
+        effective_angle_count=1,
+        required_effective_angle_count=2,
+    )
+    assert any("被排除的角度欄位" in i for i in excluded_issues)
+    assert any("reason=duplicate" in i for i in excluded_issues)
+    assert any("angle_key=definition:dup" in i for i in excluded_issues)
+
+    single_cov = {
+        "angle_type": "definition",
+        "angle_labels": ["definition", "functional_gap", "user_value"],
+        "covered_facets": [
+            "angle:definition",
+            "necessity:functional_gap",
+            "necessity:user_value",
+            "question",
+        ],
+        "angle_key": "definition:only",
+        "effective_angle_count": 1,
+        "duplicate_exclusion": {
+            "excluded": False,
+            "reason": None,
+            "kept_argument_index": 0,
+        },
+    }
+    single_issues = build_angle_field_issues(
+        single_cov,
+        argument_id="argument:0",
+        angle_gate_ok=False,
+        effective_angle_count=1,
+        required_effective_angle_count=2,
+    )
+    assert any("僅單一有效角度" in i for i in single_issues)

@@ -1,88 +1,78 @@
-# 角度有效性驗收規則實作報告
+# 角度有效性驗收規則
 
-**日期**: 2026-07-26
-**任務**: 實作角度有效性驗收規則
+**日期**: 2026-07-26  
+**任務**: 在驗收規則中新增角度有效性判定（單一角度／缺失／同義重複明確失敗，並指出缺少或被排除的角度欄位；來源綁定檢查不退化）
 
 ## 變更摘要
 
-實作了論點角度有效性驗收規則，當同一論點只有單一角度、角度彼此同義重複、或角度欄位缺失時，驗收應明確失敗並指出是哪個 `argument_id` 缺少哪類角度；同時保留一對一與一對多來源綁定的既有檢查。
+同一論點若：
 
-## 核心變更
+1. **角度欄位缺失**（`angle_type`／`functional_gap`／`user_value`／`question`）
+2. **角度彼此同義或精確重複**（被 `duplicate_exclusion` 排除）
+3. **去重後僅剩單一有效角度**（未達 `required_effective_angle_count`）
 
-### 1. `src/note_filler/angle_coverage.py`
+則綁定報告必須：
 
-**新增常數**:
-- `REQUIRED_FACETS = frozenset({"angle_type", "functional_gap", "user_value", "question"})` - 每個 argument 必須具備的四類必要 facet
+- `binding_ok=False`、`binding_status=fail`
+- 在 `angle_field_issues` 列出**缺少或被排除的角度欄位**
+- `write_binding_report` 落盤後以 `RuntimeError: 角度有效性驗收失敗：…` 拒絕驗收，訊息含上述欄位定位
 
-**新增函數**:
-- `validate_argument_angle(cov, *, argument_id)` - 驗證單一 argument 的角度面向完整性
-  - 檢查四類必要 facet 是否齊全：`angle:{type}`、`necessity:functional_gap`、`necessity:user_value`、`question`
-  - 檢查 `angle_type` 與 `angle:{type}` facet 是否一致
-  - 檢查 `functional_gap` 與 `user_value` 來源欄位非空
-  - 回傳 `(is_valid, missing_list)`，缺失訊息包含 `argument_id` 以利定位
+來源綁定 checks（`at_least_one_source`、`source_traceable`、`no_duplicate_sources`、`no_omitted_traces`、`no_extra_traces` 等）在角度失敗時**仍保留原判定**，不因角度閘而假性標壞。
 
-### 2. `src/note_filler/binding_report.py`
+## 核心 API
 
-**更新檢查鍵值** (`REQUIRED_CHECK_KEYS`):
-- 新增 `has_angle_facets` (取代原有細分檢查)
-- 移除 `angle_facet_complete`、`angle_functional_gap_present` 等過度細分的檢查鍵，改用單一 `has_angle_facets` 表示角度面向完整性
+### `src/note_filler/angle_coverage.py`
 
-**更新 `_evaluate_argument`**:
-- 引入 `validate_argument_angle` 進行每個 argument 的角度有效性驗證
-- 將驗證結果寫入 `checks["has_angle_facets"]`
-- `angle_ok = has_angle_coverage and has_angle_facets` - 角度覆蓋結構完整且面向齊全才算通過
+| 符號 | 用途 |
+|------|------|
+| `list_missing_angle_fields(cov)` | 回傳 canonical 缺欄：`angle_type`／`functional_gap`／`user_value`／`question` |
+| `validate_argument_angle(cov, *, argument_id)` | 面向完整性；回傳 `(ok, messages)` |
+| `build_angle_field_issues(...)` | 組出可機器／人類共讀的 issue 清單（缺欄＋被排除＋單一有效角度） |
 
-**更新 `parse_binding_report`**:
-- 驗證 `has_angle_facets` 為 bool
-- `has_angle_facets` 為 False 時，`binding_ok` 必為 False、`binding_status` 必為 "fail"
-- `has_angle_facets` 為 True 時，確保正確標記
+### `src/note_filler/binding_report.py`
 
-### 3. `tests/test_angle_coverage.py`
+- 每個 argument 新增固定欄位 **`angle_field_issues: list[str]`**（空 list＝通過）
+- 納入 `REQUIRED_ARGUMENT_ANGLE_KEYS`；`parse_binding_report` 重算比對，有 issues 時不得標 pass
+- `write_binding_report`：`coverage_ok` 未過、facet 不完整、或有 `angle_field_issues` 皆拒絕驗收，並在錯誤訊息中列出欄位
 
-新增 7 項測試:
-1. `test_validate_argument_angle_single_argument_missing_facets` - 單一 argument 缺失多個 facet
-2. `test_validate_argument_angle_missing_functional_gap` - 缺失 functional_gap facet
-3. `test_validate_argument_angle_missing_user_value` - 缺失 user_value facet
-4. `test_validate_argument_angle_missing_question` - 缺失 question facet
-5. `test_validate_argument_angle_complete_passes` - 完整四類 facet 通過
-5. `test_validate_argument_angle_missing_angle_type` - angle_type 為空失敗
-6. `test_validate_argument_angle_mismatched_angle_type_facet` - angle_type 與 facet 不符失敗
+## 失敗訊息範例
 
-## 驗收規則行為
+| 情況 | `angle_field_issues`／錯誤片段 |
+|------|--------------------------------|
+| 缺 functional_gap | `argument:0: 缺少角度欄位 functional_gap` |
+| 同義排除 | `argument:1: 被排除的角度欄位 angle_key=… (reason=synonym, kept_argument_index=0)` |
+| 精確重複排除 | `… (reason=duplicate, …)` |
+| 去重後僅一角 | `argument:0: 僅單一有效角度 (effective_angle_count=1/2)` |
 
-### 觸發失敗的情況
+## 測試覆蓋
 
-| 情況 | 錯誤訊息範例 |
-|------|-------------|
-| 單一論點只有一個角度 | `argument:0: 缺少 functional_gap facet (necessity:functional_gap)` |
-| 角度同義重複 | 既有邏輯：`synonym` 關係導致 `effective_angle_count=0` |
-| angle_type 缺失 | `argument:5: 缺少 angle type facet (angle:...)` |
-| functional_gap 缺失 | `argument:0: 缺少 functional_gap facet (necessity:functional_gap)` |
-| user_value 缺失 | `argument:0: 缺少 user_value facet (necessity:user_value)` |
-| question 缺失 | `argument:0: 缺少 question facet` |
-| angle_type 與 facet 不符 | `argument:6: 缺少 angle type facet (angle:definition)` |
+- `tests/test_angle_coverage.py`：`list_missing_angle_fields`、`build_angle_field_issues`、既有 facet／重複／同義單元
+- `tests/test_binding_report.py`：
+  - `test_missing_angle_fields_fail_with_explicit_field_names`（來源 OK、缺欄明確失敗）
+  - `test_excluded_synonym_angles_list_excluded_fields_and_keep_source_checks`（同義排除＋來源 checks 不退化）
+  - 既有單一／重複／來源雙閘隔離負例（錯誤訊息改對齊「角度有效性驗收失敗」）
+- 成功路徑 stub（CLI／delivery／note product）補齊必要性與相異角度，避免假成功路徑繞過閘
 
-### 保留的既有檢查
-
-- 一對一綁定：`cardinality == "one_to_one"` 且 `source_count == 1`
-- 一對多綁定：`cardinality == "one_to_many"` 且 `source_count >= 2`
-- 來源可追溯性：`source_traceable`、`no_duplicate_sources`、`no_omitted_traces`、`no_extra_traces`
-- 來源片段非空：`no_empty_fragments`
-- 必要性雙視角：`has_functional_gap`、`has_user_value`
-- 角度覆蓋門檻：`meets_angle_coverage_threshold` (跨論點去重後的有效角度數)
-
-## 測試結果
+## 驗證證據
 
 ```
-406 passed, 11 deselected
+413 passed, 11 deselected
 ```
 
-所有既有測試通過，新增測試驗證角度有效性規則正確運作。
+命令：
 
-## 相關檔案異動
+```text
+D:/Users/Administrator/Desktop/筆記補齊/.venv/Scripts/python.exe -X utf8 -m pytest -m "not integration" -q --tb=line
+```
 
-- `src/note_filler/angle_coverage.py` - 新增 `REQUIRED_FACETS`、`validate_argument_angle`
-- `src/note_filler/binding_report.py` - 整合角度有效性驗證到綁定報告
-- `tests/test_angle_coverage.py` - 新增 7 項角度有效性測試
-- `docs/pytest-audit/requirements-test-coverage-2026-07-19.json` - 更新測試收集期望值 (417/406/11)
-- `tests/test_deselection_guard.py` - 更新 `_EXPECTED_COUNTS` 為 (417, 406, 11)
+收集門檻：`_EXPECTED_COUNTS = (424, 413, 11)`（`tests/test_deselection_guard.py` 與 `docs/pytest-audit/requirements-test-coverage-2026-07-19.json`）
+
+## 相關檔案
+
+- `src/note_filler/angle_coverage.py`
+- `src/note_filler/binding_report.py`
+- `tests/test_angle_coverage.py`
+- `tests/test_binding_report.py`
+- `tests/test_cli.py`／`tests/test_delivery_receipt.py`／`tests/test_note_product_gate.py`（成功 stub）
+- `tests/test_deselection_guard.py`
+- `docs/pytest-audit/requirements-test-coverage-2026-07-19.json`

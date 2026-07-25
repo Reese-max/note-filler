@@ -934,7 +934,7 @@ def test_single_or_duplicate_angles_fail_acceptance(tmp_path):
         a["checks"]["meets_angle_coverage_threshold"] is False
         for a in dup_report["arguments"]
     )
-    with pytest.raises(RuntimeError, match="角度覆蓋驗收失敗"):
+    with pytest.raises(RuntimeError, match="角度有效性驗收失敗"):
         write_binding_report(tmp_path / "dup.md", _assemble_repeated_angles())
     dup_path = tmp_path / BINDING_REPORT_NAME
     assert dup_path.is_file()
@@ -958,7 +958,7 @@ def test_single_or_duplicate_angles_fail_acceptance(tmp_path):
     assert syn_summary["coverage_ok"] is False
     assert syn_report["summary"]["all_arguments_ok"] is False
     assert all(a["binding_status"] == "fail" for a in syn_report["arguments"])
-    with pytest.raises(RuntimeError, match="角度覆蓋驗收失敗"):
+    with pytest.raises(RuntimeError, match="角度有效性驗收失敗"):
         write_binding_report(tmp_path / "syn.md", syn_product)
 
 
@@ -1006,9 +1006,10 @@ def test_sources_ok_but_angles_insufficient_or_duplicate_fails_explicitly(tmp_pa
 
     assert report_dup["summary"]["fail"] == 2
     assert report_dup["summary"]["all_arguments_ok"] is False
-    with pytest.raises(RuntimeError, match="角度覆蓋驗收失敗") as ei_dup:
+    with pytest.raises(RuntimeError, match="角度有效性驗收失敗") as ei_dup:
         write_binding_report(tmp_path / "src-ok-angle-dup.md", product_dup)
-    assert "有效角度" in str(ei_dup.value)
+    dup_msg = str(ei_dup.value)
+    assert "被排除的角度欄位" in dup_msg or "僅單一有效角度" in dup_msg
     persisted_dup = json.loads(
         (tmp_path / BINDING_REPORT_NAME).read_text(encoding="utf-8")
     )
@@ -1031,8 +1032,9 @@ def test_sources_ok_but_angles_insufficient_or_duplicate_fails_explicitly(tmp_pa
         assert c["meets_angle_coverage_threshold"] is False
         assert arg["binding_ok"] is False
         assert arg["binding_status"] == "fail"
+        assert arg["angle_field_issues"], "同義／單一角度應列出缺少或被排除欄位"
     assert report_syn["summary"]["all_arguments_ok"] is False
-    with pytest.raises(RuntimeError, match="角度覆蓋驗收失敗"):
+    with pytest.raises(RuntimeError, match="角度有效性驗收失敗"):
         write_binding_report(tmp_path / "src-ok-angle-syn.md", product_syn)
 
 
@@ -1143,13 +1145,80 @@ def test_parse_rejects_tampered_angle_measurement_and_summary():
 
 def test_write_binding_report_persists_metrics_then_fails_angle_gate(tmp_path):
     path = tmp_path / "binding_report.json"
-    with pytest.raises(RuntimeError, match="角度覆蓋驗收失敗"):
+    with pytest.raises(RuntimeError, match="角度有效性驗收失敗") as ei:
         write_binding_report(path, _assemble_repeated_angles(3))
+    assert "被排除的角度欄位" in str(ei.value) or "僅單一有效角度" in str(ei.value)
 
     report_path = tmp_path / BINDING_REPORT_NAME
     report = json.loads(report_path.read_text(encoding="utf-8"))
     assert report["angle_coverage_summary"]["coverage_ok"] is False
     assert report["angle_coverage_summary"]["effective_angle_count"] == 1
+
+
+def test_missing_angle_fields_fail_with_explicit_field_names(tmp_path):
+    """來源綁定正確但角度欄位缺失 → 明確失敗並指出缺少的角度欄位。"""
+    product = _assemble_same_topic_distinct_angles()
+    # 剝除第一論點的 functional_gap／user_value → 角度 facet 缺失
+    for seg in product.segments:
+        if seg.type != "supplement":
+            continue
+        seg.functional_gap = ""
+        seg.user_value = ""
+        break
+
+    report = parse_binding_report(build_binding_report(product))
+    arg0 = report["arguments"][0]
+    # 來源不得因角度失敗而被假性標壞
+    assert arg0["checks"]["at_least_one_source"] is True
+    assert arg0["checks"]["source_traceable"] is True
+    assert arg0["checks"]["angle_facet_complete"] is False
+    assert arg0["binding_ok"] is False
+    assert arg0["binding_status"] == "fail"
+    issues = arg0["angle_field_issues"]
+    assert any("functional_gap" in i for i in issues)
+    assert any("user_value" in i for i in issues)
+    assert any("缺少角度欄位" in i for i in issues)
+
+    with pytest.raises(RuntimeError, match="角度有效性驗收失敗") as ei:
+        write_binding_report(tmp_path / "missing-angle-fields.md", product)
+    msg = str(ei.value)
+    assert "functional_gap" in msg
+    assert "user_value" in msg or "缺少角度欄位" in msg
+    persisted = json.loads((tmp_path / BINDING_REPORT_NAME).read_text(encoding="utf-8"))
+    assert persisted["arguments"][0]["angle_field_issues"]
+    assert persisted["summary"]["all_arguments_ok"] is False
+
+
+def test_excluded_synonym_angles_list_excluded_fields_and_keep_source_checks():
+    """同義角度被排除時必須指出 excluded angle_key，且來源 checks 不退化。"""
+    report = parse_binding_report(build_binding_report(_assemble_synonym_angles()))
+    assert report["angle_coverage_summary"]["coverage_ok"] is False
+
+    kept = report["arguments"][0]
+    excluded = report["arguments"][1]
+    assert kept["angle_coverage"]["duplicate_exclusion"]["excluded"] is False
+    assert excluded["angle_coverage"]["duplicate_exclusion"]["excluded"] is True
+    assert excluded["angle_coverage"]["duplicate_exclusion"]["reason"] == "synonym"
+
+    assert any("僅單一有效角度" in i for i in kept["angle_field_issues"])
+    assert any("被排除的角度欄位" in i for i in excluded["angle_field_issues"])
+    assert any("reason=synonym" in i for i in excluded["angle_field_issues"])
+    assert any(
+        excluded["angle_coverage"]["angle_key"] in i
+        for i in excluded["angle_field_issues"]
+    )
+
+    for arg in report["arguments"]:
+        c = arg["checks"]
+        assert c["at_least_one_source"] is True
+        assert c["source_traceable"] is True
+        assert c["no_duplicate_sources"] is True
+        assert c["no_omitted_traces"] is True
+        assert c["no_extra_traces"] is True
+        assert c["source_id_field_aligned"] is True
+        assert c["no_empty_fragments"] is True
+        assert arg["binding_status"] == "fail"
+        assert arg["binding_ok"] is False
 
 
 def test_angle_synonym_detection_same_type_overlapping_tokens():

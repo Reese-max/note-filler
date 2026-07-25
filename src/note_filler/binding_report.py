@@ -18,6 +18,7 @@ from typing import Any, Literal
 
 from note_filler.angle_coverage import (
     attach_relations,
+    build_angle_field_issues,
     build_argument_angle_fields,
     coverage_from_segment,
     is_angle_coverage_complete,
@@ -49,6 +50,8 @@ REQUIRED_ARGUMENT_ANGLE_KEYS = frozenset(
         "valid_angle_count",
         "deduped_angle_count",
         "duplicate_angles",
+        # 角度有效性：缺少或被排除的角度欄位（空 list 表示通過）
+        "angle_field_issues",
     }
 )
 REQUIRED_ARGUMENT_KEYS = frozenset(
@@ -404,7 +407,18 @@ def build_binding_report(correction) -> dict[str, Any]:
     angle_gate_ok = angle_summary["coverage_ok"]
     for argument in arguments:
         argument["checks"]["meets_angle_coverage_threshold"] = angle_gate_ok
-        if not angle_gate_ok:
+        # 明確列出缺少或被排除的角度欄位（單一角度／缺失／同義重複）
+        argument["angle_field_issues"] = build_angle_field_issues(
+            argument["angle_coverage"],
+            argument_id=argument["argument_id"],
+            angle_gate_ok=angle_gate_ok,
+            effective_angle_count=angle_summary["effective_angle_count"],
+            required_effective_angle_count=angle_summary[
+                "required_effective_angle_count"
+            ],
+        )
+        if not angle_gate_ok or argument["angle_field_issues"]:
+            # 角度有效性未過 → 驗收明確失敗（來源 checks 仍保留原判定）
             argument["binding_ok"] = False
             argument["binding_status"] = "fail"
 
@@ -545,6 +559,22 @@ def parse_binding_report(data: Any) -> dict[str, Any]:
             isinstance(angle, str) and angle.strip() for angle in duplicate_angles
         ):
             raise ValueError(f"arguments[{i}].duplicate_angles 必須為 list[str]")
+        angle_field_issues = arg.get("angle_field_issues")
+        if not isinstance(angle_field_issues, list) or not all(
+            isinstance(issue, str) and issue.strip() for issue in angle_field_issues
+        ):
+            raise ValueError(
+                f"arguments[{i}].angle_field_issues 必須為 list[str]（可為空 list）"
+            )
+        if angle_field_issues:
+            if arg["binding_ok"] is not False:
+                raise ValueError(
+                    f"arguments[{i}] 有 angle_field_issues 但 binding_ok 未標 False"
+                )
+            if arg["binding_status"] == "pass":
+                raise ValueError(
+                    f"arguments[{i}] 有 angle_field_issues 但 binding_status 為 pass"
+                )
         # 必要性空欄：結構可解析，但必須在 checks 反映，且不得標為通過
         if not arg["functional_gap"].strip():
             if checks.get("has_functional_gap") is not False:
@@ -741,6 +771,8 @@ def parse_binding_report(data: Any) -> dict[str, Any]:
             coverages=expected_coverages,
         )
         for key in REQUIRED_ARGUMENT_ANGLE_KEYS:
+            if key == "angle_field_issues":
+                continue  # 需搭配 coverage_ok 重算，見下方
             if arg[key] != expected_fields[key]:
                 raise ValueError(f"arguments[{i}].{key} 角度量測不一致")
 
@@ -800,6 +832,26 @@ def parse_binding_report(data: Any) -> dict[str, Any]:
             raise ValueError(
                 f"arguments[{i}] 角度覆蓋未達門檻但驗收未明確標為 fail"
             )
+        expected_issues = build_angle_field_issues(
+            arg["angle_coverage"],
+            argument_id=arg["argument_id"],
+            angle_gate_ok=angle_gate_ok,
+            effective_angle_count=expected_acs["effective_angle_count"],
+            required_effective_angle_count=expected_acs[
+                "required_effective_angle_count"
+            ],
+        )
+        if arg.get("angle_field_issues") != expected_issues:
+            raise ValueError(
+                f"arguments[{i}].angle_field_issues 與角度有效性量測不一致: "
+                f"期望 {expected_issues}，實際 {arg.get('angle_field_issues')}"
+            )
+        if expected_issues and (
+            arg["binding_ok"] is not False or arg["binding_status"] != "fail"
+        ):
+            raise ValueError(
+                f"arguments[{i}] 角度有效性問題未明確標為 fail: {expected_issues}"
+            )
     expected_summary = _summarize_bindings(arguments)
     if summary != expected_summary:
         raise ValueError(
@@ -809,8 +861,26 @@ def parse_binding_report(data: Any) -> dict[str, Any]:
     return data
 
 
+def _collect_angle_field_issues(report: dict[str, Any]) -> list[str]:
+    """彙總所有論點的缺少／被排除角度欄位問題（保序、去重）。"""
+    seen: set[str] = set()
+    issues: list[str] = []
+    for arg in report.get("arguments") or []:
+        for issue in arg.get("angle_field_issues") or []:
+            if not isinstance(issue, str) or not issue.strip():
+                continue
+            if issue in seen:
+                continue
+            seen.add(issue)
+            issues.append(issue)
+    return issues
+
+
 def write_binding_report(output_path: Path, correction) -> Path:
-    """寫入報告；角度門檻未通過時保留報告並明確拒絕驗收。"""
+    """寫入報告；角度有效性／覆蓋門檻未通過時保留報告並明確拒絕驗收。
+
+    失敗訊息必須指出缺少或被排除的角度欄位（argument_id + field／angle_key）。
+    """
     report = build_binding_report(correction)
     # 校驗後再落盤，保證產物可被 parse_binding_report 直接吃
     parse_binding_report(report)
@@ -823,12 +893,17 @@ def write_binding_report(output_path: Path, correction) -> Path:
         newline="\n",
     )
     angle_summary = report["angle_coverage_summary"]
-    if not angle_summary["coverage_ok"]:
-        raise RuntimeError(
-            "角度覆蓋驗收失敗："
+    field_issues = _collect_angle_field_issues(report)
+    facet_incomplete = any(
+        not (arg.get("checks") or {}).get("angle_facet_complete", True)
+        for arg in report.get("arguments") or []
+    )
+    if not angle_summary["coverage_ok"] or field_issues or facet_incomplete:
+        detail = "；".join(field_issues) if field_issues else (
             f"有效角度 {angle_summary['effective_angle_count']}/"
             f"最低 {angle_summary['required_effective_angle_count']}；"
             f"重複率 {angle_summary['duplicate_ratio']:.3f}/"
             f"上限 {angle_summary['max_duplicate_ratio']:.3f}"
         )
+        raise RuntimeError(f"角度有效性驗收失敗：{detail}")
     return report_path
