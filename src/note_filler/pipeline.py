@@ -95,7 +95,15 @@ def require_traceable_note_product(correction, *, source: object = "pipeline") -
                 errors.append(f"segment[{index}] source_id 應為 {expected_sid!r} 實際 {sid!r}")
             continue
 
-        source_ids = [item.id for item in seg.sources]
+        source_ids = list(getattr(seg, "source_ids", None) or [])
+        if not source_ids:
+            source_ids = [item.id for item in seg.sources]
+        seg_source_ids = [item.id for item in seg.sources]
+        if source_ids != seg_source_ids:
+            errors.append(
+                f"segment[{index}] source_ids 與 sources.id 不一致: "
+                f"{source_ids} vs {seg_source_ids}"
+            )
         if source_ids:
             expected = [{"kind": "source", "id": source_id} for source_id in source_ids]
             expected_sid = f"sources:{','.join(source_ids)}"

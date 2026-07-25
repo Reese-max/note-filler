@@ -2,10 +2,22 @@ from __future__ import annotations
 
 from dataclasses import asdict
 
+from typing import Literal
+
 from note_filler.binding_report import build_binding_report
 from note_filler.citation_formatter import build_reference_lines
 from note_filler.correction import CorrectionDoc
 from note_filler.retrieve.models import Source
+
+Cardinality = Literal["one_to_one", "one_to_many", "none"]
+
+
+def _cardinality(source_count: int) -> Cardinality:
+    if source_count <= 0:
+        return "none"
+    if source_count == 1:
+        return "one_to_one"
+    return "one_to_many"
 
 
 def _source_to_dict(src: Source) -> dict:
@@ -50,6 +62,12 @@ def to_json(doc: CorrectionDoc) -> dict:
         "all_arguments_ok": report["summary"]["all_arguments_ok"],
         "all_sourced_arguments_ok": report["summary"]["all_sourced_arguments_ok"],
     }
+    def _seg_source_ids(seg) -> list[str]:
+        ids = list(getattr(seg, "source_ids", None) or [])
+        if not ids:
+            ids = [s.id for s in getattr(seg, "sources", [])]
+        return ids
+
     return {
         "source_path": doc.original.source_path,
         "full_text": doc.original.full_text,
@@ -62,6 +80,8 @@ def to_json(doc: CorrectionDoc) -> dict:
                 "confidence": seg.confidence,
                 "conflict_note": getattr(seg, "conflict_note", None),
                 "source_id": getattr(seg, "source_id", ""),
+                "source_ids": _seg_source_ids(seg),
+                "cardinality": _cardinality(len(_seg_source_ids(seg))),
                 "traceability": list(getattr(seg, "traceability", [])),
                 "sources": [_source_to_dict(s) for s in seg.sources],
             }
@@ -111,6 +131,16 @@ def to_markdown(doc: CorrectionDoc) -> str:
         body.append(f"{prefix}{seg.text}{marks}")
         if trace := _trace_text(seg):
             body.append(f"> 追溯：{trace}")
+        source_ids = list(getattr(seg, "source_ids", None) or [])
+        if not source_ids:
+            source_ids = [s.id for s in getattr(seg, "sources", [])]
+        if source_ids:
+            body.append(
+                f"> **來源清單**：{','.join(source_ids)}"
+                f"（{_cardinality(len(source_ids)).replace('_', ' ')})"
+            )
+        elif seg.type == "supplement":
+            body.append("> **來源清單**：pending（無來源）")
 
     body.extend(original_traces)
 
@@ -176,6 +206,16 @@ def to_docx(doc: CorrectionDoc, path: str) -> None:
         run.italic = True  # 補充段視覺區隔於原文
         if trace := _trace_text(seg):
             out.add_paragraph(f"追溯：{trace}")
+        source_ids = list(getattr(seg, "source_ids", None) or [])
+        if not source_ids:
+            source_ids = [s.id for s in getattr(seg, "sources", [])]
+        if source_ids:
+            out.add_paragraph(
+                f"來源清單：{','.join(source_ids)}"
+                f"（{_cardinality(len(source_ids)).replace('_', ' ')}）"
+            )
+        elif seg.type == "supplement":
+            out.add_paragraph("來源清單：pending（無來源）")
 
     for trace in original_traces:
         out.add_paragraph(f"追溯：{trace}")

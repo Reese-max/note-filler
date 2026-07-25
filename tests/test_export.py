@@ -5,7 +5,7 @@ import pytest
 from note_filler.parse import Document, Paragraph
 from note_filler.correction import CorrectionDoc, Segment
 from note_filler.retrieve.models import Source
-from note_filler.export import to_json, to_markdown
+from note_filler.export import to_docx, to_json, to_markdown
 
 
 def _sample_doc() -> CorrectionDoc:
@@ -175,3 +175,69 @@ def test_to_markdown_pending_segment_has_no_footnote() -> None:
     assert len(pending_supplement) == 1
     # sources 空 → 該段不產生任何 [^n] 標記
     assert "[^" not in pending_supplement[0]
+
+
+# ---- 可機器解析綁定結構：source_ids／cardinality／來源清單行 --------------
+
+
+def test_to_json_contains_source_ids_per_segment():
+    """JSON 輸出每 segment 必須含 source_ids list 與 cardinality。"""
+    data = to_json(_sample_doc())
+    for i, seg in enumerate(data["segments"]):
+        assert "source_ids" in seg, f"segment[{i}] 缺少 source_ids"
+        assert isinstance(seg["source_ids"], list), f"segment[{i}] source_ids 須為 list"
+        assert all(isinstance(s, str) for s in seg["source_ids"]), (
+            f"segment[{i}] source_ids 元素須為 str"
+        )
+        assert "cardinality" in seg, f"segment[{i}] 缺少 cardinality"
+        assert seg["cardinality"] in ("one_to_one", "one_to_many", "none"), (
+            f"segment[{i}] cardinality 非法: {seg['cardinality']!r}"
+        )
+    # _sample_doc: seg[0]=original → none(0源), seg[1]=supplement 2源→ one_to_many
+    assert data["segments"][0]["cardinality"] == "none"
+    assert data["segments"][0]["source_ids"] == []
+    assert data["segments"][1]["cardinality"] == "one_to_many"
+    assert data["segments"][1]["source_ids"] == ["s1", "s2"]
+    assert data["segments"][2]["cardinality"] == "none"
+    assert data["segments"][2]["source_ids"] == []
+
+
+def test_to_json_source_ids_matches_sources():
+    """JSON 輸出 per-segment 的 source_ids 與 sources.id 一致。"""
+    data = to_json(_sample_doc())
+    for i, seg in enumerate(data["segments"]):
+        expected = [s["id"] for s in seg.get("sources", [])]
+        assert seg["source_ids"] == expected, (
+            f"segment[{i}] source_ids {seg['source_ids']} != sources.id {expected}"
+        )
+
+
+def test_to_markdown_contains_machine_parseable_source_list():
+    """Markdown 輸出每個 supplement 段後須有機器可解析的來源清單行。"""
+    md = to_markdown(_sample_doc())
+    lines = md.splitlines()
+
+    # verified supplement 有兩個來源 → one to many
+    source_lines = [ln for ln in lines if "> **來源清單**" in ln]
+    assert len(source_lines) == 2, f"應有 2 筆來源清單行，實際 {len(source_lines)}"
+    assert "s1,s2" in source_lines[0], f"第一筆應含 s1,s2: {source_lines[0]!r}"
+    assert "one to many" in source_lines[0], (
+        f"第一筆應標示 one to many: {source_lines[0]!r}"
+    )
+    # pending supplement → 無來源
+    assert "pending（無來源）" in source_lines[1], (
+        f"第二筆應標示 pending: {source_lines[1]!r}"
+    )
+
+
+def test_to_docx_contains_machine_parseable_source_list(tmp_path):
+    """docx 輸出每個 supplement 段後須有機器可解析的來源清單行。"""
+    from docx import Document as DocxDocument
+    out = tmp_path / "binding.docx"
+    to_docx(_sample_doc(), str(out))
+    paras = [p.text for p in DocxDocument(out).paragraphs]
+    source_lines = [p for p in paras if p.startswith("來源清單")]
+    assert len(source_lines) == 2, f"應有 2 筆來源清單行，實際 {len(source_lines)}"
+    assert "s1,s2" in source_lines[0]
+    assert "one to many" in source_lines[0]
+    assert "pending" in source_lines[1]

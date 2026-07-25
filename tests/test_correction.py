@@ -1,9 +1,11 @@
 # tests/test_correction.py
+import pytest
+
 from note_filler.correction import assemble_correction
 from note_filler.parse import Document, Paragraph      # T2
 from note_filler.gap import Gap                         # T5
 from note_filler.retrieve.models import Source                 # T6
-from note_filler.verify import Validation              # T10
+from note_filler.verify import Validation, cross_validate  # T10
 from note_filler.write import WrittenSupplement        # Q3
 
 
@@ -239,3 +241,114 @@ def test_missing_written_entry_is_trackable_and_logged(caplog):
         for rec in caplog.records
         if rec.levelno >= logging.WARNING
     ), "缺 written 時應有 warning 告警,不得靜默吞掉"
+
+
+# ---- 可機器解析綁定結構：source_ids 欄位 ------------------------------------
+#
+# Segment.source_ids 是每個論點攜帶的結構化來源清單，
+# 讓驗收工具可直接讀取而不需解析 source_id 字串或逐個提取 sources.id。
+
+
+def test_source_ids_original_is_empty():
+    """原文段的 source_ids 必須為 [](無來源)。"""
+    doc = _doc(["原文第一段。"])
+    cd = assemble_correction(doc, gaps=[], retrieved={}, written={}, validations={})
+    orig = cd.segments[0]
+    assert orig.type == "original"
+    assert orig.source_ids == []
+
+
+def test_source_ids_supplement_matches_used_ids():
+    """補充段 source_ids 必須等於 used_source_ids。"""
+    src = _src("law:92", "行政程序法第 92 條", "https://law.moj.gov.tw/", "A")
+    gap = Gap("定義？", "missing", "未說明")
+    cd = assemble_correction(
+        _doc(["原文。"]), [gap],
+        {gap.question: [src]},
+        {gap.question: WrittenSupplement("定義[^1]。", [src.id])},
+        {gap.question: cross_validate(gap.question, [src])},
+    )
+    sup = cd.segments[1]
+    assert sup.type == "supplement"
+    assert sup.source_ids == [src.id]
+    assert sup.source_ids == [s.id for s in sup.sources]
+
+
+def test_source_ids_supplement_one_to_many():
+    """一對多補充段的 source_ids 包含所有 used_source_ids。"""
+    from note_filler.verify import cross_validate
+    srcs = [
+        _src("law:92", "行政程序法第 92 條", "https://law.moj.gov.tw/92", "A"),
+        _src("law:93", "行政程序法第 93 條", "https://law.moj.gov.tw/93", "B"),
+        _src("web:abc", "官方函釋", "https://example.gov.tw/abc", "C"),
+    ]
+    used = [s.id for s in srcs]
+    gap = Gap("附款？", "missing", "未說明")
+    cd = assemble_correction(
+        _doc(["原文。"]), [gap],
+        {gap.question: srcs},
+        {gap.question: WrittenSupplement("多源[^1][^2][^3]。", used)},
+        {gap.question: cross_validate(gap.question, srcs)},
+    )
+    sup = cd.segments[1]
+    assert sup.source_ids == used
+    assert sup.source_ids == [s.id for s in sup.sources]
+
+
+def test_source_ids_supplement_pending_is_empty():
+    """pending_evidence 無來源的補充段 source_ids 為 []。"""
+    from note_filler.verify import cross_validate
+    gap = Gap("無來源問題？", "missing", "未說明")
+    cd = assemble_correction(
+        _doc(["原文。"]), [gap],
+        {gap.question: []},
+        {gap.question: WrittenSupplement("【待補證】尚無可用來源。", [])},
+        {gap.question: cross_validate(gap.question, [])},
+    )
+    sup = cd.segments[1]
+    assert sup.type == "supplement"
+    assert sup.confidence == "pending_evidence"
+    assert sup.source_ids == []
+
+
+def test_source_ids_matches_partial_usage():
+    """檢索了五個來源但只引用兩個 → source_ids 只含 used 的兩筆。"""
+    from note_filler.verify import cross_validate
+    srcs = [
+        _src("law:92", "行政程序法第 92 條", "https://law.moj.gov.tw/92"),
+        _src("law:93", "行政程序法第 93 條", "https://law.moj.gov.tw/93"),
+        _src("law:94", "行政程序法第 94 條", "https://law.moj.gov.tw/94"),
+        _src("web:abc", "官方函釋", "https://example.gov.tw/abc", "C"),
+        _src("web:xyz", "實務見解", "https://example.gov.tw/xyz", "D"),
+    ]
+    used_ids = ["law:92", "law:94"]
+    used_sources = [s for s in srcs if s.id in used_ids]
+    gap = Gap("定義？", "missing", "未說明")
+    cd = assemble_correction(
+        _doc(["原文。"]), [gap],
+        {gap.question: srcs},
+        {gap.question: WrittenSupplement("兩源[^1][^2]。", used_ids)},
+        {gap.question: cross_validate(gap.question, used_sources)},
+    )
+    sup = cd.segments[1]
+    assert sup.source_ids == used_ids
+
+
+def test_source_ids_rejects_mismatch_through_traceable_gate(caplog):
+    """若 source_ids 與 sources 不一致，require_traceable_note_product 必須拒絕。"""
+    from note_filler.pipeline import require_traceable_note_product
+    from note_filler.verify import cross_validate
+    src = _src("law:92", "行政程序法第 92 條", "https://law.moj.gov.tw/92")
+    gap = Gap("定義？", "missing", "未說明")
+    cd = assemble_correction(
+        _doc(["原文。"]), [gap],
+        {gap.question: [src]},
+        {gap.question: WrittenSupplement("定義[^1]。", [src.id])},
+        {gap.question: cross_validate(gap.question, [src])},
+    )
+    cd.segments[1].source_ids = ["wrong:id"]
+    import logging
+    with caplog.at_level(logging.WARNING):
+        with pytest.raises(RuntimeError, match="source_ids 與 sources.id 不一致"):
+            require_traceable_note_product(cd, source="source-ids-mismatch")
+    assert "note_traceability_failed" in caplog.text

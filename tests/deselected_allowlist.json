@@ -68,7 +68,7 @@
       {"test_id": "tests/test_pipeline.py::test_run_pipeline_invariant", "source": "tests/test_pipeline.py:85", "anchor": "if not seg.sources", "claim": "pipeline C6：無來源補充必為 pending_evidence，雙來源補充為 verified"},
       {"test_id": "tests/test_pipeline.py::test_run_pipeline_malformed_gap_output_falls_back_to_pending", "source": "tests/test_pipeline.py:145", "anchor": "assert supplements[0].text.startswith", "claim": "畸形 gap 輸出保守降級為待補證且不掛來源"},
       {"test_id": "tests/test_pipeline.py::test_run_pipeline_law_domain_runs_citation_check", "source": "tests/test_pipeline.py:122", "anchor": "assert len(calls)", "claim": "law 領域每個補充段都觸發法規引用查核"},
-      {"test_id": "tests/test_correction.py::test_retrieved_five_but_only_two_cited", "source": "tests/test_correction.py:82", "anchor": "assert [s.id for s in sup.sources]", "claim": "只掛實際引用來源，不把未引用的 retrieved source 帶入正文"},
+      {"test_id": "tests/test_correction.py::test_retrieved_five_but_only_two_cited", "source": "tests/test_correction.py:84", "anchor": "assert [s.id for s in sup.sources]", "claim": "只掛實際引用來源，不把未引用的 retrieved source 帶入正文"},
       {"test_id": "tests/test_excluded_failing_controls.py::test_control_02_e2e_offline_quality_gates", "source": "tests/test_excluded_failing_controls.py:155", "anchor": "assert seg.confidence == \"pending_evidence\"", "claim": "failing-first 對照：離線四硬閘（原稿/pending/引用/verified）"}
     ],
     "coverage_gap": "真模型+真檢索下的 gap 偵測品質、補充寫作品質 (_assert_supplement_quality)、Level A 路由穩定性",
@@ -190,7 +190,7 @@
       {"test_id": "tests/test_pipeline.py::test_run_pipeline_malformed_gap_output_falls_back_to_pending", "source": "tests/test_pipeline.py:145", "anchor": "assert supplements[0].text.startswith", "claim": "畸形模型輸出會保守降級為 pending_evidence"},
       {"test_id": "tests/test_pipeline.py::test_run_pipeline_law_domain_runs_citation_check", "source": "tests/test_pipeline.py:122", "anchor": "assert len(calls)", "claim": "law pipeline 會逐段執行 citation check"},
       {"test_id": "tests/test_pipeline.py::test_original_text_immutable_in_output", "source": "tests/test_pipeline.py:178", "anchor": "assert original_texts == expected_texts", "claim": "直接比對輸出原文段與原始筆記，防止「輸出資料已變但筆記內容未同步」的假綠情境"},
-      {"test_id": "tests/test_correction.py::test_retrieved_five_but_only_two_cited", "source": "tests/test_correction.py:82", "anchor": "assert [s.id for s in sup.sources]", "claim": "組裝層只保留 writer 實際引用的來源"},
+      {"test_id": "tests/test_correction.py::test_retrieved_five_but_only_two_cited", "source": "tests/test_correction.py:84", "anchor": "assert [s.id for s in sup.sources]", "claim": "組裝層只保留 writer 實際引用的來源"},
       {"test_id": "tests/test_excluded_failing_controls.py::test_control_05_pipeline_c6_pending_when_no_sources", "source": "tests/test_excluded_failing_controls.py:284", "anchor": "assert seg.confidence == \"pending_evidence\"", "claim": "failing-first 對照：empty twinkle 路徑 C6 pending_evidence"}
     ],
     "coverage_gap": "真 Grok 模型輸出的 domain/questions/gaps 正確性 + pipeline 穩定性",

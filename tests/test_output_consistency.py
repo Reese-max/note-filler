@@ -375,8 +375,10 @@ class TestOutputConsistency:
             # Skip reference block lines (start with [^N]:)
             if stripped.startswith("[^") and "]:" in stripped:
                 continue
-            # Skip binding verification separator and line (末尾新增)
+            # Skip binding verification separator and lines (末尾新增)
             if stripped.startswith("---") or stripped.startswith("> **來源綁定**"):
+                continue
+            if stripped.startswith("> **來源清單**"):
                 continue
             md_originals.append(stripped)
 
