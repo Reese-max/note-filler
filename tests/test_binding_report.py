@@ -12,6 +12,7 @@ import pytest
 
 from note_filler.binding_report import (
     BINDING_REPORT_NAME,
+    REQUIRED_ARGUMENT_ANGLE_KEYS,
     SCHEMA_ID,
     build_binding_report,
     parse_binding_report,
@@ -443,6 +444,18 @@ def test_positive_acceptance_reads_binding_report_from_disk(tmp_path):
     for arg in report["arguments"]:
         seg = serialized["segments"][arg["segment_index"]]
         assert seg["type"] == "supplement"
+        expected_angle_types = {
+            "angle_tags": list,
+            "valid_angle_count": int,
+            "deduped_angle_count": int,
+            "duplicate_angles": list,
+        }
+        for field, expected_type in expected_angle_types.items():
+            assert type(arg[field]) is expected_type
+            assert type(seg[field]) is expected_type
+            assert seg[field] == arg[field]
+        assert all(isinstance(tag, str) for tag in arg["angle_tags"])
+        assert all(isinstance(angle, str) for angle in arg["duplicate_angles"])
 
         source_ids = list(arg["source_ids"])
         trace_ids = list(arg["trace_source_ids"])
@@ -774,6 +787,12 @@ def test_argument_exposes_angle_coverage_structure():
 
     for arg in report["arguments"]:
         ac = arg["angle_coverage"]
+        assert set(REQUIRED_ARGUMENT_ANGLE_KEYS) <= set(arg)
+        assert arg["argument_id"] == f"argument:{arg['argument_index']}"
+        assert arg["angle_tags"] == ac["angle_labels"]
+        assert arg["valid_angle_count"] == 1
+        assert arg["deduped_angle_count"] == 1
+        assert arg["duplicate_angles"] == []
         assert set(ac) == set(REQUIRED_ANGLE_COVERAGE_KEYS)
         assert ac["angle_type"].strip()
         assert isinstance(ac["angle_labels"], list) and ac["angle_labels"]
@@ -872,6 +891,13 @@ def test_angle_duplicate_detection_same_key():
     assert len(supps) == 2
     assert supps[0].angle_key == supps[1].angle_key
     assert supps[0].angle_key.startswith("definition:")
+    assert [s.angle_tags for s in supps] == [s.angle_labels for s in supps]
+    assert [s.valid_angle_count for s in supps] == [1, 1]
+    assert [s.deduped_angle_count for s in supps] == [1, 0]
+    assert [s.duplicate_angles for s in supps] == [
+        [supps[1].angle_key],
+        [supps[0].angle_key],
+    ]
 
     report = parse_binding_report(build_binding_report(product))
     assert (
@@ -1168,11 +1194,23 @@ def test_parse_rejects_empty_angle_type():
 
 
 def test_parse_rejects_angle_coverage_field_drift():
-    """angle_coverage 多出未知鍵 → 拒絕。"""
+    """角度覆蓋欄位名稱或型別漂移 → 拒絕。"""
     report = build_binding_report(_assemble_one_to_one())
     report["arguments"][0]["angle_coverage"]["legacy_score"] = 1
     with pytest.raises(ValueError, match="欄位漂移"):
         parse_binding_report(report)
+
+    invalid_values = {
+        "angle_tags": "definition",
+        "valid_angle_count": True,
+        "deduped_angle_count": 1.0,
+        "duplicate_angles": [0],
+    }
+    for field, invalid in invalid_values.items():
+        report = build_binding_report(_assemble_one_to_one())
+        report["arguments"][0][field] = invalid
+        with pytest.raises(ValueError, match=field):
+            parse_binding_report(report)
 
 
 def test_json_export_includes_angle_coverage():
@@ -1184,6 +1222,7 @@ def test_json_export_includes_angle_coverage():
         assert "angle_coverage" in seg
         if seg["type"] == "supplement":
             ac = seg["angle_coverage"]
+            assert seg["angle_tags"] == ac["angle_labels"]
             assert ac["angle_type"].strip()
             assert ac["angle_labels"]
             assert ac["covered_facets"]

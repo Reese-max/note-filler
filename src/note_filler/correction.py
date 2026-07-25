@@ -6,7 +6,12 @@ import re
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Literal
 
-from note_filler.angle_coverage import build_angle_coverage
+from note_filler.angle_coverage import (
+    attach_relations,
+    build_angle_coverage,
+    build_argument_angle_fields,
+    coverage_from_segment,
+)
 from note_filler.audit import audit_event
 
 if TYPE_CHECKING:                      # 僅型別提示,執行期零硬耦合(結構化 attr 讀取)
@@ -40,6 +45,10 @@ class Segment:
     angle_type: str = ""
     angle_labels: list[str] = field(default_factory=list)
     angle_key: str = ""
+    angle_tags: list[str] = field(default_factory=list)
+    valid_angle_count: int = 0
+    deduped_angle_count: int = 0
+    duplicate_angles: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -222,5 +231,16 @@ def assemble_correction(doc, gaps, retrieved, written, validations) -> Correctio
                 angle_key=angle_cov["angle_key"],
             )
         )
+
+    arguments = [seg for seg in segments if seg.type == "supplement"]
+    coverages = attach_relations([coverage_from_segment(seg) for seg in arguments])
+    for seg, cov in zip(arguments, coverages, strict=True):
+        fields = build_argument_angle_fields(
+            cov,
+            argument_id=seg.argument_id,
+            coverages=coverages,
+        )
+        for name, value in fields.items():
+            setattr(seg, name, value)
 
     return CorrectionDoc(original=doc, segments=segments)

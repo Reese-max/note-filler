@@ -409,3 +409,34 @@ def validate_argument_angle(
             missing.append(f"{argument_id}: user_value 欄位為空")
 
     return len(missing) == 0, missing
+
+
+def build_argument_angle_fields(
+    cov: dict[str, Any],
+    *,
+    argument_id: str,
+    coverages: list[dict[str, Any]],
+) -> dict[str, Any]:
+    """由已附加 relation 的 coverage 產生固定論點角度欄位。
+
+    每個 argument 目前承載一個角度，兩個 count 因此固定為 0 或 1；
+    duplicate_angles 列出 relation 指向的 angle_key。
+    """
+    valid, _ = validate_argument_angle(cov, argument_id=argument_id)
+    related = (cov.get("relation") or {}).get("related_argument_indices") or []
+    duplicate_angles = [
+        coverages[index]["angle_key"]
+        for index in related
+        if isinstance(index, int)
+        and not isinstance(index, bool)
+        and 0 <= index < len(coverages)
+        and isinstance(coverages[index].get("angle_key"), str)
+        and coverages[index]["angle_key"]
+    ]
+    kept = cov.get("effective_angle_count") == 1
+    return {
+        "angle_tags": list(cov.get("angle_labels") or []),
+        "valid_angle_count": int(valid),
+        "deduped_angle_count": int(valid and kept),
+        "duplicate_angles": duplicate_angles,
+    }

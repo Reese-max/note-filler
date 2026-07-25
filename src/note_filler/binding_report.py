@@ -18,6 +18,7 @@ from typing import Any, Literal
 
 from note_filler.angle_coverage import (
     attach_relations,
+    build_argument_angle_fields,
     coverage_from_segment,
     is_angle_coverage_complete,
     summarize_angle_coverage,
@@ -42,9 +43,18 @@ REQUIRED_TOP_KEYS = frozenset(
         "angle_coverage_summary",
     }
 )
+REQUIRED_ARGUMENT_ANGLE_KEYS = frozenset(
+    {
+        "angle_tags",
+        "valid_angle_count",
+        "deduped_angle_count",
+        "duplicate_angles",
+    }
+)
 REQUIRED_ARGUMENT_KEYS = frozenset(
     {
         "argument_index",
+        "argument_id",
         "segment_index",
         "argument_text",
         "confidence",
@@ -60,7 +70,7 @@ REQUIRED_ARGUMENT_KEYS = frozenset(
         "user_value",
         "angle_coverage",
     }
-)
+) | REQUIRED_ARGUMENT_ANGLE_KEYS
 REQUIRED_CHECK_KEYS = frozenset(
     {
         "at_least_one_source",
@@ -147,6 +157,7 @@ _ARGUMENT_NONEMPTY_STR_KEYS = frozenset(
         "confidence",
         "cardinality",
         "binding_status",
+        "argument_id",
     }
 )
 
@@ -340,6 +351,7 @@ def _evaluate_argument(seg, *, argument_index: int, segment_index: int) -> dict[
 
     return {
         "argument_index": argument_index,
+        "argument_id": argument_id,
         "segment_index": segment_index,
         "argument_text": text,
         "confidence": confidence,
@@ -381,6 +393,13 @@ def build_binding_report(correction) -> dict[str, Any]:
     with_relations = attach_relations(bare_coverages)
     for a, cov in zip(arguments, with_relations):
         a["angle_coverage"] = cov
+        a.update(
+            build_argument_angle_fields(
+                cov,
+                argument_id=a["argument_id"],
+                coverages=with_relations,
+            )
+        )
     angle_summary = summarize_angle_coverage(with_relations)
     angle_gate_ok = angle_summary["coverage_ok"]
     for argument in arguments:
@@ -508,6 +527,24 @@ def parse_binding_report(data: Any) -> dict[str, Any]:
             raise ValueError(f"arguments[{i}].functional_gap 必須為 str")
         if not isinstance(arg.get("user_value"), str):
             raise ValueError(f"arguments[{i}].user_value 必須為 str")
+        angle_tags = arg.get("angle_tags")
+        if not isinstance(angle_tags, list) or not angle_tags or not all(
+            isinstance(tag, str) and tag.strip() for tag in angle_tags
+        ):
+            raise ValueError(f"arguments[{i}].angle_tags 必須為非空 list[str]")
+        for count_key in ("valid_angle_count", "deduped_angle_count"):
+            count = arg.get(count_key)
+            if (
+                not isinstance(count, int)
+                or isinstance(count, bool)
+                or count < 0
+            ):
+                raise ValueError(f"arguments[{i}].{count_key} 必須為非負 int")
+        duplicate_angles = arg.get("duplicate_angles")
+        if not isinstance(duplicate_angles, list) or not all(
+            isinstance(angle, str) and angle.strip() for angle in duplicate_angles
+        ):
+            raise ValueError(f"arguments[{i}].duplicate_angles 必須為 list[str]")
         # 必要性空欄：結構可解析，但必須在 checks 反映，且不得標為通過
         if not arg["functional_gap"].strip():
             if checks.get("has_functional_gap") is not False:
@@ -698,6 +735,14 @@ def parse_binding_report(data: Any) -> dict[str, Any]:
                 raise ValueError(
                     f"arguments[{i}].angle_coverage 角度量測不一致: {key}"
                 )
+        expected_fields = build_argument_angle_fields(
+            expected,
+            argument_id=arg["argument_id"],
+            coverages=expected_coverages,
+        )
+        for key in REQUIRED_ARGUMENT_ANGLE_KEYS:
+            if arg[key] != expected_fields[key]:
+                raise ValueError(f"arguments[{i}].{key} 角度量測不一致")
 
     # 校驗 source_usage 反向索引
     su = data.get("source_usage")
