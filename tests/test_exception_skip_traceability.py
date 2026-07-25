@@ -421,7 +421,7 @@ def test_law_citation_skips_and_penalty_mismatch_are_traceable(monkeypatch, capl
 
     correction = CorrectionDoc(
         _doc(),
-        [Segment("original", "原稿", 0, [], "verified", functional_gap="", user_value=""), Segment("supplement", "case-CITE-04", 0, [_source()], "verified", functional_gap="", user_value="")],
+        [Segment("original", "原稿", 0, [], "verified", functional_gap="", user_value="", argument_id=""), Segment("supplement", "case-CITE-04", 0, [_source()], "verified", functional_gap="", user_value="", argument_id="argument:0")],
     )
     monkeypatch.setattr(
         "note_filler.pipeline.check_law_citations",

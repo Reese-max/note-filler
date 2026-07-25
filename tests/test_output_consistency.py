@@ -385,6 +385,9 @@ class TestOutputConsistency:
                 continue
             if stripped.startswith("> **使用者價值**"):
                 continue
+            # Skip new argument_id line
+            if stripped.startswith("> **論點ID**"):
+                continue
             md_originals.append(stripped)
 
         # Original paragraphs from docx (first N paragraphs where N = original count)
@@ -632,6 +635,7 @@ class TestExplicitFailureReporting:
                 confidence="verified",
                 functional_gap="",
                 user_value="",
+                argument_id="",
             )
         ]
         corrupted_doc = CorrectionDoc(original=parsed, segments=corrupted_segments)

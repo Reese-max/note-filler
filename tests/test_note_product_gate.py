@@ -108,6 +108,7 @@ def _whitespace_only_segments_doc() -> CorrectionDoc:
                 confidence="verified",
                 functional_gap="",
                 user_value="",
+                argument_id="",
             ),
             Segment(
                 type="supplement",
@@ -117,6 +118,7 @@ def _whitespace_only_segments_doc() -> CorrectionDoc:
                 confidence="pending_evidence",
                 functional_gap="",
                 user_value="",
+                argument_id="argument:0",
             ),
         ],
     )
@@ -157,6 +159,7 @@ def test_require_non_empty_accepts_original_or_supplement():
                     confidence="verified",
                     functional_gap="",
                     user_value="",
+                    argument_id="",
                 )
             ],
         )
@@ -174,6 +177,7 @@ def test_require_non_empty_accepts_original_or_supplement():
                     confidence="pending_evidence",
                     functional_gap="",
                     user_value="",
+                    argument_id="argument:0",
                 )
             ],
         )
@@ -330,6 +334,7 @@ def test_process_file_success_requires_non_empty_body(tmp_path, monkeypatch):
                 confidence="verified",
                 functional_gap="",
                 user_value="",
+                argument_id="",
             ),
             Segment(
                 type="supplement",
@@ -339,6 +344,7 @@ def test_process_file_success_requires_non_empty_body(tmp_path, monkeypatch):
                 confidence="pending_evidence",
                 functional_gap="",
                 user_value="",
+                argument_id="argument:0",
             ),
         ]
 

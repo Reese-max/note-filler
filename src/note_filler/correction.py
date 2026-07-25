@@ -34,6 +34,7 @@ class Segment:
     source_ids: list[str] = field(default_factory=list)
     functional_gap: str = ""
     user_value: str = ""
+    argument_id: str = ""
 
 
 @dataclass
@@ -105,12 +106,14 @@ def assemble_correction(doc, gaps, retrieved, written, validations) -> Correctio
                 source_ids=[],
                 functional_gap="",
                 user_value="",
+                argument_id="",
             )
         )
 
     # 2) 每個 gap 一個 supplement 段(overlay 疊加):text 取寫作結果,
     #    sources 只掛實際引用到(used_source_ids)的 Source。
     for gap_idx, gap in enumerate(gaps):
+        arg_idx = gap_idx  # argument_index 對應 gap_idx
         q = gap.question
         w = written.get(q)
         if w is None:
@@ -123,7 +126,7 @@ def assemble_correction(doc, gaps, retrieved, written, validations) -> Correctio
                 outcome="pending_evidence",
             )
             text = MISSING_WRITTEN_TEXT
-            used_ids: list = []
+            used_ids = []
         else:
             text = w.text
             used_ids = w.used_source_ids
@@ -142,14 +145,14 @@ def assemble_correction(doc, gaps, retrieved, written, validations) -> Correctio
 
         # confidence:【待補證】→ pending;否則一手源即 grounded(見 _grounded)
         if text.startswith("【待補證】"):
-            confidence: Literal["verified", "pending_evidence"] = "pending_evidence"
+            confidence = "pending_evidence"
         elif _grounded(used_sources):
             confidence = "verified"
         else:
             confidence = "pending_evidence"
 
         # 從 validations 取 conflict_note,確保衝突資訊不被丟棄
-        conflict_note: str | None = None
+        conflict_note = None
         v = validations.get(q)
         if v is not None and getattr(v, "conflict", False):
             conflict_note = getattr(v, "conflict_note", None)
@@ -162,11 +165,12 @@ def assemble_correction(doc, gaps, retrieved, written, validations) -> Correctio
                 outcome="pending_evidence" if confidence == "pending_evidence" else confidence,
             )
 
-        source_id: str
         if used_ids:
             source_id = f"sources:{','.join(used_ids)}"
         else:
             source_id = f"pending:gap:{gap_idx}"
+
+        argument_id = f"argument:{arg_idx}"
 
         segments.append(
             Segment(
@@ -191,6 +195,7 @@ def assemble_correction(doc, gaps, retrieved, written, validations) -> Correctio
                 source_ids=list(used_ids) if used_ids else [],
                 functional_gap=gap.reason,
                 user_value="",
+                argument_id=argument_id,
             )
         )
 

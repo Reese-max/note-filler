@@ -43,6 +43,7 @@ def _sample_doc() -> CorrectionDoc:
             confidence="verified",
             functional_gap="",
             user_value="",
+            argument_id="",
         ),
         Segment(
             type="supplement",
@@ -54,6 +55,7 @@ def _sample_doc() -> CorrectionDoc:
             source_id="sources:s1,s2",
             functional_gap="",
             user_value="",
+            argument_id="argument:0",
         ),
         Segment(
             type="supplement",
@@ -68,6 +70,7 @@ def _sample_doc() -> CorrectionDoc:
             source_id="pending:gap:1",
             functional_gap="",
             user_value="",
+            argument_id="argument:1",
         ),
     ]
     return CorrectionDoc(original=original, segments=segments)
@@ -203,6 +206,8 @@ def test_to_json_contains_source_ids_per_segment():
         assert isinstance(seg["functional_gap"], str), f"segment[{i}] functional_gap 須為 str"
         assert "user_value" in seg, f"segment[{i}] 缺少 user_value"
         assert isinstance(seg["user_value"], str), f"segment[{i}] user_value 須為 str"
+        assert "argument_id" in seg, f"segment[{i}] 缺少 argument_id"
+        assert isinstance(seg["argument_id"], str), f"segment[{i}] argument_id 須為 str"
     # _sample_doc: seg[0]=original → none(0源), seg[1]=supplement 2源→ one_to_many
     assert data["segments"][0]["cardinality"] == "none"
     assert data["segments"][0]["source_ids"] == []

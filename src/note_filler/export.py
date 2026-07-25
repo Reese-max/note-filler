@@ -86,6 +86,7 @@ def to_json(doc: CorrectionDoc) -> dict:
                 "sources": [_source_to_dict(s) for s in seg.sources],
                 "functional_gap": getattr(seg, "functional_gap", ""),
                 "user_value": getattr(seg, "user_value", ""),
+                "argument_id": getattr(seg, "argument_id", ""),
             }
             for seg in doc.segments
         ],
@@ -151,6 +152,10 @@ def to_markdown(doc: CorrectionDoc) -> str:
         user_value = getattr(seg, "user_value", "")
         if user_value:
             body.append(f"> **使用者價值**：{user_value}")
+
+        argument_id = getattr(seg, "argument_id", "")
+        if argument_id:
+            body.append(f"> **論點ID**：{argument_id}")
 
     body.extend(original_traces)
 
@@ -234,6 +239,10 @@ def to_docx(doc: CorrectionDoc, path: str) -> None:
         user_value = getattr(seg, "user_value", "")
         if user_value:
             out.add_paragraph(f"使用者價值：{user_value}")
+
+        argument_id = getattr(seg, "argument_id", "")
+        if argument_id:
+            out.add_paragraph(f"論點ID：{argument_id}")
 
     for trace in original_traces:
         out.add_paragraph(f"追溯：{trace}")

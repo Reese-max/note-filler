@@ -47,6 +47,8 @@ REQUIRED_ARGUMENT_KEYS = frozenset(
         "checks",
         "binding_status",
         "binding_ok",
+        "functional_gap",
+        "user_value",
     }
 )
 REQUIRED_CHECK_KEYS = frozenset(
@@ -138,6 +140,8 @@ def _evaluate_argument(seg, *, argument_index: int, segment_index: int) -> dict[
     confidence = getattr(seg, "confidence", None) or ""
     text = getattr(seg, "text", None) or ""
     cardinality = _cardinality(len(source_ids))
+    functional_gap = getattr(seg, "functional_gap", "") or ""
+    user_value = getattr(seg, "user_value", "") or ""
 
     no_dup = len(source_ids) == len(set(source_ids))
     # 追溯側亦不得重複
@@ -211,6 +215,8 @@ def _evaluate_argument(seg, *, argument_index: int, segment_index: int) -> dict[
         "checks": checks,
         "binding_status": status,
         "binding_ok": binding_ok,
+        "functional_gap": functional_gap,
+        "user_value": user_value,
     }
 
 
@@ -342,6 +348,10 @@ def parse_binding_report(data: Any) -> dict[str, Any]:
             raise ValueError(
                 f"arguments[{i}].argument_index 應為 {i}，實際 {arg.get('argument_index')!r}"
             )
+        if not isinstance(arg.get("functional_gap"), str):
+            raise ValueError(f"arguments[{i}].functional_gap 必須為 str")
+        if not isinstance(arg.get("user_value"), str):
+            raise ValueError(f"arguments[{i}].user_value 必須為 str")
 
     # 校驗 source_usage 反向索引
     su = data.get("source_usage")

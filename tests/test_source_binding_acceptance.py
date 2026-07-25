@@ -607,6 +607,7 @@ def test_failure_semantic_missing_binding_blocks_pipeline_return(tmp_path, monke
                 source_id="",
                 functional_gap="",
                 user_value="",
+                argument_id="",
             )
         )
         return product
