@@ -30,6 +30,7 @@ REQUIRED_TOP_KEYS = frozenset(
         "argument_count",
         "summary",
         "arguments",
+        "source_usage",
     }
 )
 REQUIRED_ARGUMENT_KEYS = frozenset(
@@ -226,6 +227,15 @@ def build_binding_report(correction) -> dict[str, Any]:
     all_sourced_ok = all(a["binding_ok"] for a in sourced) if sourced else True
     all_ok = all(a["binding_ok"] for a in arguments) if arguments else True
 
+    # 反向索引：每個 source_id → 使用了它的 argument_indices
+    source_usage: dict[str, list[int]] = {}
+    for a in arguments:
+        for sid in a["source_ids"]:
+            source_usage.setdefault(sid, []).append(a["argument_index"])
+    source_usage = dict(sorted(
+        {k: sorted(v) for k, v in source_usage.items()}.items()
+    ))
+
     return {
         "schema": SCHEMA_ID,
         "source_path": source_path,
@@ -241,6 +251,7 @@ def build_binding_report(correction) -> dict[str, Any]:
             "all_arguments_ok": all_ok,
         },
         "arguments": arguments,
+        "source_usage": source_usage,
     }
 
 
@@ -314,6 +325,20 @@ def parse_binding_report(data: Any) -> dict[str, Any]:
             raise ValueError(
                 f"arguments[{i}].argument_index 應為 {i}，實際 {arg.get('argument_index')!r}"
             )
+
+    # 校驗 source_usage 反向索引
+    su = data.get("source_usage")
+    if not isinstance(su, dict):
+        raise ValueError("source_usage 必須為 dict")
+    expected_su: dict[str, list[int]] = {}
+    for i, a in enumerate(arguments):
+        for sid in a.get("source_ids", []):
+            expected_su.setdefault(sid, []).append(i)
+    expected_su = {k: sorted(v) for k, v in expected_su.items()}
+    if su != expected_su:
+        raise ValueError(
+            f"source_usage 與 arguments 不一致: 期望 {expected_su}，實際 {su}"
+        )
 
     return data
 

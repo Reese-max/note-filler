@@ -359,3 +359,96 @@ def test_binding_report_agrees_with_traceable_gate_on_good_product():
     for arg in report["arguments"]:
         assert arg["binding_ok"] is True
         assert arg["checks"]["source_traceable"] is True
+
+
+# ---- source_usage 反向索引：序列化中可直接看出每個來源對應哪個論點 ------------
+
+def test_source_usage_exists_in_report():
+    """binding report 必須包含 source_usage 反向索引。"""
+    report = parse_binding_report(build_binding_report(_assemble_one_to_one()))
+    assert "source_usage" in report
+    assert isinstance(report["source_usage"], dict)
+
+
+def test_source_usage_one_to_one_reverse():
+    """一對一：law:92 被 argument[0] 使用 → source_usage 應為 {"law:92": [0]}。"""
+    report = parse_binding_report(build_binding_report(_assemble_one_to_one()))
+    assert report["source_usage"] == {"law:92": [0]}
+
+
+def test_source_usage_one_to_many_reverse():
+    """一對多：三個 source 分別對應到 argument[0]。"""
+    report = parse_binding_report(build_binding_report(_assemble_one_to_many()))
+    su = report["source_usage"]
+    assert su == {
+        "law:92": [0],
+        "law:93": [0],
+        "web:abc": [0],
+    }
+
+
+def test_source_usage_mixed_reverse():
+    """混合：src_a 被 arg0 用，src_b1/src_b2 被 arg1 用。"""
+    report = parse_binding_report(build_binding_report(_assemble_mixed()))
+    su = report["source_usage"]
+    assert su == {
+        "law:92": [0],
+        "law:93": [1],
+        "law:94": [1],
+    }
+
+
+def test_source_usage_pending_excluded():
+    """pending_evidence（無來源）不貢獻 source_usage。"""
+    report = parse_binding_report(build_binding_report(_assemble_pending()))
+    assert report["source_usage"] == {}
+
+
+def test_source_usage_validated_by_parse():
+    """parse_binding_report 驗證 source_usage 與 arguments 一致。"""
+    report = build_binding_report(_assemble_one_to_one())
+    report["source_usage"] = {"wrong:id": [0]}
+    with pytest.raises(ValueError, match="source_usage 與 arguments 不一致"):
+        parse_binding_report(report)
+
+
+def test_source_usage_rejects_non_dict(tmp_path):
+    """malformed source_usage 被 parse 拒絕。"""
+    report = build_binding_report(_assemble_mixed())
+    report["source_usage"] = "not-a-dict"
+    with pytest.raises(ValueError, match="source_usage 必須為 dict"):
+        parse_binding_report(report)
+
+
+def test_source_usage_in_cli_output(tmp_path, monkeypatch):
+    """CLI process_file 寫出的 binding_report.json 包含 source_usage。"""
+    from note_filler import __main__ as cli
+    from note_filler.correction import CorrectionDoc
+
+    note = tmp_path / "note.txt"
+    note.write_text("一、標題\n內容", encoding="utf-8")
+    product = _assemble_one_to_many()
+
+    class _FakePipelineDoc:
+        def __init__(self, inner: CorrectionDoc):
+            self.original = inner.original
+            self.segments = inner.segments
+
+    monkeypatch.setattr(cli, "run_pipeline", lambda *a, **k: _FakePipelineDoc(product))
+    monkeypatch.setattr(cli, "to_markdown", lambda doc: "# 訂正稿\n有內容。")
+
+    r = cli.process_file(note, None, None, None, out_dir=None, fmt="md")
+    from pathlib import Path
+    report_path = Path(r["output"]).parent / "binding_report.json"
+    import json
+    parsed = parse_binding_report(json.loads(report_path.read_text(encoding="utf-8")))
+    assert "source_usage" in parsed
+    assert parsed["source_usage"] == {"law:92": [0], "law:93": [0], "web:abc": [0]}
+
+
+def test_source_usage_rejects_invalid_indices():
+    """source_usage 的 argument_index 超出範圍時 parse 應拒絕。"""
+    report = build_binding_report(_assemble_one_to_one())
+    report["source_usage"] = {"law:92": [99]}
+    with pytest.raises(ValueError, match="source_usage 與 arguments 不一致"):
+        parse_binding_report(report)
