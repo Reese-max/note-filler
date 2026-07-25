@@ -20,6 +20,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from .audit import audit_event
+from .binding_report import write_binding_report
 from .export import to_docx, to_json, to_markdown
 from .knowledge.law_lookup import LawLookup
 from .llm import GrokClient
@@ -166,6 +167,8 @@ def process_file(path: Path, llm, twinkle, law, out_dir: Path | None, fmt: str) 
         supplements=len(supp),
         verified=ver,
     )
+    # 可機器比對的論點—來源綁定報告（一對一／一對多逐項可驗證）
+    write_binding_report(dest, doc)
     return {"input": str(path), "output": str(dest), "supplements": len(supp), "verified": ver}
 
 
