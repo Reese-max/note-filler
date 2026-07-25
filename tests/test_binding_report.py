@@ -1114,6 +1114,71 @@ def test_angles_complete_but_sources_missing_fails_explicitly():
     )
 
 
+def test_minimal_negative_dual_gate_fails_with_argument_id(tmp_path):
+    """最小負例：雙閘隔離並以 argument_id 定位不合格論點。
+
+    案例 A — 來源綁定正確但角度不足／重複 → write_binding_report 明確失敗，
+    錯誤訊息含 argument:0／argument:1。
+    案例 B — 角度齊全但來源缺失 → require_traceable 明確失敗，
+    錯誤訊息含對應 argument_id。
+    """
+    from note_filler.pipeline import require_traceable_note_product
+
+    # --- A: 來源 OK、角度重複／不足 ---
+    product_angle = _assemble_repeated_angles()
+    report_angle = parse_binding_report(build_binding_report(product_angle))
+    assert report_angle["angle_coverage_summary"]["coverage_ok"] is False
+    fail_ids_angle = [a["argument_id"] for a in report_angle["arguments"] if not a["binding_ok"]]
+    assert fail_ids_angle == ["argument:0", "argument:1"]
+    for arg in report_angle["arguments"]:
+        assert arg["checks"]["at_least_one_source"] is True
+        assert arg["checks"]["source_traceable"] is True
+        assert arg["checks"]["meets_angle_coverage_threshold"] is False
+        assert any(arg["argument_id"] in issue for issue in arg["angle_field_issues"])
+
+    with pytest.raises(RuntimeError, match="角度有效性驗收失敗") as ei_angle:
+        write_binding_report(tmp_path / "dual-neg-angle.md", product_angle)
+    angle_msg = str(ei_angle.value)
+    assert "argument:0" in angle_msg, f"角度失敗應指出 argument:0，實際：{angle_msg!r}"
+    assert "argument:1" in angle_msg, f"角度失敗應指出 argument:1，實際：{angle_msg!r}"
+    assert "被排除的角度欄位" in angle_msg or "僅單一有效角度" in angle_msg
+
+    # --- B: 角度齊全、來源缺失 ---
+    product_src = _assemble_same_topic_distinct_angles()
+    good = parse_binding_report(build_binding_report(product_src))
+    assert good["angle_coverage_summary"]["coverage_ok"] is True
+    assert good["summary"]["all_arguments_ok"] is True
+
+    for seg in product_src.segments:
+        if seg.type != "supplement":
+            continue
+        assert seg.argument_id, "組裝後補充段必須有 argument_id"
+        assert seg.sources
+        seg.sources = []
+        seg.source_ids = []
+        seg.traceability = []
+        seg.source_id = "sources:stripped-missing"
+        seg.confidence = "verified"
+
+    report_src = parse_binding_report(build_binding_report(product_src))
+    assert report_src["angle_coverage_summary"]["coverage_ok"] is True
+    assert report_src["angle_coverage_summary"]["effective_angle_count"] == 2
+    fail_ids_src = [a["argument_id"] for a in report_src["arguments"] if not a["binding_ok"]]
+    assert fail_ids_src == ["argument:0", "argument:1"]
+    for arg in report_src["arguments"]:
+        assert arg["checks"]["at_least_one_source"] is False
+        assert arg["checks"]["source_traceable"] is False
+        assert arg["checks"]["meets_angle_coverage_threshold"] is True
+        assert arg["binding_status"] == "fail"
+
+    with pytest.raises(RuntimeError, match="來源追溯驗證失敗") as ei_src:
+        require_traceable_note_product(product_src, source="dual-neg-src-missing")
+    src_msg = str(ei_src.value)
+    assert "argument:0" in src_msg, f"來源失敗應指出 argument:0，實際：{src_msg!r}"
+    assert "argument:1" in src_msg, f"來源失敗應指出 argument:1，實際：{src_msg!r}"
+    assert "對應失敗" in src_msg or "source_id" in src_msg or "processing_record" in src_msg
+
+
 def test_excessive_angle_repetition_fails_acceptance():
     report = parse_binding_report(build_binding_report(_assemble_repeated_angles(3)))
     summary = report["angle_coverage_summary"]

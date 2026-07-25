@@ -67,8 +67,20 @@ def require_non_empty_note_product(correction, *, source: object = "pipeline") -
     )
 
 
+def _segment_error_prefix(index: int, seg) -> str:
+    """錯誤訊息定位：segment 索引＋可選 argument_id（便於指出不合格論點）。"""
+    arg_id = getattr(seg, "argument_id", None) or ""
+    if isinstance(arg_id, str) and arg_id.strip():
+        return f"segment[{index}] {arg_id.strip()}"
+    return f"segment[{index}]"
+
+
 def require_traceable_note_product(correction, *, source: object = "pipeline") -> None:
-    """逐段確認成品可回指原始輸入、實際來源 ID 或 gap 處理紀錄。"""
+    """逐段確認成品可回指原始輸入、實際來源 ID 或 gap 處理紀錄。
+
+    失敗訊息必須可定位不合格段落；補充段若有 argument_id 則一併寫入，
+    避免僅見 segment 索引而無法對到論點綁定項。
+    """
     errors: list[str] = []
     paragraphs = {
         paragraph.idx: paragraph
@@ -81,6 +93,7 @@ def require_traceable_note_product(correction, *, source: object = "pipeline") -
             continue
         refs = getattr(seg, "traceability", None) or []
         sid = getattr(seg, "source_id", None) or ""
+        loc = _segment_error_prefix(index, seg)
         if seg.type == "original":
             paragraph = paragraphs.get(seg.anchor_idx)
             expected = {
@@ -90,9 +103,9 @@ def require_traceable_note_product(correction, *, source: object = "pipeline") -
             }
             expected_sid = f"input:{source_path}#p{seg.anchor_idx}"
             if paragraph is None or seg.text != paragraph.text or refs != [expected]:
-                errors.append(f"segment[{index}] original_input 對應失敗")
+                errors.append(f"{loc} original_input 對應失敗")
             elif sid != expected_sid:
-                errors.append(f"segment[{index}] source_id 應為 {expected_sid!r} 實際 {sid!r}")
+                errors.append(f"{loc} source_id 應為 {expected_sid!r} 實際 {sid!r}")
             continue
 
         source_ids = list(getattr(seg, "source_ids", None) or [])
@@ -101,7 +114,7 @@ def require_traceable_note_product(correction, *, source: object = "pipeline") -
         seg_source_ids = [item.id for item in seg.sources]
         if source_ids != seg_source_ids:
             errors.append(
-                f"segment[{index}] source_ids 與 sources.id 不一致: "
+                f"{loc} source_ids 與 sources.id 不一致: "
                 f"{source_ids} vs {seg_source_ids}"
             )
         if source_ids:
@@ -111,12 +124,12 @@ def require_traceable_note_product(correction, *, source: object = "pipeline") -
                 refs != expected
                 or not all(isinstance(source_id, str) and source_id.strip() for source_id in source_ids)
             ):
-                errors.append(f"segment[{index}] source ID 對應失敗")
+                errors.append(f"{loc} source ID 對應失敗")
             elif sid != expected_sid:
-                errors.append(f"segment[{index}] source_id 應為 {expected_sid!r} 實際 {sid!r}")
+                errors.append(f"{loc} source_id 應為 {expected_sid!r} 實際 {sid!r}")
             empty_fragments = [item.id for item in seg.sources if not getattr(item, 'content', '').strip()]
             if empty_fragments:
-                errors.append(f"segment[{index}] 來源片段缺失：{','.join(empty_fragments)}")
+                errors.append(f"{loc} 來源片段缺失：{','.join(empty_fragments)}")
         elif (
             seg.confidence != "pending_evidence"
             or len(refs) != 1
@@ -126,9 +139,9 @@ def require_traceable_note_product(correction, *, source: object = "pipeline") -
             or not refs[0].get("question")
             or refs[0].get("outcome") != seg.confidence
         ):
-            errors.append(f"segment[{index}] processing_record 對應失敗")
+            errors.append(f"{loc} processing_record 對應失敗")
         elif not sid.startswith("pending:gap:"):
-            errors.append(f"segment[{index}] source_id 應以 pending:gap: 開頭 實際 {sid!r}")
+            errors.append(f"{loc} source_id 應以 pending:gap: 開頭 實際 {sid!r}")
 
     if errors:
         audit_event(
