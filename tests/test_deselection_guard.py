@@ -14,7 +14,6 @@ import json
 import re
 import subprocess
 import sys
-from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import pytest
@@ -458,25 +457,23 @@ def test_substitute_mapping_is_complete_and_collectable() -> None:
     collectable, collect_map_cmd, _ = _collect_tests(*MAPPED_NON_INTEGRATION_TESTS)
     assert collectable == MAPPED_NON_INTEGRATION_TESTS
 
-    # 保留每個替代測試的獨立行程隔離，只平行處理行程啟動與 collection。
+    # 每個替代測試保持獨立行程並依序執行，避免 Windows 上並行 pytest
+    # 共享 checkout/cache 時偶發 collection error。
     individual_status: dict[str, dict] = {}
-    with ThreadPoolExecutor(max_workers=4) as pool:
-        results = pool.map(_run_one_test, MAPPED_NON_INTEGRATION_TESTS)
-        for test_id, (status, command, summary, exit_code) in zip(
-            MAPPED_NON_INTEGRATION_TESTS, results, strict=True
-        ):
-            individual_status[test_id] = {
-                "test_id": test_id,
-                "status": status,
-                "summary": summary,
-                "exit_code": exit_code,
-                "invocation": _format_invocation(command),
-            }
-            assert status == "passed" and exit_code == 0, (
-                f"Substitute individual run failed: {test_id}\n"
-                f"invocation: {_format_invocation(command)}\n"
-                f"summary: {summary}"
-            )
+    for test_id in MAPPED_NON_INTEGRATION_TESTS:
+        status, command, summary, exit_code = _run_one_test(test_id)
+        individual_status[test_id] = {
+            "test_id": test_id,
+            "status": status,
+            "summary": summary,
+            "exit_code": exit_code,
+            "invocation": _format_invocation(command),
+        }
+        assert status == "passed" and exit_code == 0, (
+            f"Substitute individual run failed: {test_id}\n"
+            f"invocation: {_format_invocation(command)}\n"
+            f"summary: {summary}"
+        )
 
     live_by_id = _load_live_individual_results()
     per_node: list[dict] = []
