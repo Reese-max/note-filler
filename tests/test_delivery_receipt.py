@@ -21,13 +21,26 @@ from note_filler import __main__ as cli
 class _FakeDoc:
     """最小替身:含 2 個 segment,模擬 pipeline 產出。"""
     class _Seg:
-        def __init__(self, type_: str, confidence: str = "verified"):
+        def __init__(
+            self,
+            type_: str,
+            confidence: str = "verified",
+            angle_type: str = "",
+            angle_key: str = "",
+        ):
             self.type = type_
             self.confidence = confidence
             self.text = "test text"
             self.sources = []
+            self.angle_type = angle_type
+            self.angle_labels = [angle_type] if angle_type else []
+            self.angle_key = angle_key
 
-    segments = [_Seg("original"), _Seg("supplement", "verified"), _Seg("supplement", "pending_evidence")]
+    segments = [
+        _Seg("original"),
+        _Seg("supplement", "verified", "definition", "definition:test"),
+        _Seg("supplement", "pending_evidence", "limitation", "limitation:test"),
+    ]
 
 
 # ---- 核心:process_file 成功後必須寫出 delivery receipt -------------------

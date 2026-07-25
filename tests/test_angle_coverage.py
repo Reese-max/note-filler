@@ -60,6 +60,7 @@ def test_duplicate_relation_same_key():
     # 強制同一 key
     covs[1]["angle_key"] = covs[0]["angle_key"]
     covs[1]["angle_type"] = covs[0]["angle_type"]
+    covs[1]["covered_facets"].append("duplicate-only")
     with_rel = attach_relations(covs)
     assert with_rel[0]["relation"]["kind"] == "duplicate"
     assert with_rel[1]["relation"]["kind"] == "duplicate"
@@ -67,6 +68,22 @@ def test_duplicate_relation_same_key():
     summary = summarize_angle_coverage(with_rel)
     assert [0, 1] in summary["duplicate_pairs"]
     assert summary["synonym_pairs"] == []
+    assert [cov["effective_angle_count"] for cov in with_rel] == [1, 0]
+    assert with_rel[0]["duplicate_exclusion"] == {
+        "excluded": False,
+        "reason": None,
+        "kept_argument_index": 0,
+    }
+    assert with_rel[1]["duplicate_exclusion"] == {
+        "excluded": True,
+        "reason": "duplicate",
+        "kept_argument_index": 0,
+    }
+    assert summary["effective_angle_count"] == 1
+    assert summary["excluded_angle_count"] == 1
+    assert "duplicate-only" not in summary["covered_facets_union"]
+    assert summary["has_sufficient_angles"] is False
+    assert summary["coverage_ok"] is False
 
 
 def test_synonym_relation_overlapping_definition_questions():
@@ -104,6 +121,31 @@ def test_unique_when_different_types():
     assert summary["duplicate_pairs"] == []
     assert summary["synonym_pairs"] == []
     assert set(summary["unique_angle_types"]) == {"definition", "limitation"}
+    assert summary["effective_angle_count"] == 2
+    assert summary["required_effective_angle_count"] == 2
+    assert summary["duplicate_ratio"] == 0.0
+    assert summary["has_sufficient_angles"] is True
+    assert summary["has_acceptable_duplicate_ratio"] is True
+    assert summary["coverage_ok"] is True
+
+
+def test_excessive_duplicate_ratio_fails_coverage_gate():
+    covs = [
+        build_angle_coverage(
+            question="行政處分如何定義？",
+            functional_gap=f"gap-{i}",
+            user_value=f"value-{i}",
+        )
+        for i in range(3)
+    ]
+    summary = summarize_angle_coverage(attach_relations(covs))
+    assert summary["effective_angle_count"] == 1
+    assert summary["excluded_angle_count"] == 2
+    assert summary["duplicate_ratio"] == 2 / 3
+    assert summary["max_duplicate_ratio"] == 0.5
+    assert summary["has_sufficient_angles"] is False
+    assert summary["has_acceptable_duplicate_ratio"] is False
+    assert summary["coverage_ok"] is False
 
 
 def test_incomplete_coverage_rejected():

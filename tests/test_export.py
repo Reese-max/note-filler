@@ -214,6 +214,10 @@ def test_to_json_contains_source_ids_per_segment():
         assert "angle_labels" in seg, f"segment[{i}] 缺少 angle_labels"
         assert "angle_key" in seg, f"segment[{i}] 缺少 angle_key"
     assert "angle_coverage_summary" in data
+    assert data["angle_coverage_summary"]["effective_angle_count"] == 2
+    assert data["angle_coverage_summary"]["coverage_ok"] is True
+    assert data["segments"][1]["angle_coverage"]["effective_angle_count"] == 1
+    assert data["segments"][1]["angle_coverage"]["duplicate_exclusion"]["excluded"] is False
     # _sample_doc: seg[0]=original → none(0源), seg[1]=supplement 2源→ one_to_many
     assert data["segments"][0]["cardinality"] == "none"
     assert data["segments"][0]["source_ids"] == []
@@ -264,6 +268,13 @@ def test_to_markdown_contains_angle_coverage_line():
     assert "type=definition" in angle_lines[0]
     assert "labels=definition,functional_gap,user_value" in angle_lines[0]
     assert "key=definition:" in angle_lines[0]
+    assert "effective_count=1" in angle_lines[0]
+    assert "duplicate_excluded=false" in angle_lines[0]
+    assert "duplicate_reason=none" in angle_lines[0]
+    summary_lines = [ln for ln in md.splitlines() if "> **角度覆蓋摘要**" in ln]
+    assert len(summary_lines) == 1
+    assert "有效角度 2/最低 2" in summary_lines[0]
+    assert "通過 ✓" in summary_lines[0]
 
 
 def test_to_docx_contains_machine_parseable_source_list(tmp_path):
@@ -277,3 +288,4 @@ def test_to_docx_contains_machine_parseable_source_list(tmp_path):
     assert "s1,s2" in source_lines[0]
     assert "one to many" in source_lines[0]
     assert "pending" in source_lines[1]
+    assert any(p.startswith("角度覆蓋摘要：") for p in paras)

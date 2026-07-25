@@ -158,6 +158,9 @@ def process_file(path: Path, llm, twinkle, law, out_dir: Path | None, fmt: str) 
             raise RuntimeError(f"訂正稿內容為空,拒絕視為送達成功:{path}")
         dest.write_text(body, encoding="utf-8", newline="\n")
 
+    # 先寫並驗收綁定報告；角度門檻失敗不得留下 delivered 回執。
+    write_binding_report(dest, doc)
+
     # 送達後寫 delivery receipt:提供可查詢的交付回執,不只靠本機檔案存在
     write_delivery_receipt(
         dest, path,
@@ -167,8 +170,6 @@ def process_file(path: Path, llm, twinkle, law, out_dir: Path | None, fmt: str) 
         supplements=len(supp),
         verified=ver,
     )
-    # 可機器比對的論點—來源綁定報告（一對一／一對多逐項可驗證）
-    write_binding_report(dest, doc)
     return {"input": str(path), "output": str(dest), "supplements": len(supp), "verified": ver}
 
 

@@ -4,6 +4,7 @@
 - 每個 argument 明確記錄 angle_type 與 angle_labels
 - 可機器讀出 covered_facets（涵蓋哪些不同面向）
 - 以 angle_key 判定 exact 重複；以 type + token 重疊判定同義
+- 依首次出現保留有效角度，輸出排除結果與筆記層門檻摘要
 - 純函式、無 LLM、可 deterministically 重現
 """
 from __future__ import annotations
@@ -30,6 +31,11 @@ _VALID_ANGLE_TYPES = frozenset(t for t, _ in _ANGLE_TYPE_RULES) | frozenset({"ot
 
 # 同義：同 angle_type 且 token Jaccard ≥ 門檻、但 angle_key 不同
 _SYNONYM_JACCARD = 0.5
+
+# 筆記只有一個論點時要求一個；兩個以上論點至少保留兩個有效角度。
+MIN_EFFECTIVE_ANGLE_COUNT = 2
+# exact duplicate 與 synonym 排除後，最多容許一半論點重複。
+MAX_DUPLICATE_RATIO = 0.5
 
 _NON_WORD = re.compile(r"[^\w\u4e00-\u9fff]+", re.UNICODE)
 _CJK_OR_WORD = re.compile(r"[A-Za-z0-9]+|[\u4e00-\u9fff]")
@@ -199,11 +205,36 @@ def detect_angle_relation(
 def attach_relations(
     coverages: list[dict[str, Any]],
 ) -> list[dict[str, Any]]:
-    """回傳新 list：每項 angle_coverage 加上 relation（不修改輸入）。"""
+    """加上關係、有效角度數及重複排除結果（不修改輸入）。"""
     out: list[dict[str, Any]] = []
     for i, cov in enumerate(coverages):
         base = dict(cov) if cov else {}
-        base["relation"] = detect_angle_relation(i, coverages)
+        relation = detect_angle_relation(i, coverages)
+        earlier_duplicates = [j for j in relation["duplicate_of"] if j < i]
+        earlier_synonyms = [j for j in relation["synonym_of"] if j < i]
+        if earlier_duplicates:
+            related = min(earlier_duplicates)
+            reason = "duplicate"
+        elif earlier_synonyms:
+            related = min(earlier_synonyms)
+            reason = "synonym"
+        else:
+            related = i
+            reason = None
+
+        kept_index = (
+            out[related]["duplicate_exclusion"]["kept_argument_index"]
+            if related < len(out)
+            else i
+        )
+        excluded = reason is not None
+        base["relation"] = relation
+        base["effective_angle_count"] = 0 if excluded else 1
+        base["duplicate_exclusion"] = {
+            "excluded": excluded,
+            "reason": reason,
+            "kept_argument_index": kept_index,
+        }
         out.append(base)
     return out
 
@@ -211,7 +242,7 @@ def attach_relations(
 def summarize_angle_coverage(
     coverages_with_relation: list[dict[str, Any]],
 ) -> dict[str, Any]:
-    """整份報告的角度覆蓋摘要（機器可讀）。"""
+    """整份報告的角度覆蓋量測與門檻摘要（機器可讀）。"""
     types: list[str] = []
     facets_union: list[str] = []
     dup_pairs: list[list[int]] = []
@@ -220,12 +251,13 @@ def summarize_angle_coverage(
     seen_syn: set[tuple[int, int]] = set()
 
     for i, cov in enumerate(coverages_with_relation):
-        at = cov.get("angle_type") or "other"
-        if at not in types:
-            types.append(at)
-        for f in cov.get("covered_facets") or []:
-            if f not in facets_union:
-                facets_union.append(f)
+        if cov.get("effective_angle_count") == 1:
+            at = cov.get("angle_type") or "other"
+            if at not in types:
+                types.append(at)
+            for f in cov.get("covered_facets") or []:
+                if f not in facets_union:
+                    facets_union.append(f)
         rel = cov.get("relation") or {}
         for j in rel.get("duplicate_of") or []:
             pair = tuple(sorted((i, int(j))))
@@ -238,12 +270,31 @@ def summarize_angle_coverage(
                 seen_syn.add(pair)
                 syn_pairs.append([pair[0], pair[1]])
 
+    argument_count = len(coverages_with_relation)
+    effective_count = sum(
+        cov.get("effective_angle_count") == 1
+        for cov in coverages_with_relation
+    )
+    excluded_count = argument_count - effective_count
+    duplicate_ratio = excluded_count / argument_count if argument_count else 0.0
+    required_count = min(MIN_EFFECTIVE_ANGLE_COUNT, argument_count)
+    sufficient = effective_count >= required_count
+    acceptable_duplicates = duplicate_ratio <= MAX_DUPLICATE_RATIO
+
     return {
         "unique_angle_types": types,
         "covered_facets_union": facets_union,
         "duplicate_pairs": sorted(dup_pairs),
         "synonym_pairs": sorted(syn_pairs),
-        "argument_count_with_angles": len(coverages_with_relation),
+        "argument_count_with_angles": argument_count,
+        "effective_angle_count": effective_count,
+        "excluded_angle_count": excluded_count,
+        "duplicate_ratio": duplicate_ratio,
+        "required_effective_angle_count": required_count,
+        "max_duplicate_ratio": MAX_DUPLICATE_RATIO,
+        "has_sufficient_angles": sufficient,
+        "has_acceptable_duplicate_ratio": acceptable_duplicates,
+        "coverage_ok": sufficient and acceptable_duplicates,
     }
 
 

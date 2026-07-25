@@ -90,6 +90,12 @@ def to_json(doc: CorrectionDoc) -> dict:
                     "duplicate_of": [],
                     "synonym_of": [],
                 },
+                "effective_angle_count": 0,
+                "duplicate_exclusion": {
+                    "excluded": False,
+                    "reason": None,
+                    "kept_argument_index": None,
+                },
             }
         return coverage_from_segment(seg)
 
@@ -132,12 +138,17 @@ def to_markdown(doc: CorrectionDoc) -> str:
     文末以 build_reference_lines(所有被引用 sources) 產參考區塊(C7 內含 Date)。
     footnote 編號與 cited 順序一致，交給 T11 重新列 [^1..n]。
     """
+    report = build_binding_report(doc)
+    angle_by_seg_index = {
+        argument["segment_index"]: argument["angle_coverage"]
+        for argument in report["arguments"]
+    }
     body: list[str] = []
     cited: list[Source] = []
     original_traces: list[str] = []
     counter = 0
 
-    for seg in doc.segments:
+    for seg_index, seg in enumerate(doc.segments):
         if seg.type == "original":
             body.append(seg.text)
             if trace := _trace_text(seg):
@@ -187,15 +198,21 @@ def to_markdown(doc: CorrectionDoc) -> str:
         if argument_id:
             body.append(f"> **論點ID**：{argument_id}")
 
-        angle_type = getattr(seg, "angle_type", "") or ""
-        angle_labels = list(getattr(seg, "angle_labels", None) or [])
-        angle_key = getattr(seg, "angle_key", "") or ""
+        angle_coverage = angle_by_seg_index.get(seg_index, {})
+        angle_type = angle_coverage.get("angle_type", "")
+        angle_labels = angle_coverage.get("angle_labels", [])
+        angle_key = angle_coverage.get("angle_key", "")
         if angle_type or angle_labels or angle_key:
             labels_s = ",".join(angle_labels) if angle_labels else ""
+            exclusion = angle_coverage["duplicate_exclusion"]
             body.append(
                 f"> **角度覆蓋**：type={angle_type}"
                 f"；labels={labels_s}"
                 f"；key={angle_key}"
+                f"；effective_count={angle_coverage['effective_angle_count']}"
+                f"；duplicate_excluded={str(exclusion['excluded']).lower()}"
+                f"；duplicate_reason={exclusion['reason'] or 'none'}"
+                f"；kept_argument_index={exclusion['kept_argument_index']}"
             )
 
     body.extend(original_traces)
@@ -208,7 +225,6 @@ def to_markdown(doc: CorrectionDoc) -> str:
         md = f"{md}\n\n{ref_block}"
 
     # 綁定驗證摘要行：可直接被測試解析的結構化文字
-    report = build_binding_report(doc)
     s = report["summary"]
     summary_parts = []
     if s["pass"]:
@@ -220,6 +236,16 @@ def to_markdown(doc: CorrectionDoc) -> str:
     binding_line = "、".join(summary_parts) if summary_parts else "無論點"
     verdict = "全部通過 ✓" if s["all_arguments_ok"] else "有綁定問題 ✗"
     md = f"{md}\n\n---\n> **來源綁定**：{verdict}（{binding_line}）"
+    angle_summary = report["angle_coverage_summary"]
+    angle_verdict = "通過 ✓" if angle_summary["coverage_ok"] else "未通過 ✗"
+    md += (
+        "\n> **角度覆蓋摘要**："
+        f"{angle_verdict}（有效角度 {angle_summary['effective_angle_count']}/"
+        f"最低 {angle_summary['required_effective_angle_count']}；"
+        f"排除重複 {angle_summary['excluded_angle_count']}；"
+        f"重複率 {angle_summary['duplicate_ratio']:.3f}/"
+        f"上限 {angle_summary['max_duplicate_ratio']:.3f}）"
+    )
 
     return md
 
@@ -231,12 +257,17 @@ def to_docx(doc: CorrectionDoc, path: str) -> None:
     """
     from docx import Document as DocxDocument  # 延遲 import,不用 docx 輸出時免裝
 
+    report = build_binding_report(doc)
+    angle_by_seg_index = {
+        argument["segment_index"]: argument["angle_coverage"]
+        for argument in report["arguments"]
+    }
     out = DocxDocument()
     cited: list[Source] = []
     original_traces: list[str] = []
     counter = 0
 
-    for seg in doc.segments:
+    for seg_index, seg in enumerate(doc.segments):
         if seg.type == "original":
             out.add_paragraph(seg.text)
             if trace := _trace_text(seg):
@@ -285,15 +316,21 @@ def to_docx(doc: CorrectionDoc, path: str) -> None:
         if argument_id:
             out.add_paragraph(f"論點ID：{argument_id}")
 
-        angle_type = getattr(seg, "angle_type", "") or ""
-        angle_labels = list(getattr(seg, "angle_labels", None) or [])
-        angle_key = getattr(seg, "angle_key", "") or ""
+        angle_coverage = angle_by_seg_index.get(seg_index, {})
+        angle_type = angle_coverage.get("angle_type", "")
+        angle_labels = angle_coverage.get("angle_labels", [])
+        angle_key = angle_coverage.get("angle_key", "")
         if angle_type or angle_labels or angle_key:
             labels_s = ",".join(angle_labels) if angle_labels else ""
+            exclusion = angle_coverage["duplicate_exclusion"]
             out.add_paragraph(
                 f"角度覆蓋：type={angle_type}"
                 f"；labels={labels_s}"
                 f"；key={angle_key}"
+                f"；effective_count={angle_coverage['effective_angle_count']}"
+                f"；duplicate_excluded={str(exclusion['excluded']).lower()}"
+                f"；duplicate_reason={exclusion['reason'] or 'none'}"
+                f"；kept_argument_index={exclusion['kept_argument_index']}"
             )
 
     for trace in original_traces:
@@ -305,5 +342,16 @@ def to_docx(doc: CorrectionDoc, path: str) -> None:
         for line in ref_lines:
             if line.strip():
                 out.add_paragraph(line)
+
+    angle_summary = report["angle_coverage_summary"]
+    angle_verdict = "通過 ✓" if angle_summary["coverage_ok"] else "未通過 ✗"
+    out.add_paragraph(
+        f"角度覆蓋摘要：{angle_verdict}（"
+        f"有效角度 {angle_summary['effective_angle_count']}/"
+        f"最低 {angle_summary['required_effective_angle_count']}；"
+        f"排除重複 {angle_summary['excluded_angle_count']}；"
+        f"重複率 {angle_summary['duplicate_ratio']:.3f}/"
+        f"上限 {angle_summary['max_duplicate_ratio']:.3f}）"
+    )
 
     out.save(path)

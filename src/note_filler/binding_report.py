@@ -74,6 +74,7 @@ REQUIRED_CHECK_KEYS = frozenset(
         "has_user_value",
         # 角度覆蓋：論點須具備可機器讀的角度標籤／面向
         "has_angle_coverage",
+        "meets_angle_coverage_threshold",
     }
 )
 REQUIRED_SUMMARY_KEYS = frozenset(
@@ -95,6 +96,8 @@ REQUIRED_ANGLE_COVERAGE_KEYS = frozenset(
         "covered_facets",
         "angle_key",
         "relation",
+        "effective_angle_count",
+        "duplicate_exclusion",
     }
 )
 REQUIRED_ANGLE_RELATION_KEYS = frozenset(
@@ -105,6 +108,13 @@ REQUIRED_ANGLE_RELATION_KEYS = frozenset(
         "synonym_of",
     }
 )
+REQUIRED_DUPLICATE_EXCLUSION_KEYS = frozenset(
+    {
+        "excluded",
+        "reason",
+        "kept_argument_index",
+    }
+)
 REQUIRED_ANGLE_SUMMARY_KEYS = frozenset(
     {
         "unique_angle_types",
@@ -112,6 +122,14 @@ REQUIRED_ANGLE_SUMMARY_KEYS = frozenset(
         "duplicate_pairs",
         "synonym_pairs",
         "argument_count_with_angles",
+        "effective_angle_count",
+        "excluded_angle_count",
+        "duplicate_ratio",
+        "required_effective_angle_count",
+        "max_duplicate_ratio",
+        "has_sufficient_angles",
+        "has_acceptable_duplicate_ratio",
+        "coverage_ok",
     }
 )
 
@@ -167,6 +185,26 @@ def _cardinality(source_count: int) -> Cardinality:
     if source_count == 1:
         return "one_to_one"
     return "one_to_many"
+
+
+def _summarize_bindings(arguments: list[dict[str, Any]]) -> dict[str, Any]:
+    sourced = [a for a in arguments if a["cardinality"] != "none"]
+    return {
+        "one_to_one": sum(a["cardinality"] == "one_to_one" for a in arguments),
+        "one_to_many": sum(a["cardinality"] == "one_to_many" for a in arguments),
+        "none": sum(a["cardinality"] == "none" for a in arguments),
+        "pass": sum(a["binding_status"] == "pass" for a in arguments),
+        "fail": sum(a["binding_status"] == "fail" for a in arguments),
+        "pending_evidence": sum(
+            a["binding_status"] == "pending_evidence" for a in arguments
+        ),
+        "all_sourced_arguments_ok": (
+            all(a["binding_ok"] for a in sourced) if sourced else True
+        ),
+        "all_arguments_ok": (
+            all(a["binding_ok"] for a in arguments) if arguments else True
+        ),
+    }
 
 
 def _pending_traceable(seg) -> bool:
@@ -244,6 +282,8 @@ def _evaluate_argument(seg, *, argument_index: int, segment_index: int) -> dict[
         "has_functional_gap": has_functional_gap,
         "has_user_value": has_user_value,
         "has_angle_coverage": has_angle_coverage,
+        # 跨論點量測完成後覆寫。
+        "meets_angle_coverage_threshold": True,
     }
 
     necessity_ok = has_functional_gap and has_user_value
@@ -320,19 +360,13 @@ def build_binding_report(correction) -> dict[str, Any]:
     with_relations = attach_relations(bare_coverages)
     for a, cov in zip(arguments, with_relations):
         a["angle_coverage"] = cov
-        # relation 不影響 binding_ok；僅 has_angle_coverage 結構完整性為閘
     angle_summary = summarize_angle_coverage(with_relations)
-
-    one_to_one = sum(1 for a in arguments if a["cardinality"] == "one_to_one")
-    one_to_many = sum(1 for a in arguments if a["cardinality"] == "one_to_many")
-    none_n = sum(1 for a in arguments if a["cardinality"] == "none")
-    pass_n = sum(1 for a in arguments if a["binding_status"] == "pass")
-    fail_n = sum(1 for a in arguments if a["binding_status"] == "fail")
-    pending_n = sum(1 for a in arguments if a["binding_status"] == "pending_evidence")
-
-    sourced = [a for a in arguments if a["cardinality"] != "none"]
-    all_sourced_ok = all(a["binding_ok"] for a in sourced) if sourced else True
-    all_ok = all(a["binding_ok"] for a in arguments) if arguments else True
+    angle_gate_ok = angle_summary["coverage_ok"]
+    for argument in arguments:
+        argument["checks"]["meets_angle_coverage_threshold"] = angle_gate_ok
+        if not angle_gate_ok:
+            argument["binding_ok"] = False
+            argument["binding_status"] = "fail"
 
     # 反向索引：每個 source_id → 使用了它的 argument_indices
     source_usage: dict[str, list[int]] = {}
@@ -347,16 +381,7 @@ def build_binding_report(correction) -> dict[str, Any]:
         "schema": SCHEMA_ID,
         "source_path": source_path,
         "argument_count": len(arguments),
-        "summary": {
-            "one_to_one": one_to_one,
-            "one_to_many": one_to_many,
-            "none": none_n,
-            "pass": pass_n,
-            "fail": fail_n,
-            "pending_evidence": pending_n,
-            "all_sourced_arguments_ok": all_sourced_ok,
-            "all_arguments_ok": all_ok,
-        },
+        "summary": _summarize_bindings(arguments),
         "arguments": arguments,
         "source_usage": source_usage,
         "angle_coverage_summary": angle_summary,
@@ -539,6 +564,37 @@ def parse_binding_report(data: Any) -> dict[str, Any]:
                 raise ValueError(
                     f"arguments[{i}].angle_coverage.relation.{rk} 必須為 list[int]"
                 )
+        if ac.get("effective_angle_count") not in (0, 1) or isinstance(
+            ac.get("effective_angle_count"), bool
+        ):
+            raise ValueError(
+                f"arguments[{i}].angle_coverage.effective_angle_count 必須為 0 或 1"
+            )
+        exclusion = ac.get("duplicate_exclusion")
+        _reject_key_drift(
+            exclusion,
+            REQUIRED_DUPLICATE_EXCLUSION_KEYS,
+            where=f"arguments[{i}].angle_coverage.duplicate_exclusion",
+        )
+        if not isinstance(exclusion.get("excluded"), bool):
+            raise ValueError(
+                f"arguments[{i}].angle_coverage.duplicate_exclusion.excluded 必須為 bool"
+            )
+        if exclusion.get("reason") not in (None, "duplicate", "synonym"):
+            raise ValueError(
+                f"arguments[{i}].angle_coverage.duplicate_exclusion.reason 非法"
+            )
+        kept_index = exclusion.get("kept_argument_index")
+        if (
+            not isinstance(kept_index, int)
+            or isinstance(kept_index, bool)
+            or kept_index < 0
+            or kept_index >= len(arguments)
+        ):
+            raise ValueError(
+                f"arguments[{i}].angle_coverage.duplicate_exclusion."
+                "kept_argument_index 超出範圍"
+            )
         complete = is_angle_coverage_complete(
             {
                 "angle_type": ac["angle_type"],
@@ -564,6 +620,23 @@ def parse_binding_report(data: Any) -> dict[str, Any]:
             raise ValueError(
                 f"arguments[{i}] angle_coverage 完整但 checks.has_angle_coverage 未標 True"
             )
+
+    # 重新量測原始角度欄位，拒絕 relation／排除／有效數被竄改。
+    base_coverages = [
+        {
+            key: arg["angle_coverage"][key]
+            for key in ("angle_type", "angle_labels", "covered_facets", "angle_key")
+        }
+        for arg in arguments
+    ]
+    expected_coverages = attach_relations(base_coverages)
+    for i, (arg, expected) in enumerate(zip(arguments, expected_coverages)):
+        actual = arg["angle_coverage"]
+        for key in ("relation", "effective_angle_count", "duplicate_exclusion"):
+            if actual[key] != expected[key]:
+                raise ValueError(
+                    f"arguments[{i}].angle_coverage 角度量測不一致: {key}"
+                )
 
     # 校驗 source_usage 反向索引
     su = data.get("source_usage")
@@ -601,12 +674,37 @@ def parse_binding_report(data: Any) -> dict[str, Any]:
         raise ValueError(
             "angle_coverage_summary.argument_count_with_angles 必須等於 argument_count"
         )
+    expected_acs = summarize_angle_coverage(expected_coverages)
+    if acs != expected_acs:
+        raise ValueError(
+            f"angle_coverage_summary 角度覆蓋摘要不一致: "
+            f"期望 {expected_acs}，實際 {acs}"
+        )
+    angle_gate_ok = expected_acs["coverage_ok"]
+    for i, arg in enumerate(arguments):
+        checks = arg["checks"]
+        if checks["meets_angle_coverage_threshold"] is not angle_gate_ok:
+            raise ValueError(
+                f"arguments[{i}].checks.meets_angle_coverage_threshold "
+                "與 angle_coverage_summary.coverage_ok 不一致"
+            )
+        if not angle_gate_ok and (
+            arg["binding_ok"] is not False or arg["binding_status"] != "fail"
+        ):
+            raise ValueError(
+                f"arguments[{i}] 角度覆蓋未達門檻但驗收未明確標為 fail"
+            )
+    expected_summary = _summarize_bindings(arguments)
+    if summary != expected_summary:
+        raise ValueError(
+            f"summary 驗收摘要不一致: 期望 {expected_summary}，實際 {summary}"
+        )
 
     return data
 
 
 def write_binding_report(output_path: Path, correction) -> Path:
-    """將綁定報告寫到輸出檔同目錄的 binding_report.json。"""
+    """寫入報告；角度門檻未通過時保留報告並明確拒絕驗收。"""
     report = build_binding_report(correction)
     # 校驗後再落盤，保證產物可被 parse_binding_report 直接吃
     parse_binding_report(report)
@@ -618,4 +716,13 @@ def write_binding_report(output_path: Path, correction) -> Path:
         encoding="utf-8",
         newline="\n",
     )
+    angle_summary = report["angle_coverage_summary"]
+    if not angle_summary["coverage_ok"]:
+        raise RuntimeError(
+            "角度覆蓋驗收失敗："
+            f"有效角度 {angle_summary['effective_angle_count']}/"
+            f"最低 {angle_summary['required_effective_angle_count']}；"
+            f"重複率 {angle_summary['duplicate_ratio']:.3f}/"
+            f"上限 {angle_summary['max_duplicate_ratio']:.3f}"
+        )
     return report_path

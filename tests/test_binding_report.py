@@ -107,6 +107,32 @@ def _assemble_pending():
     )
 
 
+def _assemble_repeated_angles(count: int = 2):
+    questions = [
+        "行政處分如何定義？",
+        "行政處分如何定義!",
+        "行政處分如何定義。",
+    ][:count]
+    gaps = [Gap(q, "missing", f"未說明 {i}") for i, q in enumerate(questions)]
+    sources = [
+        _source(f"law:{92 + i}", f"行政程序法第 {92 + i} 條")
+        for i in range(count)
+    ]
+    return assemble_correction(
+        _doc(),
+        gaps,
+        {gap.question: [src] for gap, src in zip(gaps, sources)},
+        {
+            gap.question: WrittenSupplement(f"定義 {i}[^1]。", [src.id])
+            for i, (gap, src) in enumerate(zip(gaps, sources))
+        },
+        {
+            gap.question: cross_validate(gap.question, [src])
+            for gap, src in zip(gaps, sources)
+        },
+    )
+
+
 # ---- 格式可直接由測試解析 ---------------------------------------------------
 
 def test_schema_is_machine_parseable():
@@ -468,6 +494,7 @@ def test_each_argument_exposes_three_core_checks():
             assert c["has_functional_gap"] is True
             assert c["has_user_value"] is True
             assert c["has_angle_coverage"] is True
+            assert c["meets_angle_coverage_threshold"] is True
 
 
 # ---- 負例：缺來源／來源未對上 → binding_ok False ----------------------------
@@ -696,6 +723,7 @@ def test_argument_exposes_angle_coverage_structure():
         REQUIRED_ANGLE_COVERAGE_KEYS,
         REQUIRED_ANGLE_RELATION_KEYS,
         REQUIRED_ANGLE_SUMMARY_KEYS,
+        REQUIRED_DUPLICATE_EXCLUSION_KEYS,
     )
 
     report = parse_binding_report(build_binding_report(_assemble_mixed()))
@@ -711,7 +739,13 @@ def test_argument_exposes_angle_coverage_structure():
         assert ac["angle_key"].strip()
         assert set(ac["relation"]) == set(REQUIRED_ANGLE_RELATION_KEYS)
         assert ac["relation"]["kind"] in ("unique", "duplicate", "synonym")
+        assert ac["effective_angle_count"] == 1
+        assert set(ac["duplicate_exclusion"]) == set(
+            REQUIRED_DUPLICATE_EXCLUSION_KEYS
+        )
+        assert ac["duplicate_exclusion"]["excluded"] is False
         assert arg["checks"]["has_angle_coverage"] is True
+        assert arg["checks"]["meets_angle_coverage_threshold"] is True
 
 
 def test_assemble_classifies_definition_and_limitation_angles():
@@ -740,24 +774,7 @@ def test_assemble_classifies_definition_and_limitation_angles():
 
 def test_angle_duplicate_detection_same_key():
     """相同 angle_key 的兩個論點 → relation.kind=duplicate，summary 有 pair。"""
-    src_a = _source("law:92", "行政程序法第 92 條")
-    src_b = _source("law:93", "行政程序法第 93 條")
-    # 標點差異會被 normalize 成同一 key（「？」vs「!」）
-    gap_a = Gap("行政處分如何定義？", "missing", "未說明 A")
-    gap_b = Gap("行政處分如何定義!", "missing", "未說明 B")
-    product = assemble_correction(
-        _doc(),
-        [gap_a, gap_b],
-        {gap_a.question: [src_a], gap_b.question: [src_b]},
-        {
-            gap_a.question: WrittenSupplement("定義 A[^1]。", [src_a.id]),
-            gap_b.question: WrittenSupplement("定義 B[^1]。", [src_b.id]),
-        },
-        {
-            gap_a.question: cross_validate(gap_a.question, [src_a]),
-            gap_b.question: cross_validate(gap_b.question, [src_b]),
-        },
-    )
+    product = _assemble_repeated_angles()
     supps = [s for s in product.segments if s.type == "supplement"]
     assert len(supps) == 2
     assert supps[0].angle_key == supps[1].angle_key
@@ -773,6 +790,54 @@ def test_angle_duplicate_detection_same_key():
     assert 1 in report["arguments"][0]["angle_coverage"]["relation"]["duplicate_of"]
     assert 0 in report["arguments"][1]["angle_coverage"]["relation"]["duplicate_of"]
     assert [0, 1] in report["angle_coverage_summary"]["duplicate_pairs"]
+    assert [
+        arg["angle_coverage"]["effective_angle_count"]
+        for arg in report["arguments"]
+    ] == [1, 0]
+    assert report["angle_coverage_summary"]["has_sufficient_angles"] is False
+    assert report["angle_coverage_summary"]["coverage_ok"] is False
+    assert report["summary"]["all_arguments_ok"] is False
+    assert all(arg["binding_status"] == "fail" for arg in report["arguments"])
+
+
+def test_excessive_angle_repetition_fails_acceptance():
+    report = parse_binding_report(build_binding_report(_assemble_repeated_angles(3)))
+    summary = report["angle_coverage_summary"]
+    assert summary["effective_angle_count"] == 1
+    assert summary["excluded_angle_count"] == 2
+    assert summary["duplicate_ratio"] == 2 / 3
+    assert summary["has_acceptable_duplicate_ratio"] is False
+    assert summary["coverage_ok"] is False
+    assert report["summary"]["fail"] == 3
+    assert report["summary"]["all_arguments_ok"] is False
+
+
+def test_parse_rejects_tampered_angle_measurement_and_summary():
+    report = build_binding_report(_assemble_mixed())
+    report["arguments"][0]["angle_coverage"]["effective_angle_count"] = 0
+    with pytest.raises(ValueError, match="角度量測不一致"):
+        parse_binding_report(report)
+
+    report = build_binding_report(_assemble_mixed())
+    report["angle_coverage_summary"]["effective_angle_count"] = 0
+    with pytest.raises(ValueError, match="角度覆蓋摘要不一致"):
+        parse_binding_report(report)
+
+    report = build_binding_report(_assemble_repeated_angles())
+    report["summary"]["all_arguments_ok"] = True
+    with pytest.raises(ValueError, match="驗收摘要不一致"):
+        parse_binding_report(report)
+
+
+def test_write_binding_report_persists_metrics_then_fails_angle_gate(tmp_path):
+    path = tmp_path / "binding_report.json"
+    with pytest.raises(RuntimeError, match="角度覆蓋驗收失敗"):
+        write_binding_report(path, _assemble_repeated_angles(3))
+
+    report_path = tmp_path / BINDING_REPORT_NAME
+    report = json.loads(report_path.read_text(encoding="utf-8"))
+    assert report["angle_coverage_summary"]["coverage_ok"] is False
+    assert report["angle_coverage_summary"]["effective_angle_count"] == 1
 
 
 def test_angle_synonym_detection_same_type_overlapping_tokens():
@@ -850,3 +915,5 @@ def test_json_export_includes_angle_coverage():
             assert ac["covered_facets"]
             assert ac["angle_key"].strip()
             assert "relation" in ac
+            assert ac["effective_angle_count"] in (0, 1)
+            assert "duplicate_exclusion" in ac
