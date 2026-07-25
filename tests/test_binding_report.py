@@ -936,6 +936,156 @@ def test_single_or_duplicate_angles_fail_acceptance(tmp_path):
         write_binding_report(tmp_path / "syn.md", syn_product)
 
 
+def test_sources_ok_but_angles_insufficient_or_duplicate_fails_explicitly(tmp_path):
+    """最小負例：來源綁定正確，但角度不足／角度重複 → 流程明確失敗。
+
+    鎖定雙閘隔離：來源 checks 全過仍不得因「只驗來源」而放行不完整輸出；
+    角度門檻未過時 binding_ok／all_arguments_ok 必須為 False，且 write 拒絕驗收。
+    """
+    # --- 精確重複角度（有效角度塌縮為 1）---
+    product_dup = _assemble_repeated_angles()
+    report_dup = parse_binding_report(build_binding_report(product_dup))
+    summary_dup = report_dup["angle_coverage_summary"]
+
+    assert report_dup["argument_count"] == 2
+    assert [
+        a["angle_coverage"]["relation"]["kind"] for a in report_dup["arguments"]
+    ] == ["duplicate", "duplicate"]
+    assert summary_dup["effective_angle_count"] == 1
+    assert summary_dup["required_effective_angle_count"] == 2
+    assert summary_dup["has_sufficient_angles"] is False
+    assert summary_dup["coverage_ok"] is False
+
+    for arg in report_dup["arguments"]:
+        c = arg["checks"]
+        # 來源綁定正確：不得因角度失敗而假性把來源也標壞
+        assert arg["cardinality"] == "one_to_one"
+        assert arg["source_count"] == 1
+        assert arg["source_ids"]  # 有實際引用來源
+        assert c["at_least_one_source"] is True
+        assert c["source_traceable"] is True
+        assert c["no_duplicate_sources"] is True
+        assert c["no_omitted_traces"] is True
+        assert c["no_extra_traces"] is True
+        assert c["source_id_field_aligned"] is True
+        assert c["no_empty_fragments"] is True
+        assert c["has_functional_gap"] is True
+        assert c["has_user_value"] is True
+        # 單點 facet 結構完整，但跨論點有效角度不足
+        assert c["has_angle_coverage"] is True
+        assert c["angle_facet_complete"] is True
+        assert c["meets_angle_coverage_threshold"] is False
+        assert arg["binding_ok"] is False
+        assert arg["binding_status"] == "fail"
+
+    assert report_dup["summary"]["fail"] == 2
+    assert report_dup["summary"]["all_arguments_ok"] is False
+    with pytest.raises(RuntimeError, match="角度覆蓋驗收失敗") as ei_dup:
+        write_binding_report(tmp_path / "src-ok-angle-dup.md", product_dup)
+    assert "有效角度" in str(ei_dup.value)
+    persisted_dup = json.loads(
+        (tmp_path / BINDING_REPORT_NAME).read_text(encoding="utf-8")
+    )
+    assert persisted_dup["angle_coverage_summary"]["coverage_ok"] is False
+    assert persisted_dup["summary"]["all_arguments_ok"] is False
+
+    # --- 同義角度（同樣有效角度不足）---
+    product_syn = _assemble_synonym_angles()
+    report_syn = parse_binding_report(build_binding_report(product_syn))
+    summary_syn = report_syn["angle_coverage_summary"]
+    assert [
+        a["angle_coverage"]["relation"]["kind"] for a in report_syn["arguments"]
+    ] == ["synonym", "synonym"]
+    assert summary_syn["effective_angle_count"] == 1
+    assert summary_syn["coverage_ok"] is False
+    for arg in report_syn["arguments"]:
+        c = arg["checks"]
+        assert c["at_least_one_source"] is True
+        assert c["source_traceable"] is True
+        assert c["meets_angle_coverage_threshold"] is False
+        assert arg["binding_ok"] is False
+        assert arg["binding_status"] == "fail"
+    assert report_syn["summary"]["all_arguments_ok"] is False
+    with pytest.raises(RuntimeError, match="角度覆蓋驗收失敗"):
+        write_binding_report(tmp_path / "src-ok-angle-syn.md", product_syn)
+
+
+def test_angles_complete_but_sources_missing_fails_explicitly():
+    """最小負例：角度齊全（兩相異有效角度）但來源缺失 → 流程明確失敗。
+
+    鎖定雙閘隔離：角度 coverage_ok 仍不得因「只驗角度」而放行無來源輸出；
+    來源 checks 必須標 False，binding_status=fail，且 require_traceable 硬失敗。
+    """
+    from note_filler.pipeline import require_traceable_note_product
+
+    product = _assemble_same_topic_distinct_angles()
+    # 先確認正例本體角度齊全且來源正確
+    good = parse_binding_report(build_binding_report(product))
+    assert good["angle_coverage_summary"]["coverage_ok"] is True
+    assert good["angle_coverage_summary"]["effective_angle_count"] == 2
+    assert good["summary"]["all_arguments_ok"] is True
+
+    # 剝除來源：模擬「角度欄位齊全、來源未綁定」的不完整輸出
+    stripped_ids: list[str] = []
+    for seg in product.segments:
+        if seg.type != "supplement":
+            continue
+        assert seg.sources, "前置組裝必須有來源才可構造來源缺失負例"
+        stripped_ids.extend(s.id for s in seg.sources)
+        seg.sources = []
+        seg.traceability = []
+        seg.source_id = "sources:stripped-missing"
+        seg.confidence = "verified"  # 非 pending → 不可當待補證放行
+
+    assert len(stripped_ids) >= 2
+    report = parse_binding_report(build_binding_report(product))
+    angle_summary = report["angle_coverage_summary"]
+
+    # 角度齊全：定義＋限制，facet 完整，門檻通過
+    assert report["argument_count"] == 2
+    assert {
+        a["angle_coverage"]["angle_type"] for a in report["arguments"]
+    } == {"definition", "limitation"}
+    assert [
+        a["angle_coverage"]["relation"]["kind"] for a in report["arguments"]
+    ] == ["unique", "unique"]
+    assert angle_summary["effective_angle_count"] == 2
+    assert angle_summary["required_effective_angle_count"] == 2
+    assert angle_summary["has_sufficient_angles"] is True
+    assert angle_summary["coverage_ok"] is True
+
+    for arg in report["arguments"]:
+        c = arg["checks"]
+        # 來源缺失：至少一源／可追溯必須失敗
+        assert arg["cardinality"] == "none"
+        assert arg["source_count"] == 0
+        assert arg["source_ids"] == []
+        assert c["at_least_one_source"] is False
+        assert c["source_traceable"] is False
+        assert c["source_id_field_aligned"] is False
+        # 角度仍齊全——證明失敗不是角度閘造成
+        assert c["has_angle_coverage"] is True
+        assert c["angle_facet_complete"] is True
+        assert c["meets_angle_coverage_threshold"] is True
+        assert c["has_functional_gap"] is True
+        assert c["has_user_value"] is True
+        assert arg["binding_ok"] is False
+        assert arg["binding_status"] == "fail"
+
+    assert report["summary"]["fail"] == 2
+    assert report["summary"]["pass"] == 0
+    assert report["summary"]["all_arguments_ok"] is False
+    assert report["source_usage"] == {}
+
+    # 末端追溯閘必須明確 raise，避免默默產出不完整成品
+    with pytest.raises(RuntimeError, match="來源追溯驗證失敗") as ei:
+        require_traceable_note_product(product, source="neg-angles-ok-sources-missing")
+    msg = str(ei.value)
+    assert "source_id" in msg or "對應失敗" in msg or "pending:gap:" in msg, (
+        f"失敗訊息應指出來源綁定缺口，實際：{msg!r}"
+    )
+
+
 def test_excessive_angle_repetition_fails_acceptance():
     report = parse_binding_report(build_binding_report(_assemble_repeated_angles(3)))
     summary = report["angle_coverage_summary"]

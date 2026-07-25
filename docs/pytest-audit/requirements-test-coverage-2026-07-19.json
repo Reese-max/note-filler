@@ -9,8 +9,8 @@
     "command": "D:/Users/Administrator/Desktop/筆記補齊/.venv/Scripts/python.exe -X utf8 -m pytest -m 'not integration' -q --color=no",
     "collection_command": "D:/Users/Administrator/Desktop/筆記補齊/.venv/Scripts/python.exe -X utf8 -m pytest --collect-only -q --deselected-details --color=no",
     "expected_collection": {
-      "collected": 418,
-      "default_selected": 407,
+      "collected": 420,
+      "default_selected": 409,
       "deselected": 11
     }
   },
@@ -24,8 +24,8 @@
     "observed": {
       "coverage_matrix": "2 passed",
       "blind_spot_and_controls": "12 passed",
-      "default_suite": "407 passed, 11 deselected",
-      "deselection_guard": "updated with anti-leak gate counts 418/407/11"
+      "default_suite": "409 passed, 11 deselected",
+      "deselection_guard": "updated with anti-leak gate counts 420/409/11"
     }
   },
   "paths": [
