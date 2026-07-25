@@ -45,23 +45,25 @@ def _trace_text(seg) -> str:
 
 
 def _argument_coverage_text(argument: dict) -> str:
-    """逐筆聚合論點、來源、必要性雙視角與角度清單。"""
+    """逐筆聚合論點、來源、必要性雙視角與角度清單。
+    
+    格式與機器可讀報告對齊，顯示四個核心欄位：
+    - functional_gap：功能缺口
+    - user_value：使用者價值
+    - angle_tags：角度標籤
+    - source_ids：來源識別碼
+    """
     coverage = argument["angle_coverage"]
-    labels = coverage["angle_labels"]
-    exclusion = coverage["duplicate_exclusion"]
+    angle_tags = argument.get("angle_tags", coverage.get("angle_labels", []))
+    source_ids = argument.get("source_ids", [])
+    functional_gap = argument.get("functional_gap", "")
+    user_value = argument.get("user_value", "")
+    
     return (
-        f"論點={argument['argument_text']}"
-        f"；來源={','.join(argument['source_ids']) or 'pending（無來源）'}"
-        f"；functional_gap={argument['functional_gap'] or '（未提供）'}"
-        f"；user_value={argument['user_value'] or '（未提供）'}"
-        f"；角度清單={'、'.join(labels) or '（無）'}"
-        f"；type={coverage['angle_type']}"
-        f"；labels={','.join(labels)}"
-        f"；key={coverage['angle_key']}"
-        f"；effective_count={coverage['effective_angle_count']}"
-        f"；duplicate_excluded={str(exclusion['excluded']).lower()}"
-        f"；duplicate_reason={exclusion['reason'] or 'none'}"
-        f"；kept_argument_index={exclusion['kept_argument_index']}"
+        f"functional_gap={functional_gap or '（未提供）'}"
+        f"；user_value={user_value or '（未提供）'}"
+        f"；angle_tags={'、'.join(angle_tags) if angle_tags else '（無）'}"
+        f"；source_ids={','.join(source_ids) if source_ids else 'pending（無來源）'}"
     )
 
 
