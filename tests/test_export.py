@@ -256,7 +256,7 @@ def test_to_markdown_contains_machine_parseable_source_list():
 
 
 def test_to_markdown_contains_angle_coverage_line():
-    """Markdown 輸出：有角度欄位的 supplement 須含可解析角度覆蓋行。"""
+    """Markdown 逐筆同列論點、來源、必要性雙視角與角度清單。"""
     doc = _sample_doc()
     # 手建 fixture 預設無 angle_*；補上以驗證序列化輸出
     doc.segments[1].angle_type = "definition"
@@ -265,6 +265,11 @@ def test_to_markdown_contains_angle_coverage_line():
     md = to_markdown(doc)
     angle_lines = [ln for ln in md.splitlines() if "> **角度覆蓋**" in ln]
     assert len(angle_lines) >= 1
+    assert "論點=依行政程序法第92條" in angle_lines[0]
+    assert "來源=s1,s2" in angle_lines[0]
+    assert "functional_gap=原稿未定義行政處分" in angle_lines[0]
+    assert "user_value=補齊讀者對「行政處分如何定義？」所需的說明" in angle_lines[0]
+    assert "角度清單=definition、functional_gap、user_value" in angle_lines[0]
     assert "type=definition" in angle_lines[0]
     assert "labels=definition,functional_gap,user_value" in angle_lines[0]
     assert "key=definition:" in angle_lines[0]
@@ -288,4 +293,13 @@ def test_to_docx_contains_machine_parseable_source_list(tmp_path):
     assert "s1,s2" in source_lines[0]
     assert "one to many" in source_lines[0]
     assert "pending" in source_lines[1]
+    angle_lines = [p for p in paras if p.startswith("角度覆蓋：")]
+    assert any(
+        "論點=依行政程序法第92條" in p
+        and "來源=s1,s2" in p
+        and "functional_gap=原稿未定義行政處分" in p
+        and "user_value=補齊讀者對「行政處分如何定義？」所需的說明" in p
+        and "角度清單=definition、functional_gap、user_value" in p
+        for p in angle_lines
+    )
     assert any(p.startswith("角度覆蓋摘要：") for p in paras)

@@ -44,7 +44,7 @@
       {% for seg in doc.segments %}
         {% if seg.type == "supplement" %}
         <div class="supplement">
-          <span class="seg">{{ seg.text }}</span>
+          <div class="seg"><strong>論點：</strong>{{ seg.text }}</div>
           {% if seg.confidence == "pending_evidence" %}
           <span class="pending">[待補依據]</span>
           {% endif %}
@@ -61,7 +61,27 @@
             {% endfor %}
             </ul>
           </details>
+          {% else %}
+          <div class="source-status">來源：pending（無來源）</div>
           {% endif %}
+          <dl class="argument-metadata">
+            <dt>functional_gap（功能缺口）</dt>
+            <dd>{{ seg.functional_gap or "未提供" }}</dd>
+            <dt>user_value（使用者價值）</dt>
+            <dd>{{ seg.user_value or "未提供" }}</dd>
+            <dt>角度清單</dt>
+            <dd>
+              {% if seg.angle_labels %}
+              <ul class="angles">
+                {% for angle in seg.angle_labels %}<li>{{ angle }}</li>{% endfor %}
+              </ul>
+              {% elif seg.angle_type %}
+              <ul class="angles"><li>{{ seg.angle_type }}</li></ul>
+              {% else %}
+              未提供
+              {% endif %}
+            </dd>
+          </dl>
           {% if seg.traceability %}
           <div class="traceability">追溯：{% for ref in seg.traceability %}{{ ref.kind }} {{ ref.id }}{% if ref.kind == "original_input" %}#paragraph-{{ ref.paragraph_idx }}{% endif %}{% if not loop.last %}、{% endif %}{% endfor %}</div>
           {% endif %}

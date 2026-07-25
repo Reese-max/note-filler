@@ -55,9 +55,12 @@ def _fixed_doc() -> CorrectionDoc:
         sources=[src],
         confidence="verified",
         traceability=[{"kind": "source", "id": "s1"}],
-        functional_gap="",
-        user_value="",
+        functional_gap="原稿未定義行政處分",
+        user_value="讓讀者辨識行政處分的適用範圍",
         argument_id="argument:0",
+        angle_type="definition",
+        angle_labels=["definition", "functional_gap", "user_value"],
+        angle_key="definition:行政處分之定義",
     )
     seg_supp_pending = Segment(
         type="supplement",
@@ -101,6 +104,7 @@ async def test_run_renders_two_columns(async_client, monkeypatch):
     # 右欄 supplement 高亮
     assert 'class="supplement"' in body
     assert "行政處分係指行政機關就公法上具體事件所為之單方決定。" in body
+    assert "論點：" in body
     # 有來源時可展開,且標 Level
     assert "[Level A]" in body
     assert "行政程序法第92條" in body
@@ -112,6 +116,14 @@ async def test_run_renders_two_columns(async_client, monkeypatch):
     assert "/tmp/note.txt" in body
     assert "source s1" in body
     assert "processing_record gap:1" in body
+    # 每筆可讀卡片同時呈現來源、必要性雙視角與角度清單。
+    assert "functional_gap（功能缺口）" in body
+    assert "原稿未定義行政處分" in body
+    assert "user_value（使用者價值）" in body
+    assert "讓讀者辨識行政處分的適用範圍" in body
+    assert "角度清單" in body
+    assert "definition" in body
+    assert "來源：pending（無來源）" in body
 
 
 @pytest.mark.anyio

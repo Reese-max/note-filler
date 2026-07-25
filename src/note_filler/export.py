@@ -44,6 +44,27 @@ def _trace_text(seg) -> str:
     return "、".join(items)
 
 
+def _argument_coverage_text(argument: dict) -> str:
+    """逐筆聚合論點、來源、必要性雙視角與角度清單。"""
+    coverage = argument["angle_coverage"]
+    labels = coverage["angle_labels"]
+    exclusion = coverage["duplicate_exclusion"]
+    return (
+        f"論點={argument['argument_text']}"
+        f"；來源={','.join(argument['source_ids']) or 'pending（無來源）'}"
+        f"；functional_gap={argument['functional_gap'] or '（未提供）'}"
+        f"；user_value={argument['user_value'] or '（未提供）'}"
+        f"；角度清單={'、'.join(labels) or '（無）'}"
+        f"；type={coverage['angle_type']}"
+        f"；labels={','.join(labels)}"
+        f"；key={coverage['angle_key']}"
+        f"；effective_count={coverage['effective_angle_count']}"
+        f"；duplicate_excluded={str(exclusion['excluded']).lower()}"
+        f"；duplicate_reason={exclusion['reason'] or 'none'}"
+        f"；kept_argument_index={exclusion['kept_argument_index']}"
+    )
+
+
 def to_json(doc: CorrectionDoc) -> dict:
     """序列化整份 CorrectionDoc；原文 immutable，僅讀不改。
 
@@ -139,8 +160,8 @@ def to_markdown(doc: CorrectionDoc) -> str:
     footnote 編號與 cited 順序一致，交給 T11 重新列 [^1..n]。
     """
     report = build_binding_report(doc)
-    angle_by_seg_index = {
-        argument["segment_index"]: argument["angle_coverage"]
+    argument_by_seg_index = {
+        argument["segment_index"]: argument
         for argument in report["arguments"]
     }
     body: list[str] = []
@@ -198,22 +219,8 @@ def to_markdown(doc: CorrectionDoc) -> str:
         if argument_id:
             body.append(f"> **論點ID**：{argument_id}")
 
-        angle_coverage = angle_by_seg_index.get(seg_index, {})
-        angle_type = angle_coverage.get("angle_type", "")
-        angle_labels = angle_coverage.get("angle_labels", [])
-        angle_key = angle_coverage.get("angle_key", "")
-        if angle_type or angle_labels or angle_key:
-            labels_s = ",".join(angle_labels) if angle_labels else ""
-            exclusion = angle_coverage["duplicate_exclusion"]
-            body.append(
-                f"> **角度覆蓋**：type={angle_type}"
-                f"；labels={labels_s}"
-                f"；key={angle_key}"
-                f"；effective_count={angle_coverage['effective_angle_count']}"
-                f"；duplicate_excluded={str(exclusion['excluded']).lower()}"
-                f"；duplicate_reason={exclusion['reason'] or 'none'}"
-                f"；kept_argument_index={exclusion['kept_argument_index']}"
-            )
+        if argument := argument_by_seg_index.get(seg_index):
+            body.append(f"> **角度覆蓋**：{_argument_coverage_text(argument)}")
 
     body.extend(original_traces)
 
@@ -258,8 +265,8 @@ def to_docx(doc: CorrectionDoc, path: str) -> None:
     from docx import Document as DocxDocument  # 延遲 import,不用 docx 輸出時免裝
 
     report = build_binding_report(doc)
-    angle_by_seg_index = {
-        argument["segment_index"]: argument["angle_coverage"]
+    argument_by_seg_index = {
+        argument["segment_index"]: argument
         for argument in report["arguments"]
     }
     out = DocxDocument()
@@ -316,22 +323,8 @@ def to_docx(doc: CorrectionDoc, path: str) -> None:
         if argument_id:
             out.add_paragraph(f"論點ID：{argument_id}")
 
-        angle_coverage = angle_by_seg_index.get(seg_index, {})
-        angle_type = angle_coverage.get("angle_type", "")
-        angle_labels = angle_coverage.get("angle_labels", [])
-        angle_key = angle_coverage.get("angle_key", "")
-        if angle_type or angle_labels or angle_key:
-            labels_s = ",".join(angle_labels) if angle_labels else ""
-            exclusion = angle_coverage["duplicate_exclusion"]
-            out.add_paragraph(
-                f"角度覆蓋：type={angle_type}"
-                f"；labels={labels_s}"
-                f"；key={angle_key}"
-                f"；effective_count={angle_coverage['effective_angle_count']}"
-                f"；duplicate_excluded={str(exclusion['excluded']).lower()}"
-                f"；duplicate_reason={exclusion['reason'] or 'none'}"
-                f"；kept_argument_index={exclusion['kept_argument_index']}"
-            )
+        if argument := argument_by_seg_index.get(seg_index):
+            out.add_paragraph(f"角度覆蓋：{_argument_coverage_text(argument)}")
 
     for trace in original_traces:
         out.add_paragraph(f"追溯：{trace}")
