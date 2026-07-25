@@ -18,6 +18,7 @@ from note_filler.binding_report import (
     write_binding_report,
 )
 from note_filler.correction import Segment, assemble_correction
+from note_filler.export import to_json
 from note_filler.gap import Gap
 from note_filler.parse import Document, Paragraph
 from note_filler.retrieve.models import Source
@@ -186,6 +187,47 @@ def test_mixed_one_to_one_and_one_to_many():
     assert a0["source_ids"] == ["law:92"]
     assert a1["source_ids"] == ["law:93", "law:94"]
     assert report["summary"]["all_sourced_arguments_ok"] is True
+    assert report["summary"]["all_arguments_ok"] is True
+
+
+def test_product_output_each_argument_has_ids_and_traceable_fragments():
+    """最小正例：同一成品逐筆核對 1:1、1:N 論點的來源與片段。"""
+    from note_filler.pipeline import require_traceable_note_product
+
+    product = _assemble_mixed()
+    require_traceable_note_product(product, source="positive-binding")
+    output = json.loads(json.dumps(to_json(product), ensure_ascii=False))
+    report = parse_binding_report(build_binding_report(product))
+    expected = [
+        ("定義[^1]。", "one_to_one", {"law:92": "行政程序法第 92 條"}),
+        (
+            "限制[^1][^2]。",
+            "one_to_many",
+            {
+                "law:93": "行政程序法第 93 條",
+                "law:94": "行政程序法第 94 條",
+            },
+        ),
+    ]
+
+    assert report["argument_count"] == len(expected)
+    for argument, (claim, cardinality, fragments) in zip(report["arguments"], expected):
+        segment = output["segments"][argument["segment_index"]]
+        sources = {source["id"]: source for source in segment["sources"]}
+
+        assert argument["argument_text"] == segment["text"] == claim
+        assert argument["cardinality"] == cardinality
+        assert argument["source_ids"] == list(fragments)
+        assert argument["trace_source_ids"] == list(fragments)
+        assert segment["source_id"] == f"sources:{','.join(fragments)}"
+        assert all(
+            fragment in sources[source_id]["content"]
+            for source_id, fragment in fragments.items()
+        )
+        assert all(argument["checks"].values())
+        assert argument["binding_status"] == "pass"
+        assert argument["binding_ok"] is True
+
     assert report["summary"]["all_arguments_ok"] is True
 
 
