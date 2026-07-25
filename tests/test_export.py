@@ -48,6 +48,8 @@ def _sample_doc() -> CorrectionDoc:
             anchor_idx=0,
             sources=[src_a, src_b],
             confidence="verified",
+            traceability=[{"kind": "source", "id": "s1"}, {"kind": "source", "id": "s2"}],
+            source_id="sources:s1,s2",
         ),
         Segment(
             type="supplement",
@@ -55,6 +57,11 @@ def _sample_doc() -> CorrectionDoc:
             anchor_idx=0,
             sources=[],
             confidence="pending_evidence",
+            traceability=[{
+                "kind": "processing_record", "id": "gap:1",
+                "question": "細節待查", "outcome": "pending_evidence",
+            }],
+            source_id="pending:gap:1",
         ),
     ]
     return CorrectionDoc(original=original, segments=segments)
@@ -86,6 +93,58 @@ def test_to_json_serializes_segments() -> None:
     json.dumps(data, ensure_ascii=False)
 
 
+def test_to_json_contains_binding_summary() -> None:
+    """訂正稿 JSON 頂層必須包含 binding_summary，可直接被測試解析綁定驗證狀態。"""
+    data = to_json(_sample_doc())
+    bs = data.get("binding_summary")
+    assert bs is not None, "JSON 輸出應含 binding_summary"
+    assert bs["schema"] == "note_filler.binding_report.v1"
+    assert isinstance(bs["argument_count"], int)
+    assert isinstance(bs["pass"], int)
+    assert isinstance(bs["fail"], int)
+    assert isinstance(bs["pending_evidence"], int)
+    assert isinstance(bs["one_to_one"], int)
+    assert isinstance(bs["one_to_many"], int)
+    assert isinstance(bs["none"], int)
+    assert isinstance(bs["all_arguments_ok"], bool)
+    assert isinstance(bs["all_sourced_arguments_ok"], bool)
+    # _sample_doc 有 2 個 supplement：第一個 verified 有 2 源、第二個 pending 無源
+    assert bs["argument_count"] == 2
+    assert bs["one_to_many"] == 1
+    assert bs["none"] == 1
+    assert bs["pending_evidence"] == 1
+
+
+def test_to_json_binding_summary_matches_segments() -> None:
+    """binding_summary 的計數必須與 segments 實際 supplement 數一致。"""
+    data = to_json(_sample_doc())
+    bs = data["binding_summary"]
+    supplement_segs = [s for s in data["segments"] if s["type"] == "supplement"]
+    assert bs["argument_count"] == len(supplement_segs)
+    assert bs["pass"] + bs["fail"] + bs["pending_evidence"] == len(supplement_segs)
+
+
+def test_to_markdown_ends_with_binding_line() -> None:
+    """Markdown 輸出末尾必須包含來源綁定驗證行，格式為 > **來源綁定**。"""
+    md = to_markdown(_sample_doc())
+    last_lines = md.strip().splitlines()[-2:]
+    binding_lines = [ln for ln in last_lines if "來源綁定" in ln]
+    assert len(binding_lines) >= 1, "Markdown 末段應含來源綁定驗證行"
+    assert "✓" in binding_lines[0] or "✗" in binding_lines[0]
+
+
+def test_to_markdown_binding_verdict_matches_doc() -> None:
+    md = to_markdown(_sample_doc())
+    assert "\u5168\u90e8\u901a\u904e" in md  # UTF-8: 「全部通過」
+
+
+def test_to_markdown_binding_line_machine_parseable() -> None:
+    import re
+    md = to_markdown(_sample_doc())
+    m = re.search(r"> \*\*[\u4f86\u6e90\u7d81\u5b9a]+\*\*", md)
+    assert m is not None, "binding line format mismatch"
+
+
 def test_to_markdown_format_locked() -> None:
     md = to_markdown(_sample_doc())
 
@@ -111,7 +170,8 @@ def test_to_markdown_format_locked() -> None:
 
 def test_to_markdown_pending_segment_has_no_footnote() -> None:
     md = to_markdown(_sample_doc())
-    pending_lines = [ln for ln in md.splitlines() if "待補證" in ln]
-    assert len(pending_lines) == 1
+    # 篩出補充段的待補證行（非末尾綁定摘要行）
+    pending_supplement = [ln for ln in md.splitlines() if "待補證" in ln and "【補充】" in ln]
+    assert len(pending_supplement) == 1
     # sources 空 → 該段不產生任何 [^n] 標記
-    assert "[^" not in pending_lines[0]
+    assert "[^" not in pending_supplement[0]

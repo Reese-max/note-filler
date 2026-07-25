@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import asdict
 
+from note_filler.binding_report import build_binding_report
 from note_filler.citation_formatter import build_reference_lines
 from note_filler.correction import CorrectionDoc
 from note_filler.retrieve.models import Source
@@ -31,10 +32,28 @@ def _trace_text(seg) -> str:
 
 
 def to_json(doc: CorrectionDoc) -> dict:
-    """序列化整份 CorrectionDoc；原文 immutable，僅讀不改。"""
+    """序列化整份 CorrectionDoc；原文 immutable，僅讀不改。
+
+    頂層含 binding_summary（整合 binding_report 的摘要），
+    讓訂正稿 JSON 本身就可被測試直接解析驗證綁定狀態。
+    """
+    report = build_binding_report(doc)
+    binding_summary = {
+        "schema": report["schema"],
+        "argument_count": report["argument_count"],
+        "pass": report["summary"]["pass"],
+        "fail": report["summary"]["fail"],
+        "pending_evidence": report["summary"]["pending_evidence"],
+        "one_to_one": report["summary"]["one_to_one"],
+        "one_to_many": report["summary"]["one_to_many"],
+        "none": report["summary"]["none"],
+        "all_arguments_ok": report["summary"]["all_arguments_ok"],
+        "all_sourced_arguments_ok": report["summary"]["all_sourced_arguments_ok"],
+    }
     return {
         "source_path": doc.original.source_path,
         "full_text": doc.original.full_text,
+        "binding_summary": binding_summary,
         "segments": [
             {
                 "type": seg.type,
@@ -101,6 +120,20 @@ def to_markdown(doc: CorrectionDoc) -> str:
     ref_block = build_reference_lines(cited)
     if ref_block:
         md = f"{md}\n\n{ref_block}"
+
+    # 綁定驗證摘要行：可直接被測試解析的結構化文字
+    report = build_binding_report(doc)
+    s = report["summary"]
+    summary_parts = []
+    if s["pass"]:
+        summary_parts.append(f"✓ {s['pass']} 通過")
+    if s["fail"]:
+        summary_parts.append(f"✗ {s['fail']} 未通過")
+    if s["pending_evidence"]:
+        summary_parts.append(f"⚠ {s['pending_evidence']} 待補證")
+    binding_line = "、".join(summary_parts) if summary_parts else "無論點"
+    verdict = "全部通過 ✓" if s["all_arguments_ok"] else "有綁定問題 ✗"
+    md = f"{md}\n\n---\n> **來源綁定**：{verdict}（{binding_line}）"
 
     return md
 
