@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import pytest
 
+from note_filler.binding_report import build_binding_report, parse_binding_report
 from note_filler.correction import assemble_correction
 from note_filler.gap import Gap
 from note_filler.parse import Document, Paragraph
@@ -512,6 +513,57 @@ def test_failure_semantic_source_trace_not_matched_to_sources(caplog):
     assert "來源追溯驗證失敗" in str(ei.value)
     assert "note_traceability_failed" in caplog.text
     assert "fail-bind-trace" in caplog.text
+
+
+def test_failure_semantic_binding_report_flags_missing_source(caplog):
+    """最小負例：assemble_correction 產出 source_id 宣稱存在但 sources 為空的 segment。
+
+    驗證：
+    1) 綁定報告的 binding_status 為 fail（不得默默標 pass）
+    2) 錯誤訊息明確指出缺失綁定（含 source_id）
+    3) 與 require_traceable_note_product 閘一致攔截
+    """
+    import logging
+
+    from note_filler.pipeline import require_traceable_note_product
+
+    gap = Gap("行政處分之要件為何？", "missing", "原稿未展開")
+    claim = "行政處分應符合法定要件，並保障當事人陳述意見之機會。"
+    missing_id = "missing-src-RPT-01"
+    with caplog.at_level(logging.WARNING):
+        product = assemble_correction(
+            _doc(),
+            [gap],
+            {gap.question: []},  # retrieved 為空：missing_id 在此找不到
+            {gap.question: WrittenSupplement(claim, [missing_id])},
+            {},
+        )
+    seg = product.segments[-1]
+    assert seg.type == "supplement"
+    assert claim in seg.text
+    assert seg.sources == []
+    assert missing_id in seg.source_id
+
+    # 綁定報告必須明確標示 fail（不得靜默標 pass）
+    report = parse_binding_report(build_binding_report(product))
+    arg = report["arguments"][0]
+    assert arg["binding_status"] == "fail", (
+        f"缺失來源之 binding_status 應為 fail，實際：{arg['binding_status']!r}"
+    )
+    assert arg["binding_ok"] is False
+    assert arg["checks"]["at_least_one_source"] is False
+    assert report["summary"]["fail"] == 1
+    assert report["summary"]["all_arguments_ok"] is False
+
+    # 閘門必須明確 raise 且錯誤指向綁定缺口
+    with caplog.at_level(logging.WARNING):
+        with pytest.raises(RuntimeError, match="來源追溯驗證失敗") as ei:
+            require_traceable_note_product(product, source="fail-bind-rpt")
+    msg = str(ei.value)
+    assert "source_id" in msg or "對應失敗" in msg, (
+        f"失敗訊息應指出綁定缺口，實際：{msg!r}"
+    )
+    assert "note_traceability_failed" in caplog.text
 
 
 def test_failure_semantic_missing_binding_blocks_pipeline_return(tmp_path, monkeypatch, caplog):
