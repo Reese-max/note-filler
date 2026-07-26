@@ -1573,3 +1573,46 @@ def test_positive_acceptance_multi_angle_and_one_to_many_count_consistency(
         "law:93": [1],
         "law:94": [1],
     }
+
+
+def test_persisted_report_summary_matches_final_product(tmp_path):
+    """落盤後逐筆證明報告摘要已進入成品，不只存在記憶體。"""
+    product = _assemble_mixed()
+    product_path = tmp_path / "note_product.json"
+    product_path.write_text(
+        json.dumps(to_json(product), ensure_ascii=False, indent=2),
+        encoding="utf-8",
+        newline="\n",
+    )
+    report_path = write_binding_report(product_path, product)
+
+    serialized = json.loads(product_path.read_text(encoding="utf-8"))
+    report = parse_binding_report(
+        json.loads(report_path.read_text(encoding="utf-8"))
+    )
+
+    for argument in report["arguments"]:
+        segment = serialized["segments"][argument["segment_index"]]
+        assert argument["summary"] == segment["summary"] == segment["text"]
+        assert argument["checks"]["summary_matches_product"] is True
+
+
+def test_summary_mismatch_is_machine_visible_and_rejected(tmp_path):
+    """摘要只留在中繼欄位時須標記失敗，且不可交付。"""
+    product = _assemble_one_to_one()
+    product.segments[1].summary = "未落地的中繼摘要。"
+
+    report = parse_binding_report(build_binding_report(product))
+    argument = report["arguments"][0]
+    assert argument["summary"] == "未落地的中繼摘要。"
+    assert argument["argument_text"] == product.segments[1].text
+    assert argument["checks"]["summary_matches_product"] is False
+    assert argument["binding_ok"] is False
+    assert argument["binding_status"] == "fail"
+
+    with pytest.raises(RuntimeError, match="摘要一致性驗收失敗"):
+        write_binding_report(tmp_path / "out.json", product)
+
+    report["arguments"][0]["checks"]["summary_matches_product"] = True
+    with pytest.raises(ValueError, match="summary_matches_product.*不一致"):
+        parse_binding_report(report)

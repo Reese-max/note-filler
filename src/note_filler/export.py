@@ -71,7 +71,7 @@ def _visible_summary_text(argument: dict) -> str:
     """同列顯示單一論點摘要與必要性雙視角。"""
     return (
         f"argument_id={argument['argument_id']}"
-        f"；摘要={argument['argument_text']}"
+        f"；摘要={argument['summary']}"
         f"；functional_gap={argument['functional_gap'] or '（未提供）'}"
         f"；user_value={argument['user_value'] or '（未提供）'}"
     )
@@ -136,6 +136,7 @@ def to_json(doc: CorrectionDoc) -> dict:
         if argument := argument_by_seg_index.get(seg_index):
             return {
                 "argument_id": argument["argument_id"],
+                "summary": argument["summary"],
                 "angle_tags": list(argument["angle_tags"]),
                 "valid_angle_count": argument["valid_angle_count"],
                 "deduped_angle_count": argument["deduped_angle_count"],
@@ -143,6 +144,7 @@ def to_json(doc: CorrectionDoc) -> dict:
             }
         return {
             "argument_id": str(getattr(seg, "argument_id", "") or ""),
+            "summary": str(getattr(seg, "summary", "") or ""),
             "angle_tags": list(getattr(seg, "angle_tags", None) or []),
             "valid_angle_count": int(getattr(seg, "valid_angle_count", 0) or 0),
             "deduped_angle_count": int(getattr(seg, "deduped_angle_count", 0) or 0),

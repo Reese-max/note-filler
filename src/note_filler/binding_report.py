@@ -4,6 +4,7 @@
   1. 至少一個來源（at_least_one_source）
   2. 來源可追溯（source_traceable：sources ↔ traceability 對齊）
   3. 無重複遺漏（no_duplicate_sources + no_omitted_traces + no_extra_traces）
+  4. 摘要已落地成品（summary_matches_product）
 
 明確標示 cardinality：
   - one_to_one：剛好一個來源
@@ -60,6 +61,7 @@ REQUIRED_ARGUMENT_KEYS = frozenset(
         "argument_id",
         "segment_index",
         "argument_text",
+        "summary",
         "confidence",
         "cardinality",
         "source_count",
@@ -86,6 +88,7 @@ REQUIRED_CHECK_KEYS = frozenset(
         # 必要性雙視角：來源可追溯仍不得遺失功能缺口／使用者價值
         "has_functional_gap",
         "has_user_value",
+        "summary_matches_product",
         # 角度覆蓋：論點須具備可機器讀的角度標籤／面向
         "has_angle_coverage",
         "meets_angle_coverage_threshold",
@@ -157,6 +160,7 @@ REQUIRED_ANGLE_SUMMARY_KEYS = frozenset(
 _ARGUMENT_NONEMPTY_STR_KEYS = frozenset(
     {
         "argument_text",
+        "summary",
         "confidence",
         "cardinality",
         "binding_status",
@@ -248,6 +252,10 @@ def _evaluate_argument(seg, *, argument_index: int, segment_index: int) -> dict[
     sid_field = getattr(seg, "source_id", None) or ""
     confidence = getattr(seg, "confidence", None) or ""
     text = getattr(seg, "text", None) or ""
+    summary = getattr(seg, "summary", None)
+    if summary is None:  # 相容既有手建 Segment；正式組裝一律顯式寫入。
+        summary = text
+    summary_matches_product = summary == text
     cardinality = _cardinality(len(source_ids))
     functional_gap = getattr(seg, "functional_gap", "") or ""
     user_value = getattr(seg, "user_value", "") or ""
@@ -311,6 +319,7 @@ def _evaluate_argument(seg, *, argument_index: int, segment_index: int) -> dict[
         "no_empty_fragments": no_empty_fragments,
         "has_functional_gap": has_functional_gap,
         "has_user_value": has_user_value,
+        "summary_matches_product": summary_matches_product,
         "has_angle_coverage": has_angle_coverage,
         # 角度有效性檢查
         "angle_facet_complete": angle_facet_complete,
@@ -335,6 +344,7 @@ def _evaluate_argument(seg, *, argument_index: int, segment_index: int) -> dict[
                 checks["no_extra_traces"],
                 checks["source_id_field_aligned"],
                 checks["no_empty_fragments"],
+                summary_matches_product,
                 necessity_ok,
                 angle_ok,
             )
@@ -346,6 +356,7 @@ def _evaluate_argument(seg, *, argument_index: int, segment_index: int) -> dict[
             confidence == "pending_evidence"
             and source_traceable
             and source_id_aligned
+            and summary_matches_product
             and necessity_ok
             and angle_ok
         )
@@ -357,6 +368,7 @@ def _evaluate_argument(seg, *, argument_index: int, segment_index: int) -> dict[
         "argument_id": argument_id,
         "segment_index": segment_index,
         "argument_text": text,
+        "summary": summary,
         "confidence": confidence,
         "cardinality": cardinality,
         "source_count": len(source_ids),
@@ -541,6 +553,20 @@ def parse_binding_report(data: Any) -> dict[str, Any]:
             raise ValueError(f"arguments[{i}].functional_gap 必須為 str")
         if not isinstance(arg.get("user_value"), str):
             raise ValueError(f"arguments[{i}].user_value 必須為 str")
+        expected_summary_match = arg["summary"] == arg["argument_text"]
+        if checks["summary_matches_product"] is not expected_summary_match:
+            raise ValueError(
+                f"arguments[{i}].checks.summary_matches_product 與摘要／成品不一致"
+            )
+        if not expected_summary_match:
+            if arg["binding_ok"] is not False:
+                raise ValueError(
+                    f"arguments[{i}] 摘要未落地到成品但 binding_ok 未標 False"
+                )
+            if arg["binding_status"] == "pass":
+                raise ValueError(
+                    f"arguments[{i}] 摘要未落地到成品但 binding_status 為 pass"
+                )
         angle_tags = arg.get("angle_tags")
         if not isinstance(angle_tags, list) or not angle_tags or not all(
             isinstance(tag, str) and tag.strip() for tag in angle_tags
@@ -877,9 +903,9 @@ def _collect_angle_field_issues(report: dict[str, Any]) -> list[str]:
 
 
 def write_binding_report(output_path: Path, correction) -> Path:
-    """寫入報告；角度有效性／覆蓋門檻未通過時保留報告並明確拒絕驗收。
+    """寫入報告；摘要或角度驗收未通過時保留報告並明確拒絕。
 
-    失敗訊息必須指出缺少或被排除的角度欄位（argument_id + field／angle_key）。
+    失敗訊息必須指出 argument_id 與摘要或角度問題。
     """
     report = build_binding_report(correction)
     # 校驗後再落盤，保證產物可被 parse_binding_report 直接吃
@@ -892,6 +918,13 @@ def write_binding_report(output_path: Path, correction) -> Path:
         encoding="utf-8",
         newline="\n",
     )
+    summary_issues = [
+        f"{arg['argument_id']}.summary 與成品正文不一致"
+        for arg in report["arguments"]
+        if not arg["checks"]["summary_matches_product"]
+    ]
+    if summary_issues:
+        raise RuntimeError(f"摘要一致性驗收失敗：{'；'.join(summary_issues)}")
     angle_summary = report["angle_coverage_summary"]
     field_issues = _collect_angle_field_issues(report)
     facet_incomplete = any(

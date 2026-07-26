@@ -40,6 +40,7 @@ class Segment:
     source_ids: list[str] = field(default_factory=list)
     functional_gap: str = ""
     user_value: str = ""
+    summary: str | None = None
     argument_id: str = ""
     # 角度覆蓋：主類型／標籤／精確鍵（序列化時組成 angle_coverage）
     angle_type: str = ""
@@ -120,6 +121,7 @@ def assemble_correction(doc, gaps, retrieved, written, validations) -> Correctio
                 source_ids=[],
                 functional_gap="",
                 user_value="",
+                summary="",
                 argument_id="",
                 angle_type="",
                 angle_labels=[],
@@ -225,6 +227,7 @@ def assemble_correction(doc, gaps, retrieved, written, validations) -> Correctio
                 # 避免後續只掛來源卻遺失「為何需要此論點」的視角。
                 functional_gap=functional_gap,
                 user_value=user_value,
+                summary=text,
                 argument_id=argument_id,
                 angle_type=angle_cov["angle_type"],
                 angle_labels=list(angle_cov["angle_labels"]),
