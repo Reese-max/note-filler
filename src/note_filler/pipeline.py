@@ -170,7 +170,19 @@ def run_pipeline(path, llm, twinkle, law):
     validations: dict = {}
     for gap in gaps:                                       # 只對 partial/missing gap(T5 已過濾)
         sources = retrieve_for_gap(gap, domain, twinkle, law, llm)  # T9(law+llm 啟用 Level A)
-        w = write_supplement(gap, sources, llm)            # Q3(寫出補充,解析 [^n])
+        retrieved[gap.question] = sources
+        try:
+            w = write_supplement(gap, sources, llm)        # Q3(寫出補充,解析 [^n])
+        except Exception as exc:  # noqa: BLE001 - 單一 digest 失敗不得中斷其他 gap
+            audit_event(
+                logger,
+                "supplement_writing_failed",
+                gap.question,
+                error_type=type(exc).__name__,
+                error=str(exc),
+                outcome="pending_evidence",
+            )
+            continue
         used = [s for s in sources if s.id in w.used_source_ids]
         omitted_ids = [s.id for s in sources if s.id not in w.used_source_ids]
         if omitted_ids:
@@ -182,7 +194,6 @@ def run_pipeline(path, llm, twinkle, law):
                 source_ids=omitted_ids,
                 reason="not actually cited by generated supplement",
             )
-        retrieved[gap.question] = sources
         written[gap.question] = w
         validations[gap.question] = cross_validate(gap.question, used)  # T10(只驗 used)
 

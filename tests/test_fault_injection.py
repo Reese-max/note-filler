@@ -195,6 +195,46 @@ class TestTimeout:
         assert sources[0].url == "https://good.test"
         assert "fetch-timeout" in caplog.text
 
+    @pytest.mark.parametrize(
+        "missing_urls",
+        [
+            {"https://missing-1.test"},
+            {"https://missing-1.test", "https://missing-2.test"},
+        ],
+        ids=["single-missing-page", "multiple-missing-pages"],
+    )
+    def test_web_missing_pages_preserve_available_content(self, missing_urls, caplog):
+        """單頁或多頁取得失敗只略過壞頁，仍回傳所有可用全文。"""
+        gap = Gap("case-PARTIAL-PAGES", "missing", "reason")
+        urls = [
+            "https://missing-1.test",
+            "https://missing-2.test",
+            "https://good.test",
+        ]
+        hits = [{"title": url, "href": url} for url in urls]
+        grades = ['{"level":"C","doc_date":null}'] * (len(urls) - len(missing_urls))
+
+        def fetch(url):
+            if url in missing_urls:
+                raise FileNotFoundError(f"page unavailable: {url}")
+            return f"可用全文 {url} " + "x" * 250
+
+        with caplog.at_level(logging.WARNING, logger="note_filler.retrieve.web"):
+            sources = search_web_sources(
+                gap,
+                _SequenceLLM(["query-text", *grades]),
+                search=lambda q, n: hits,
+                fetch=fetch,
+                max_fetch=5,
+            )
+
+        expected_urls = [url for url in urls if url not in missing_urls]
+        assert [source.url for source in sources] == expected_urls
+        assert all(source.content.startswith("可用全文") for source in sources)
+        records = _audit_records(caplog)
+        assert sum(record["event"] == "web_fetch_failed" for record in records) == len(missing_urls)
+        assert "Traceback" not in caplog.text
+
 
 # ===========================================================================
 # §3  持久化失敗：檔案寫入 / SQLite / 匯出失敗
@@ -551,6 +591,61 @@ class TestSkipBranches:
 
 class TestEndToEndFaultInjection:
     """多階段同時故障時，pipeline 應降級並在每個故障點留下 audit。"""
+
+    def test_digest_exception_preserves_other_segments_and_output(self, tmp_path, caplog):
+        """單一 digest 撰寫例外降為待補證，其餘內容仍完成輸出且不暴露堆疊。"""
+        note = tmp_path / "digest-fault.txt"
+        original_text = "原稿第一段逐字保留。\n原稿第二段逐字保留。"
+        note.write_text(original_text, encoding="utf-8")
+        failed_gap = Gap("失敗段落如何處理？", "missing", "原稿未說明失敗處理")
+        good_gap = Gap("可用段落如何處理？", "missing", "原稿未說明可用處理")
+        good_source = _source("source-good", level="B")
+        llm = _SequenceLLM([
+            "law",
+            f"{failed_gap.question}\n{good_gap.question}",
+            json.dumps([
+                {"question": failed_gap.question, "status": "missing", "reason": failed_gap.reason},
+                {"question": good_gap.question, "status": "missing", "reason": good_gap.reason},
+            ], ensure_ascii=False),
+            '{"keywords":[]}',
+            RuntimeError("digest-generation-fault"),
+            '{"keywords":[]}',
+            "可用補充內容[^1]",
+        ])
+
+        class Twinkle:
+            def search(self, query):
+                return [good_source]
+
+        class Law:
+            def search_articles(self, keyword, limit, law_name):
+                return []
+
+        with caplog.at_level(logging.WARNING, logger="note_filler.pipeline"):
+            correction = run_pipeline(str(note), llm, Twinkle(), Law())
+
+        originals = [segment.text for segment in correction.segments if segment.type == "original"]
+        supplements = [segment for segment in correction.segments if segment.type == "supplement"]
+        markdown = to_markdown(correction)
+
+        assert originals == [original_text]
+        assert len(supplements) == 2
+        assert supplements[0].text.startswith("【待補證】")
+        assert supplements[0].confidence == "pending_evidence"
+        assert supplements[0].sources == []
+        assert supplements[1].text == "可用補充內容[^1]"
+        assert [source.id for source in supplements[1].sources] == [good_source.id]
+        assert all(source.id == good_source.id for source in supplements[1].sources)
+        assert all(text in markdown for text in originals)
+        assert "可用補充內容" in markdown
+        assert "digest-generation-fault" not in markdown
+        assert "Traceback" not in markdown
+        assert "Traceback" not in caplog.text
+        assert any(
+            record["event"] == "supplement_writing_failed"
+            and record["data_id"] == failed_gap.question
+            for record in _audit_records(caplog)
+        )
 
     def test_web_search_exception_all_pages_faulty(self, caplog):
         """web search 整體拋例外 + 每頁 fetch 也失敗 → web_search_failed + web_fetch_failed。"""
