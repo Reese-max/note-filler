@@ -124,10 +124,11 @@ async def test_run_renders_two_columns(async_client, monkeypatch):
     assert "角度清單" in body
     assert "definition" in body
     assert "來源：pending（無來源）" in body
-    # 摘要、必要性雙視角與 ID 必須同卡顯示，不能只留在內部報告。
+    # 關聯知識、必要性雙視角與 ID 必須同卡顯示，不能只留在內部報告。
     assert "摘要可見" in body
     assert 'data-argument-id="argument:0"' in body
     assert "argument_id" in body
+    assert "related_knowledge（關聯知識）" in body
     summary_block = body.split('data-argument-id="argument:0"', 1)[1].split(
         "</section>", 1
     )[0]

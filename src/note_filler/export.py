@@ -68,12 +68,12 @@ def _argument_coverage_text(argument: dict) -> str:
 
 
 def _visible_summary_text(argument: dict) -> str:
-    """同列顯示單一論點摘要與必要性雙視角。"""
+    """同列顯示單一論點的必要性雙視角與關聯知識。"""
     return (
         f"argument_id={argument['argument_id']}"
-        f"；摘要={argument['summary']}"
         f"；functional_gap={argument['functional_gap'] or '（未提供）'}"
         f"；user_value={argument['user_value'] or '（未提供）'}"
+        f"；related_knowledge={argument['summary']}"
     )
 
 

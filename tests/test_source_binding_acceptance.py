@@ -1286,14 +1286,14 @@ def test_positive_disk_product_multi_angle_and_one_to_many_four_way_consistency(
     }
 
 
-# ---- 三元驗收：摘要 + 功能缺口 + 使用者價值 同論點同來源呼應 ---------------
+# ---- 三元驗收：功能缺口 + 使用者價值 + 關聯知識 同論點同來源呼應 -----------
 
 
 _RE_VISIBLE_SUMMARY = re.compile(
     r"argument_id=(?P<argument_id>[^；]+)"
-    r"；摘要=(?P<summary>.*?)"
     r"；functional_gap=(?P<functional_gap>.*?)"
-    r"；user_value=(?P<user_value>.*)$"
+    r"；user_value=(?P<user_value>.*?)"
+    r"；related_knowledge=(?P<related_knowledge>.*)$"
 )
 _RE_SOURCE_LIST = re.compile(
     # Markdown 可能為 **來源清單**：ids（card）— 冒號前允許粗體星號
@@ -1343,11 +1343,11 @@ def _parse_md_argument_blocks(md: str) -> list[dict[str, str]]:
             current["visible_summary"] = visible
             vm = _RE_VISIBLE_SUMMARY.fullmatch(visible)
             assert vm is not None, f"摘要可見格式不可解析: {visible!r}"
-            # 以摘要可見內嵌三元覆寫，確保同列一致
+            # 以摘要可見內嵌三元覆寫，確保同列、同 argument_id 一致
             current["argument_id"] = vm.group("argument_id").strip()
-            current["summary"] = vm.group("summary").strip()
             current["functional_gap"] = vm.group("functional_gap").strip()
             current["user_value"] = vm.group("user_value").strip()
+            current["summary"] = vm.group("related_knowledge").strip()
         elif plain.startswith("**論點ID**：") or plain.startswith("論點ID："):
             current["argument_id"] = plain.split("：", 1)[1].strip()
     if current is not None:
@@ -1566,8 +1566,10 @@ def test_final_output_each_argument_triad_coheres_with_same_source_and_argument(
         assert block["source_ids"].replace(" ", "") == ",".join(source_ids)
         assert "（未提供）" not in block["visible_summary"]
         assert f"argument_id={exp['argument_id']}" in block["visible_summary"]
-        # 摘要可見可能保留 footnote 標記；去掉後須與論點正文一致
-        vis_summary_m = re.search(r"；摘要=(.*?)；functional_gap=", block["visible_summary"])
+        # related_knowledge 可能保留 footnote 標記；去掉後須與論點正文一致
+        vis_summary_m = re.search(
+            r"；related_knowledge=(.*)$", block["visible_summary"]
+        )
         assert vis_summary_m is not None
         assert re.sub(r"\[\^\d+\]", "", vis_summary_m.group(1)).strip() == summary_plain
         assert f"functional_gap={fg}" in block["visible_summary"]

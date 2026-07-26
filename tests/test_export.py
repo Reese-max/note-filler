@@ -276,19 +276,19 @@ def test_to_markdown_contains_angle_coverage_line():
 
 
 def test_human_readable_exports_show_argument_aligned_visible_summaries(tmp_path):
-    """每筆摘要必須與同一 argument_id 的必要性雙視角一起顯示。"""
+    """每筆關聯知識必須與同一 argument_id 的必要性雙視角一起顯示。"""
     expected = [
         (
             "argument_id=argument:0；"
-            "摘要=依行政程序法第92條，行政處分係指行政機關就公法上具體事件所為之決定。；"
             "functional_gap=原稿未定義行政處分；"
-            "user_value=補齊讀者對「行政處分如何定義？」所需的說明"
+            "user_value=補齊讀者對「行政處分如何定義？」所需的說明；"
+            "related_knowledge=依行政程序法第92條，行政處分係指行政機關就公法上具體事件所為之決定。"
         ),
         (
             "argument_id=argument:1；"
-            "摘要=關於施行細節仍待查證。；"
             "functional_gap=原稿未說明施行細節；"
-            "user_value=補齊讀者對「細節待查」所需的說明"
+            "user_value=補齊讀者對「細節待查」所需的說明；"
+            "related_knowledge=關於施行細節仍待查證。"
         ),
     ]
 
