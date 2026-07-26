@@ -702,13 +702,17 @@ def test_final_note_delivery_with_partial_page_failure_and_generation_exception(
         "最終可見筆記未包含補充內容"
     )
     assert "【待補證】" in content, "生成例外未降級為待補證填充"
-    assert r["delivery_status"] == {
+    expected_ds = {
         "primary_note_ready": True,
         "user_channel_sent": False,
         "local_fallback_written": True,
     }
+    assert expected_ds.items() <= r["delivery_status"].items(), (
+        f"delivery_status 缺必要欄位: "
+        f"{set(expected_ds) - set(r['delivery_status'])}"
+    )
     receipt = json.loads((tmp_path / cli.MANIFEST_NAME).read_text(encoding="utf-8"))
-    assert receipt["delivery_status"] == r["delivery_status"]
+    assert expected_ds.items() <= receipt["delivery_status"].items()
 
 
 def test_silent_failure_detection_final_note_readable_and_error_free(tmp_path):

@@ -38,13 +38,52 @@ def _delivery_status(
     primary_note_ready: bool = False,
     user_channel_sent: bool = False,
     local_fallback_written: bool = False,
-) -> dict[str, bool]:
-    """建立固定欄位的機器可讀送達狀態。"""
-    return {
+    segment_delivery_details: list[dict] | None = None,
+) -> dict:
+    """建立固定欄位的機器可讀送達狀態。
+
+    segment_delivery_details 為逐段降級摘要：每筆含 question, confidence,
+    has_sources, degraded 三個布林欄位，讓下游可分辨哪些片段是降級補齊
+    而非中斷流程。
+    """
+    result: dict = {
         "primary_note_ready": primary_note_ready,
         "user_channel_sent": user_channel_sent,
         "local_fallback_written": local_fallback_written,
     }
+    if segment_delivery_details is not None:
+        result["segment_delivery_details"] = segment_delivery_details
+    return result
+
+
+def _build_segment_delivery_details(correction) -> list[dict]:
+    """從 CorrectionDoc 建立逐段降級摘要，供 delivery_status 使用。
+
+    每筆記錄：
+      - question: 原始段落索引（original）或缺口問題字串（supplement）
+      - confidence: verified / pending_evidence
+      - has_sources: 是否有引用來源
+      - degraded: 是否為降級補齊（pending_evidence 或無來源）
+    """
+    details: list[dict] = []
+    for seg in getattr(correction, "segments", []):
+        if seg.type == "original":
+            details.append({
+                "question": f"paragraph:{getattr(seg, 'anchor_idx', '?')}",
+                "confidence": seg.confidence,
+                "has_sources": False,
+                "degraded": False,
+            })
+        else:
+            has_src = bool(getattr(seg, "sources", None))
+            degraded = seg.confidence == "pending_evidence" or not has_src
+            details.append({
+                "question": getattr(seg, "argument_id", "") or "",
+                "confidence": seg.confidence,
+                "has_sources": has_src,
+                "degraded": degraded,
+            })
+    return details
 
 
 def _is_non_empty_file(path: Path) -> bool:
@@ -137,6 +176,7 @@ def write_delivery_receipt(
             local_fallback_written=bool(
                 status_data.get("local_fallback_written", _is_non_empty_file(output_path))
             ),
+            segment_delivery_details=status_data.get("segment_delivery_details"),
         ),
     }
     if error is not None:
@@ -207,7 +247,11 @@ def process_file(path: Path, llm, twinkle, law, out_dir: Path | None, fmt: str) 
     # 防禦層：檢查內容是否外洩底層錯誤訊息（JSON 與 Markdown 都需檢查）
     _check_no_leaked_errors(body)
     
-    delivery_status = _delivery_status(primary_note_ready=True)
+    seg_details = _build_segment_delivery_details(doc)
+    delivery_status = _delivery_status(
+        primary_note_ready=True,
+        segment_delivery_details=seg_details,
+    )
 
     if fmt == "docx":
         to_docx(doc, str(dest))

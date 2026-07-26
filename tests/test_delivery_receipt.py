@@ -112,11 +112,15 @@ def test_process_file_writes_delivery_receipt_on_success(tmp_path, monkeypatch):
     assert manifest["output_path"] == r["output"]
     assert manifest["input_path"] == str(note)
     assert manifest["content_hash"], "content_hash 不可為空"
-    assert manifest["delivery_status"] == {
+    expected_ds = {
         "primary_note_ready": True,
         "user_channel_sent": False,
         "local_fallback_written": True,
     }
+    assert expected_ds.items() <= manifest["delivery_status"].items(), (
+        f"manifest delivery_status 缺必要欄位: "
+        f"{set(expected_ds) - set(manifest['delivery_status'])}"
+    )
 
 
 def test_process_file_receipt_status_is_delivered(tmp_path, monkeypatch):

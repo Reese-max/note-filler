@@ -104,11 +104,12 @@ def test_process_file_writes_md_and_counts(tmp_path, monkeypatch):
     assert r["supplements"] == 2 and r["verified"] == 1
     assert r["output"] == str(dest)
     assert r["content"] == dest.read_text(encoding="utf-8")
-    assert r["delivery_status"] == {
+    expected_ds = {
         "primary_note_ready": True,
         "user_channel_sent": False,
         "local_fallback_written": True,
     }
+    assert expected_ds.items() <= r["delivery_status"].items()
 
 
 def test_process_file_json_format_and_outdir(tmp_path, monkeypatch):
@@ -188,11 +189,12 @@ def test_main_keeps_artifact_and_delivers_full_content_to_stdout(tmp_path, monke
     assert "✅" in captured.err
     assert "完成 1/1 檔" in captured.err
     receipt = json.loads((out / cli.MANIFEST_NAME).read_text(encoding="utf-8"))
-    assert receipt["delivery_status"] == {
+    expected_ds = {
         "primary_note_ready": True,
         "user_channel_sent": True,
         "local_fallback_written": True,
     }
+    assert expected_ds.items() <= receipt["delivery_status"].items()
 
 
 def test_main_stdout_delivery_failure_is_not_counted_as_success(tmp_path, monkeypatch, capsys):
