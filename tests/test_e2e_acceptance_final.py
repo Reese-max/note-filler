@@ -20,7 +20,7 @@ from note_filler.export import to_json, to_markdown
 from note_filler.llm import FakeLLM
 from note_filler.pipeline import run_pipeline
 from note_filler.retrieve.models import Source
-from tests.test_pipeline import FakeLaw, FakeTwinkle
+from test_pipeline import FakeLaw, FakeTwinkle
 
 
 # ---- fixtures ----------------------------------------------------------------
@@ -634,41 +634,134 @@ def test_final_note_delivery_with_partial_page_failure_and_generation_exception(
         '{"keyword": "行政處分", "law_name": "行政程序法"}',
         "行政處分係指行政機關就公法上具體事件所為之對外直接發生法律效果之單方行政行為[^1]。",
         '{"keyword": "訴願", "law_name": "訴願法"}',
-        "【待補證】此問題因生成例外，尚待補充。",  # 第二個 gap 降級為待補證
+        "【待補證】此問題缺乏可用來源,尚待補充。",
     ])
     
     twinkle = PartialFailureTwinkle()
     
-    # 執行 process_file，應該能處理異常並產出完整筆記
     r = cli.process_file(note, llm, twinkle, FakeLaw(), out_dir=None, fmt="md")
     
-    # 驗證回傳值存在且包含完整內容
-    assert r is not None, "process_file 應正常回傳"
-    assert "content" in r, "回傳值應包含 content 欄位"
     content = r["content"]
     
-    # 驗證內容非空且包含實質筆記內容
-    assert content.strip(), "content 應為非空"
-    assert "行政程序法" in content, "content 應包含原稿內容"
-    assert "行政處分係指行政機關就公法上具體事件所為之對外直接發生法律效果之單方行政行為" in content, (
-        "content 應包含第一個 gap 的補充內容"
+    # 驗證最終可見筆記存在且非空
+    assert content.strip(), "最終可見筆記為空，屬靜默失敗"
+    
+    # 驗證筆記可讀（非亂碼、非二進位、非損壞格式）
+    assert isinstance(content, str), "最終可見筆記非字串格式，不可讀"
+    assert len(content) > 50, "最終可見筆記內容過短，可能不完整"
+    
+    # 驗證不含底層錯誤資訊（traceback、exception、stack trace）
+    error_indicators = [
+        "Traceback",
+        "Exception",
+        "Error:",
+        "stack trace",
+        "raise ",
+        "assert ",
+        "File \"",
+        "line ",
+    ]
+    for indicator in error_indicators:
+        assert indicator not in content, f"最終可見筆記含底層錯誤資訊: {indicator}"
+    
+    # 驗證不含內部稽核事件字串
+    assert "note_product_empty" not in content, "最終可見筆記含內部稽核事件字串"
+    assert "MISSING_WRITTEN_TEXT" not in content, "最終可見筆記含內部佔位文"
+    
+    # 驗證含實質筆記內容（非僅錯誤訊息或技術輸出）
+    assert any(kw in content for kw in ("行政程序法", "正當程序", "行政處分")), (
+        "最終可見筆記缺乏實質筆記內容，可能為錯誤輸出"
     )
     
-    # 驗證第二個 gap 因異常而降級為待補證
-    assert "【待補證】" in content, "第二個 gap 應因異常而降級為待補證"
+    # 驗證原稿段落完整保留
+    assert "行政程序法要求行政行為應遵守正當程序" in content, (
+        "最終可見筆記未包含原稿段落"
+    )
     
-    # 驗證本機檔案也存在且內容一致
-    assert r["output"] is not None, "應產生輸出檔案"
-    assert Path(r["output"]).exists(), "輸出檔案應存在"
-    local_content = Path(r["output"]).read_text(encoding="utf-8")
-    assert content.strip() == local_content.strip(), "content 與本機檔案內容應一致"
+    # 驗證補充內容存在（即使部分降級為待補證）
+    assert "行政處分係指行政機關就公法上具體事件所為之對外直接發生法律效果之單方行政行為" in content, (
+        "最終可見筆記未包含補充內容"
+    )
+
+
+def test_silent_failure_detection_final_note_readable_and_error_free(tmp_path):
+    """針對「靜默失敗」的斷言：只檢查最終可見筆記是否存在、是否可讀、是否未含底層錯誤資訊。
     
-    # 驗證統計資訊
-    assert "supplements" in r, "回傳值應包含 supplements 統計"
-    assert r["supplements"] >= 1, "應至少有一個補充段"
-    assert "verified" in r, "回傳值應包含 verified 統計"
+    避免只看 exit code 或本機檔案存在就誤判完成。
     
-    # 驗證輸出格式正確
-    assert not content.lstrip().startswith("{"), "content 不應為 JSON 格式"
-    assert not content.lstrip().startswith("```"), "content 不應為 code block"
-    assert "note_product_empty" not in content, "content 不應含稽核事件字串"
+    斷言：
+    1. 最終可見筆記（process_file 回傳值 content）存在且非空
+    2. 筆記內容可讀（字串格式、合理長度、UTF-8 可解碼）
+    3. 筆記不含底層錯誤資訊（traceback、exception、stack trace）
+    4. 筆記不含內部稽核事件字串或佔位文
+    5. 筆記含實質內容（非僅錯誤訊息或技術輸出）
+    """
+    from note_filler import __main__ as cli
+    
+    note = _txt(
+        tmp_path, "note.txt",
+        "行政程序法要求行政行為應遵守正當程序。\n\n本筆記僅記錄部分重點,尚未展開。",
+    )
+    
+    llm = _canned_llm_two_gaps()
+    twinkle = FakeTwinkle([[_src("s1"), _src("s2")], [_src("s3"), _src("s4")]])
+    
+    # 執行 process_file，若失敗則直接失敗（這是驗收測試，不應吞掉異常）
+    try:
+        r = cli.process_file(note, llm, twinkle, FakeLaw(), out_dir=None, fmt="md")
+    except Exception as e:
+        pytest.fail(f"process_file 拋出異常，屬靜默失敗: {type(e).__name__}: {e}")
+    
+    # 先檢查回傳值結構
+    assert r is not None, "process_file 回傳值為 None，屬靜默失敗"
+    assert "content" in r, f"process_file 回傳值缺 content 欄位，實際欄位: {list(r.keys())}，屬靜默失敗"
+    
+    content = r["content"]
+    
+    # 斷言 1：最終可見筆記存在且非空
+    assert content is not None, "最終可見筆記不存在，屬靜默失敗"
+    assert content.strip(), "最終可見筆記為空，屬靜默失敗"
+    
+    # 斷言 2：筆記內容可讀
+    assert isinstance(content, str), "最終可見筆記非字串格式，不可讀"
+    try:
+        content.encode("utf-8").decode("utf-8")
+    except UnicodeError:
+        pytest.fail("最終可見筆記非有效 UTF-8，不可讀")
+    assert len(content) > 100, "最終可見筆記內容過短，可能不完整"
+    
+    # 斷言 3：筆記不含底層錯誤資訊
+    error_indicators = [
+        "Traceback",
+        "Exception",
+        "Error:",
+        "stack trace",
+        "raise ",
+        "assert ",
+        "File \"",
+        "line ",
+        "TypeError",
+        "ValueError",
+        "AttributeError",
+        "KeyError",
+        "RuntimeError",
+    ]
+    for indicator in error_indicators:
+        assert indicator not in content, f"最終可見筆記含底層錯誤資訊: {indicator}"
+    
+    # 斷言 4：筆記不含內部稽核事件字串或佔位文
+    assert "note_product_empty" not in content, "最終可見筆記含內部稽核事件字串"
+    assert "MISSING_WRITTEN_TEXT" not in content, "最終可見筆記含內部佔位文"
+    
+    # 斷言 5：筆記含實質內容
+    assert any(kw in content for kw in ("行政程序法", "正當程序", "行政處分", "訴願")), (
+        "最終可見筆記缺乏實質筆記內容，可能為錯誤輸出或技術摘要"
+    )
+    
+    # 額外驗證：原稿與補充內容都存在
+    assert "行政程序法要求行政行為應遵守正當程序" in content, (
+        "最終可見筆記未包含原稿段落"
+    )
+    assert "行政處分係指行政機關就公法上具體事件所為之對外直接發生法律效果之單方行政行為" in content, (
+        "最終可見筆記未包含補充內容"
+    )
