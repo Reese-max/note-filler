@@ -145,17 +145,17 @@ def process_file(path: Path, llm, twinkle, law, out_dir: Path | None, fmt: str) 
     dest_dir.mkdir(parents=True, exist_ok=True)
     dest = dest_dir / f"{path.stem}.訂正稿.{fmt}"
 
-    body: str | None = None
+    # stdout 的使用者送達內容；DOCX 另以 Markdown 提供可直接閱讀的完整筆記。
+    body = json.dumps(to_json(doc), ensure_ascii=False, indent=2) if fmt == "json" else to_markdown(doc)
+    if not body.strip():
+        raise RuntimeError(f"訂正稿內容為空,拒絕視為送達成功:{path}")
+
     if fmt == "docx":
         to_docx(doc, str(dest))
         # 送達後再驗：空檔不得當成功（digest 已生成但未真正送達）
         if not dest.is_file() or dest.stat().st_size == 0:
             raise RuntimeError(f"訂正稿寫出失敗或為空,拒絕視為送達成功:{dest}")
     else:
-        body = json.dumps(to_json(doc), ensure_ascii=False, indent=2) if fmt == "json" else to_markdown(doc)
-        if not str(body).strip():
-            # digest 已由 pipeline 產出,但匯出體為空 → 不得回成功 dict
-            raise RuntimeError(f"訂正稿內容為空,拒絕視為送達成功:{path}")
         dest.write_text(body, encoding="utf-8", newline="\n")
 
     # 先寫並驗收綁定報告；角度門檻失敗不得留下 delivered 回執。
@@ -165,12 +165,18 @@ def process_file(path: Path, llm, twinkle, law, out_dir: Path | None, fmt: str) 
     write_delivery_receipt(
         dest, path,
         status="delivered",
-        content=body,
+        content=body if fmt != "docx" else None,
         fmt=fmt,
         supplements=len(supp),
         verified=ver,
     )
-    return {"input": str(path), "output": str(dest), "supplements": len(supp), "verified": ver}
+    return {
+        "input": str(path),
+        "output": str(dest),
+        "content": body,
+        "supplements": len(supp),
+        "verified": ver,
+    }
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -200,8 +206,12 @@ def main(argv: list[str] | None = None) -> int:
     for f in files:
         try:
             r = process_file(f, llm, twinkle, law, out_dir, args.format)
+            print(r["content"], flush=True)
             ok += 1
-            print(f"✅ {r['input']} → {r['output']}(補充 {r['supplements']}、verified {r['verified']})")
+            print(
+                f"✅ {r['input']} → {r['output']}(補充 {r['supplements']}、verified {r['verified']})",
+                file=sys.stderr,
+            )
         except Exception as e:  # 單檔失敗不拖垮整批
             tb = traceback.format_exc()
             audit_event(
@@ -243,7 +253,7 @@ def main(argv: list[str] | None = None) -> int:
                     file=sys.stderr,
                 )
 
-    print(f"完成 {ok}/{len(files)} 檔。")
+    print(f"完成 {ok}/{len(files)} 檔。", file=sys.stderr)
     return 0 if ok == len(files) else 1
 
 

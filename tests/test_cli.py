@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import builtins
+import json
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -101,6 +103,7 @@ def test_process_file_writes_md_and_counts(tmp_path, monkeypatch):
     assert dest.exists() and dest.read_text(encoding="utf-8").startswith("# 訂正稿")
     assert r["supplements"] == 2 and r["verified"] == 1
     assert r["output"] == str(dest)
+    assert r["content"] == dest.read_text(encoding="utf-8")
 
 
 def test_process_file_json_format_and_outdir(tmp_path, monkeypatch):
@@ -115,6 +118,7 @@ def test_process_file_json_format_and_outdir(tmp_path, monkeypatch):
     dest = out / "note.訂正稿.json"
     assert dest.exists() and '"ok": true' in dest.read_text(encoding="utf-8")
     assert r["output"] == str(dest)
+    assert r["content"] == dest.read_text(encoding="utf-8")
 
 
 def test_process_file_delivery_write_failure_does_not_return_success(tmp_path, monkeypatch):
@@ -156,6 +160,65 @@ def test_process_file_empty_export_body_does_not_return_success(tmp_path, monkey
     assert not (tmp_path / "note.訂正稿.md").exists()
 
 
+def test_main_keeps_artifact_and_delivers_full_content_to_stdout(tmp_path, monkeypatch, capsys):
+    note = tmp_path / "note.txt"
+    note.write_text("一、標題\n內容", encoding="utf-8")
+    out = tmp_path / "out"
+    db = tmp_path / "law.db"
+    db.touch()
+    content = "# 訂正稿\n完整筆記內容"
+
+    monkeypatch.setattr(cli, "run_pipeline", lambda *a, **k: _Doc())
+    monkeypatch.setattr(cli, "to_markdown", lambda doc: content)
+    monkeypatch.setattr(cli, "GrokClient", lambda: None)
+    monkeypatch.setattr(cli, "TwinkleClient", lambda token="": None)
+    monkeypatch.setattr(cli, "LawLookup", lambda path: None)
+
+    code = cli.main([str(note), "-o", str(out), "--db", str(db), "--token", "token"])
+    captured = capsys.readouterr()
+
+    assert code == 0
+    assert (out / "note.訂正稿.md").read_text(encoding="utf-8") == content
+    assert captured.out == f"{content}\n"
+    assert "✅" in captured.err
+    assert "完成 1/1 檔" in captured.err
+
+
+def test_main_stdout_delivery_failure_is_not_counted_as_success(tmp_path, monkeypatch, capsys):
+    note = tmp_path / "note.txt"
+    note.write_text("一、標題\n內容", encoding="utf-8")
+    out = tmp_path / "out"
+    real_print = builtins.print
+
+    monkeypatch.setattr(cli, "process_file", lambda *a, **k: {
+        "input": str(note),
+        "output": str(out / "note.訂正稿.md"),
+        "content": "完整筆記內容",
+        "supplements": 0,
+        "verified": 0,
+    })
+    monkeypatch.setattr(cli, "GrokClient", lambda: None)
+    monkeypatch.setattr(cli, "TwinkleClient", lambda token="": None)
+    monkeypatch.setattr(cli, "LawLookup", lambda path: None)
+
+    def fail_stdout(*args, **kwargs):
+        if kwargs.get("file") is None:
+            raise OSError("message output unavailable")
+        return real_print(*args, **kwargs)
+
+    monkeypatch.setattr(builtins, "print", fail_stdout)
+
+    code = cli.main([str(note), "-o", str(out), "--db", str(tmp_path / "no.db")])
+    captured = capsys.readouterr()
+    receipt = json.loads((out / cli.MANIFEST_NAME).read_text(encoding="utf-8"))
+
+    assert code == 1
+    assert captured.out == ""
+    assert "message output unavailable" in captured.err
+    assert "完成 0/1 檔" in captured.err
+    assert receipt["status"] == "failed"
+
+
 def test_main_delivery_failure_not_counted_as_success(tmp_path, monkeypatch, capsys):
     """main 批次層:單檔送達失敗不得計入 ok,exit≠0,stderr 含失敗原因。"""
     note = tmp_path / "note.txt"
@@ -173,8 +236,9 @@ def test_main_delivery_failure_not_counted_as_success(tmp_path, monkeypatch, cap
     captured = capsys.readouterr()
 
     assert code == 1
-    assert "✅" not in captured.out
-    assert "完成 0/1 檔" in captured.out
+    assert captured.out == ""
+    assert "✅" not in captured.err
+    assert "完成 0/1 檔" in captured.err
     assert "delivery channel down" in captured.err
     assert "OSError" in captured.err
 
@@ -188,7 +252,13 @@ def test_main_partial_delivery_failure_returns_failure(tmp_path, monkeypatch, ca
     def _process(path, *args, **kwargs):
         if path.name == "empty.txt":
             raise RuntimeError("訂正稿內容為空")
-        return {"input": str(path), "output": "ok.md", "supplements": 0, "verified": 0}
+        return {
+            "input": str(path),
+            "output": "ok.md",
+            "content": "# 成功訂正稿\n完整內容",
+            "supplements": 0,
+            "verified": 0,
+        }
 
     monkeypatch.setattr(cli, "process_file", _process)
     monkeypatch.setattr(cli, "GrokClient", lambda: None)
@@ -199,7 +269,8 @@ def test_main_partial_delivery_failure_returns_failure(tmp_path, monkeypatch, ca
     captured = capsys.readouterr()
 
     assert code == 1
-    assert "完成 1/2 檔" in captured.out
+    assert captured.out == "# 成功訂正稿\n完整內容\n"
+    assert "完成 1/2 檔" in captured.err
     assert "訂正稿內容為空" in captured.err
 
 
@@ -211,7 +282,8 @@ def test_main_missing_token_warns_to_stderr(tmp_path, monkeypatch, capsys):
     note = tmp_path / "note.txt"
     note.write_text("一、標題\n內容", encoding="utf-8")
     monkeypatch.setattr(cli, "process_file", lambda *a, **k: {
-        "input": str(note), "output": "ok.md", "supplements": 0, "verified": 0,
+        "input": str(note), "output": "ok.md", "content": "完整筆記內容",
+        "supplements": 0, "verified": 0,
     })
     monkeypatch.setattr(cli, "GrokClient", lambda: None)
     monkeypatch.setattr(cli, "TwinkleClient", lambda token="": None)
@@ -236,7 +308,8 @@ def test_main_missing_db_warns_to_stderr(tmp_path, monkeypatch, capsys):
     note = tmp_path / "note.txt"
     note.write_text("一、標題\n內容", encoding="utf-8")
     monkeypatch.setattr(cli, "process_file", lambda *a, **k: {
-        "input": str(note), "output": "ok.md", "supplements": 0, "verified": 0,
+        "input": str(note), "output": "ok.md", "content": "完整筆記內容",
+        "supplements": 0, "verified": 0,
     })
     monkeypatch.setattr(cli, "GrokClient", lambda: None)
     monkeypatch.setattr(cli, "TwinkleClient", lambda token="": None)
@@ -257,7 +330,8 @@ def test_main_missing_token_and_db_both_warn(tmp_path, monkeypatch, capsys):
     note = tmp_path / "note.txt"
     note.write_text("一、標題\n內容", encoding="utf-8")
     monkeypatch.setattr(cli, "process_file", lambda *a, **k: {
-        "input": str(note), "output": "ok.md", "supplements": 0, "verified": 0,
+        "input": str(note), "output": "ok.md", "content": "完整筆記內容",
+        "supplements": 0, "verified": 0,
     })
     monkeypatch.setattr(cli, "GrokClient", lambda: None)
     monkeypatch.setattr(cli, "TwinkleClient", lambda token="": None)

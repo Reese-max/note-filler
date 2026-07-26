@@ -612,7 +612,13 @@ class TestEndToEndFaultInjection:
             call_count += 1
             if "fail" in str(path):
                 raise RuntimeError("single-fail")
-            return {"input": str(path), "output": str(out / "ok.md"), "supplements": 0, "verified": 0}
+            return {
+                "input": str(path),
+                "output": str(out / "ok.md"),
+                "content": "完整筆記內容",
+                "supplements": 0,
+                "verified": 0,
+            }
 
         monkeypatch.setattr(cli, "GrokClient", lambda: None)
         monkeypatch.setattr(cli, "TwinkleClient", lambda token="": None)
