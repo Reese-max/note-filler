@@ -3,7 +3,7 @@ import json
 import pytest
 
 from note_filler.parse import Document, Paragraph
-from note_filler.correction import CorrectionDoc, Segment
+from note_filler.correction import CorrectionDoc, Segment, build_related_knowledge
 from note_filler.retrieve.models import Source
 from note_filler.export import to_docx, to_json, to_markdown
 
@@ -277,18 +277,28 @@ def test_to_markdown_contains_angle_coverage_line():
 
 def test_human_readable_exports_show_argument_aligned_visible_summaries(tmp_path):
     """每筆關聯知識必須與同一 argument_id 的必要性雙視角一起顯示。"""
+    rk0 = build_related_knowledge(
+        knowledge_body="依行政程序法第92條，行政處分係指行政機關就公法上具體事件所為之決定。",
+        functional_gap="原稿未定義行政處分",
+        user_value="補齊讀者對「行政處分如何定義？」所需的說明",
+    )
+    rk1 = build_related_knowledge(
+        knowledge_body="關於施行細節仍待查證。",
+        functional_gap="原稿未說明施行細節",
+        user_value="補齊讀者對「細節待查」所需的說明",
+    )
     expected = [
         (
             "argument_id=argument:0；"
             "functional_gap=原稿未定義行政處分；"
             "user_value=補齊讀者對「行政處分如何定義？」所需的說明；"
-            "related_knowledge=依行政程序法第92條，行政處分係指行政機關就公法上具體事件所為之決定。"
+            f"related_knowledge={rk0}"
         ),
         (
             "argument_id=argument:1；"
             "functional_gap=原稿未說明施行細節；"
             "user_value=補齊讀者對「細節待查」所需的說明；"
-            "related_knowledge=關於施行細節仍待查證。"
+            f"related_knowledge={rk1}"
         ),
     ]
 
@@ -298,6 +308,15 @@ def test_human_readable_exports_show_argument_aligned_visible_summaries(tmp_path
         if line.startswith("> **摘要可見**：")
     ]
     assert md_lines == expected
+    # 人類可讀亦須有獨立「關聯知識」列，且明示決策品質／使用者理解
+    md = to_markdown(_sample_doc())
+    rk_lines = [
+        line.removeprefix("> **關聯知識**：")
+        for line in md.splitlines()
+        if line.startswith("> **關聯知識**：")
+    ]
+    assert rk_lines == [rk0, rk1]
+    assert all("支撐決策品質" in line and "補強使用者理解" in line for line in rk_lines)
 
     out = tmp_path / "visible-summaries.docx"
     to_docx(_sample_doc(), str(out))
@@ -309,6 +328,12 @@ def test_human_readable_exports_show_argument_aligned_visible_summaries(tmp_path
         if paragraph.text.startswith("摘要可見：")
     ]
     assert docx_lines == expected
+    docx_rk = [
+        paragraph.text.removeprefix("關聯知識：")
+        for paragraph in DocxDocument(out).paragraphs
+        if paragraph.text.startswith("關聯知識：")
+    ]
+    assert docx_rk == [rk0, rk1]
 
 
 def test_to_docx_contains_machine_parseable_source_list(tmp_path):

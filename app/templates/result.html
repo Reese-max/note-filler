@@ -74,7 +74,7 @@
             <dt>user_value（使用者價值）</dt>
             <dd>{{ seg.user_value or "未提供" }}</dd>
             <dt>related_knowledge（關聯知識）</dt>
-            <dd>{{ seg.summary or seg.text or "未提供" }}</dd>
+            <dd>{{ seg.related_knowledge or seg.summary or seg.text or "未提供" }}</dd>
             <dt>來源清單</dt>
             <dd>
               {% if seg.sources %}

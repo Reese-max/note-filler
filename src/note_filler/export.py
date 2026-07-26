@@ -68,12 +68,13 @@ def _argument_coverage_text(argument: dict) -> str:
 
 
 def _visible_summary_text(argument: dict) -> str:
-    """同列顯示單一論點的必要性雙視角與關聯知識。"""
+    """同列顯示單一論點的功能缺口、使用者價值與關聯知識（同 argument_id）。"""
+    related = argument.get("related_knowledge") or argument.get("summary") or ""
     return (
         f"argument_id={argument['argument_id']}"
         f"；functional_gap={argument['functional_gap'] or '（未提供）'}"
         f"；user_value={argument['user_value'] or '（未提供）'}"
-        f"；related_knowledge={argument['summary']}"
+        f"；related_knowledge={related}"
     )
 
 
@@ -137,6 +138,7 @@ def to_json(doc: CorrectionDoc) -> dict:
             return {
                 "argument_id": argument["argument_id"],
                 "summary": argument["summary"],
+                "related_knowledge": argument["related_knowledge"],
                 "angle_tags": list(argument["angle_tags"]),
                 "valid_angle_count": argument["valid_angle_count"],
                 "deduped_angle_count": argument["deduped_angle_count"],
@@ -145,6 +147,7 @@ def to_json(doc: CorrectionDoc) -> dict:
         return {
             "argument_id": str(getattr(seg, "argument_id", "") or ""),
             "summary": str(getattr(seg, "summary", "") or ""),
+            "related_knowledge": str(getattr(seg, "related_knowledge", "") or ""),
             "angle_tags": list(getattr(seg, "angle_tags", None) or []),
             "valid_angle_count": int(getattr(seg, "valid_angle_count", 0) or 0),
             "deduped_angle_count": int(getattr(seg, "deduped_angle_count", 0) or 0),
@@ -179,6 +182,18 @@ def to_json(doc: CorrectionDoc) -> dict:
             for i, seg in enumerate(doc.segments)
         ],
     }
+
+
+def _related_knowledge_of(seg, argument: dict | None) -> str:
+    """取同 argument_id 綁定的關聯知識（優先報告欄，再 segment）。"""
+    if argument:
+        rk = argument.get("related_knowledge")
+        if isinstance(rk, str) and rk.strip():
+            return rk
+    raw = getattr(seg, "related_knowledge", None)
+    if isinstance(raw, str) and raw.strip():
+        return raw
+    return ""
 
 
 def to_markdown(doc: CorrectionDoc) -> str:
@@ -228,7 +243,7 @@ def to_markdown(doc: CorrectionDoc) -> str:
         if trace := _trace_text(seg):
             body.append(f"> 追溯：{trace}")
 
-        # 多層面必要性區塊：functional_gap → user_value → 來源清單 → 角度清單
+        # 多層面必要性區塊：功能缺口 → 使用者價值 → 關聯知識 → 來源 → 角度
         functional_gap = getattr(seg, "functional_gap", "")
         if functional_gap:
             body.append(f"> **功能缺口**：{functional_gap}")
@@ -236,6 +251,11 @@ def to_markdown(doc: CorrectionDoc) -> str:
         user_value = getattr(seg, "user_value", "")
         if user_value:
             body.append(f"> **使用者價值**：{user_value}")
+
+        argument = argument_by_seg_index.get(seg_index)
+        related_knowledge = _related_knowledge_of(seg, argument)
+        if related_knowledge:
+            body.append(f"> **關聯知識**：{related_knowledge}")
 
         source_ids = list(getattr(seg, "source_ids", None) or [])
         if not source_ids:
@@ -248,7 +268,7 @@ def to_markdown(doc: CorrectionDoc) -> str:
         elif seg.type == "supplement":
             body.append("> **來源清單**：pending（無來源）")
 
-        if argument := argument_by_seg_index.get(seg_index):
+        if argument:
             body.append(f"> **摘要可見**：{_visible_summary_text(argument)}")
             body.append(f"> **角度覆蓋**：{_argument_coverage_text(argument)}")
 
@@ -335,7 +355,7 @@ def to_docx(doc: CorrectionDoc, path: str) -> None:
         if trace := _trace_text(seg):
             out.add_paragraph(f"追溯：{trace}")
 
-        # 多層面必要性區塊：functional_gap → user_value → 來源清單 → 角度清單
+        # 多層面必要性區塊：功能缺口 → 使用者價值 → 關聯知識 → 來源 → 角度
         functional_gap = getattr(seg, "functional_gap", "")
         if functional_gap:
             out.add_paragraph(f"功能缺口：{functional_gap}")
@@ -343,6 +363,11 @@ def to_docx(doc: CorrectionDoc, path: str) -> None:
         user_value = getattr(seg, "user_value", "")
         if user_value:
             out.add_paragraph(f"使用者價值：{user_value}")
+
+        argument = argument_by_seg_index.get(seg_index)
+        related_knowledge = _related_knowledge_of(seg, argument)
+        if related_knowledge:
+            out.add_paragraph(f"關聯知識：{related_knowledge}")
 
         source_ids = list(getattr(seg, "source_ids", None) or [])
         if not source_ids:
@@ -355,7 +380,7 @@ def to_docx(doc: CorrectionDoc, path: str) -> None:
         elif seg.type == "supplement":
             out.add_paragraph("來源清單：pending（無來源）")
 
-        if argument := argument_by_seg_index.get(seg_index):
+        if argument:
             out.add_paragraph(f"摘要可見：{_visible_summary_text(argument)}")
             out.add_paragraph(f"角度覆蓋：{_argument_coverage_text(argument)}")
 

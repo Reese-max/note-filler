@@ -3,7 +3,7 @@ import pytest
 import app.server as server
 
 from note_filler.parse import Document, Paragraph
-from note_filler.correction import Segment, CorrectionDoc
+from note_filler.correction import Segment, CorrectionDoc, build_related_knowledge
 from note_filler.retrieve.models import Source
 
 
@@ -57,6 +57,11 @@ def _fixed_doc() -> CorrectionDoc:
         traceability=[{"kind": "source", "id": "s1"}],
         functional_gap="原稿未定義行政處分",
         user_value="讓讀者辨識行政處分的適用範圍",
+        related_knowledge=build_related_knowledge(
+            knowledge_body="行政處分係指行政機關就公法上具體事件所為之單方決定。",
+            functional_gap="原稿未定義行政處分",
+            user_value="讓讀者辨識行政處分的適用範圍",
+        ),
         argument_id="argument:0",
         angle_type="definition",
         angle_labels=["definition", "functional_gap", "user_value"],
@@ -135,6 +140,8 @@ async def test_run_renders_two_columns(async_client, monkeypatch):
     assert "行政處分係指行政機關就公法上具體事件所為之單方決定。" in summary_block
     assert "原稿未定義行政處分" in summary_block
     assert "讓讀者辨識行政處分的適用範圍" in summary_block
+    assert "支撐決策品質" in summary_block
+    assert "補強使用者理解" in summary_block
     assert "另有學說補充" not in summary_block
 
 

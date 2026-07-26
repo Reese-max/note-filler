@@ -1315,6 +1315,7 @@ def _parse_md_argument_blocks(md: str) -> list[dict[str, str]]:
                 "summary": "",
                 "functional_gap": "",
                 "user_value": "",
+                "related_knowledge": "",
                 "source_ids": "",
                 "cardinality": "",
                 "argument_id": "",
@@ -1333,6 +1334,8 @@ def _parse_md_argument_blocks(md: str) -> list[dict[str, str]]:
             current["functional_gap"] = plain.split("：", 1)[1].strip()
         elif plain.startswith("**使用者價值**：") or plain.startswith("使用者價值："):
             current["user_value"] = plain.split("：", 1)[1].strip()
+        elif plain.startswith("**關聯知識**：") or plain.startswith("關聯知識："):
+            current["related_knowledge"] = plain.split("：", 1)[1].strip()
         elif plain.startswith("**來源清單**：") or plain.startswith("來源清單"):
             m = _RE_SOURCE_LIST.search(plain)
             if m:
@@ -1347,7 +1350,7 @@ def _parse_md_argument_blocks(md: str) -> list[dict[str, str]]:
             current["argument_id"] = vm.group("argument_id").strip()
             current["functional_gap"] = vm.group("functional_gap").strip()
             current["user_value"] = vm.group("user_value").strip()
-            current["summary"] = vm.group("related_knowledge").strip()
+            current["related_knowledge"] = vm.group("related_knowledge").strip()
         elif plain.startswith("**論點ID**：") or plain.startswith("論點ID："):
             current["argument_id"] = plain.split("：", 1)[1].strip()
     if current is not None:
@@ -1380,8 +1383,12 @@ def _assert_triad_acceptance(
     summary: str,
     functional_gap: str,
     user_value: str,
+    related_knowledge: str = "",
 ) -> None:
-    """驗收三元必填且摘要確實呼應功能缺口與使用者價值。"""
+    """驗收三元必填且摘要／關聯知識確實呼應功能缺口與使用者價值。
+
+    related_knowledge 若提供，必須明示「支撐決策品質」與「補強使用者理解」。
+    """
     fields = {
         "summary": summary,
         "functional_gap": functional_gap,
@@ -1395,6 +1402,22 @@ def _assert_triad_acceptance(
             f"{argument_id}：內容不一致位置 summary 未反映 functional_gap／user_value；"
             f"summary={summary!r}；functional_gap={functional_gap!r}；user_value={user_value!r}"
         )
+    if related_knowledge.strip():
+        if "支撐決策品質" not in related_knowledge:
+            raise AssertionError(
+                f"{argument_id}：related_knowledge 未說明如何支撐決策品質；"
+                f"related_knowledge={related_knowledge!r}"
+            )
+        if "補強使用者理解" not in related_knowledge:
+            raise AssertionError(
+                f"{argument_id}：related_knowledge 未說明如何補強使用者理解；"
+                f"related_knowledge={related_knowledge!r}"
+            )
+        if _shared_topic_token(related_knowledge, functional_gap, user_value) is None:
+            raise AssertionError(
+                f"{argument_id}：related_knowledge 未與 functional_gap／user_value 呼應；"
+                f"related_knowledge={related_knowledge!r}"
+            )
 
 
 def test_final_output_each_argument_triad_coheres_with_same_source_and_argument(
@@ -1521,26 +1544,33 @@ def test_final_output_each_argument_triad_coheres_with_same_source_and_argument(
         assert arg["argument_id"] == exp["argument_id"] == seg["argument_id"]
         assert block["argument_id"] == exp["argument_id"]
 
-        # (1) 三元齊備：摘要 / 功能缺口 / 使用者價值
+        # (1) 三元齊備：摘要 / 功能缺口 / 使用者價值 / 關聯知識
         summary = (arg["argument_text"] or "").strip()
         # 摘要以正文為準（可能含 footnote 標記）；比對時去掉 [^n]
         summary_plain = re.sub(r"\[\^\d+\]", "", summary).strip()
         fg = (arg["functional_gap"] or "").strip()
         uv = (arg["user_value"] or "").strip()
-        _assert_triad_acceptance(exp["argument_id"], summary_plain, fg, uv)
+        rk = (arg["related_knowledge"] or "").strip()
+        _assert_triad_acceptance(
+            exp["argument_id"], summary_plain, fg, uv, related_knowledge=rk
+        )
         assert "（未提供）" not in fg and "（未提供）" not in uv
+        assert "支撐決策品質" in rk and "補強使用者理解" in rk
 
         # 成品 segment ↔ binding_report 同論點一致
         assert re.sub(r"\[\^\d+\]", "", seg["text"]).strip() == summary_plain
         assert seg["functional_gap"] == fg == exp["functional_gap"]
         assert seg["user_value"] == uv == exp["user_value"]
+        assert seg["related_knowledge"] == rk
         assert arg["checks"]["has_functional_gap"] is True
         assert arg["checks"]["has_user_value"] is True
+        assert arg["checks"]["has_related_knowledge"] is True
 
         # (2) 互相呼應：主題詞同時出現在三元中
         assert exp["topic"] in summary_plain
         assert exp["topic"] in fg
         assert exp["topic"] in uv
+        assert exp["topic"] in rk
         # user_value 須回扣同一問題（與摘要／缺口同論點）
         assert "補齊讀者對「" in uv and "」所需的說明" in uv
 
@@ -1563,15 +1593,18 @@ def test_final_output_each_argument_triad_coheres_with_same_source_and_argument(
         assert block_summary_plain == exp["summary"]
         assert block["functional_gap"] == fg
         assert block["user_value"] == uv
+        assert block["related_knowledge"] == rk
         assert block["source_ids"].replace(" ", "") == ",".join(source_ids)
         assert "（未提供）" not in block["visible_summary"]
         assert f"argument_id={exp['argument_id']}" in block["visible_summary"]
-        # related_knowledge 可能保留 footnote 標記；去掉後須與論點正文一致
+        # related_knowledge 與同一 argument_id 綁定，明示決策品質／使用者理解
         vis_summary_m = re.search(
             r"；related_knowledge=(.*)$", block["visible_summary"]
         )
         assert vis_summary_m is not None
-        assert re.sub(r"\[\^\d+\]", "", vis_summary_m.group(1)).strip() == summary_plain
+        assert vis_summary_m.group(1).strip() == rk
+        assert "支撐決策品質" in vis_summary_m.group(1)
+        assert "補強使用者理解" in vis_summary_m.group(1)
         assert f"functional_gap={fg}" in block["visible_summary"]
         assert f"user_value={uv}" in block["visible_summary"]
 
@@ -1585,16 +1618,16 @@ def test_final_output_each_argument_triad_coheres_with_same_source_and_argument(
 
 @pytest.mark.parametrize(
     "missing_field",
-    ["functional_gap", "user_value", "summary"],
+    ["functional_gap", "user_value", "summary", "related_knowledge"],
 )
 def test_final_output_triad_missing_any_field_fails_explicitly(
     missing_field: str,
     tmp_path,
 ):
-    """負例：來源綁定存在，但摘要／功能缺口／使用者價值缺一即明確失敗。
+    """負例：來源綁定存在，但摘要／功能缺口／使用者價值／關聯知識缺一即明確失敗。
 
-    - functional_gap / user_value 空欄 → binding_ok=fail，checks 點名缺失，
-      write_binding_report 以角度有效性驗收失敗拒絕（訊息含缺欄名）
+    - functional_gap / user_value / related_knowledge 空欄或缺決策說明
+      → binding_ok=fail，checks 點名缺失；write 不得默默通過
     - 摘要（argument_text）空白 → parse/write 拒絕空欄 argument_text，
       不得默默產出可通過的最終報告
     """
@@ -1617,6 +1650,9 @@ def test_final_output_triad_missing_any_field_fails_explicitly(
         seg.functional_gap = ""
     elif missing_field == "user_value":
         seg.user_value = "   "
+    elif missing_field == "related_knowledge":
+        # 故意寫入無決策品質／使用者理解說明的殘缺文字
+        seg.related_knowledge = "僅有摘要卻未說明決策與理解價值"
     else:
         seg.text = "   "
 
@@ -1655,6 +1691,20 @@ def test_final_output_triad_missing_any_field_fails_explicitly(
         with pytest.raises(RuntimeError, match="角度有效性驗收失敗|user_value") as ei:
             write_binding_report(out, product)
         assert "user_value" in str(ei.value)
+    elif missing_field == "related_knowledge":
+        assert arg["checks"]["has_related_knowledge"] is False
+        assert arg["binding_ok"] is False
+        assert arg["binding_status"] == "fail"
+        assert raw_report["summary"]["all_arguments_ok"] is False
+        assert "支撐決策品質" not in (arg["related_knowledge"] or "")
+        assert (arg["argument_text"] or "").strip()
+        assert (arg["functional_gap"] or "").strip()
+        assert (arg["user_value"] or "").strip()
+        parsed = parse_binding_report(raw_report)
+        assert parsed["arguments"][0]["checks"]["has_related_knowledge"] is False
+        with pytest.raises(RuntimeError, match="關聯知識驗收失敗|related_knowledge") as ei:
+            write_binding_report(out, product)
+        assert "related_knowledge" in str(ei.value)
     else:
         # 摘要空白：schema 層拒絕 argument_text 空欄
         assert not (arg["argument_text"] or "").strip()

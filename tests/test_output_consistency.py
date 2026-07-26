@@ -380,10 +380,12 @@ class TestOutputConsistency:
                 continue
             if stripped.startswith("> **來源清單**"):
                 continue
-            # Skip new functional_gap and user_value lines
+            # Skip new functional_gap / user_value / related_knowledge lines
             if stripped.startswith("> **功能缺口**"):
                 continue
             if stripped.startswith("> **使用者價值**"):
+                continue
+            if stripped.startswith("> **關聯知識**"):
                 continue
             if stripped.startswith("> **摘要可見**"):
                 continue
@@ -398,7 +400,7 @@ class TestOutputConsistency:
             md_originals.append(stripped)
 
         # Original paragraphs from docx (first N paragraphs where N = original count)
-        # Filter out metadata lines (來源清單, 功能缺口, 使用者價值, 追溯)
+        # Filter out metadata lines (來源清單, 功能缺口, 使用者價值, 關聯知識, 追溯)
         docx_filtered = []
         for para in docx_paras:
             stripped = para.strip()
@@ -409,6 +411,8 @@ class TestOutputConsistency:
             if stripped.startswith("功能缺口："):
                 continue
             if stripped.startswith("使用者價值："):
+                continue
+            if stripped.startswith("關聯知識："):
                 continue
             if stripped.startswith("摘要可見："):
                 continue

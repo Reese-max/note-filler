@@ -26,6 +26,44 @@ logger = logging.getLogger(__name__)
 # gap 在 written 字典中找不到時的可追蹤佔位文;以【待補證】開頭以觸發 pending_evidence
 MISSING_WRITTEN_TEXT = "【待補證】寫作結果缺失：gap 問題不在 written 字典中"
 
+# 關聯知識必須明示決策品質支撐與使用者理解補強（機器可驗收關鍵詞）
+RELATED_KNOWLEDGE_DECISION_MARKER = "支撐決策品質"
+RELATED_KNOWLEDGE_UNDERSTANDING_MARKER = "補強使用者理解"
+
+
+def build_related_knowledge(
+    *,
+    knowledge_body: str,
+    functional_gap: str = "",
+    user_value: str = "",
+) -> str:
+    """組裝與 argument_id 同論點綁定的關聯知識文字。
+
+    必須同時說明：
+      1. 如何支撐決策品質（對應功能缺口、提供可追溯依據）
+      2. 如何補強使用者理解（對應使用者價值）
+    """
+    body = (knowledge_body or "").strip()
+    fg = (functional_gap or "").strip() or "（未標示功能缺口）"
+    uv = (user_value or "").strip() or "（未標示使用者價值）"
+    prefix = body if body else "（尚無可落地的關聯知識正文）"
+    return (
+        f"{prefix}"
+        f"（如何{RELATED_KNOWLEDGE_DECISION_MARKER}：對應功能缺口「{fg}」"
+        f"提供可追溯依據，降低僅憑印象取捨的風險；"
+        f"如何{RELATED_KNOWLEDGE_UNDERSTANDING_MARKER}：{uv}）"
+    )
+
+
+def related_knowledge_explains_value(text: str) -> bool:
+    """關聯知識非空且明確含決策品質／使用者理解雙重說明。"""
+    t = (text or "").strip()
+    return (
+        bool(t)
+        and RELATED_KNOWLEDGE_DECISION_MARKER in t
+        and RELATED_KNOWLEDGE_UNDERSTANDING_MARKER in t
+    )
+
 
 @dataclass
 class Segment:
@@ -41,6 +79,8 @@ class Segment:
     functional_gap: str = ""
     user_value: str = ""
     summary: str | None = None
+    # None＝相容既有手建 Segment，binding_report 依 summary 合成；空字串＝明確缺欄
+    related_knowledge: str | None = None
     argument_id: str = ""
     # 角度覆蓋：主類型／標籤／精確鍵（序列化時組成 angle_coverage）
     angle_type: str = ""
@@ -122,6 +162,7 @@ def assemble_correction(doc, gaps, retrieved, written, validations) -> Correctio
                 functional_gap="",
                 user_value="",
                 summary="",
+                related_knowledge="",
                 argument_id="",
                 angle_type="",
                 angle_labels=[],
@@ -194,6 +235,12 @@ def assemble_correction(doc, gaps, retrieved, written, validations) -> Correctio
         # 必要性雙視角：功能缺口取 gap.reason；使用者價值由問題推導
         functional_gap = gap.reason
         user_value = f"補齊讀者對「{q}」所需的說明"
+        # 關聯知識：同 argument_id 綁定，明示決策品質支撐與使用者理解補強
+        related_knowledge = build_related_knowledge(
+            knowledge_body=text,
+            functional_gap=functional_gap,
+            user_value=user_value,
+        )
         # 角度覆蓋：依問題文字分類類型／標籤／鍵，供重複／同義機器判定
         angle_cov = build_angle_coverage(
             question=q,
@@ -228,6 +275,7 @@ def assemble_correction(doc, gaps, retrieved, written, validations) -> Correctio
                 functional_gap=functional_gap,
                 user_value=user_value,
                 summary=text,
+                related_knowledge=related_knowledge,
                 argument_id=argument_id,
                 angle_type=angle_cov["angle_type"],
                 angle_labels=list(angle_cov["angle_labels"]),

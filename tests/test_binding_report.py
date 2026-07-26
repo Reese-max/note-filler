@@ -280,6 +280,21 @@ def test_empty_user_value_fails_even_when_sources_traceable():
     assert arg["binding_status"] == "fail"
 
 
+def test_empty_related_knowledge_fails_even_when_sources_traceable():
+    """來源可追溯但關聯知識缺決策品質／使用者理解說明 → binding_ok False。"""
+    product = _assemble_one_to_one()
+    product.segments[1].related_knowledge = "只有正文沒有決策說明"
+    report = parse_binding_report(build_binding_report(product))
+    arg = report["arguments"][0]
+    assert arg["checks"]["at_least_one_source"] is True
+    assert arg["checks"]["source_traceable"] is True
+    assert arg["checks"]["has_related_knowledge"] is False
+    assert arg["binding_ok"] is False
+    assert arg["binding_status"] == "fail"
+    assert "related_knowledge" in arg
+    assert arg["related_knowledge"] == "只有正文沒有決策說明"
+
+
 def test_parse_rejects_empty_necessity_marked_as_pass():
     """空欄卻標 pass／has_* True → 解析器拒絕（防止假完成報告）。"""
     report = build_binding_report(_assemble_one_to_one())
@@ -292,7 +307,7 @@ def test_parse_rejects_empty_necessity_marked_as_pass():
 
 
 def test_assembled_arguments_include_nonempty_necessity_views():
-    """assemble 產出的論點必須自帶非空必要性雙視角，避免後續遺失。"""
+    """assemble 產出的論點必須自帶非空必要性雙視角與關聯知識，避免後續遺失。"""
     for product in (
         _assemble_one_to_one(),
         _assemble_one_to_many(),
@@ -303,8 +318,12 @@ def test_assembled_arguments_include_nonempty_necessity_views():
         for arg in report["arguments"]:
             assert arg["functional_gap"].strip(), arg
             assert arg["user_value"].strip(), arg
+            assert arg["related_knowledge"].strip(), arg
+            assert "支撐決策品質" in arg["related_knowledge"]
+            assert "補強使用者理解" in arg["related_knowledge"]
             assert arg["checks"]["has_functional_gap"] is True
             assert arg["checks"]["has_user_value"] is True
+            assert arg["checks"]["has_related_knowledge"] is True
             assert arg["binding_ok"] is True
 
 

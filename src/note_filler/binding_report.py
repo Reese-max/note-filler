@@ -26,6 +26,10 @@ from note_filler.angle_coverage import (
     summarize_angle_coverage,
     validate_argument_angle,
 )
+from note_filler.correction import (
+    build_related_knowledge,
+    related_knowledge_explains_value,
+)
 
 SCHEMA_ID = "note_filler.binding_report.v1"
 BINDING_REPORT_NAME = "binding_report.json"
@@ -73,6 +77,8 @@ REQUIRED_ARGUMENT_KEYS = frozenset(
         "binding_ok",
         "functional_gap",
         "user_value",
+        # 關聯知識：與同一 argument_id 綁定，明示決策品質／使用者理解
+        "related_knowledge",
         "angle_coverage",
     }
 ) | REQUIRED_ARGUMENT_ANGLE_KEYS
@@ -88,6 +94,8 @@ REQUIRED_CHECK_KEYS = frozenset(
         # 必要性雙視角：來源可追溯仍不得遺失功能缺口／使用者價值
         "has_functional_gap",
         "has_user_value",
+        # 關聯知識：須明示如何支撐決策品質、如何補強使用者理解
+        "has_related_knowledge",
         "summary_matches_product",
         # 角度覆蓋：論點須具備可機器讀的角度標籤／面向
         "has_angle_coverage",
@@ -156,7 +164,7 @@ REQUIRED_ANGLE_SUMMARY_KEYS = frozenset(
 )
 
 # 結構性必填非空字串（枚舉／狀態）；source_id_field 可空（語意 fail，非結構錯誤）
-# functional_gap／user_value 空欄以 checks + binding_ok 拒絕，仍可解析以指出缺失項
+# functional_gap／user_value／related_knowledge 空欄以 checks + binding_ok 拒絕，仍可解析以指出缺失項
 _ARGUMENT_NONEMPTY_STR_KEYS = frozenset(
     {
         "argument_text",
@@ -266,6 +274,20 @@ def _evaluate_argument(seg, *, argument_index: int, segment_index: int) -> dict[
     has_functional_gap = bool(functional_gap.strip())
     has_user_value = bool(user_value.strip())
 
+    # 關聯知識：None＝相容手建 Segment 自動合成；空字串＝明確缺欄
+    raw_related = getattr(seg, "related_knowledge", None)
+    if raw_related is None:
+        related_knowledge = build_related_knowledge(
+            knowledge_body=summary,
+            functional_gap=functional_gap,
+            user_value=user_value,
+        )
+    elif not isinstance(raw_related, str):
+        related_knowledge = str(raw_related)
+    else:
+        related_knowledge = raw_related
+    has_related_knowledge = related_knowledge_explains_value(related_knowledge)
+
     # 角度覆蓋（暫不含 relation；整份 arguments 組齊後再 attach）
     angle_coverage = coverage_from_segment(seg)
     has_angle_coverage = is_angle_coverage_complete(angle_coverage)
@@ -319,6 +341,7 @@ def _evaluate_argument(seg, *, argument_index: int, segment_index: int) -> dict[
         "no_empty_fragments": no_empty_fragments,
         "has_functional_gap": has_functional_gap,
         "has_user_value": has_user_value,
+        "has_related_knowledge": has_related_knowledge,
         "summary_matches_product": summary_matches_product,
         "has_angle_coverage": has_angle_coverage,
         # 角度有效性檢查
@@ -330,7 +353,9 @@ def _evaluate_argument(seg, *, argument_index: int, segment_index: int) -> dict[
         "meets_angle_coverage_threshold": True,
     }
 
-    necessity_ok = has_functional_gap and has_user_value
+    necessity_ok = (
+        has_functional_gap and has_user_value and has_related_knowledge
+    )
     angle_ok = has_angle_coverage and angle_facet_complete
 
     # 有來源：核心綁定 + 對齊 + 片段非空 + 必要性雙視角 + 角度覆蓋皆須通過
@@ -380,6 +405,7 @@ def _evaluate_argument(seg, *, argument_index: int, segment_index: int) -> dict[
         "binding_ok": binding_ok,
         "functional_gap": functional_gap,
         "user_value": user_value,
+        "related_knowledge": related_knowledge,
         "angle_coverage": angle_coverage,
     }
 
@@ -473,7 +499,7 @@ def parse_binding_report(data: Any) -> dict[str, Any]:
     固定欄位契約：
       - 缺欄／未知欄（欄位漂移）→ ValueError
       - 結構性空欄（如 confidence、source_id 元素）→ ValueError
-      - 必要性空欄（functional_gap／user_value）以 checks 標記，
+      - 必要性空欄（functional_gap／user_value／related_knowledge）以 checks 標記，
         binding_ok 為 False（仍可解析，便於驗收指出缺失項）
 
     測試應以此函式解析報告，而非手寫鬆散 dict 存取。
@@ -553,6 +579,8 @@ def parse_binding_report(data: Any) -> dict[str, Any]:
             raise ValueError(f"arguments[{i}].functional_gap 必須為 str")
         if not isinstance(arg.get("user_value"), str):
             raise ValueError(f"arguments[{i}].user_value 必須為 str")
+        if not isinstance(arg.get("related_knowledge"), str):
+            raise ValueError(f"arguments[{i}].related_knowledge 必須為 str")
         expected_summary_match = arg["summary"] == arg["argument_text"]
         if checks["summary_matches_product"] is not expected_summary_match:
             raise ValueError(
@@ -628,6 +656,26 @@ def parse_binding_report(data: Any) -> dict[str, Any]:
                 raise ValueError(
                     f"arguments[{i}] user_value 為空欄但 binding_status 為 pass"
                 )
+        # 關聯知識：空欄或缺決策品質／使用者理解說明 → checks 必須點名且不得 pass
+        rk_ok = related_knowledge_explains_value(arg["related_knowledge"])
+        if not rk_ok:
+            if checks.get("has_related_knowledge") is not False:
+                raise ValueError(
+                    f"arguments[{i}] related_knowledge 缺決策品質／使用者理解說明"
+                    f"但 checks.has_related_knowledge 未標 False"
+                )
+            if arg["binding_ok"] is not False:
+                raise ValueError(
+                    f"arguments[{i}] related_knowledge 不合格但 binding_ok 未標 False"
+                )
+            if arg["binding_status"] == "pass":
+                raise ValueError(
+                    f"arguments[{i}] related_knowledge 不合格但 binding_status 為 pass"
+                )
+        elif checks.get("has_related_knowledge") is not True:
+            raise ValueError(
+                f"arguments[{i}] related_knowledge 合格但 checks.has_related_knowledge 未標 True"
+            )
 
         # 角度覆蓋：固定結構 + 空欄語意
         ac = arg.get("angle_coverage")
@@ -925,6 +973,13 @@ def write_binding_report(output_path: Path, correction) -> Path:
     ]
     if summary_issues:
         raise RuntimeError(f"摘要一致性驗收失敗：{'；'.join(summary_issues)}")
+    related_issues = [
+        f"{arg['argument_id']}.related_knowledge 缺決策品質／使用者理解說明"
+        for arg in report["arguments"]
+        if not arg["checks"].get("has_related_knowledge", False)
+    ]
+    if related_issues:
+        raise RuntimeError(f"關聯知識驗收失敗：{'；'.join(related_issues)}")
     angle_summary = report["angle_coverage_summary"]
     field_issues = _collect_angle_field_issues(report)
     facet_incomplete = any(
