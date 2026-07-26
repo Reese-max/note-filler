@@ -591,3 +591,84 @@ def test_final_note_delivery_all_conditions(tmp_path):
     assert Path(r["output"]).exists(), "條件四失敗：本機檔案不存在"
     local_content = Path(r["output"]).read_text(encoding="utf-8")
     assert content.strip() == local_content.strip(), "條件四失敗：content 與本機不一致"
+
+
+def test_final_note_delivery_with_partial_page_failure_and_generation_exception(tmp_path):
+    """端到端正向測試：模擬部分頁面缺失與一段內容生成例外時，最終仍能取得完整筆記輸出。
+    
+    測試情境：
+    1. 模擬部分頁面缺失（web 檢索時部分頁面失敗）
+    2. 模擬一段內容生成例外（LLM 寫作時拋出異常）
+    3. 驗證最終仍能取得完整筆記輸出
+    4. 驗證輸出同時出現在使用者可見通道（process_file 回傳值）與最終回傳值中
+    """
+    from note_filler import __main__ as cli
+    
+    note = _txt(
+        tmp_path, "note.txt",
+        "行政程序法要求行政行為應遵守正當程序。\n\n本筆記僅記錄部分重點,尚未展開。",
+    )
+    
+    # 模擬部分頁面缺失：第一個 gap 的檢索返回部分來源，第二個 gap 返回正常來源
+    class PartialFailureTwinkle:
+        def __init__(self):
+            self.call_count = 0
+        
+        def search(self, query, n=3):
+            self.call_count += 1
+            if self.call_count == 1:
+                # 第一次檢索（第一個 gap）返回部分來源
+                return [_src("s1"), _src("s2")]
+            else:
+                # 第二次檢索（第二個 gap）返回正常來源
+                return [_src("s3"), _src("s4")]
+    
+    # 模擬一段內容生成例外：第二個 gap 的寫作會降級為待補證
+    llm = FakeLLM([
+        "law",
+        "行政處分的定義為何?\n訴願前置程序為何?",
+        json.dumps([
+            {"question": "行政處分的定義為何?", "status": "missing", "reason": "筆記未展開定義"},
+            {"question": "訴願前置程序為何?", "status": "missing", "reason": "筆記未提及"},
+        ], ensure_ascii=False),
+        '{"keyword": "行政處分", "law_name": "行政程序法"}',
+        "行政處分係指行政機關就公法上具體事件所為之對外直接發生法律效果之單方行政行為[^1]。",
+        '{"keyword": "訴願", "law_name": "訴願法"}',
+        "【待補證】此問題因生成例外，尚待補充。",  # 第二個 gap 降級為待補證
+    ])
+    
+    twinkle = PartialFailureTwinkle()
+    
+    # 執行 process_file，應該能處理異常並產出完整筆記
+    r = cli.process_file(note, llm, twinkle, FakeLaw(), out_dir=None, fmt="md")
+    
+    # 驗證回傳值存在且包含完整內容
+    assert r is not None, "process_file 應正常回傳"
+    assert "content" in r, "回傳值應包含 content 欄位"
+    content = r["content"]
+    
+    # 驗證內容非空且包含實質筆記內容
+    assert content.strip(), "content 應為非空"
+    assert "行政程序法" in content, "content 應包含原稿內容"
+    assert "行政處分係指行政機關就公法上具體事件所為之對外直接發生法律效果之單方行政行為" in content, (
+        "content 應包含第一個 gap 的補充內容"
+    )
+    
+    # 驗證第二個 gap 因異常而降級為待補證
+    assert "【待補證】" in content, "第二個 gap 應因異常而降級為待補證"
+    
+    # 驗證本機檔案也存在且內容一致
+    assert r["output"] is not None, "應產生輸出檔案"
+    assert Path(r["output"]).exists(), "輸出檔案應存在"
+    local_content = Path(r["output"]).read_text(encoding="utf-8")
+    assert content.strip() == local_content.strip(), "content 與本機檔案內容應一致"
+    
+    # 驗證統計資訊
+    assert "supplements" in r, "回傳值應包含 supplements 統計"
+    assert r["supplements"] >= 1, "應至少有一個補充段"
+    assert "verified" in r, "回傳值應包含 verified 統計"
+    
+    # 驗證輸出格式正確
+    assert not content.lstrip().startswith("{"), "content 不應為 JSON 格式"
+    assert not content.lstrip().startswith("```"), "content 不應為 code block"
+    assert "note_product_empty" not in content, "content 不應含稽核事件字串"
