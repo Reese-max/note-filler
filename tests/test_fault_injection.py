@@ -261,6 +261,33 @@ class TestPersistenceFailure:
         assert receipt["status"] == "failed"
         assert "disk-full" in receipt["error"]
 
+    def test_cli_file_processing_failed_no_traceback_in_output(self, tmp_path, monkeypatch, capsys):
+        """檔案處理失敗時，對外輸出不暴露堆疊。"""
+        note = tmp_path / "case-NO-TRACEBACK.txt"
+        note.write_text("原稿", encoding="utf-8")
+        out = tmp_path / "out"
+        monkeypatch.setattr(cli, "GrokClient", lambda: None)
+        monkeypatch.setattr(cli, "TwinkleClient", lambda token="": None)
+        monkeypatch.setattr(cli, "LawLookup", lambda db: None)
+        monkeypatch.setattr(
+            cli, "process_file",
+            lambda *a, **kw: (_ for _ in ()).throw(RuntimeError("internal-error")),
+        )
+
+        assert cli.main([str(note), "-o", str(out), "--db", str(tmp_path / "none.db")]) == 1
+        captured = capsys.readouterr()
+        # stderr 應包含錯誤訊息但不包含堆疊
+        assert "RuntimeError" in captured.err
+        assert "internal-error" in captured.err
+        assert "Traceback" not in captured.err
+        assert "File \"" not in captured.err
+        # delivery receipt 也不應包含堆疊
+        receipt = json.loads((out / cli.MANIFEST_NAME).read_text(encoding="utf-8"))
+        assert receipt["status"] == "failed"
+        assert "RuntimeError" in receipt["error"]
+        assert "internal-error" in receipt["error"]
+        assert "Traceback" not in receipt["error"]
+
     def test_docx_export_failure_raises(self, tmp_path):
         """export.py:to_docx 寫入失敗應向上拋 OSError。"""
         doc = CorrectionDoc(_doc(), [

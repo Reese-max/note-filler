@@ -15,7 +15,6 @@ import json
 import logging
 import os
 import sys
-import traceback
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -213,7 +212,6 @@ def main(argv: list[str] | None = None) -> int:
                 file=sys.stderr,
             )
         except Exception as e:  # 單檔失敗不拖垮整批
-            tb = traceback.format_exc()
             audit_event(
                 logger,
                 "file_processing_failed",
@@ -221,7 +219,6 @@ def main(argv: list[str] | None = None) -> int:
                 level=logging.ERROR,
                 error_type=type(e).__name__,
                 error=str(e),
-                traceback=tb,
             )
             print(f"❌ {f}:{type(e).__name__}: {e}", file=sys.stderr)
             # 寫 delivery_manifest 失敗回執,讓下游可查詢交付狀態
