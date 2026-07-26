@@ -1742,6 +1742,130 @@ def test_triad_acceptance_rejects_summary_not_reflecting_both_perspectives():
     )
 
 
+def test_missing_related_knowledge_with_valid_gap_and_user_value_fails_explicitly(tmp_path):
+    """負例：有功能缺口與使用者價值但缺少關聯知識 → 明確失敗並指出缺失欄位。
+
+    最小案例：來源綁定正常、功能缺口與使用者價值皆存在，
+    但 related_knowledge 為空或無決策品質／使用者理解說明。
+    驗證：
+    1) binding_ok=False 且 checks.has_related_knowledge=False
+    2) 錯誤訊息明確指出 related_knowledge 缺失
+    3) write_binding_report 拒絕輸出
+    """
+    from pathlib import Path
+
+    src = _source("law:92", "行政程序法第 92 條")
+    gap = Gap("行政處分如何定義？", "missing", "原稿未定義行政處分")
+    product = assemble_correction(
+        _doc(),
+        [gap],
+        {gap.question: [src]},
+        {gap.question: WrittenSupplement("行政處分定義[^1]。", [src.id])},
+        {gap.question: cross_validate(gap.question, [src])},
+    )
+    seg = product.segments[1]
+    assert seg.type == "supplement"
+    assert [s.id for s in seg.sources] == ["law:92"]
+
+    # 設定功能缺口與使用者價值，但故意清空關聯知識
+    seg.functional_gap = "原稿未定義行政處分，導致讀者無法理解其法律要件"
+    seg.user_value = "補齊讀者對行政處分定義及適用範圍的理解"
+    seg.related_knowledge = ""  # 缺少關聯知識
+
+    raw_report = build_binding_report(product)
+    arg = raw_report["arguments"][0]
+
+    # 來源層仍可追溯
+    assert arg["checks"]["at_least_one_source"] is True
+    assert arg["source_ids"] == ["law:92"]
+
+    # 功能缺口與使用者價值存在
+    assert arg["checks"]["has_functional_gap"] is True
+    assert arg["checks"]["has_user_value"] is True
+    assert arg["functional_gap"].strip()
+    assert arg["user_value"].strip()
+
+    # 關聯知識缺失 → 必須明確失敗
+    assert arg["checks"]["has_related_knowledge"] is False
+    assert arg["binding_ok"] is False
+    assert arg["binding_status"] == "fail"
+    assert raw_report["summary"]["all_arguments_ok"] is False
+
+    # parse 階段應能識別缺失
+    parsed = parse_binding_report(raw_report)
+    assert parsed["arguments"][0]["checks"]["has_related_knowledge"] is False
+
+    # write 階段應拒絕並指出缺失
+    out = Path(tmp_path) / "out.md"
+    with pytest.raises(RuntimeError, match="關聯知識驗收失敗|related_knowledge") as ei:
+        write_binding_report(out, product)
+    assert "related_knowledge" in str(ei.value)
+
+
+def test_related_knowledge_missing_impact_or_importance_fails_explicitly(tmp_path):
+    """負例：有關聯知識但未說明影響誰或為何重要 → 明確失敗並指出不一致位置。
+
+    最小案例：關聯知識欄位存在，但內容未說明「影響誰」或「為何重要」，
+    即缺少「支撐決策品質」或「補強使用者理解」關鍵詞。
+    驗證：
+    1) binding_ok=False 且 checks.has_related_knowledge=False
+    2) 錯誤訊息指出關聯知識未說明決策品質或使用者理解
+    3) write_binding_report 拒絕輸出
+    """
+    from pathlib import Path
+
+    src = _source("law:92", "行政程序法第 92 條")
+    gap = Gap("行政處分如何定義？", "missing", "原稿未定義行政處分")
+    product = assemble_correction(
+        _doc(),
+        [gap],
+        {gap.question: [src]},
+        {gap.question: WrittenSupplement("行政處分定義[^1]。", [src.id])},
+        {gap.question: cross_validate(gap.question, [src])},
+    )
+    seg = product.segments[1]
+    assert seg.type == "supplement"
+    assert [s.id for s in seg.sources] == ["law:92"]
+
+    # 設定功能缺口與使用者價值
+    seg.functional_gap = "原稿未定義行政處分，導致讀者無法理解其法律要件"
+    seg.user_value = "補齊讀者對行政處分定義及適用範圍的理解"
+
+    # 關聯知識存在但未說明影響誰或為何重要（缺少關鍵詞）
+    seg.related_knowledge = "行政處分是一個法律概念，有相關法條規範"
+
+    raw_report = build_binding_report(product)
+    arg = raw_report["arguments"][0]
+
+    # 來源層仍可追溯
+    assert arg["checks"]["at_least_one_source"] is True
+    assert arg["source_ids"] == ["law:92"]
+
+    # 功能缺口與使用者價值存在
+    assert arg["checks"]["has_functional_gap"] is True
+    assert arg["checks"]["has_user_value"] is True
+    assert arg["functional_gap"].strip()
+    assert arg["user_value"].strip()
+
+    # 關聯知識存在但未說明決策品質或使用者理解 → 必須明確失敗
+    assert arg["checks"]["has_related_knowledge"] is False
+    assert arg["binding_ok"] is False
+    assert arg["binding_status"] == "fail"
+    assert raw_report["summary"]["all_arguments_ok"] is False
+    assert "支撐決策品質" not in (arg["related_knowledge"] or "")
+    assert "補強使用者理解" not in (arg["related_knowledge"] or "")
+
+    # parse 階段應能識別缺失
+    parsed = parse_binding_report(raw_report)
+    assert parsed["arguments"][0]["checks"]["has_related_knowledge"] is False
+
+    # write 階段應拒絕並指出缺失
+    out = Path(tmp_path) / "out.md"
+    with pytest.raises(RuntimeError, match="關聯知識驗收失敗|related_knowledge") as ei:
+        write_binding_report(out, product)
+    assert "related_knowledge" in str(ei.value)
+
+
 # ---- 四要素驗收：缺口、影響對象、重要性、關聯知識同論點呼應 -------------
 
 def test_final_output_each_argument_has_four_coherent_elements(tmp_path):
