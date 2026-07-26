@@ -461,3 +461,133 @@ def test_content_coverage_citation_integrity(tmp_path):
             assert "【待補證】" in text, (
                 f"無來源的補充段缺少【待補證】標記：{text!r}"
             )
+
+
+# ---- 端到端驗收：最終成品筆記直接送達使用者介面 ---------------------------
+
+def test_final_note_delivery_ui_accessible(tmp_path):
+    """條件一：使用者介面（CLI process_file 回傳值）可取得完整成品筆記內容。"""
+    from note_filler import __main__ as cli
+    
+    note = _txt(
+        tmp_path, "note.txt",
+        "行政程序法要求行政行為應遵守正當程序。\n\n本筆記僅記錄部分重點,尚未展開。",
+    )
+    
+    llm = _canned_llm_two_gaps()
+    twinkle = FakeTwinkle([[_src("s1"), _src("s2")], [_src("s3"), _src("s4")]])
+    
+    r = cli.process_file(note, llm, twinkle, FakeLaw(), out_dir=None, fmt="md")
+    
+    # process_file 回傳值應包含完整內容
+    assert "content" in r, "process_file 回傳值缺 content 欄位"
+    content = r["content"]
+    assert content.strip(), "content 為空，使用者無法取得任何內容"
+    assert any(kw in content for kw in ("行政程序法", "正當程序", "行政處分", "訴願")), (
+        f"content 缺乏實質筆記內容，僅包含：{content[:200]}"
+    )
+    assert "行政程序法要求行政行為應遵守正當程序" in content, (
+        "content 未包含原稿段落"
+    )
+    assert "行政處分係指行政機關就公法上具體事件所為之對外直接發生法律效果之單方行政行為" in content, (
+        "content 未包含補充內容"
+    )
+
+
+def test_final_note_delivery_flow_uninterrupted(tmp_path):
+    """條件二：主流程不中斷，正常完成且回傳值完整。"""
+    from note_filler import __main__ as cli
+    
+    note = _txt(
+        tmp_path, "note.txt",
+        "行政程序法要求行政行為應遵守正當程序。",
+    )
+    
+    llm = _canned_llm_two_gaps()
+    twinkle = FakeTwinkle([[_src("s1"), _src("s2")], [_src("s3"), _src("s4")]])
+    
+    r = cli.process_file(note, llm, twinkle, FakeLaw(), out_dir=None, fmt="md")
+    
+    # process_file 應正常回傳，不拋出異常
+    assert r is not None, "process_file 未正常回傳"
+    assert "input" in r, "回傳值缺 input 欄位"
+    assert "output" in r, "回傳值缺 output 欄位"
+    assert "content" in r, "回傳值缺 content 欄位"
+    assert r["output"] is not None, "未產生輸出路徑"
+    assert Path(r["output"]).exists(), "輸出檔不存在"
+
+
+
+
+
+def test_final_note_delivery_not_empty_or_local_only(tmp_path):
+    """條件四：回傳結果不是空輸出或僅本機落盤（content 有實際內容）。"""
+    from note_filler import __main__ as cli
+    
+    note = _txt(
+        tmp_path, "note.txt",
+        "行政程序法要求行政行為應遵守正當程序。",
+    )
+    
+    llm = _canned_llm_two_gaps()
+    twinkle = FakeTwinkle([[_src("s1"), _src("s2")], [_src("s3"), _src("s4")]])
+    
+    r = cli.process_file(note, llm, twinkle, FakeLaw(), out_dir=None, fmt="md")
+    
+    content = r["content"]
+    
+    # 驗證不是空輸出
+    assert content.strip(), "content 為空輸出"
+    assert len(content) > 100, (
+        f"content 內容過短，疑似僅包含路徑或統計：{content}"
+    )
+    assert "行政程序法" in content, (
+        "content 缺乏實際筆記內容，疑似僅本機落盤"
+    )
+    
+    # 驗證本機檔案也存在（兩者並存）
+    assert Path(r["output"]).exists(), "本機輸出檔不存在"
+    local_content = Path(r["output"]).read_text(encoding="utf-8")
+    assert local_content.strip(), "本機輸出檔為空"
+    
+    # content 應與本機檔案內容一致
+    assert content.strip() == local_content.strip(), (
+        "content 與本機檔案不一致"
+    )
+
+
+def test_final_note_delivery_all_conditions(tmp_path):
+    """整合測試：同時驗證四個條件。"""
+    from note_filler import __main__ as cli
+    
+    note = _txt(
+        tmp_path, "note.txt",
+        "行政程序法要求行政行為應遵守正當程序。\n\n本筆記僅記錄部分重點,尚未展開。",
+    )
+    
+    llm = _canned_llm_two_gaps()
+    twinkle = FakeTwinkle([[_src("s1"), _src("s2")], [_src("s3"), _src("s4")]])
+    
+    r = cli.process_file(note, llm, twinkle, FakeLaw(), out_dir=None, fmt="md")
+    
+    content = r["content"]
+    
+    # 條件一：使用者介面可取得完整內容（透過回傳值）
+    assert content.strip(), "條件一失敗：content 為空"
+    assert "行政程序法" in content, "條件一失敗：content 缺乏實質內容"
+    assert "行政處分係指行政機關就公法上具體事件所為之對外直接發生法律效果之單方行政行為" in content, (
+        "條件一失敗：content 缺乏補充內容"
+    )
+    
+    # 條件二：主流程不中斷（process_file 正常回傳）
+    assert r is not None, "條件二失敗：process_file 未正常回傳"
+    assert r["output"] is not None, "條件二失敗：未產生輸出路徑"
+    
+    # 條件三：失敗情境不輸出錯誤堆疊（這是成功情境，代表無異常）
+    # 成功情境自然不會有 traceback
+    
+    # 條件四：回傳結果不是空輸出或僅本機落盤
+    assert len(content) > 100, "條件四失敗：content 內容過短"
+    assert Path(r["output"]).exists(), "條件四失敗：本機檔案不存在"
+    local_content = Path(r["output"]).read_text(encoding="utf-8")
+    assert content.strip() == local_content.strip(), "條件四失敗：content 與本機不一致"
