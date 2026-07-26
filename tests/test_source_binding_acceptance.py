@@ -1565,6 +1565,7 @@ def test_final_output_each_argument_triad_coheres_with_same_source_and_argument(
         assert arg["checks"]["has_functional_gap"] is True
         assert arg["checks"]["has_user_value"] is True
         assert arg["checks"]["has_related_knowledge"] is True
+        assert arg["checks"]["related_knowledge_consistent"] is True
 
         # (2) 互相呼應：主題詞同時出現在三元中
         assert exp["topic"] in summary_plain
@@ -1866,6 +1867,51 @@ def test_related_knowledge_missing_impact_or_importance_fails_explicitly(tmp_pat
     assert "related_knowledge" in str(ei.value)
 
 
+def test_unrelated_triad_fails_cross_field_consistency_gate(tmp_path):
+    """負例：三欄皆存在但主題各寫各的，不得形成可交付的多視角論點。"""
+    from pathlib import Path
+
+    src = _source("law:92", "行政程序法第 92 條")
+    gap = Gap("行政處分如何定義？", "missing", "原稿未定義行政處分")
+    product = assemble_correction(
+        _doc(),
+        [gap],
+        {gap.question: [src]},
+        {gap.question: WrittenSupplement("行政處分定義[^1]。", [src.id])},
+        {gap.question: cross_validate(gap.question, [src])},
+    )
+    seg = product.segments[1]
+    seg.user_value = "協助咖啡愛好者掌握咖啡豆保存期限"
+    seg.related_knowledge = (
+        "颱風警報應及早發布（如何支撐決策品質：依風速規劃撤離路線；"
+        "如何補強使用者理解：協助居民辨識避難時機）"
+    )
+
+    raw_report = build_binding_report(product)
+    arg = raw_report["arguments"][0]
+    assert arg["functional_gap"].strip()
+    assert arg["user_value"].strip()
+    assert arg["related_knowledge"].strip()
+    assert arg["checks"]["has_related_knowledge"] is True
+    assert arg["checks"]["related_knowledge_consistent"] is False
+    assert arg["checks"]["at_least_one_source"] is True
+    assert arg["binding_ok"] is False
+    assert arg["binding_status"] == "fail"
+    assert raw_report["summary"]["all_arguments_ok"] is False
+
+    parsed = parse_binding_report(raw_report)
+    assert parsed["arguments"][0]["checks"]["related_knowledge_consistent"] is False
+
+    with pytest.raises(RuntimeError, match="跨欄位一致性驗收失敗") as exc_info:
+        write_binding_report(Path(tmp_path) / "out.md", product)
+    assert "related_knowledge 未對應 functional_gap／user_value" in str(exc_info.value)
+
+    # 報告不可把量測結果竄改為 True 後混過嚴格解析器。
+    raw_report["arguments"][0]["checks"]["related_knowledge_consistent"] = True
+    with pytest.raises(ValueError, match="跨欄位一致性量測不一致"):
+        parse_binding_report(raw_report)
+
+
 # ---- 四要素驗收：缺口、影響對象、重要性、關聯知識同論點呼應 -------------
 
 def test_final_output_each_argument_has_four_coherent_elements(tmp_path):
@@ -2074,6 +2120,7 @@ def test_final_output_each_argument_has_four_coherent_elements(tmp_path):
         assert arg["checks"]["has_functional_gap"] is True
         assert arg["checks"]["has_user_value"] is True
         assert arg["checks"]["has_related_knowledge"] is True
+        assert arg["checks"]["related_knowledge_consistent"] is True
         assert arg["checks"]["at_least_one_source"] is True
     
     # 驗證 Markdown 摘要可見列包含四要素

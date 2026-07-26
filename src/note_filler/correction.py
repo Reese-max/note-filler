@@ -30,6 +30,15 @@ MISSING_WRITTEN_TEXT = "【待補證】寫作結果缺失：gap 問題不在 wri
 RELATED_KNOWLEDGE_DECISION_MARKER = "支撐決策品質"
 RELATED_KNOWLEDGE_UNDERSTANDING_MARKER = "補強使用者理解"
 
+# 排除固定模板語，否則「讀者／說明」也會讓無關內容誤判一致。
+_RELATED_TOPIC_NOISE = re.compile(
+    r"如何支撐決策品質|如何補強使用者理解|對應功能缺口|功能缺口|使用者價值|"
+    r"提供可追溯依據|降低僅憑印象取捨的風險|原稿|未(?:定義|說明|提供)|"
+    r"缺(?:少|失)|補齊|所需的說明|幫助|協助|讀者|使用者|定義|限制|"
+    r"說明|理解|重要性?|影響|價值"
+)
+_RELATED_TOPIC_RUN = re.compile(r"[A-Za-z0-9]+|[\u4e00-\u9fff]+")
+
 
 def build_related_knowledge(
     *,
@@ -63,6 +72,64 @@ def related_knowledge_explains_value(text: str) -> bool:
         and RELATED_KNOWLEDGE_DECISION_MARKER in t
         and RELATED_KNOWLEDGE_UNDERSTANDING_MARKER in t
     )
+
+
+def _related_topic_tokens(text: str) -> set[str]:
+    normalized = _RELATED_TOPIC_NOISE.sub(" ", (text or "").casefold())
+
+    tokens: set[str] = set()
+    for run in _RELATED_TOPIC_RUN.findall(normalized):
+        if run.isascii():
+            if len(run) >= 2:
+                tokens.add(run)
+            continue
+        for size in range(2, min(8, len(run)) + 1):
+            tokens.update(run[i : i + size] for i in range(len(run) - size + 1))
+    return tokens
+
+
+def related_knowledge_matches_views(
+    text: str,
+    *,
+    functional_gap: str,
+    user_value: str,
+) -> bool:
+    """關聯知識、功能缺口與使用者價值須指向同一主題。"""
+    related = (text or "").strip()
+    gap = (functional_gap or "").strip()
+    value = (user_value or "").strip()
+    if not related_knowledge_explains_value(related) or not gap or not value:
+        return False
+
+    decision_at = related.find(RELATED_KNOWLEDGE_DECISION_MARKER)
+    understanding_at = related.find(RELATED_KNOWLEDGE_UNDERSTANDING_MARKER)
+    if understanding_at <= decision_at:
+        return False
+    decision_view = related[
+        decision_at + len(RELATED_KNOWLEDGE_DECISION_MARKER) : understanding_at
+    ]
+    understanding_view = related[
+        understanding_at + len(RELATED_KNOWLEDGE_UNDERSTANDING_MARKER) :
+    ]
+
+    gap_topics = _related_topic_tokens(gap)
+    value_topics = _related_topic_tokens(value)
+    decision_topics = _related_topic_tokens(decision_view)
+    understanding_topics = _related_topic_tokens(understanding_view)
+
+    # ponytail: 先用可重現的詞彙重疊；有量測到同義改寫誤拒時再換離線語義模型。
+    explicit_links = gap in decision_view and value in understanding_view
+    views_align = (
+        explicit_links
+        or not gap_topics
+        or not value_topics
+        or bool(gap_topics & value_topics)
+    )
+    gap_linked = gap in decision_view or bool(gap_topics & decision_topics)
+    value_linked = value in understanding_view or bool(
+        value_topics & understanding_topics
+    )
+    return views_align and gap_linked and value_linked
 
 
 @dataclass

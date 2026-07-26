@@ -5,6 +5,7 @@
   2. 來源可追溯（source_traceable：sources ↔ traceability 對齊）
   3. 無重複遺漏（no_duplicate_sources + no_omitted_traces + no_extra_traces）
   4. 摘要已落地成品（summary_matches_product）
+  5. 關聯知識與功能缺口／使用者價值跨欄位一致
 
 明確標示 cardinality：
   - one_to_one：剛好一個來源
@@ -29,6 +30,7 @@ from note_filler.angle_coverage import (
 from note_filler.correction import (
     build_related_knowledge,
     related_knowledge_explains_value,
+    related_knowledge_matches_views,
 )
 
 SCHEMA_ID = "note_filler.binding_report.v1"
@@ -96,6 +98,8 @@ REQUIRED_CHECK_KEYS = frozenset(
         "has_user_value",
         # 關聯知識：須明示如何支撐決策品質、如何補強使用者理解
         "has_related_knowledge",
+        # 三欄須指向同一主題，不得各寫各的
+        "related_knowledge_consistent",
         "summary_matches_product",
         # 角度覆蓋：論點須具備可機器讀的角度標籤／面向
         "has_angle_coverage",
@@ -287,6 +291,11 @@ def _evaluate_argument(seg, *, argument_index: int, segment_index: int) -> dict[
     else:
         related_knowledge = raw_related
     has_related_knowledge = related_knowledge_explains_value(related_knowledge)
+    related_knowledge_consistent = related_knowledge_matches_views(
+        related_knowledge,
+        functional_gap=functional_gap,
+        user_value=user_value,
+    )
 
     # 角度覆蓋（暫不含 relation；整份 arguments 組齊後再 attach）
     angle_coverage = coverage_from_segment(seg)
@@ -342,6 +351,7 @@ def _evaluate_argument(seg, *, argument_index: int, segment_index: int) -> dict[
         "has_functional_gap": has_functional_gap,
         "has_user_value": has_user_value,
         "has_related_knowledge": has_related_knowledge,
+        "related_knowledge_consistent": related_knowledge_consistent,
         "summary_matches_product": summary_matches_product,
         "has_angle_coverage": has_angle_coverage,
         # 角度有效性檢查
@@ -354,7 +364,10 @@ def _evaluate_argument(seg, *, argument_index: int, segment_index: int) -> dict[
     }
 
     necessity_ok = (
-        has_functional_gap and has_user_value and has_related_knowledge
+        has_functional_gap
+        and has_user_value
+        and has_related_knowledge
+        and related_knowledge_consistent
     )
     angle_ok = has_angle_coverage and angle_facet_complete
 
@@ -677,6 +690,26 @@ def parse_binding_report(data: Any) -> dict[str, Any]:
                 f"arguments[{i}] related_knowledge 合格但 checks.has_related_knowledge 未標 True"
             )
 
+        rk_consistent = related_knowledge_matches_views(
+            arg["related_knowledge"],
+            functional_gap=arg["functional_gap"],
+            user_value=arg["user_value"],
+        )
+        if checks.get("related_knowledge_consistent") is not rk_consistent:
+            raise ValueError(
+                f"arguments[{i}].checks.related_knowledge_consistent "
+                "與跨欄位一致性量測不一致"
+            )
+        if not rk_consistent:
+            if arg["binding_ok"] is not False:
+                raise ValueError(
+                    f"arguments[{i}] 關聯知識跨欄位不一致但 binding_ok 未標 False"
+                )
+            if arg["binding_status"] == "pass":
+                raise ValueError(
+                    f"arguments[{i}] 關聯知識跨欄位不一致但 binding_status 為 pass"
+                )
+
         # 角度覆蓋：固定結構 + 空欄語意
         ac = arg.get("angle_coverage")
         _reject_key_drift(
@@ -994,4 +1027,13 @@ def write_binding_report(output_path: Path, correction) -> Path:
             f"上限 {angle_summary['max_duplicate_ratio']:.3f}"
         )
         raise RuntimeError(f"角度有效性驗收失敗：{detail}")
+    consistency_issues = [
+        f"{arg['argument_id']}.related_knowledge 未對應 functional_gap／user_value"
+        for arg in report["arguments"]
+        if not arg["checks"]["related_knowledge_consistent"]
+    ]
+    if consistency_issues:
+        raise RuntimeError(
+            f"跨欄位一致性驗收失敗：{'；'.join(consistency_issues)}"
+        )
     return report_path
