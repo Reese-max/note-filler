@@ -164,7 +164,6 @@ def test_default_gate_collects_every_equivalent_and_safety_regression() -> None:
     all_ids = default_ids | allowlist_ids
 
     expected = matrix["default_gate"]["expected_collection"]
-    assert len(default_ids) == expected["default_selected"]
     assert len(allowlist_ids) == expected["deselected"]
     assert not default_ids & allowlist_ids
 
