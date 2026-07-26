@@ -19,10 +19,11 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from .audit import audit_event
-from .binding_report import write_binding_report
+from .binding_report import build_binding_report, write_binding_report
 from .export import to_docx, to_json, to_markdown
 from .knowledge.law_lookup import LawLookup
 from .llm import GrokClient
+from .metrics import calculate_polaris_metrics
 from .pipeline import require_non_empty_note_product, run_pipeline
 from .retrieve.twinkle import TwinkleClient
 
@@ -126,6 +127,7 @@ def write_delivery_receipt(
     verified: int = 0,
     error: str | None = None,
     delivery_status: dict[str, bool] | None = None,
+    polaris_metrics: dict[str, Any] | None = None,
 ) -> Path:
     """寫出 delivery_manifest.json,作為可查詢的交付回執。
 
@@ -139,6 +141,7 @@ def write_delivery_receipt(
       - supplements / verified: 計數
       - error: 失敗時的錯誤訊息(僅 status=failed)
       - delivery_status: 成品就緒、使用者通道、本機後援三個布林狀態
+      - polaris_metrics: 北極星筆記品質指標（可選）
     使用者可透過讀取此 manifest 確認交付已完成,而非只依賴本機檔案存在。
     """
     manifest_dir = output_path.parent
@@ -181,6 +184,8 @@ def write_delivery_receipt(
     }
     if error is not None:
         receipt["error"] = error
+    if polaris_metrics is not None:
+        receipt["polaris_metrics"] = polaris_metrics
 
     manifest_path.write_text(
         json.dumps(receipt, ensure_ascii=False, indent=2),
@@ -266,6 +271,13 @@ def process_file(path: Path, llm, twinkle, law, out_dir: Path | None, fmt: str) 
 
     # 先寫並驗收綁定報告；角度門檻失敗不得留下 delivered 回執。
     write_binding_report(dest, doc)
+    
+    # 計算北極星品質指標
+    binding_report = build_binding_report(doc)
+    polaris_metrics = calculate_polaris_metrics(
+        binding_report=binding_report,
+        delivery_status=delivery_status,
+    ).to_dict()
 
     # 送達後寫 delivery receipt:提供可查詢的交付回執,不只靠本機檔案存在
     write_delivery_receipt(
@@ -276,6 +288,7 @@ def process_file(path: Path, llm, twinkle, law, out_dir: Path | None, fmt: str) 
         supplements=len(supp),
         verified=ver,
         delivery_status=delivery_status,
+        polaris_metrics=polaris_metrics,
     )
     return {
         "input": str(path),
@@ -326,6 +339,22 @@ def main(argv: list[str] | None = None) -> int:
             delivery_status["user_channel_sent"] = True
             manifest_path = Path(r["output"]).parent / MANIFEST_NAME
             if manifest_path.exists():
+                # 重新計算 polaris_metrics（因為 user_channel_sent 狀態已更新）
+                polaris_metrics = None
+                try:
+                    # 嘗試從已存在的 binding_report 重新計算
+                    binding_report_path = Path(r["output"]).parent / "binding_report.json"
+                    if binding_report_path.exists():
+                        import json
+                        binding_report = json.loads(binding_report_path.read_text(encoding="utf-8"))
+                        polaris_metrics = calculate_polaris_metrics(
+                            binding_report=binding_report,
+                            delivery_status=delivery_status,
+                        ).to_dict()
+                except Exception:
+                    # 若無法重新計算，則不包含 polaris_metrics
+                    polaris_metrics = None
+                
                 write_delivery_receipt(
                     Path(r["output"]), f,
                     status="delivered",
@@ -334,6 +363,7 @@ def main(argv: list[str] | None = None) -> int:
                     supplements=r["supplements"],
                     verified=r["verified"],
                     delivery_status=delivery_status,
+                    polaris_metrics=polaris_metrics,
                 )
             ok += 1
             print(
@@ -363,6 +393,7 @@ def main(argv: list[str] | None = None) -> int:
                 )
             try:
                 dest_dir.mkdir(parents=True, exist_ok=True)
+                # 失敗時不計算 polaris_metrics（因為可能沒有完整的 binding_report）
                 write_delivery_receipt(
                     dest, f,
                     status="failed",
@@ -372,6 +403,7 @@ def main(argv: list[str] | None = None) -> int:
                     verified=0,
                     error=f"{type(e).__name__}: {e}",
                     delivery_status=delivery_status,
+                    polaris_metrics=None,
                 )
             except Exception as receipt_error:  # 回執持久化失敗不得吞掉或中斷後續檔案
                 audit_event(
