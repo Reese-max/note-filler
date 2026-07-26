@@ -1,0 +1,141 @@
+{
+  "schema": "note_filler.polaris_field_specification.v1",
+  "version": "1.0",
+  "specification_date": "2026-07-27",
+  "field_definitions": {
+    "functional_gap": {
+      "data_type": "string",
+      "source_location": "Segment.functional_gap",
+      "binding_report_path": "arguments[].functional_gap",
+      "generation_stage": "assemble_correction",
+      "default_value": "",
+      "required_for_metrics": ["FunctionalGapScore"],
+      "missing_data_handling": "status=missing_data",
+      "empty_value_handling": "not_counted_in_numerator"
+    },
+    "user_value": {
+      "data_type": "string",
+      "source_location": "Segment.user_value",
+      "binding_report_path": "arguments[].user_value",
+      "generation_stage": "assemble_correction",
+      "default_value": "",
+      "required_for_metrics": ["UserValueScore"],
+      "missing_data_handling": "status=missing_data",
+      "empty_value_handling": "not_counted_in_numerator"
+    },
+    "source_ids": {
+      "data_type": "list[string]",
+      "source_location": "Segment.source_ids",
+      "binding_report_path": "arguments[].source_ids",
+      "generation_stage": "assemble_correction",
+      "default_value": "[]",
+      "required_for_metrics": ["SourceBindingIntegrity"],
+      "missing_data_handling": "status=missing_data",
+      "empty_value_handling": "binding_status=pending_evidence_or_fail"
+    },
+    "angle_tags": {
+      "data_type": "list[string]",
+      "source_location": "Segment.angle_tags",
+      "binding_report_path": "arguments[].angle_tags",
+      "generation_stage": "assemble_correction",
+      "default_value": "[]",
+      "required_for_metrics": ["AngleDiversityIndex"],
+      "missing_data_handling": "status=missing_data",
+      "empty_value_handling": "score=0.0"
+    },
+    "delivery_status": {
+      "data_type": "dict",
+      "source_location": "delivery_manifest.delivery_status",
+      "binding_report_path": null,
+      "generation_stage": "process_file",
+      "default_value": "{\"primary_note_ready\":false,\"user_channel_sent\":false,\"local_fallback_written\":false}",
+      "required_for_metrics": ["DeliverySuccessRate"],
+      "missing_data_handling": "status=missing_data",
+      "sub_fields": {
+        "primary_note_ready": {"type": "bool", "default": false},
+        "user_channel_sent": {"type": "bool", "default": false},
+        "local_fallback_written": {"type": "bool", "default": false},
+        "segment_delivery_details": {"type": "list[dict]", "default": "[]"}
+      }
+    },
+    "binding_status": {
+      "data_type": "string",
+      "source_location": "binding_report.arguments[].binding_status",
+      "binding_report_path": "arguments[].binding_status",
+      "generation_stage": "build_binding_report",
+      "default_value": null,
+      "required_for_metrics": ["SourceBindingIntegrity"],
+      "missing_data_handling": "status=missing_data",
+      "valid_values": ["pass", "fail", "pending_evidence"]
+    },
+    "angle_coverage_summary": {
+      "data_type": "dict",
+      "source_location": "binding_report.angle_coverage_summary",
+      "binding_report_path": "angle_coverage_summary",
+      "generation_stage": "build_binding_report",
+      "default_value": null,
+      "required_for_metrics": ["AngleDiversityIndex"],
+      "missing_data_handling": "status=missing_data",
+      "sub_fields": {
+        "unique_angle_types": {"type": "list[string]", "default": "[]"},
+        "effective_angle_count": {"type": "int", "default": 0},
+        "duplicate_ratio": {"type": "float", "default": 0.0},
+        "coverage_ok": {"type": "bool", "default": false}
+      }
+    }
+  },
+  "metric_definitions": {
+    "FunctionalGapScore": {
+      "required_fields": ["functional_gap"],
+      "calculation_formula": "arguments_with_concrete_gap / total_arguments",
+      "threshold": 0.7,
+      "concrete_definition": "length >= 10 characters"
+    },
+    "UserValueScore": {
+      "required_fields": ["user_value"],
+      "calculation_formula": "arguments_with_clear_value / total_arguments",
+      "threshold": 0.7,
+      "clear_value_keywords": ["讀者", "說明", "理解", "reader", "understand", "explanation"]
+    },
+    "SourceBindingIntegrity": {
+      "required_fields": ["binding_status"],
+      "calculation_formula": "arguments_pass / total_arguments",
+      "threshold": 0.8,
+      "pass_condition": "binding_status == 'pass'"
+    },
+    "AngleDiversityIndex": {
+      "required_fields": ["angle_coverage_summary"],
+      "calculation_formula": "unique_angle_types / expected_angle_types",
+      "threshold": 0.6,
+      "expected_angle_types": 8
+    },
+    "DeliverySuccessRate": {
+      "required_fields": ["delivery_status"],
+      "calculation_formula": "successful_deliveries / total_attempts",
+      "threshold": 0.9,
+      "success_condition": "all boolean fields are true"
+    }
+  },
+  "output_locations": {
+    "json": {
+      "file_extension": ".json",
+      "output_function": "export.to_json",
+      "metrics_location": "polaris_metrics"
+    },
+    "markdown": {
+      "file_extension": ".md",
+      "output_function": "export.to_markdown",
+      "metrics_location": "end_summary_block"
+    },
+    "docx": {
+      "file_extension": ".docx",
+      "output_function": "export.to_docx",
+      "metrics_location": "end_paragraph"
+    },
+    "delivery_manifest": {
+      "file_name": "delivery_manifest.json",
+      "output_function": "__main__.write_delivery_receipt",
+      "metrics_location": "polaris_metrics"
+    }
+  }
+}
