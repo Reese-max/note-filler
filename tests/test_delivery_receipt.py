@@ -99,7 +99,10 @@ def test_process_file_writes_delivery_receipt_on_success(tmp_path, monkeypatch):
 
     # manifest 內容必須合法且含所有必要欄位
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-    required_keys = {"output_path", "input_path", "status", "timestamp", "content_hash"}
+    required_keys = {
+        "output_path", "input_path", "status", "timestamp", "content_hash",
+        "delivery_status",
+    }
     assert required_keys.issubset(manifest.keys()), (
         f"manifest 缺少必要欄位: {required_keys - manifest.keys()}"
     )
@@ -109,6 +112,11 @@ def test_process_file_writes_delivery_receipt_on_success(tmp_path, monkeypatch):
     assert manifest["output_path"] == r["output"]
     assert manifest["input_path"] == str(note)
     assert manifest["content_hash"], "content_hash 不可為空"
+    assert manifest["delivery_status"] == {
+        "primary_note_ready": True,
+        "user_channel_sent": False,
+        "local_fallback_written": True,
+    }
 
 
 def test_process_file_receipt_status_is_delivered(tmp_path, monkeypatch):

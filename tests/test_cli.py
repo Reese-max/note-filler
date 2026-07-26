@@ -104,6 +104,11 @@ def test_process_file_writes_md_and_counts(tmp_path, monkeypatch):
     assert r["supplements"] == 2 and r["verified"] == 1
     assert r["output"] == str(dest)
     assert r["content"] == dest.read_text(encoding="utf-8")
+    assert r["delivery_status"] == {
+        "primary_note_ready": True,
+        "user_channel_sent": False,
+        "local_fallback_written": True,
+    }
 
 
 def test_process_file_json_format_and_outdir(tmp_path, monkeypatch):
@@ -182,6 +187,12 @@ def test_main_keeps_artifact_and_delivers_full_content_to_stdout(tmp_path, monke
     assert captured.out == f"{content}\n"
     assert "✅" in captured.err
     assert "完成 1/1 檔" in captured.err
+    receipt = json.loads((out / cli.MANIFEST_NAME).read_text(encoding="utf-8"))
+    assert receipt["delivery_status"] == {
+        "primary_note_ready": True,
+        "user_channel_sent": True,
+        "local_fallback_written": True,
+    }
 
 
 def test_main_stdout_delivery_failure_is_not_counted_as_success(tmp_path, monkeypatch, capsys):
@@ -196,6 +207,11 @@ def test_main_stdout_delivery_failure_is_not_counted_as_success(tmp_path, monkey
         "content": "完整筆記內容",
         "supplements": 0,
         "verified": 0,
+        "delivery_status": {
+            "primary_note_ready": True,
+            "user_channel_sent": False,
+            "local_fallback_written": True,
+        },
     })
     monkeypatch.setattr(cli, "GrokClient", lambda: None)
     monkeypatch.setattr(cli, "TwinkleClient", lambda token="": None)
@@ -217,6 +233,11 @@ def test_main_stdout_delivery_failure_is_not_counted_as_success(tmp_path, monkey
     assert "message output unavailable" in captured.err
     assert "完成 0/1 檔" in captured.err
     assert receipt["status"] == "failed"
+    assert receipt["delivery_status"] == {
+        "primary_note_ready": True,
+        "user_channel_sent": False,
+        "local_fallback_written": True,
+    }
 
 
 def test_main_delivery_failure_not_counted_as_success(tmp_path, monkeypatch, capsys):

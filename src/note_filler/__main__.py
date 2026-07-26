@@ -33,6 +33,27 @@ _SUFFIXES = {".txt", ".docx"}
 MANIFEST_NAME = "delivery_manifest.json"
 
 
+def _delivery_status(
+    *,
+    primary_note_ready: bool = False,
+    user_channel_sent: bool = False,
+    local_fallback_written: bool = False,
+) -> dict[str, bool]:
+    """建立固定欄位的機器可讀送達狀態。"""
+    return {
+        "primary_note_ready": primary_note_ready,
+        "user_channel_sent": user_channel_sent,
+        "local_fallback_written": local_fallback_written,
+    }
+
+
+def _is_non_empty_file(path: Path) -> bool:
+    try:
+        return path.is_file() and path.stat().st_size > 0
+    except OSError:
+        return False
+
+
 def write_delivery_receipt(
     output_path: Path,
     input_path: Path,
@@ -43,6 +64,7 @@ def write_delivery_receipt(
     supplements: int = 0,
     verified: int = 0,
     error: str | None = None,
+    delivery_status: dict[str, bool] | None = None,
 ) -> Path:
     """寫出 delivery_manifest.json,作為可查詢的交付回執。
 
@@ -55,6 +77,7 @@ def write_delivery_receipt(
       - format: 輸出格式
       - supplements / verified: 計數
       - error: 失敗時的錯誤訊息(僅 status=failed)
+      - delivery_status: 成品就緒、使用者通道、本機後援三個布林狀態
     使用者可透過讀取此 manifest 確認交付已完成,而非只依賴本機檔案存在。
     """
     manifest_dir = output_path.parent
@@ -74,6 +97,7 @@ def write_delivery_receipt(
     if content is not None:
         content_hash = hashlib.sha256(content.encode("utf-8")).hexdigest()[:16]
 
+    status_data = delivery_status or {}
     receipt = {
         "output_path": str(output_path),
         "input_path": str(input_path),
@@ -83,6 +107,15 @@ def write_delivery_receipt(
         "format": fmt,
         "supplements": supplements,
         "verified": verified,
+        "delivery_status": _delivery_status(
+            primary_note_ready=bool(
+                status_data.get("primary_note_ready", status == "delivered")
+            ),
+            user_channel_sent=bool(status_data.get("user_channel_sent", False)),
+            local_fallback_written=bool(
+                status_data.get("local_fallback_written", _is_non_empty_file(output_path))
+            ),
+        ),
     }
     if error is not None:
         receipt["error"] = error
@@ -148,6 +181,7 @@ def process_file(path: Path, llm, twinkle, law, out_dir: Path | None, fmt: str) 
     body = json.dumps(to_json(doc), ensure_ascii=False, indent=2) if fmt == "json" else to_markdown(doc)
     if not body.strip():
         raise RuntimeError(f"訂正稿內容為空,拒絕視為送達成功:{path}")
+    delivery_status = _delivery_status(primary_note_ready=True)
 
     if fmt == "docx":
         to_docx(doc, str(dest))
@@ -156,6 +190,7 @@ def process_file(path: Path, llm, twinkle, law, out_dir: Path | None, fmt: str) 
             raise RuntimeError(f"訂正稿寫出失敗或為空,拒絕視為送達成功:{dest}")
     else:
         dest.write_text(body, encoding="utf-8", newline="\n")
+    delivery_status["local_fallback_written"] = True
 
     # 先寫並驗收綁定報告；角度門檻失敗不得留下 delivered 回執。
     write_binding_report(dest, doc)
@@ -168,6 +203,7 @@ def process_file(path: Path, llm, twinkle, law, out_dir: Path | None, fmt: str) 
         fmt=fmt,
         supplements=len(supp),
         verified=ver,
+        delivery_status=delivery_status,
     )
     return {
         "input": str(path),
@@ -175,6 +211,7 @@ def process_file(path: Path, llm, twinkle, law, out_dir: Path | None, fmt: str) 
         "content": body,
         "supplements": len(supp),
         "verified": ver,
+        "delivery_status": delivery_status,
     }
 
 
@@ -203,9 +240,29 @@ def main(argv: list[str] | None = None) -> int:
 
     ok = 0
     for f in files:
+        r = None
         try:
             r = process_file(f, llm, twinkle, law, out_dir, args.format)
+            delivery_status = r.setdefault(
+                "delivery_status",
+                _delivery_status(
+                    primary_note_ready=bool(str(r.get("content", "")).strip()),
+                    local_fallback_written=_is_non_empty_file(Path(r["output"])),
+                ),
+            )
             print(r["content"], flush=True)
+            delivery_status["user_channel_sent"] = True
+            manifest_path = Path(r["output"]).parent / MANIFEST_NAME
+            if manifest_path.exists():
+                write_delivery_receipt(
+                    Path(r["output"]), f,
+                    status="delivered",
+                    content=r["content"] if args.format != "docx" else None,
+                    fmt=args.format,
+                    supplements=r["supplements"],
+                    verified=r["verified"],
+                    delivery_status=delivery_status,
+                )
             ok += 1
             print(
                 f"✅ {r['input']} → {r['output']}(補充 {r['supplements']}、verified {r['verified']})",
@@ -224,6 +281,14 @@ def main(argv: list[str] | None = None) -> int:
             # 寫 delivery_manifest 失敗回執,讓下游可查詢交付狀態
             dest_dir = out_dir if out_dir is not None else f.parent
             dest = dest_dir / f"{f.stem}.訂正稿.{args.format}"
+            if r is not None and isinstance(r.get("delivery_status"), dict):
+                delivery_status = r["delivery_status"]
+            else:
+                local_fallback_written = _is_non_empty_file(dest)
+                delivery_status = _delivery_status(
+                    primary_note_ready=local_fallback_written,
+                    local_fallback_written=local_fallback_written,
+                )
             try:
                 dest_dir.mkdir(parents=True, exist_ok=True)
                 write_delivery_receipt(
@@ -234,6 +299,7 @@ def main(argv: list[str] | None = None) -> int:
                     supplements=0,
                     verified=0,
                     error=f"{type(e).__name__}: {e}",
+                    delivery_status=delivery_status,
                 )
             except Exception as receipt_error:  # 回執持久化失敗不得吞掉或中斷後續檔案
                 audit_event(

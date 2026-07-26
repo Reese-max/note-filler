@@ -593,7 +593,9 @@ def test_final_note_delivery_all_conditions(tmp_path):
     assert content.strip() == local_content.strip(), "條件四失敗：content 與本機不一致"
 
 
-def test_final_note_delivery_with_partial_page_failure_and_generation_exception(tmp_path):
+def test_final_note_delivery_with_partial_page_failure_and_generation_exception(
+    tmp_path, monkeypatch
+):
     """端到端正向測試：模擬部分頁面缺失與一段內容生成例外時，最終仍能取得完整筆記輸出。
     
     測試情境：
@@ -609,37 +611,53 @@ def test_final_note_delivery_with_partial_page_failure_and_generation_exception(
         "行政程序法要求行政行為應遵守正當程序。\n\n本筆記僅記錄部分重點,尚未展開。",
     )
     
-    # 模擬部分頁面缺失：第一個 gap 的檢索返回部分來源，第二個 gap 返回正常來源
-    class PartialFailureTwinkle:
-        def __init__(self):
-            self.call_count = 0
-        
-        def search(self, query, n=3):
-            self.call_count += 1
-            if self.call_count == 1:
-                # 第一次檢索（第一個 gap）返回部分來源
-                return [_src("s1"), _src("s2")]
-            else:
-                # 第二次檢索（第二個 gap）返回正常來源
-                return [_src("s3"), _src("s4")]
-    
-    # 模擬一段內容生成例外：第二個 gap 的寫作會降級為待補證
+    from note_filler import pipeline as pipeline_module
+    from note_filler.retrieve import web as web_module
+
+    search_calls = 0
+
+    def partial_search(query, max_results):
+        nonlocal search_calls
+        search_calls += 1
+        if search_calls == 1:
+            return [
+                {"title": "缺失頁", "href": "https://example.test/missing"},
+                {"title": "可用頁", "href": "https://example.test/available"},
+            ]
+        return [{"title": "缺失頁", "href": "https://example.test/missing"}]
+
+    available_page = "官方完整頁面。" + "行政處分是具外部法律效果的行政行為。" * 30
+    monkeypatch.setattr(web_module, "_ddg_search", partial_search)
+    monkeypatch.setattr(
+        web_module,
+        "_fetch_fulltext",
+        lambda url: available_page if url.endswith("/available") else None,
+    )
+
+    # 第二個 gap 的寫作真正拋出例外，pipeline 必須轉成待補證填充。
+    real_write_supplement = pipeline_module.write_supplement
+
+    def partial_write(gap, sources, client):
+        if gap.question == "訴願前置程序為何?":
+            raise RuntimeError("private-generation-error")
+        return real_write_supplement(gap, sources, client)
+
+    monkeypatch.setattr(pipeline_module, "write_supplement", partial_write)
+
     llm = FakeLLM([
-        "law",
+        "other",
         "行政處分的定義為何?\n訴願前置程序為何?",
         json.dumps([
             {"question": "行政處分的定義為何?", "status": "missing", "reason": "筆記未展開定義"},
             {"question": "訴願前置程序為何?", "status": "missing", "reason": "筆記未提及"},
         ], ensure_ascii=False),
-        '{"keyword": "行政處分", "law_name": "行政程序法"}',
+        "行政處分 定義",
+        '{"level":"C","doc_date":"2026-07-26","reason":"官方頁面"}',
         "行政處分係指行政機關就公法上具體事件所為之對外直接發生法律效果之單方行政行為[^1]。",
-        '{"keyword": "訴願", "law_name": "訴願法"}',
-        "【待補證】此問題缺乏可用來源,尚待補充。",
+        "訴願 前置程序",
     ])
-    
-    twinkle = PartialFailureTwinkle()
-    
-    r = cli.process_file(note, llm, twinkle, FakeLaw(), out_dir=None, fmt="md")
+
+    r = cli.process_file(note, llm, FakeTwinkle([]), FakeLaw(), out_dir=None, fmt="md")
     
     content = r["content"]
     
@@ -667,6 +685,7 @@ def test_final_note_delivery_with_partial_page_failure_and_generation_exception(
     # 驗證不含內部稽核事件字串
     assert "note_product_empty" not in content, "最終可見筆記含內部稽核事件字串"
     assert "MISSING_WRITTEN_TEXT" not in content, "最終可見筆記含內部佔位文"
+    assert "private-generation-error" not in content, "最終可見筆記洩漏生成例外"
     
     # 驗證含實質筆記內容（非僅錯誤訊息或技術輸出）
     assert any(kw in content for kw in ("行政程序法", "正當程序", "行政處分")), (
@@ -682,6 +701,14 @@ def test_final_note_delivery_with_partial_page_failure_and_generation_exception(
     assert "行政處分係指行政機關就公法上具體事件所為之對外直接發生法律效果之單方行政行為" in content, (
         "最終可見筆記未包含補充內容"
     )
+    assert "【待補證】" in content, "生成例外未降級為待補證填充"
+    assert r["delivery_status"] == {
+        "primary_note_ready": True,
+        "user_channel_sent": False,
+        "local_fallback_written": True,
+    }
+    receipt = json.loads((tmp_path / cli.MANIFEST_NAME).read_text(encoding="utf-8"))
+    assert receipt["delivery_status"] == r["delivery_status"]
 
 
 def test_silent_failure_detection_final_note_readable_and_error_free(tmp_path):

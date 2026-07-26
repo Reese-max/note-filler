@@ -8,7 +8,7 @@ from .domain import detect_domain              # T3
 from .questions import generate_questions      # T4
 from .gap import detect_gaps                   # T5
 from .retrieve import retrieve_for_gap          # T9
-from .write import write_supplement            # Q3
+from .write import WrittenSupplement, write_supplement            # Q3
 from .verify import cross_validate            # T10
 from .knowledge.law_citation_check import check_law_citations   # T8
 from .correction import assemble_correction       # T12
@@ -182,7 +182,10 @@ def run_pipeline(path, llm, twinkle, law):
                 error=str(exc),
                 outcome="pending_evidence",
             )
-            continue
+            w = WrittenSupplement(
+                text="【待補證】此段內容生成暫時未完成；已保留原稿與缺口資訊，請重新產生並查核來源。",
+                used_source_ids=[],
+            )
         used = [s for s in sources if s.id in w.used_source_ids]
         omitted_ids = [s.id for s in sources if s.id not in w.used_source_ids]
         if omitted_ids:
