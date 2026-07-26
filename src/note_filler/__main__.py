@@ -54,6 +54,28 @@ def _is_non_empty_file(path: Path) -> bool:
         return False
 
 
+def _check_no_leaked_errors(content: str) -> None:
+    """檢查內容是否外洩底層錯誤訊息，若有則拒絕送達。
+    
+    防止靜默失敗被錯誤訊息污染成品筆記，若內容中出現以下字樣直接視為失敗：
+    - traceback
+    - provider error
+    - connection error
+    """
+    error_patterns = [
+        "traceback",
+        "provider error", 
+        "connection error",
+    ]
+    content_lower = content.lower()
+    for pattern in error_patterns:
+        if pattern in content_lower:
+            raise RuntimeError(
+                f"成品筆記內容檢測到底層錯誤訊息('{pattern}')，"
+                f"拒絕視為送達成功以避免錯誤訊息污染成品"
+            )
+
+
 def write_delivery_receipt(
     output_path: Path,
     input_path: Path,
@@ -181,6 +203,10 @@ def process_file(path: Path, llm, twinkle, law, out_dir: Path | None, fmt: str) 
     body = json.dumps(to_json(doc), ensure_ascii=False, indent=2) if fmt == "json" else to_markdown(doc)
     if not body.strip():
         raise RuntimeError(f"訂正稿內容為空,拒絕視為送達成功:{path}")
+    
+    # 防禦層：檢查內容是否外洩底層錯誤訊息（JSON 與 Markdown 都需檢查）
+    _check_no_leaked_errors(body)
+    
     delivery_status = _delivery_status(primary_note_ready=True)
 
     if fmt == "docx":
@@ -188,6 +214,8 @@ def process_file(path: Path, llm, twinkle, law, out_dir: Path | None, fmt: str) 
         # 送達後再驗：空檔不得當成功（digest 已生成但未真正送達）
         if not dest.is_file() or dest.stat().st_size == 0:
             raise RuntimeError(f"訂正稿寫出失敗或為空,拒絕視為送達成功:{dest}")
+        # DOCX 也需檢查 Markdown 內容是否外洩錯誤
+        _check_no_leaked_errors(body)
     else:
         dest.write_text(body, encoding="utf-8", newline="\n")
     delivery_status["local_fallback_written"] = True

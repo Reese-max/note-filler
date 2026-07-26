@@ -19,7 +19,7 @@ from note_filler import __main__ as cli
 
 
 class _FakeDoc:
-    """最小替身:含 2 個 segment,模擬 pipeline 產出。
+    """最小替身:含 2 個 segment,模擬 pipeline 產出.
 
     成功路徑必須具備角度有效性必要欄位（functional_gap／user_value／相異角度），
     否則 write_binding_report 角度有效性閘會明確拒絕。
@@ -285,3 +285,79 @@ def test_process_file_manifest_copexists_with_output(tmp_path, monkeypatch):
     assert manifest.exists(), "manifest 必須存在"
     # 兩者在同一目錄
     assert output.parent == manifest.parent
+
+
+# ---- 禁止外洩底層錯誤檢查 ----------------------------------------------
+
+def test_process_file_rejects_traceback_in_content(tmp_path, monkeypatch):
+    """內容含 traceback 字樣時應拒絕送達成功。"""
+    note = tmp_path / "note.txt"
+    note.write_text("x", encoding="utf-8")
+    monkeypatch.setattr(cli, "run_pipeline", lambda *a, **k: _FakeDoc())
+    monkeypatch.setattr(cli, "to_markdown", lambda doc: "正常內容\nTraceback (most recent call last):")
+
+    with pytest.raises(RuntimeError, match="traceback"):
+        cli.process_file(note, None, None, None, out_dir=None, fmt="md")
+
+
+def test_process_file_rejects_provider_error_in_content(tmp_path, monkeypatch):
+    """內容含 provider error 字樣時應拒絕送達成功。"""
+    note = tmp_path / "note.txt"
+    note.write_text("x", encoding="utf-8")
+    monkeypatch.setattr(cli, "run_pipeline", lambda *a, **k: _FakeDoc())
+    monkeypatch.setattr(cli, "to_markdown", lambda doc: "正常內容\nProvider error: API key invalid")
+
+    with pytest.raises(RuntimeError, match="provider error"):
+        cli.process_file(note, None, None, None, out_dir=None, fmt="md")
+
+
+def test_process_file_rejects_connection_error_in_content(tmp_path, monkeypatch):
+    """內容含 connection error 字樣時應拒絕送達成功。"""
+    note = tmp_path / "note.txt"
+    note.write_text("x", encoding="utf-8")
+    monkeypatch.setattr(cli, "run_pipeline", lambda *a, **k: _FakeDoc())
+    monkeypatch.setattr(cli, "to_markdown", lambda doc: "正常內容\nConnection error: timeout")
+
+    with pytest.raises(RuntimeError, match="connection error"):
+        cli.process_file(note, None, None, None, out_dir=None, fmt="md")
+
+
+def test_process_file_allows_clean_content(tmp_path, monkeypatch):
+    """不含錯誤訊息的乾淨內容應正常送達。"""
+    note = tmp_path / "note.txt"
+    note.write_text("x", encoding="utf-8")
+    monkeypatch.setattr(cli, "run_pipeline", lambda *a, **k: _FakeDoc())
+    monkeypatch.setattr(cli, "to_markdown", lambda doc: "這是乾淨的訂正稿內容，沒有錯誤訊息。")
+
+    r = cli.process_file(note, None, None, None, out_dir=None, fmt="md")
+    assert r["output"]
+    manifest_path = Path(r["output"]).parent / cli.MANIFEST_NAME
+    assert manifest_path.exists()
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    assert manifest["status"] == "delivered"
+
+
+def test_process_file_json_format_rejects_traceback(tmp_path, monkeypatch):
+    """JSON 格式含 traceback 字樣時也應拒絕送達成功。"""
+    note = tmp_path / "note.txt"
+    note.write_text("x", encoding="utf-8")
+    monkeypatch.setattr(cli, "run_pipeline", lambda *a, **k: _FakeDoc())
+    
+    def _to_json_with_traceback(doc):
+        return {"text": "Traceback (most recent call last):", "ok": True}
+    
+    monkeypatch.setattr(cli, "to_json", _to_json_with_traceback)
+
+    with pytest.raises(RuntimeError, match="traceback"):
+        cli.process_file(note, None, None, None, out_dir=None, fmt="json")
+
+
+def test_check_no_leaked_errors_case_insensitive(tmp_path, monkeypatch):
+    """錯誤檢查應不區分大小寫。"""
+    note = tmp_path / "note.txt"
+    note.write_text("x", encoding="utf-8")
+    monkeypatch.setattr(cli, "run_pipeline", lambda *a, **k: _FakeDoc())
+    monkeypatch.setattr(cli, "to_markdown", lambda doc: "正常內容\nTRACEBACK: some error")
+
+    with pytest.raises(RuntimeError, match="traceback"):
+        cli.process_file(note, None, None, None, out_dir=None, fmt="md")
