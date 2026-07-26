@@ -592,6 +592,77 @@ class TestSkipBranches:
 class TestEndToEndFaultInjection:
     """多階段同時故障時，pipeline 應降級並在每個故障點留下 audit。"""
 
+    @pytest.mark.parametrize(
+        ("provider_result", "error_type"),
+        [
+            (RuntimeError("provider-internal-token=secret"), "RuntimeError"),
+            (None, "AttributeError"),
+        ],
+        ids=["provider-exception", "malformed-response"],
+    )
+    def test_cli_provider_failure_is_silent_and_delivers_complete_note(
+        self, tmp_path, monkeypatch, caplog, capsys, provider_result, error_type
+    ):
+        """外部模型失敗時降為待補證；使用者只收到完整、穩定的筆記。"""
+        note = tmp_path / "provider-fault.txt"
+        original_text = "原稿第一段逐字保留。\n原稿第二段逐字保留。"
+        note.write_text(original_text, encoding="utf-8")
+        out = tmp_path / "out"
+        db = tmp_path / "law.db"
+        db.touch()
+        question = "外部模型失敗時如何保留筆記？"
+        llm = _SequenceLLM([
+            "law",
+            question,
+            json.dumps(
+                [{"question": question, "status": "missing", "reason": "原稿未說明回退行為"}],
+                ensure_ascii=False,
+            ),
+            '{"keywords":[]}',
+            provider_result,
+        ])
+
+        class Twinkle:
+            def search(self, query):
+                return [_source("source-provider-fallback", level="B")]
+
+        class Law:
+            def search_articles(self, keyword, limit, law_name):
+                return []
+
+        monkeypatch.setattr(cli, "GrokClient", lambda: llm)
+        monkeypatch.setattr(cli, "TwinkleClient", lambda token="": Twinkle())
+        monkeypatch.setattr(cli, "LawLookup", lambda path: Law())
+
+        with caplog.at_level(logging.WARNING, logger="note_filler.pipeline"):
+            exit_code = cli.main([
+                str(note), "-o", str(out), "--db", str(db), "--token", "test-token"
+            ])
+
+        captured = capsys.readouterr()
+        delivered = (out / "provider-fault.訂正稿.md").read_text(encoding="utf-8")
+        receipt = json.loads((out / cli.MANIFEST_NAME).read_text(encoding="utf-8"))
+        visible = captured.out + captured.err + delivered
+
+        assert exit_code == 0
+        assert original_text in delivered
+        assert "【待補證】" in delivered
+        assert receipt["status"] == "delivered"
+        assert receipt["content_hash"]
+        assert "error" not in receipt
+        assert "✅" in captured.err
+        assert "完成 1/1 檔。" in captured.err
+        assert "source-provider-fallback" not in delivered
+        assert "provider-internal-token=secret" not in visible
+        assert error_type not in visible
+        assert "Traceback" not in visible
+        assert any(
+            record["event"] == "supplement_writing_failed"
+            and record["error_type"] == error_type
+            and record["outcome"] == "pending_evidence"
+            for record in _audit_records(caplog)
+        )
+
     def test_digest_exception_preserves_other_segments_and_output(self, tmp_path, caplog):
         """單一 digest 撰寫例外降為待補證，其餘內容仍完成輸出且不暴露堆疊。"""
         note = tmp_path / "digest-fault.txt"
