@@ -397,6 +397,9 @@ class TestOutputConsistency:
                 continue
             if stripped.startswith("> **角度覆蓋摘要**"):
                 continue
+            # Skip polaris metrics line
+            if stripped.startswith("> **北極星分數**"):
+                continue
             md_originals.append(stripped)
 
         # Original paragraphs from docx (first N paragraphs where N = original count)
@@ -421,6 +424,8 @@ class TestOutputConsistency:
             if stripped.startswith("角度覆蓋："):
                 continue
             if stripped.startswith("角度覆蓋摘要："):
+                continue
+            if stripped.startswith("北極星分數："):
                 continue
             if stripped.startswith("追溯："):
                 continue

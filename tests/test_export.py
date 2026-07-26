@@ -5,7 +5,7 @@ import pytest
 from note_filler.parse import Document, Paragraph
 from note_filler.correction import CorrectionDoc, Segment, build_related_knowledge
 from note_filler.retrieve.models import Source
-from note_filler.export import to_docx, to_json, to_markdown
+from note_filler.export import to_docx, to_json, to_markdown, _calculate_polaris_for_doc
 
 
 def _sample_doc() -> CorrectionDoc:
@@ -134,11 +134,11 @@ def test_to_json_binding_summary_matches_segments() -> None:
 
 
 def test_to_markdown_ends_with_binding_line() -> None:
-    """Markdown 輸出末尾必須包含來源綁定驗證行，格式為 > **來源綁定**。"""
+    """Markdown 輸出必須包含來源綁定驗證行，格式為 > **來源綁定**。"""
     md = to_markdown(_sample_doc())
-    last_lines = md.strip().splitlines()[-2:]
-    binding_lines = [ln for ln in last_lines if "來源綁定" in ln]
-    assert len(binding_lines) >= 1, "Markdown 末段應含來源綁定驗證行"
+    # 綁定驗證行可能不在最後一行（因為北極星分數行在其後），但必須存在
+    binding_lines = [ln for ln in md.splitlines() if "來源綁定" in ln]
+    assert len(binding_lines) >= 1, "Markdown 應含來源綁定驗證行"
     assert "✓" in binding_lines[0] or "✗" in binding_lines[0]
 
 
@@ -356,3 +356,253 @@ def test_to_docx_contains_machine_parseable_source_list(tmp_path):
         for p in angle_lines
     )
     assert any(p.startswith("角度覆蓋摘要：") for p in paras)
+
+
+# ---- 北極星品質指標整合測試 ----
+
+class TestPolarisMetricsIntegration:
+    """北極星品質指標在成品輸出中的整合測試。"""
+
+    def test_to_json_contains_polaris_metrics(self):
+        """JSON 輸出必須包含 polaris_metrics 頂層欄位。"""
+        data = to_json(_sample_doc())
+        assert "polaris_metrics" in data, "JSON 輸出應含 polaris_metrics"
+        polaris = data["polaris_metrics"]
+        assert polaris["schema"] == "note_filler.polaris_metrics.v1"
+        assert polaris["overall_status"] in ["excellent", "good", "acceptable", "poor", "error"]
+        assert isinstance(polaris["core_metrics_pass_count"], int)
+        assert isinstance(polaris["core_metrics_total_count"], int)
+        assert polaris["core_metrics_total_count"] == 5
+
+    def test_to_json_polaris_metrics_has_all_subscores(self):
+        """polaris_metrics 必須包含所有五項分項分數。"""
+        data = to_json(_sample_doc())
+        polaris = data["polaris_metrics"]
+        
+        # 驗證五項分項分數都存在
+        for key in [
+            "functional_gap_score",
+            "user_value_score",
+            "source_binding_integrity",
+            "angle_diversity_index",
+            "delivery_success_rate",
+        ]:
+            assert key in polaris, f"polaris_metrics 應含 {key}"
+            subscore = polaris[key]
+            assert "score" in subscore, f"{key} 應含 score"
+            assert "status" in subscore, f"{key} 應含 status"
+            assert "passes_threshold" in subscore, f"{key} 應含 passes_threshold"
+            assert 0.0 <= subscore["score"] <= 1.0, f"{key}.score 應在 0-1 之間"
+
+    def test_to_json_polaris_metrics_judgment_basis(self):
+        """polaris_metrics 每項分項分數必須包含判定依據（threshold）。"""
+        data = to_json(_sample_doc())
+        polaris = data["polaris_metrics"]
+        
+        for key in [
+            "functional_gap_score",
+            "user_value_score",
+            "source_binding_integrity",
+            "angle_diversity_index",
+            "delivery_success_rate",
+        ]:
+            subscore = polaris[key]
+            assert "threshold" in subscore, f"{key} 應含 threshold（判定門檻）"
+            assert isinstance(subscore["threshold"], float), f"{key}.threshold 應為 float"
+
+    def test_to_json_polaris_metrics_source_binding_detail(self):
+        """source_binding_integrity 必須包含通過/失敗/待補證計數。"""
+        data = to_json(_sample_doc())
+        sbi = data["polaris_metrics"]["source_binding_integrity"]
+        assert "total_arguments" in sbi
+        assert "arguments_pass" in sbi
+        assert "arguments_fail" in sbi
+        assert "arguments_pending" in sbi
+        assert isinstance(sbi["total_arguments"], int)
+        assert isinstance(sbi["arguments_pass"], int)
+
+    def test_to_json_polaris_metrics_functional_gap_detail(self):
+        """functional_gap_score 必須包含具體描述計數。"""
+        data = to_json(_sample_doc())
+        fgs = data["polaris_metrics"]["functional_gap_score"]
+        assert "total_arguments" in fgs
+        assert "arguments_with_concrete_gap" in fgs
+        assert "arguments_with_empty_gap" in fgs
+        assert isinstance(fgs["total_arguments"], int)
+
+    def test_to_json_polaris_metrics_angle_diversity_detail(self):
+        """angle_diversity_index 必須包含角度覆蓋資訊。"""
+        data = to_json(_sample_doc())
+        adi = data["polaris_metrics"]["angle_diversity_index"]
+        assert "unique_angle_types" in adi
+        assert "expected_angle_types" in adi
+        assert "effective_angle_count" in adi
+        assert isinstance(adi["unique_angle_types"], int)
+        assert isinstance(adi["expected_angle_types"], int)
+
+    def test_to_markdown_contains_polaris_metrics_line(self):
+        """Markdown 輸出必須包含北極星分數摘要行。"""
+        md = to_markdown(_sample_doc())
+        polaris_lines = [ln for ln in md.splitlines() if "> **北極星分數**" in ln]
+        assert len(polaris_lines) == 1, f"應有 1 筆北極星分數行，實際 {len(polaris_lines)}"
+        line = polaris_lines[0]
+        # 驗證包含 overall_status
+        assert "overall=" in line
+        # 驗證包含各分項分數
+        assert "functional_gap=" in line
+        assert "user_value=" in line
+        assert "source_binding=" in line
+        assert "angle_diversity=" in line
+        assert "delivery=" in line
+
+    def test_to_markdown_polaris_metrics_has_pass_fail_marks(self):
+        """Markdown 北極星分數行必須包含通過/未通過標記。"""
+        md = to_markdown(_sample_doc())
+        polaris_lines = [ln for ln in md.splitlines() if "> **北極星分數**" in ln]
+        assert len(polaris_lines) == 1
+        line = polaris_lines[0]
+        # 每項分數後應有 ✓ 或 ✗ 標記
+        assert "✓" in line or "✗" in line, "北極星分數行應含通過/未通過標記"
+
+    def test_to_markdown_polaris_metrics_machine_parseable(self):
+        """Markdown 北極星分數行必須可被機器解析。"""
+        import re
+        md = to_markdown(_sample_doc())
+        polaris_lines = [ln for ln in md.splitlines() if "> **北極星分數**" in ln]
+        assert len(polaris_lines) == 1
+        line = polaris_lines[0]
+        
+        # 驗證可解析的格式：key=value（threshold）
+        pattern = r"(\w+)=([0-9.]+)（([✓✗])）"
+        matches = re.findall(pattern, line)
+        assert len(matches) >= 5, f"應至少有 5 項分數，實際 {len(matches)}"
+        
+        # 驗證 overall_status 可解析
+        overall_pattern = r"overall=(\w+)"
+        overall_match = re.search(overall_pattern, line)
+        assert overall_match is not None, "應可解析 overall_status"
+        assert overall_match.group(1) in ["excellent", "good", "acceptable", "poor", "error"]
+
+    def test_to_docx_contains_polaris_metrics(self, tmp_path):
+        """docx 輸出必須包含北極星品質指標摘要。"""
+        from docx import Document as DocxDocument
+        out = tmp_path / "polaris.docx"
+        to_docx(_sample_doc(), str(out))
+        paras = [p.text for p in DocxDocument(out).paragraphs]
+        polaris_lines = [p for p in paras if p.startswith("北極星分數：")]
+        assert len(polaris_lines) == 1, f"應有 1 筆北極星分數行，實際 {len(polaris_lines)}"
+        line = polaris_lines[0]
+        assert "overall=" in line
+        assert "functional_gap=" in line
+        assert "user_value=" in line
+        assert "source_binding=" in line
+        assert "angle_diversity=" in line
+        assert "delivery=" in line
+
+    def test_calculate_polaris_for_doc_returns_valid_dict(self):
+        """_calculate_polaris_for_doc 必須回傳有效的 polaris_metrics dict。"""
+        result = _calculate_polaris_for_doc(_sample_doc())
+        assert isinstance(result, dict)
+        assert result["schema"] == "note_filler.polaris_metrics.v1"
+        assert result["overall_status"] in ["excellent", "good", "acceptable", "poor", "error"]
+        assert isinstance(result["core_metrics_pass_count"], int)
+        assert isinstance(result["core_metrics_total_count"], int)
+
+    def test_polaris_metrics_json_serializable(self):
+        """polaris_metrics 必須可被 JSON 序列化。"""
+        data = to_json(_sample_doc())
+        json_str = json.dumps(data, ensure_ascii=False, indent=2)
+        assert len(json_str) > 0
+        # 驗證可反序列化
+        parsed = json.loads(json_str)
+        assert "polaris_metrics" in parsed
+        assert parsed["polaris_metrics"]["schema"] == "note_filler.polaris_metrics.v1"
+
+    def test_polaris_metrics_consistent_across_formats(self):
+        """JSON 與 Markdown 輸出的 polaris_metrics 必須一致。"""
+        data = to_json(_sample_doc())
+        md = to_markdown(_sample_doc())
+        
+        # 從 JSON 取得分數
+        json_polaris = data["polaris_metrics"]
+        
+        # 從 Markdown 解析分數
+        import re
+        polaris_lines = [ln for ln in md.splitlines() if "> **北極星分數**" in ln]
+        assert len(polaris_lines) == 1
+        line = polaris_lines[0]
+        
+        # 驗證 overall_status 一致
+        overall_match = re.search(r"overall=(\w+)", line)
+        assert overall_match is not None
+        assert overall_match.group(1) == json_polaris["overall_status"]
+        
+        # 驗證各分項分數數值一致
+        for key, subscore in [
+            ("functional_gap", json_polaris["functional_gap_score"]),
+            ("user_value", json_polaris["user_value_score"]),
+            ("source_binding", json_polaris["source_binding_integrity"]),
+            ("angle_diversity", json_polaris["angle_diversity_index"]),
+            ("delivery", json_polaris["delivery_success_rate"]),
+        ]:
+            pattern = rf"{key}=([0-9.]+)"
+            match = re.search(pattern, line)
+            assert match is not None, f"Markdown 應含 {key} 分數"
+            md_score = float(match.group(1))
+            assert abs(md_score - subscore["score"]) < 0.01, (
+                f"{key} 分數不一致：JSON={subscore['score']}, MD={md_score}"
+            )
+
+    def test_polaris_metrics_in_empty_doc(self):
+        """空文件（無 supplement）的 polaris_metrics 應正確處理缺值。"""
+        original = Document(
+            source_path="/tmp/empty.txt",
+            paragraphs=(Paragraph(idx=0, text="只有原文。"),),
+            full_text="只有原文。",
+        )
+        doc = CorrectionDoc(original=original, segments=[
+            Segment(
+                type="original",
+                text="只有原文。",
+                anchor_idx=0,
+                sources=[],
+                confidence="verified",
+                functional_gap="",
+                user_value="",
+                argument_id="",
+            ),
+        ])
+        data = to_json(doc)
+        polaris = data["polaris_metrics"]
+        # 無 supplement → 功能缺口/使用者價值/來源綁定應為 missing_data
+        assert polaris["functional_gap_score"]["status"] == "missing_data"
+        assert polaris["user_value_score"]["status"] == "missing_data"
+        assert polaris["source_binding_integrity"]["status"] == "missing_data"
+
+    def test_polaris_metrics_with_mixed_confidence(self):
+        """混合 confidence 的 polaris_metrics 應正確計算。"""
+        data = to_json(_sample_doc())
+        polaris = data["polaris_metrics"]
+        
+        # _sample_doc 有一個 verified supplement 與一個 pending_evidence supplement
+        # 來源綁定完整性應反映此狀態
+        sbi = polaris["source_binding_integrity"]
+        assert sbi["total_arguments"] == 2
+        # pending_evidence 的 binding_status 為 pending_evidence
+        assert sbi["arguments_pending"] >= 0
+
+    def test_polaris_metrics_core_metrics_count_matches(self):
+        """core_metrics_pass_count 必須等於通過門檻的核心指標數。"""
+        data = to_json(_sample_doc())
+        polaris = data["polaris_metrics"]
+        
+        # 計算通過門檻的核心指標數
+        pass_count = sum(1 for key in [
+            "functional_gap_score",
+            "user_value_score",
+            "source_binding_integrity",
+            "angle_diversity_index",
+            "delivery_success_rate",
+        ] if polaris[key]["passes_threshold"])
+        
+        assert polaris["core_metrics_pass_count"] == pass_count

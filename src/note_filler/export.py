@@ -2,12 +2,13 @@ from __future__ import annotations
 
 from dataclasses import asdict
 
-from typing import Literal
+from typing import Any, Literal
 
 from note_filler.angle_coverage import coverage_from_segment
 from note_filler.binding_report import build_binding_report
 from note_filler.citation_formatter import build_reference_lines
 from note_filler.correction import CorrectionDoc
+from note_filler.metrics import calculate_polaris_metrics
 from note_filler.retrieve.models import Source
 
 Cardinality = Literal["one_to_one", "one_to_many", "none"]
@@ -19,6 +20,53 @@ def _cardinality(source_count: int) -> Cardinality:
     if source_count == 1:
         return "one_to_one"
     return "one_to_many"
+
+
+def _calculate_polaris_for_doc(doc: CorrectionDoc) -> dict[str, Any]:
+    """從 CorrectionDoc 計算北極星品質指標，用於整合到成品輸出。
+    
+    計算方式：
+      1. 從 build_binding_report 取得綁定報告
+      2. 依每個 segment 的 confidence 建構 delivery_status
+      3. 透過 calculate_polaris_metrics 計算五項分項分數
+      4. 回傳可序列化的 dict（含 overall_status、各分項分數、判定依據）
+    
+    判定依據：
+      - functional_gap_score：功能缺口具體描述比例
+      - user_value_score：使用者價值關鍵詞覆蓋比例
+      - source_binding_integrity：來源綁定通過比例
+      - angle_diversity_index：角度多樣性覆蓋比例
+      - delivery_success_rate：端到端送達成功率
+    
+    資料來源：
+      - binding_report.arguments[].functional_gap / user_value / binding_status
+      - binding_report.angle_coverage_summary
+      - 各 segment 的 confidence 狀態
+    """
+    report = build_binding_report(doc)
+    
+    # 從 segments 建構 delivery_status
+    all_segments = list(getattr(doc, "segments", None) or [])
+    has_any_segment = len(all_segments) > 0
+    has_supplement = any(s.type == "supplement" for s in all_segments)
+    all_verified = all(
+        s.confidence == "verified" 
+        for s in all_segments 
+        if s.type == "supplement"
+    ) if has_supplement else False
+    
+    delivery_status = {
+        "primary_note_ready": has_any_segment,
+        "user_channel_sent": False,  # 尚未送出，由外部更新
+        "local_fallback_written": has_any_segment,
+    }
+    
+    metrics = calculate_polaris_metrics(
+        binding_report=report,
+        delivery_status=delivery_status,
+    )
+    
+    return metrics.to_dict()
 
 
 def _source_to_dict(src: Source) -> dict:
@@ -81,8 +129,14 @@ def _visible_summary_text(argument: dict) -> str:
 def to_json(doc: CorrectionDoc) -> dict:
     """序列化整份 CorrectionDoc；原文 immutable，僅讀不改。
 
-    頂層含 binding_summary（整合 binding_report 的摘要），
-    讓訂正稿 JSON 本身就可被測試直接解析驗證綁定狀態。
+    頂層含 binding_summary（整合 binding_report 的摘要）與 polaris_metrics（北極星品質指標），
+    讓訂正稿 JSON 本身就可被測試直接解析驗證綁定狀態與品質分數。
+    
+    polaris_metrics 包含：
+      - overall_status：整體品質判定（excellent/good/acceptable/poor/error）
+      - core_metrics_pass_count：通過門檻的核心指標數
+      - functional_gap_score / user_value_score / source_binding_integrity / 
+        angle_diversity_index / delivery_success_rate：各分項分數與判定依據
     """
     report = build_binding_report(doc)
     binding_summary = {
@@ -97,6 +151,9 @@ def to_json(doc: CorrectionDoc) -> dict:
         "all_arguments_ok": report["summary"]["all_arguments_ok"],
         "all_sourced_arguments_ok": report["summary"]["all_sourced_arguments_ok"],
     }
+    
+    # 計算北極星品質指標
+    polaris_metrics = _calculate_polaris_for_doc(doc)
     def _seg_source_ids(seg) -> list[str]:
         ids = list(getattr(seg, "source_ids", None) or [])
         if not ids:
@@ -159,6 +216,7 @@ def to_json(doc: CorrectionDoc) -> dict:
         "full_text": doc.original.full_text,
         "binding_summary": binding_summary,
         "angle_coverage_summary": dict(report.get("angle_coverage_summary") or {}),
+        "polaris_metrics": polaris_metrics,
         "segments": [
             {
                 "type": seg.type,
@@ -307,6 +365,24 @@ def to_markdown(doc: CorrectionDoc) -> str:
         f"重複率 {angle_summary['duplicate_ratio']:.3f}/"
         f"上限 {angle_summary['max_duplicate_ratio']:.3f}）"
     )
+    
+    # 北極星品質指標摘要：每則筆記同步帶出分數、判定依據與資料來源
+    polaris = _calculate_polaris_for_doc(doc)
+    md += (
+        "\n> **北極星分數**："
+        f"overall={polaris['overall_status']}"
+        f"（pass {polaris['core_metrics_pass_count']}/{polaris['core_metrics_total_count']}）；"
+        f"functional_gap={polaris['functional_gap_score']['score']:.2f}"
+        f"（{'✓' if polaris['functional_gap_score']['passes_threshold'] else '✗'}）；"
+        f"user_value={polaris['user_value_score']['score']:.2f}"
+        f"（{'✓' if polaris['user_value_score']['passes_threshold'] else '✗'}）；"
+        f"source_binding={polaris['source_binding_integrity']['score']:.2f}"
+        f"（{'✓' if polaris['source_binding_integrity']['passes_threshold'] else '✗'}）；"
+        f"angle_diversity={polaris['angle_diversity_index']['score']:.2f}"
+        f"（{'✓' if polaris['angle_diversity_index']['passes_threshold'] else '✗'}）；"
+        f"delivery={polaris['delivery_success_rate']['score']:.2f}"
+        f"（{'✓' if polaris['delivery_success_rate']['passes_threshold'] else '✗'}）"
+    )
 
     return md
 
@@ -407,6 +483,23 @@ def to_docx(doc: CorrectionDoc, path: str) -> None:
         f"排除重複 {angle_summary['excluded_angle_count']}；"
         f"重複率 {angle_summary['duplicate_ratio']:.3f}/"
         f"上限 {angle_summary['max_duplicate_ratio']:.3f}）"
+    )
+    
+    # 北極星品質指標摘要：每則筆記同步帶出分數、判定依據與資料來源
+    polaris = _calculate_polaris_for_doc(doc)
+    out.add_paragraph(
+        f"北極星分數：overall={polaris['overall_status']}"
+        f"（pass {polaris['core_metrics_pass_count']}/{polaris['core_metrics_total_count']}）；"
+        f"functional_gap={polaris['functional_gap_score']['score']:.2f}"
+        f"（{'✓' if polaris['functional_gap_score']['passes_threshold'] else '✗'}）；"
+        f"user_value={polaris['user_value_score']['score']:.2f}"
+        f"（{'✓' if polaris['user_value_score']['passes_threshold'] else '✗'}）；"
+        f"source_binding={polaris['source_binding_integrity']['score']:.2f}"
+        f"（{'✓' if polaris['source_binding_integrity']['passes_threshold'] else '✗'}）；"
+        f"angle_diversity={polaris['angle_diversity_index']['score']:.2f}"
+        f"（{'✓' if polaris['angle_diversity_index']['passes_threshold'] else '✗'}）；"
+        f"delivery={polaris['delivery_success_rate']['score']:.2f}"
+        f"（{'✓' if polaris['delivery_success_rate']['passes_threshold'] else '✗'}）"
     )
 
     out.save(path)
