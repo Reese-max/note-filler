@@ -1740,3 +1740,224 @@ def test_triad_acceptance_rejects_summary_not_reflecting_both_perspectives():
         "argument:0：內容不一致位置 summary 未反映 functional_gap／user_value"
         in str(exc_info.value)
     )
+
+
+# ---- 四要素驗收：缺口、影響對象、重要性、關聯知識同論點呼應 -------------
+
+def test_final_output_each_argument_has_four_coherent_elements(tmp_path):
+    """正向驗收測試：每個論點同時包含缺口、影響對象、重要性、關聯知識，且內容互相呼應。
+    
+    驗證最終成品中每個論點都具備：
+    1. 缺口（functional_gap）：描述原稿缺失的功能性缺口
+    2. 影響對象（user_value 中體現）：描述受影響的使用者群體或對象
+    3. 重要性（functional_gap/user_value 中體現）：描述補齊後的重要性或價值
+    4. 關聯知識（related_knowledge）：描述如何支撐決策品質與補強使用者理解
+    
+    且四者內容能互相呼應，可逐筆對應到同一 argument_id。
+    """
+    import json
+    from pathlib import Path
+
+    from note_filler.export import to_json, to_markdown
+    from note_filler.pipeline import require_traceable_note_product
+
+    src_a = Source(
+        id="law:92",
+        title="行政程序法第 92 條",
+        url=None,
+        level="A",
+        content="【片段:law:92】行政處分，係指行政機關就公法上具體事件所為之決定。",
+        fetched_date="2026-07-26",
+        doc_date=None,
+        distance=0.1,
+    )
+    src_b = Source(
+        id="law:93",
+        title="行政程序法第 93 條",
+        url=None,
+        level="A",
+        content="【片段:law:93】行政機關作成行政處分有裁量權時，得為附款。",
+        fetched_date="2026-07-26",
+        doc_date=None,
+        distance=0.2,
+    )
+    
+    gap_a = Gap("行政處分如何定義？", "missing", "原稿未定義行政處分")
+    gap_b = Gap("附款有何限制？", "missing", "原稿未說明附款限制")
+    
+    claim_a = "行政處分定義參照[^1]。"
+    claim_b = "附款限制須兼顧目的[^1]。"
+    
+    product = assemble_correction(
+        _doc(),
+        [gap_a, gap_b],
+        {gap_a.question: [src_a], gap_b.question: [src_b]},
+        {
+            gap_a.question: WrittenSupplement(claim_a, [src_a.id]),
+            gap_b.question: WrittenSupplement(claim_b, [src_b.id]),
+        },
+        {
+            gap_a.question: cross_validate(gap_a.question, [src_a]),
+            gap_b.question: cross_validate(gap_b.question, [src_b]),
+        },
+    )
+    
+    # 設定四要素，確保內容互相呼應
+    # 論點 A：行政處分定義
+    product.segments[1].functional_gap = "原稿未定義行政處分概念，讀者無法理解行政處分的法律定義"
+    product.segments[1].user_value = "補齊讀者（行政法初學者）對行政處分定義的理解，避免適用錯誤"
+    product.segments[1].related_knowledge = (
+        "行政處分定義是適用行政程序法的基礎（支撐決策品質：對應功能缺口「原稿未定義行政處分概念」"
+        "提供可追溯依據，降低僅憑印象取捨的風險；"
+        "補強使用者理解：幫助讀者正確識別行政處分，避免與其他行政行為混淆）"
+    )
+    
+    # 論點 B：附款限制
+    product.segments[2].functional_gap = "原稿未說明附款限制，讀者不知附款不得違背行政處分之目的"
+    product.segments[2].user_value = "補齊讀者（行政機關人員）對附款限制的認識，確保行政處分合法性"
+    product.segments[2].related_knowledge = (
+        "附款限制是保障行政處分合法性的關鍵（支撐決策品質：對應功能缺口「原稿未說明附款限制」"
+        "提供可追溯依據，降低僅憑印象取捨的風險；"
+        "補強使用者理解：幫助讀者理解附款的目的性限制，避免違法附款）"
+    )
+    
+    require_traceable_note_product(product, source="four-elements-acceptance")
+    
+    # 落盤成品
+    out_dir = Path(tmp_path)
+    product_path = out_dir / "note_product.json"
+    md_path = out_dir / "note_product.md"
+    product_path.write_text(
+        json.dumps(to_json(product), ensure_ascii=False, indent=2),
+        encoding="utf-8",
+        newline="\n",
+    )
+    md_path.write_text(to_markdown(product), encoding="utf-8", newline="\n")
+    report_path = write_binding_report(md_path, product)
+    
+    # 讀取成品進行驗證
+    serialized = json.loads(product_path.read_text(encoding="utf-8"))
+    report = parse_binding_report(
+        json.loads(report_path.read_text(encoding="utf-8"))
+    )
+    md = md_path.read_text(encoding="utf-8")
+    md_blocks = _parse_md_argument_blocks(md)
+    
+    assert report["summary"]["all_arguments_ok"] is True
+    assert report["summary"]["fail"] == 0
+    assert report["argument_count"] == 2
+    assert len(md_blocks) == 2
+    
+    # 逐筆驗證每個論點的四要素
+    for arg, block in zip(report["arguments"], md_blocks, strict=True):
+        seg = serialized["segments"][arg["segment_index"]]
+        assert seg["type"] == "supplement"
+        
+        argument_id = arg["argument_id"]
+        assert argument_id == seg["argument_id"]
+        assert argument_id == block["argument_id"]
+        
+        # 1. 缺口（functional_gap）
+        functional_gap = (arg["functional_gap"] or "").strip()
+        assert functional_gap, f"{argument_id}：缺口（functional_gap）不可為空"
+        assert "原稿未" in functional_gap or "缺失" in functional_gap, (
+            f"{argument_id}：缺口應描述原稿缺失"
+        )
+        assert seg["functional_gap"] == functional_gap
+        assert block["functional_gap"] == functional_gap
+        
+        # 2. 影響對象（從 user_value 中提取）
+        user_value = (arg["user_value"] or "").strip()
+        assert user_value, f"{argument_id}：使用者價值不可為空"
+        # 檢查是否包含受影響的對象（讀者、使用者等）
+        has_affected_object = any(
+            keyword in user_value 
+            for keyword in ["讀者", "使用者", "人員", "當事人", "民眾"]
+        )
+        assert has_affected_object, (
+            f"{argument_id}：使用者價值應描述受影響的對象（讀者、使用者等）"
+        )
+        assert seg["user_value"] == user_value
+        assert block["user_value"] == user_value
+        
+        # 3. 重要性（從 functional_gap 和 user_value 中提取）
+        # 檢查是否包含重要性描述（避免、確保、關鍵、基礎等）
+        has_importance = any(
+            keyword in functional_gap + user_value
+            for keyword in ["避免", "確保", "關鍵", "基礎", "重要", "必要", "核心"]
+        )
+        assert has_importance, (
+            f"{argument_id}：缺口或使用者價值應描述補齊的重要性"
+        )
+        
+        # 4. 關聯知識（related_knowledge）
+        related_knowledge = (arg["related_knowledge"] or "").strip()
+        assert related_knowledge, f"{argument_id}：關聯知識不可為空"
+        assert "支撐決策品質" in related_knowledge, (
+            f"{argument_id}：關聯知識必須說明如何支撐決策品質"
+        )
+        assert "補強使用者理解" in related_knowledge, (
+            f"{argument_id}：關聯知識必須說明如何補強使用者理解"
+        )
+        assert seg["related_knowledge"] == related_knowledge
+        assert block["related_knowledge"] == related_knowledge
+        
+        # 驗證四要素內容互相呼應
+        # 提取主題詞
+        summary_text = re.sub(r"\[\^\d+\]", "", (arg["argument_text"] or "")).strip()
+        
+        # 驗證至少在三個要素中有共同的主題詞（更寬鬆的條件）
+        all_text = f"{summary_text} {functional_gap} {user_value} {related_knowledge}"
+        chinese_tokens = re.findall(r"[\u4e00-\u9fff]{2,}", all_text)
+        
+        # 找出在三個或更多要素中出現的主題詞
+        shared_tokens = []
+        for token in chinese_tokens:
+            count = sum([
+                token in summary_text,
+                token in functional_gap,
+                token in user_value,
+                token in related_knowledge
+            ])
+            if count >= 3:
+                shared_tokens.append(token)
+        
+        # 如果沒有找到在三個要素中都出現的詞，改為檢查兩兩之間的關聯
+        if not shared_tokens:
+            # 檢查摘要與缺口之間的共同詞
+            summary_gap_shared = [t for t in chinese_tokens if t in summary_text and t in functional_gap]
+            # 檢查摘要與使用者價值之間的共同詞
+            summary_uv_shared = [t for t in chinese_tokens if t in summary_text and t in user_value]
+            # 檢查缺口與關聯知識之間的共同詞
+            gap_rk_shared = [t for t in chinese_tokens if t in functional_gap and t in related_knowledge]
+            
+            # 至少要有兩兩之間的關聯
+            assert (summary_gap_shared or summary_uv_shared or gap_rk_shared), (
+                f"{argument_id}：四要素應該有兩兩之間的共同主題詞以確保內容互相呼應"
+            )
+        
+        # 驗證關聯知識與缺口、使用者價值的對應關係
+        assert functional_gap in related_knowledge or "功能缺口" in related_knowledge, (
+            f"{argument_id}：關聯知識應對應功能缺口"
+        )
+        assert "使用者理解" in related_knowledge or "使用者價值" in related_knowledge, (
+            f"{argument_id}：關聯知識應對應使用者價值"
+        )
+        
+        # 驗證來源綁定
+        assert arg["binding_ok"] is True
+        assert arg["binding_status"] == "pass"
+        assert arg["checks"]["has_functional_gap"] is True
+        assert arg["checks"]["has_user_value"] is True
+        assert arg["checks"]["has_related_knowledge"] is True
+        assert arg["checks"]["at_least_one_source"] is True
+    
+    # 驗證 Markdown 摘要可見列包含四要素
+    for block in md_blocks:
+        visible_summary = block["visible_summary"]
+        assert f"argument_id=" in visible_summary
+        assert f"functional_gap=" in visible_summary
+        assert f"user_value=" in visible_summary
+        assert f"related_knowledge=" in visible_summary
+        assert "支撐決策品質" in visible_summary
+        assert "補強使用者理解" in visible_summary
