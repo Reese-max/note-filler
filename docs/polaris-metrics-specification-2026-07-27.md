@@ -10,11 +10,22 @@ Schema 版本：`note_filler.polaris_metrics.v1`
 
 本規格定義可機器讀取的北極星筆記品質指標，包含「功能缺口分數」與「使用者價值分數」等核心指標的明確公式、判定規則、資料來源與缺值處理方式。每則筆記可被一致計分與追蹤，並產出可序列化的指標物件與報告欄位。
 
+本規格以「功能缺口分數」與「使用者價值分數」為兩項北極星品質指標；其餘三項為來源、角度與送達品質的配套指標，不得替代這兩項指標。兩項北極星指標只在資料完整且 `status = calculated` 時允許通過門檻，不可量測或部分可量測資料一律不得判為高品質。
+
 ## 核心指標
 
 ### 1. 功能缺口分數（Functional Gap Score）
 
-#### 計算公式
+#### 名稱
+
+功能缺口分數（Functional Gap Score），序列化欄位為 `functional_gap_score`。
+
+#### 目的
+
+衡量單一筆記中的補充論點是否針對具體功能缺口，並同時具備可追溯來源、有效角度與一致的決策助益；避免只因 `functional_gap` 有文字就將筆記判為高品質。
+
+#### 公式或判定規則
+
 ```
 功能缺口分數 = 可追溯性 × 0.25 + 覆蓋廣度 × 0.25
                + 必要性明確度 × 0.25 + 決策助益 × 0.25
@@ -27,22 +38,37 @@ Schema 版本：`note_filler.polaris_metrics.v1`
 - **必要性明確度**：`functional_gap` 非空且至少 10 字元。
 - **決策助益**：關聯知識明示決策助益，且與功能缺口及使用者價值一致。
 
-#### 判定規則
 - **具體描述定義**：`functional_gap` 欄位非空且長度 >= 10 字元
 - **分數範圍**：0.0 ~ 1.0
-- **合格門檻**：>= 0.7 (70%)
 - **狀態**：`calculated`（成功計算）、`missing_data`（資料不足）、`error`（計算錯誤）
 
+#### 計算週期
+
+採事件制逐筆計算：每次單一筆記產出或更新 `binding_report`，並在訂正稿或最終 `delivery_manifest` 序列化前重算。若只更新送達狀態而 `binding_report` 未變，本指標重算結果應保持不變；本規格不定義跨筆記的排程彙總。
+
 #### 資料來源
+
 - `binding_report.arguments[].functional_gap`
 - `binding_report.arguments[].source_ids`
-- `binding_report.arguments[].checks`
-- `binding_report.arguments[].angle_coverage`
+- `binding_report.arguments[].checks.{at_least_one_source,source_traceable,no_omitted_traces,no_extra_traces,has_functional_gap,has_related_knowledge,related_knowledge_consistent}`
+- `binding_report.arguments[].angle_coverage.{covered_facets,effective_angle_count}`
 
-#### 缺值處理
+#### 統計粒度
+
+- 最小判定單位：單一 `argument_id`；四個子分數皆逐論點產生布林判定。
+- 分母：同一份 `binding_report.arguments` 的論點總數，不排除失敗或缺欄位論點。
+- 報告單位：每則筆記、每次成品產出一個分數；不跨筆記或跨時間窗平均。
+
+#### 門檻值
+
+`status = calculated` 且分數 >= 0.70 才通過；`missing_data` 或 `error` 即使保有診斷分數也必須令 `passes_threshold = false`。
+
+#### 缺失資料處理方式
+
 - `functional_gap` 為空字串：視為無具體描述，不計入分子
 - 論點無 `functional_gap` 欄位：該論點的必要性明確度記為 0
-- `source_ids`、`checks` 或 `angle_coverage` 缺少可重算的清單、布林或數值依據：`status = missing_data`，不得通過門檻
+- `source_ids` 為有效空清單代表無實際來源：可追溯性記為 0，並維持既有 `pending_evidence`／來源綁定失敗語義，不得視為缺值而排除該論點
+- `source_ids`、`checks` 或 `angle_coverage` 缺少可重算的清單、布林或數值依據：`basis_mode = partial_binding_report` 或 `primary_field_fallback`、`status = missing_data`，不得通過門檻
 - 總論點數為 0：`status = missing_data`
 
 #### 詳細統計欄位
@@ -73,7 +99,16 @@ Schema 版本：`note_filler.polaris_metrics.v1`
 
 ### 2. 使用者價值分數（User Value Score）
 
-#### 計算公式
+#### 名稱
+
+使用者價值分數（User Value Score），序列化欄位為 `user_value_score`。
+
+#### 目的
+
+衡量單一筆記中的補充論點是否清楚說明對讀者的理解或決策價值，並同時具備可追溯來源、有效角度與一致的決策助益；避免只以固定模板或非空文字充當使用者價值。
+
+#### 公式或判定規則
+
 ```
 使用者價值分數 = 可追溯性 × 0.25 + 覆蓋廣度 × 0.25
                  + 必要性明確度 × 0.25 + 決策助益 × 0.25
@@ -86,22 +121,37 @@ Schema 版本：`note_filler.polaris_metrics.v1`
 - **必要性明確度**：`user_value` 非空，且含「讀者」、「說明」、「理解」或對應英文語意。
 - **決策助益**：關聯知識明示決策助益，且與功能缺口及使用者價值一致。
 
-#### 判定規則
 - **明確使用者價值定義**：`user_value` 欄位非空且包含關鍵詞「讀者」、「說明」、「理解」
 - **分數範圍**：0.0 ~ 1.0
-- **合格門檻**：>= 0.7 (70%)
 - **狀態**：`calculated`、`missing_data`、`error`
 
+#### 計算週期
+
+採事件制逐筆計算：每次單一筆記產出或更新 `binding_report`，並在訂正稿或最終 `delivery_manifest` 序列化前重算。若只更新送達狀態而 `binding_report` 未變，本指標重算結果應保持不變；本規格不定義跨筆記的排程彙總。
+
 #### 資料來源
+
 - `binding_report.arguments[].user_value`
 - `binding_report.arguments[].source_ids`
-- `binding_report.arguments[].checks`
-- `binding_report.arguments[].angle_coverage`
+- `binding_report.arguments[].checks.{at_least_one_source,source_traceable,no_omitted_traces,no_extra_traces,has_user_value,has_related_knowledge,related_knowledge_consistent}`
+- `binding_report.arguments[].angle_coverage.{covered_facets,effective_angle_count}`
 
-#### 缺值處理
+#### 統計粒度
+
+- 最小判定單位：單一 `argument_id`；四個子分數皆逐論點產生布林判定。
+- 分母：同一份 `binding_report.arguments` 的論點總數，不排除失敗或缺欄位論點。
+- 報告單位：每則筆記、每次成品產出一個分數；不跨筆記或跨時間窗平均。
+
+#### 門檻值
+
+`status = calculated` 且分數 >= 0.70 才通過；`missing_data` 或 `error` 即使保有診斷分數也必須令 `passes_threshold = false`。
+
+#### 缺失資料處理方式
+
 - `user_value` 為空字串：視為無明確價值，不計入分子
 - 論點無 `user_value` 欄位：該論點的必要性明確度記為 0
-- `source_ids`、`checks` 或 `angle_coverage` 缺少可重算的清單、布林或數值依據：`status = missing_data`，不得通過門檻
+- `source_ids` 為有效空清單代表無實際來源：可追溯性記為 0，並維持既有 `pending_evidence`／來源綁定失敗語義，不得視為缺值而排除該論點
+- `source_ids`、`checks` 或 `angle_coverage` 缺少可重算的清單、布林或數值依據：`basis_mode = partial_binding_report` 或 `primary_field_fallback`、`status = missing_data`，不得通過門檻
 - 總論點數為 0：`status = missing_data`
 
 #### 詳細統計欄位
