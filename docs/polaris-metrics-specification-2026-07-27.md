@@ -328,6 +328,9 @@ Schema 版本：`note_filler.polaris_metrics.v1`
     "source_binding_integrity": { ... },  # 來源綁定完整性詳情
     "angle_diversity_index": { ... },     # 角度多樣性指數詳情
     "delivery_success_rate": { ... },    # 端到端送達成功率詳情
+    "traceability_markers": list[dict],   # 論點層級來源／待補證追溯標記
+    "claim_source_map": dict[str, list[str]],  # argument_id → 實際引用來源
+    "citation_span_map": list[dict],      # 引用標記在補充文字中的精確範圍
 }
 ```
 
@@ -340,6 +343,195 @@ Schema 版本：`note_filler.polaris_metrics.v1`
 
 ---
 
+## 可追溯性標記欄位定義
+
+### 必填輸出契約
+
+每則筆記的 `polaris_metrics` 必須輸出 `traceability_markers`、
+`claim_source_map` 與 `citation_span_map` 三個機器可讀欄位。三個欄位皆不得省略或為
+`null`；沒有補充論點時分別輸出 `[]`、`{}`、`[]`。這些欄位是原稿以外的旁路
+metadata，不得改寫 `full_text` 或任何 `original` segment。Markdown／DOCX 的
+「北極星追蹤」文字只供人閱讀，不能取代這三個 JSON 欄位。
+
+以下公式使用：
+
+- `A`：依 `argument_index` 排序的 `binding_report.arguments`。
+- `S(a)`：論點 `a` 的 `source_ids` 原始順序清單；只含實際引用且已傳遞到成品的
+  來源，不含 retrieved 候選來源，且驗收時要求不得重複。
+- `T(a)`：論點 `a` 的 `trace_source_ids`。
+- `C(a)`：撰寫階段解析出的有效 inline 引用標記出現紀錄；同一來源重複引用可有多筆。
+
+### 1. `traceability_markers`
+
+#### 欄位結構
+
+```python
+list[{
+    "argument_id": str,
+    "kind": "source" | "processing_record",
+    "id": str,  # source ID 或 pending 的 processing record ID
+    "binding_status": "pass" | "fail" | "pending_evidence",
+}]
+```
+
+#### 公式
+
+```text
+traceability_markers = concat(
+  每個 a ∈ A 的 Segment.traceability 紀錄
+  投影為 (argument_id, kind, id, binding_status)
+)
+```
+
+輸出保留論點順序及原始追溯紀錄順序，不在序列化時偷偷去重。有來源論點每個實際
+來源輸出一筆 `kind = source`；無來源且明確待補證的論點輸出一筆
+`kind = processing_record`。
+
+#### 判定規則
+
+- 有來源論點的 `kind = source` ID 清單必須與 `S(a)`、`T(a)` 完全相等，不得遺漏、
+  額外加入或重複。
+- `kind = processing_record` 只允許用於 `S(a) = []`、文字以 `【待補證】` 開頭且
+  `binding_status = pending_evidence` 的論點；不得與同論點的 `kind = source` 並存。
+- `binding_status = pass` 只允許實際來源、追溯標記、`claim_source_map` 與
+  `citation_span_map` 全部對齊。法條來源另須先通過既有離線法條查核。
+- 有來源但任一對齊條件不成立時必須為 `fail`；`pending_evidence` 不得算作通過。
+
+#### 資料來源
+
+- `CorrectionDoc.segments[type=supplement].{argument_id,traceability,confidence}`
+- `binding_report.arguments[].{argument_id,trace_source_ids,binding_status}`
+- `Segment.traceability` 中的 `source` 或 `processing_record` 紀錄
+
+#### 缺值處理
+
+- 欄位省略、為 `null`、非 list，或 item 缺少必填鍵：輸出契約驗收失敗，不得以空
+  清單回退後宣稱成功。
+- 有補充論點但完全沒有對應 marker：視為部分資料遺失，該論點綁定失敗；不得從
+  `source_ids` 反向虛構 marker。
+- 無來源論點保留 `processing_record` 並標為 `pending_evidence`；不得補入假來源。
+- `A = []` 時 `[]` 是有效結構，但五項指標仍依既有「總論點數為 0」規則判為
+  `missing_data`。
+
+### 2. `claim_source_map`
+
+#### 欄位結構
+
+```python
+dict[str, list[str]]  # 每個 argument_id 對應 0..n 個實際引用 source ID
+```
+
+#### 公式
+
+```text
+claim_source_map = {a.argument_id: S(a) for a in A}
+```
+
+#### 判定規則
+
+- key 集合必須與 `A` 的 `argument_id` 集合完全相等；每個論點恰有一個 key。
+- value 依實際引用順序排列且不得有重複或空字串：一個 ID 為 `one_to_one`，兩個以上
+  為 `one_to_many`。
+- value 只能來自 `WrittenSupplement.used_source_ids` 且確實存在於該 Segment 的
+  `sources`；僅被檢索但未引用的來源不得列入。
+- `claim_source_map[a]` 必須與該論點所有 `kind = source` marker 的 ID 集合一致，並
+  由 `citation_span_map` 至少覆蓋每個 source ID 一次。
+- 法條 source ID 只有在既有離線法條引用查核通過後才可列入。
+
+#### 資料來源
+
+- `WrittenSupplement.used_source_ids`
+- `CorrectionDoc.segments[type=supplement].{argument_id,source_ids,sources}`
+- `binding_report.arguments[].{argument_id,source_ids,cardinality}`
+
+#### 缺值處理
+
+- 欄位省略、為 `null`、非 object，或缺少任一 `argument_id`：輸出契約驗收失敗，且
+  來源綁定不得通過。
+- `A = []` 時輸出 `{}`。
+- 明確 `pending_evidence` 論點輸出空清單 `[]`；這是已知無來源，不是可忽略的缺值，
+  且不得計入來源綁定分子。
+- 非 `pending_evidence` 論點為空清單、含未知來源或與 marker 不一致：該論點
+  `binding_status = fail`，不得由 retrieved 候選來源自動補值。
+
+### 3. `citation_span_map`
+
+#### 欄位結構
+
+```python
+list[{
+    "segment_index": int,
+    "argument_id": str,
+    "source_id": str,
+    "span_start": int,  # 以 Unicode code point 計數，0-based，含頭
+    "span_end": int,    # 以 Unicode code point 計數，0-based，不含尾
+    "marker_text": str, # 例如 "[^1]"
+}]
+```
+
+範圍一律相對於訂正稿 JSON 的 `segments[segment_index].text`，採半開區間
+`[span_start, span_end)`；不得改以 Markdown／DOCX 經排版後的位移計算。
+
+#### 公式
+
+```text
+citation_span_map = sort(
+  {(segment_index(a), a.argument_id, source_id(c),
+    start(c), end(c), text[start(c):end(c)])
+   | a ∈ A, c ∈ C(a)},
+  by=(segment_index, span_start, span_end, source_id)
+)
+```
+
+`source_id(c)` 必須在撰寫階段依當時的來源序號解析並保留，不得在輸出階段只看
+`[^n]` 字面值猜測來源。
+
+#### 判定規則
+
+- `segments[segment_index].text[span_start:span_end]` 必須逐字等於 `marker_text`，且
+  `marker_text` 必須是已通過解析的有效 inline 引用標記。
+- `argument_id` 必須指向同一 segment，`source_id` 必須存在於
+  `claim_source_map[argument_id]`。
+- `claim_source_map` 中每個 source ID 至少要有一筆 span；span 不得引用 map 以外的
+  來源。重複引用同一來源可保留多筆不同 span，但 span 不得重疊或越界。
+- `pending_evidence` 論點不得有 citation span；越界或無法對應來源的標記不得進入
+  map，也不得據此掛來源。
+
+#### 資料來源
+
+- `write_supplement` 解析 `WrittenSupplement.text` 時的 inline marker 與來源序號對應
+- `CorrectionDoc.segments[].{text,argument_id,source_ids,sources}`
+- `binding_report.arguments[].{argument_id,segment_index,source_ids}`
+
+#### 缺值處理
+
+- 欄位省略、為 `null`、非 list，或 span item 型別／必填鍵錯誤：輸出契約驗收失敗，
+  不得略過壞資料後繼續判為通過。
+- 沒有有來源論點時輸出 `[]`；包含有來源論點卻為空，視為追溯資料遺失，相關論點
+  綁定失敗。
+- span 越界、對不到原文 marker、缺 source ID 或指向未知 source ID：該論點
+  `binding_status = fail`，不得推測或補造範圍。
+
+### 三欄一致性總判定
+
+令 `source_pairs` 為 `claim_source_map` 的所有 `(argument_id, source_id)`，
+`marker_pairs` 為 `traceability_markers` 中 `kind = source` 的相同 pair，
+`span_pairs` 為 `citation_span_map` 的相同 pair 去重集合。每則有補充論點的筆記必須
+同時滿足：
+
+```text
+keys(claim_source_map) = {a.argument_id | a ∈ A}
+source_pairs = marker_pairs = span_pairs
+```
+
+等式成立且每筆 span 的字面、範圍與 segment 關聯皆有效，才可令既有
+`checks.source_traceable`、`checks.no_omitted_traces` 與 `checks.no_extra_traces` 通過。
+任一欄位結構缺失時 fail-closed，該筆記不得判為高品質或成功送達；欄位完整但集合
+不一致時，逐論點標為 `fail`。這三欄是既有追溯資料的可驗收投影，不改變五項分數的
+數值公式，因此 `formula_version` 維持 `1.1`。
+
+---
+
 ## 資料流整合
 
 ### 輸出位置
@@ -348,6 +540,8 @@ Schema 版本：`note_filler.polaris_metrics.v1`
 
 1. **訂正稿 JSON**
    - 頂層欄位：`polaris_metrics`
+   - `polaris_metrics` 固定含 `traceability_markers`、`claim_source_map`、
+     `citation_span_map`
    - 每次輸出時由 `CorrectionDoc` 與綁定報告自動計算
 
 2. **訂正稿 Markdown／DOCX**
@@ -356,6 +550,7 @@ Schema 版本：`note_filler.polaris_metrics.v1`
 
 3. **delivery_manifest.json**
    - 頂層欄位：`polaris_metrics`
+   - 沿用訂正稿 JSON 的三個可追溯性欄位，不得重新推測或省略
    - 每次成功送達時自動計算並寫入
 
 4. **binding_report.json**
@@ -498,4 +693,5 @@ if polaris_metrics:
 ---
 
 ## 變更紀錄
+- 2026-07-27：新增每則筆記必填的可追溯性標記欄位、構造公式、判定規則、資料來源與缺值處理
 - 2026-07-27：初始版本，定義 5 個核心指標與整體評估機制
