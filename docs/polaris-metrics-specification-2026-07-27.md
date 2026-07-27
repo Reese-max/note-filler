@@ -4,7 +4,7 @@
 基準 revision：`90229c30`
 Schema 版本：`note_filler.polaris_metrics.v1`
 
-公式版本：`1.0`
+公式版本：`1.1`
 
 ## 概述
 
@@ -42,6 +42,7 @@ Schema 版本：`note_filler.polaris_metrics.v1`
 #### 缺值處理
 - `functional_gap` 為空字串：視為無具體描述，不計入分子
 - 論點無 `functional_gap` 欄位：該論點的必要性明確度記為 0
+- `source_ids`、`checks` 或 `angle_coverage` 缺少可重算的清單、布林或數值依據：`status = missing_data`，不得通過門檻
 - 總論點數為 0：`status = missing_data`
 
 #### 詳細統計欄位
@@ -60,7 +61,7 @@ Schema 版本：`note_filler.polaris_metrics.v1`
         "decision_support": { ... },
     },
     "calculation_basis": list[dict],  # 每個 argument_id 的四項布林判定與實際 source_ids
-    "basis_mode": "binding_report" | "primary_field_fallback" | "missing_data",
+    "basis_mode": "binding_report" | "partial_binding_report" | "primary_field_fallback" | "missing_data",
     "total_arguments": int,      # 總論點數
     "arguments_with_concrete_gap": int,   # 具體描述的功能缺口數
     "arguments_with_empty_gap": int,       # 空功能缺口數
@@ -100,6 +101,7 @@ Schema 版本：`note_filler.polaris_metrics.v1`
 #### 缺值處理
 - `user_value` 為空字串：視為無明確價值，不計入分子
 - 論點無 `user_value` 欄位：該論點的必要性明確度記為 0
+- `source_ids`、`checks` 或 `angle_coverage` 缺少可重算的清單、布林或數值依據：`status = missing_data`，不得通過門檻
 - 總論點數為 0：`status = missing_data`
 
 #### 詳細統計欄位
@@ -118,7 +120,7 @@ Schema 版本：`note_filler.polaris_metrics.v1`
         "decision_support": { ... },
     },
     "calculation_basis": list[dict],
-    "basis_mode": "binding_report" | "primary_field_fallback" | "missing_data",
+    "basis_mode": "binding_report" | "partial_binding_report" | "primary_field_fallback" | "missing_data",
     "total_arguments": int,
     "arguments_with_clear_value": int,     # 明確使用者價值的論點數
     "arguments_with_empty_value": int,     # 空使用者價值數
@@ -246,6 +248,7 @@ Schema 版本：`note_filler.polaris_metrics.v1`
 ### PolarisMetrics 總覽
 
 #### 整體品質判定規則
+- **poor**：任一核心指標為 `missing_data`；即使其餘分項通過數達 3 項以上亦不得判為高品質
 - **excellent**：所有 5 個核心指標皆通過門檻
 - **good**：至少 3 個核心指標通過門檻
 - **acceptable**：至少 2 個核心指標通過門檻
@@ -263,7 +266,7 @@ Schema 版本：`note_filler.polaris_metrics.v1`
 ```python
 {
     "schema": "note_filler.polaris_metrics.v1",
-    "formula_version": "1.0",            # 公式、門檻與來源欄位契約版本
+    "formula_version": "1.1",            # 公式、門檻與來源欄位契約版本
     "overall_status": "excellent" | "good" | "acceptable" | "poor" | "error",
     "decision": "excellent" | "good" | "acceptable" | "poor" | "error",
     "decision_rule": str,

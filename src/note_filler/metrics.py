@@ -41,7 +41,7 @@ QUALITY_SCORE_FORMULA = (
 )
 
 # 公式、門檻或來源欄位語意改變時必須升版，讓歷次成品可重算與比較。
-POLARIS_FORMULA_VERSION = "1.0"
+POLARIS_FORMULA_VERSION = "1.1"
 POLARIS_METRIC_DEFINITIONS: dict[str, dict[str, Any]] = {
     "functional_gap_score": {
         "formula": QUALITY_SCORE_FORMULA,
@@ -93,7 +93,8 @@ POLARIS_METRIC_DEFINITIONS: dict[str, dict[str, Any]] = {
     },
 }
 POLARIS_OVERALL_DECISION_RULE = (
-    "error if any metric status=error; excellent if pass_count=5; "
+    "error if any metric status=error; poor if any metric status=missing_data; "
+    "excellent if pass_count=5; "
     "good if pass_count>=3; acceptable if pass_count>=2; otherwise poor"
 )
 
@@ -326,6 +327,7 @@ class PolarisMetrics:
     聚合所有品質指標，提供整體品質評估。
     
     整體品質判定：
+        - 任一核心指標資料不足：overall_status = "poor"
         - 所有核心指標皆通過門檻：overall_status = "excellent"
         - 至少 3 個核心指標通過門檻：overall_status = "good"
         - 至少 2 個核心指標通過門檻：overall_status = "acceptable"
@@ -371,6 +373,8 @@ class PolarisMetrics:
         # 判定整體品質
         if any(m.status == "error" for m in core_metrics):
             self.overall_status = "error"
+        elif any(m.status == "missing_data" for m in core_metrics):
+            self.overall_status = "poor"
         elif pass_count == 5:
             self.overall_status = "excellent"
         elif pass_count >= 3:
@@ -478,6 +482,39 @@ class PolarisMetrics:
         }
 
 
+_QUALITY_BASIS_CHECKS = (
+    "at_least_one_source",
+    "source_traceable",
+    "no_omitted_traces",
+    "no_extra_traces",
+    "has_related_knowledge",
+    "related_knowledge_consistent",
+)
+
+
+def _has_quantifiable_quality_basis(arg: dict[str, Any], facet: str) -> bool:
+    """確認四面向分數所需的布林、清單與數值依據皆可重算。"""
+    checks = arg.get("checks")
+    coverage = arg.get("angle_coverage")
+    facet_check = (
+        "has_functional_gap"
+        if facet == "necessity:functional_gap"
+        else "has_user_value"
+    )
+    return bool(
+        isinstance(arg.get("source_ids"), list)
+        and isinstance(checks, dict)
+        and all(
+            isinstance(checks.get(name), bool)
+            for name in (*_QUALITY_BASIS_CHECKS, facet_check)
+        )
+        and isinstance(coverage, dict)
+        and isinstance(coverage.get("covered_facets"), list)
+        and all(isinstance(item, str) for item in coverage["covered_facets"])
+        and type(coverage.get("effective_angle_count")) is int
+    )
+
+
 def _quality_score_breakdown(
     arguments: list[dict[str, Any]],
     *,
@@ -488,8 +525,12 @@ def _quality_score_breakdown(
 ) -> tuple[float, dict[str, dict[str, Any]], list[dict[str, Any]], str]:
     """以既有 binding_report 訊號產生四子分數與逐論點依據。"""
     total = len(arguments)
-    has_detailed_basis = any(
-        isinstance(arg.get("checks"), dict)
+    complete_basis = [
+        _has_quantifiable_quality_basis(arg, facet) for arg in arguments
+    ]
+    has_any_basis = any(
+        "source_ids" in arg
+        or isinstance(arg.get("checks"), dict)
         or isinstance(arg.get("angle_coverage"), dict)
         for arg in arguments
     )
@@ -512,7 +553,7 @@ def _quality_score_breakdown(
             if isinstance(source_id, str) and source_id.strip()
         ] if isinstance(arg.get("source_ids"), list) else []
 
-        if has_detailed_basis:
+        if complete_basis[index]:
             traceable = bool(
                 source_ids
                 and checks.get("at_least_one_source") is True
@@ -530,8 +571,10 @@ def _quality_score_breakdown(
                 checks.get("has_related_knowledge") is True
                 and checks.get("related_knowledge_consistent") is True
             )
+        elif has_any_basis:
+            traceable = covered = decision_support = False
         else:
-            # 相容舊呼叫端的精簡 arguments；正式 binding_report 不走此分支。
+            # 保留單項計分函式的舊精簡呼叫；正式聚合會將 fallback 標為 missing_data。
             traceable = covered = decision_support = necessity_clear
 
         traceability_flags.append(traceable)
@@ -578,7 +621,8 @@ def _quality_score_breakdown(
     total_score = sum(item["weighted_score"] for item in subscores.values())
     basis_mode = (
         "missing_data" if not arguments
-        else "binding_report" if has_detailed_basis
+        else "binding_report" if all(complete_basis)
+        else "partial_binding_report" if has_any_basis
         else "primary_field_fallback"
     )
     return total_score, subscores, basis, basis_mode
@@ -877,6 +921,10 @@ def calculate_polaris_metrics(
     
     functional_gap_score = calculate_functional_gap_score(arguments)
     user_value_score = calculate_user_value_score(arguments)
+    for metric in (functional_gap_score, user_value_score):
+        if metric.basis_mode != "binding_report":
+            metric.status = "missing_data"
+            metric.passes_threshold = False
     source_binding_integrity = calculate_source_binding_integrity(arguments)
     angle_diversity_index = calculate_angle_diversity_index(angle_summary)
     delivery_success_rate = calculate_delivery_success_rate(delivery_status)

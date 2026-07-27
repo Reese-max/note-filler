@@ -369,7 +369,7 @@ class TestPolarisMetricsIntegration:
         assert "polaris_metrics" in data, "JSON 輸出應含 polaris_metrics"
         polaris = data["polaris_metrics"]
         assert polaris["schema"] == "note_filler.polaris_metrics.v1"
-        assert polaris["formula_version"] == "1.0"
+        assert polaris["formula_version"] == "1.1"
         assert polaris["decision"] == polaris["overall_status"]
         assert polaris["overall_status"] in ["excellent", "good", "acceptable", "poor", "error"]
         assert isinstance(polaris["core_metrics_pass_count"], int)
@@ -489,7 +489,7 @@ class TestPolarisMetricsIntegration:
             assert "functional_gap_threshold=0.70" in text
             assert "user_value_threshold=0.70" in text
             assert "formula=weighted_sum" in text
-            assert "formula_version=1.0" in text
+            assert "formula_version=1.1" in text
             assert "metric=functional_gap_score" in text
             assert "source_fields=binding_report.arguments[].functional_gap" in text
             assert "metric=delivery_success_rate" in text

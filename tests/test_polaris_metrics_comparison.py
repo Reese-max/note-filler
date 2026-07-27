@@ -66,6 +66,13 @@ def _src(sid: str = "s1", level: str = "A") -> Source:
     )
 
 
+_DELIVERED = {
+    "primary_note_ready": True,
+    "user_channel_sent": True,
+    "local_fallback_written": True,
+}
+
+
 # ── Set A：高功能缺口 + 高使用者價值（pipeline 前置）─────────────────────
 
 A_FIXTURE_LLM = [
@@ -173,7 +180,7 @@ def _verify_quality_score_formula(metric: dict, name: str):
     assert abs(metric["score"] - expected) < 0.001, (
         f"{name} 總分 {metric['score']:.4f} ≠ 子分數加權和 {expected:.4f}"
     )
-    assert metric["formula_version"] == "1.0"
+    assert metric["formula_version"] == "1.1"
     assert metric["formula"] == (
         "traceability*0.25 + coverage_breadth*0.25 + "
         "necessity_clarity*0.25 + decision_support*0.25"
@@ -496,8 +503,8 @@ class TestDirectArgumentComparison:
             ),
         ]
 
-        ma = calculate_polaris_metrics(_build_report(args_a))
-        mb = calculate_polaris_metrics(_build_report(args_b))
+        ma = calculate_polaris_metrics(_build_report(args_a), _DELIVERED)
+        mb = calculate_polaris_metrics(_build_report(args_b), _DELIVERED)
 
         assert ma.functional_gap_score.score - mb.functional_gap_score.score >= 0.5
         assert ma.user_value_score.score - mb.user_value_score.score >= 0.4
@@ -657,3 +664,59 @@ def test_metrics_json_serializable(tmp_path):
     ]
     for field in required:
         assert field in parsed, f"JSON 輸出缺少 {field}"
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# 5.  不可量測與部分可量測負例
+# ══════════════════════════════════════════════════════════════════════════════
+
+def test_complete_fields_without_quantifiable_basis_fail_quality_gate():
+    """欄位雖齊全，量測依據不是布林／數值時不得算成高品質。"""
+    argument = _make_arg_high(
+        0,
+        TestDirectArgumentComparison.HIGH_ARG_FG,
+        TestDirectArgumentComparison.HIGH_ARG_UV,
+        ["law:1"],
+    )
+    report = _build_report([argument])
+    report["angle_coverage_summary"]["unique_angle_types"] = [
+        "definition", "limitation", "requirement", "effect", "procedure",
+    ]
+
+    # 所有欄位名稱都在，但內容只是筆記式文字，無法重算布林與數值依據。
+    argument["checks"] = {
+        key: "筆記聲稱已完成" for key in argument["checks"]
+    }
+    argument["angle_coverage"]["covered_facets"] = "各面向都有提到"
+    argument["angle_coverage"]["effective_angle_count"] = "一個"
+
+    polaris = calculate_polaris_metrics(report, _DELIVERED).to_dict()
+
+    for name in ("functional_gap_score", "user_value_score"):
+        metric = polaris[name]
+        assert metric["status"] == "missing_data"
+        assert metric["decision"] == "missing_data"
+        assert metric["passes_threshold"] is False
+        assert metric["basis_mode"] == "partial_binding_report"
+    assert polaris["core_metrics_pass_count"] == 3
+    assert polaris["overall_status"] == polaris["decision"] == "poor"
+
+
+def test_partial_calculability_is_explicitly_downgraded():
+    """即使 4/5 可計算分項通過，缺一項仍不得判為 good。"""
+    report = _build_report([
+        _make_arg_high(
+            0,
+            TestDirectArgumentComparison.HIGH_ARG_FG,
+            TestDirectArgumentComparison.HIGH_ARG_UV,
+            ["law:1"],
+        )
+    ])
+    report["angle_coverage_summary"] = {}
+
+    polaris = calculate_polaris_metrics(report, _DELIVERED).to_dict()
+
+    assert polaris["angle_diversity_index"]["status"] == "missing_data"
+    assert polaris["angle_diversity_index"]["decision"] == "missing_data"
+    assert polaris["core_metrics_pass_count"] == 4
+    assert polaris["overall_status"] == polaris["decision"] == "poor"

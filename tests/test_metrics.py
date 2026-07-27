@@ -25,6 +25,32 @@ from note_filler.metrics import (
 )
 
 
+def _argument_with_quantifiable_basis(functional_gap: str, user_value: str) -> dict:
+    return {
+        "functional_gap": functional_gap,
+        "user_value": user_value,
+        "source_ids": ["source:a"],
+        "binding_status": "pass",
+        "checks": {
+            "at_least_one_source": True,
+            "source_traceable": True,
+            "no_omitted_traces": True,
+            "no_extra_traces": True,
+            "has_functional_gap": True,
+            "has_user_value": True,
+            "has_related_knowledge": True,
+            "related_knowledge_consistent": True,
+        },
+        "angle_coverage": {
+            "covered_facets": [
+                "necessity:functional_gap",
+                "necessity:user_value",
+            ],
+            "effective_angle_count": 1,
+        },
+    }
+
+
 class TestFunctionalGapScore:
     """功能缺口分數測試。"""
 
@@ -390,16 +416,14 @@ class TestPolarisMetrics:
         """測試所有指標的計算。"""
         binding_report = {
             "arguments": [
-                {
-                    "functional_gap": "This is a long functional gap description",
-                    "user_value": "Help readers understand the legal responsibility scope",
-                    "binding_status": "pass",
-                },
-                {
-                    "functional_gap": "Another detailed gap description here",
-                    "user_value": "Provide explanation for readers to understand conditions",
-                    "binding_status": "pass",
-                },
+                _argument_with_quantifiable_basis(
+                    "This is a long functional gap description",
+                    "Help readers understand the legal responsibility scope",
+                ),
+                _argument_with_quantifiable_basis(
+                    "Another detailed gap description here",
+                    "Provide explanation for readers to understand conditions",
+                ),
             ],
             "angle_coverage_summary": {
                 "unique_angle_types": ["definition", "limitation"],
@@ -520,11 +544,10 @@ class TestPolarisMetrics:
         """測試序列化為 dict。"""
         binding_report = {
             "arguments": [
-                {
-                    "functional_gap": "原稿未定義法律責任範圍",
-                    "user_value": "補齊讀者對法律責任範圍所需的說明",
-                    "binding_status": "pass",
-                },
+                _argument_with_quantifiable_basis(
+                    "原稿未定義法律責任範圍",
+                    "補齊讀者對法律責任範圍所需的說明",
+                ),
             ],
             "angle_coverage_summary": {
                 "unique_angle_types": ["definition"],
@@ -544,7 +567,7 @@ class TestPolarisMetrics:
         # 驗證基本結構
         assert "schema" in metrics_dict
         assert metrics_dict["schema"] == "note_filler.polaris_metrics.v1"
-        assert metrics_dict["formula_version"] == "1.0"
+        assert metrics_dict["formula_version"] == "1.1"
         assert "overall_status" in metrics_dict
         assert metrics_dict["decision"] == metrics_dict["overall_status"]
         assert metrics_dict["decision_rule"]
@@ -654,11 +677,10 @@ class TestMetricsIntegration:
         """測試北極星指標在 delivery_manifest 中的整合。"""
         binding_report = {
             "arguments": [
-                {
-                    "functional_gap": "原稿未定義法律責任範圍",
-                    "user_value": "補齊讀者對法律責任範圍所需的說明",
-                    "binding_status": "pass",
-                },
+                _argument_with_quantifiable_basis(
+                    "原稿未定義法律責任範圍",
+                    "補齊讀者對法律責任範圍所需的說明",
+                ),
             ],
             "angle_coverage_summary": {
                 "unique_angle_types": ["definition"],

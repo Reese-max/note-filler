@@ -193,6 +193,10 @@
 - **欄位缺失**: 視為缺值，整個指標狀態為 `missing_data`
 - **類型錯誤**: 嘗試轉為列表，失敗則視為空列表
 
+`FunctionalGapScore` 與 `UserValueScore` 只有在每個論點的 `source_ids`、
+`checks` 與 `angle_coverage` 都具備可重算型別時才標為 `calculated`；欄位名稱雖齊全但
+值僅為敘述文字，或只有部分論點具備依據時，皆標為 `missing_data` 且整體品質降為 `poor`。
+
 #### 3.2.4 angle_tags
 
 - **空列表處理**: 視為無角度標籤，角度多樣性分數為 0.0
@@ -311,7 +315,7 @@
 ```json
 {
   "schema": "note_filler.polaris_field_specification.v1",
-  "version": "1.0",
+  "version": "1.1",
   "specification_date": "2026-07-27",
   "field_definitions": {
     "functional_gap": {
@@ -386,7 +390,7 @@
       "generation_stage": "build_binding_report",
       "default_value": null,
       "required_for_metrics": ["FunctionalGapScore", "UserValueScore"],
-      "missing_data_handling": "affected_subscores=0"
+      "missing_data_handling": "status=missing_data;passes_threshold=false"
     },
     "angle_coverage": {
       "data_type": "dict",
@@ -395,7 +399,7 @@
       "generation_stage": "build_binding_report",
       "default_value": null,
       "required_for_metrics": ["FunctionalGapScore", "UserValueScore"],
-      "missing_data_handling": "coverage_breadth=0"
+      "missing_data_handling": "status=missing_data;passes_threshold=false"
     },
     "angle_coverage_summary": {
       "data_type": "dict",

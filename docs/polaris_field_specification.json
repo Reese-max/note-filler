@@ -1,6 +1,6 @@
 {
   "schema": "note_filler.polaris_field_specification.v1",
-  "version": "1.0",
+  "version": "1.1",
   "specification_date": "2026-07-27",
   "field_definitions": {
     "functional_gap": {
@@ -75,7 +75,7 @@
       "generation_stage": "build_binding_report",
       "default_value": null,
       "required_for_metrics": ["FunctionalGapScore", "UserValueScore"],
-      "missing_data_handling": "affected_subscores=0"
+      "missing_data_handling": "status=missing_data;passes_threshold=false"
     },
     "angle_coverage": {
       "data_type": "dict",
@@ -84,7 +84,7 @@
       "generation_stage": "build_binding_report",
       "default_value": null,
       "required_for_metrics": ["FunctionalGapScore", "UserValueScore"],
-      "missing_data_handling": "coverage_breadth=0"
+      "missing_data_handling": "status=missing_data;passes_threshold=false"
     },
     "angle_coverage_summary": {
       "data_type": "dict",
