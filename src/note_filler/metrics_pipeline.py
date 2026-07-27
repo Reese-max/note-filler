@@ -1,13 +1,15 @@
 """北極星指標週期性計算管線。
 
 提供持續計算北極星品質指標的資料蒐集、轉換與彙總功能：
-- 從 delivery_manifest.json 蒐集指標資料
+- 從 delivery_manifest.json 蒐集指標資料（含 note_id 識別碼）
 - 轉換與彙總週期性結果
-- 儲存可查詢的結果
-- 執行失敗告警
+- 儲存可查詢的歷史結果（帶時間戳與筆記識別碼）
+- 提供可重跑機制（rerun_note）
+- 執行結構化失敗告警（MetricsAlert）
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
 from dataclasses import dataclass, field
@@ -16,6 +18,15 @@ from pathlib import Path
 from typing import Any
 
 logger = logging.getLogger(__name__)
+
+
+def derive_note_id(source_path: str) -> str:
+    """從輸入路徑產生穩定的筆記識別碼。
+
+    使用路徑的 sha256 前 12 碼，確保同一筆記在不同環境下 ID 一致。
+    """
+    normalized = source_path.replace("\\", "/").strip().lower()
+    return hashlib.sha256(normalized.encode("utf-8")).hexdigest()[:12]
 
 
 @dataclass
@@ -46,12 +57,29 @@ class MetricsRecord:
     source_path: str
     manifest_path: str
     collection_time: str
+    note_id: str  # 穩定的筆記識別碼（sha256 前 12 碼）
     
     # 北極星指標
     polaris_metrics: dict[str, Any]
     
     # 原始 delivery_manifest 資料
     delivery_manifest: dict[str, Any]
+
+
+@dataclass
+class MetricsAlert:
+    """結構化指標告警記錄。"""
+    alert_id: str  # 唯一告警識別碼
+    alert_time: str  # ISO 8601 UTC
+    alert_type: str  # threshold_breach | collection_failure | rerun_failure | pipeline_error
+    severity: str  # warning | critical
+    metric_name: str  # 受影響指標名稱（pipeline_error 時為 "pipeline"）
+    note_id: str  # 受影響筆記識別碼
+    source_path: str  # 受影響筆記路徑
+    threshold: float | None  # 門檻值（threshold_breach 時有值）
+    actual_value: float | None  # 實際值（threshold_breach 時有值）
+    error_message: str  # 錯誤訊息（failure 時有值）
+    resolved: bool = False  # 是否已解決
 
 
 @dataclass
@@ -71,6 +99,9 @@ class MetricsSummary:
     
     # 指標統計
     metrics_records: list[MetricsRecord] = field(default_factory=list)
+    
+    # 筆記識別碼清單（去重、排序）
+    note_ids: list[str] = field(default_factory=list)
     
     # 平均分數
     average_scores: dict[str, float] = field(default_factory=dict)
@@ -118,6 +149,7 @@ def _traceability_improvement_priorities(
             continue
         seen_manifests.add(record.manifest_path)
         priorities.append({
+            "note_id": record.note_id,
             "source_path": record.source_path,
             "manifest_path": record.manifest_path,
             "reason": "traceability_below_target",
@@ -176,12 +208,14 @@ def collect_metrics_from_manifest(
             return None
         
         source_path = manifest_data.get("input_path", "")
+        note_id = derive_note_id(source_path)
         collection_time = datetime.now(timezone.utc).isoformat()
         
         return MetricsRecord(
             source_path=source_path,
             manifest_path=str(manifest_path),
             collection_time=collection_time,
+            note_id=note_id,
             polaris_metrics=polaris_metrics,
             delivery_manifest=manifest_data,
         )
@@ -249,6 +283,7 @@ def calculate_summary_statistics(
         successful_collections=len(records),
         failed_collections=0,
         metrics_records=records,
+        note_ids=sorted({r.note_id for r in records}),
     )
     
     # 計算平均分數
@@ -333,6 +368,7 @@ def save_metrics_summary(
         "total_manifests": summary.total_manifests,
         "successful_collections": summary.successful_collections,
         "failed_collections": summary.failed_collections,
+        "note_ids": summary.note_ids,
         "average_scores": summary.average_scores,
         "quality_distribution": summary.quality_distribution,
         "alerts": summary.alerts,
@@ -367,6 +403,7 @@ def save_detailed_records(
             "source_path": r.source_path,
             "manifest_path": r.manifest_path,
             "collection_time": r.collection_time,
+            "note_id": r.note_id,
             "polaris_metrics": r.polaris_metrics,
         }
         for r in records
@@ -390,7 +427,8 @@ def run_metrics_pipeline(config: MetricsCollectionConfig) -> MetricsSummary:
     2. 計算彙總統計
     3. 儲存彙總結果
     4. 儲存詳細記錄
-    5. 檢查並發送告警
+    5. 檢查並發送告警（結構化 MetricsAlert）
+    6. 儲存告警記錄
     
     回傳 MetricsSummary。
     """
@@ -407,13 +445,33 @@ def run_metrics_pipeline(config: MetricsCollectionConfig) -> MetricsSummary:
     save_metrics_summary(summary, config)
     save_detailed_records(records, config)
     
-    # 4. 處理告警
-    if summary.alerts:
-        logger.warning(f"觸發 {len(summary.alerts)} 個告警")
-        for alert in summary.alerts:
+    # 4. 轉換告警為結構化 MetricsAlert
+    alerts: list[MetricsAlert] = []
+    for alert_data in summary.alerts:
+        _emit_alert(
+            alerts,
+            alert_type="threshold_breach",
+            severity=alert_data.get("severity", "warning"),
+            metric_name=alert_data.get("metric_name", ""),
+            note_id="aggregate",
+            source_path="",
+            threshold=alert_data.get("threshold"),
+            actual_value=alert_data.get("actual_value"),
+            error_message=(
+                f"{alert_data.get('metric_name', '')} 平均分數 "
+                f"{alert_data.get('actual_value', 0):.3f} 低於門檻 "
+                f"{alert_data.get('threshold', 0)}"
+            ),
+        )
+    
+    # 5. 儲存告警
+    if alerts:
+        save_alerts(alerts, config)
+        logger.warning(f"觸發 {len(alerts)} 個告警")
+        for alert in alerts:
             logger.warning(
-                f"告警: {alert['metric_name']} = {alert['actual_value']:.3f} "
-                f"< {alert['threshold']} (嚴重性: {alert['severity']})"
+                f"告警: {alert.metric_name} = {alert.actual_value:.3f} "
+                f"< {alert.threshold} (嚴重性: {alert.severity})"
             )
     
     logger.info("指標計算管線執行完成")
@@ -458,3 +516,247 @@ def query_latest_summary(config: MetricsCollectionConfig) -> dict[str, Any] | No
     """
     histories = query_metrics_history(config, limit=1)
     return histories[0] if histories else None
+
+
+def save_alerts(
+    alerts: list[MetricsAlert],
+    config: MetricsCollectionConfig,
+) -> Path:
+    """儲存告警記錄到 JSON 檔案。
+
+    每次儲存會追加到現有告警檔案（冪等：同 alert_id 不重複寫入）。
+    """
+    config.output_dir.mkdir(parents=True, exist_ok=True)
+    alerts_path = config.output_dir / "metrics_alerts.json"
+
+    existing: list[dict[str, Any]] = []
+    if alerts_path.exists():
+        try:
+            existing = json.loads(alerts_path.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, OSError):
+            existing = []
+
+    existing_ids = {a.get("alert_id") for a in existing}
+    new_alerts = [
+        {
+            "alert_id": a.alert_id,
+            "alert_time": a.alert_time,
+            "alert_type": a.alert_type,
+            "severity": a.severity,
+            "metric_name": a.metric_name,
+            "note_id": a.note_id,
+            "source_path": a.source_path,
+            "threshold": a.threshold,
+            "actual_value": a.actual_value,
+            "error_message": a.error_message,
+            "resolved": a.resolved,
+        }
+        for a in alerts
+        if a.alert_id not in existing_ids
+    ]
+
+    existing.extend(new_alerts)
+    alerts_path.write_text(
+        json.dumps(existing, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+        newline="\n",
+    )
+    logger.info(f"告警記錄已儲存: {alerts_path} (+{len(new_alerts)} new)")
+    return alerts_path
+
+
+def load_alerts(config: MetricsCollectionConfig) -> list[MetricsAlert]:
+    """載入所有告警記錄。"""
+    alerts_path = config.output_dir / "metrics_alerts.json"
+    if not alerts_path.exists():
+        return []
+
+    try:
+        data = json.loads(alerts_path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return []
+
+    return [
+        MetricsAlert(
+            alert_id=a["alert_id"],
+            alert_time=a["alert_time"],
+            alert_type=a["alert_type"],
+            severity=a["severity"],
+            metric_name=a["metric_name"],
+            note_id=a["note_id"],
+            source_path=a["source_path"],
+            threshold=a.get("threshold"),
+            actual_value=a.get("actual_value"),
+            error_message=a["error_message"],
+            resolved=a.get("resolved", False),
+        )
+        for a in data
+    ]
+
+
+def _emit_alert(
+    alerts: list[MetricsAlert],
+    *,
+    alert_type: str,
+    severity: str,
+    metric_name: str,
+    note_id: str,
+    source_path: str,
+    threshold: float | None = None,
+    actual_value: float | None = None,
+    error_message: str = "",
+) -> MetricsAlert:
+    """建立並加入告警到清單。"""
+    alert_id = hashlib.sha256(
+        f"{alert_type}:{note_id}:{metric_name}:{datetime.now(timezone.utc).isoformat()}".encode()
+    ).hexdigest()[:16]
+    alert = MetricsAlert(
+        alert_id=alert_id,
+        alert_time=datetime.now(timezone.utc).isoformat(),
+        alert_type=alert_type,
+        severity=severity,
+        metric_name=metric_name,
+        note_id=note_id,
+        source_path=source_path,
+        threshold=threshold,
+        actual_value=actual_value,
+        error_message=error_message,
+    )
+    alerts.append(alert)
+    return alert
+
+
+def rerun_note(
+    manifest_path: Path,
+    config: MetricsCollectionConfig,
+) -> tuple[MetricsRecord | None, list[MetricsAlert]]:
+    """重跑單筆筆記的指標計算。
+
+    從既有 delivery_manifest.json 讀取 binding_report 資料，
+    重新計算北極星指標，更新 manifest 並回傳新的 MetricsRecord。
+
+    回傳 (record, alerts)：
+      - record: 成功時回傳 MetricsRecord，失敗時回傳 None
+      - alerts: 告警清單（可能為空）
+    """
+    alerts: list[MetricsAlert] = []
+
+    if not manifest_path.exists():
+        _emit_alert(
+            alerts,
+            alert_type="rerun_failure",
+            severity="critical",
+            metric_name="pipeline",
+            note_id="unknown",
+            source_path=str(manifest_path),
+            error_message=f"Manifest 檔案不存在: {manifest_path}",
+        )
+        return None, alerts
+
+    try:
+        manifest_data = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError) as exc:
+        _emit_alert(
+            alerts,
+            alert_type="rerun_failure",
+            severity="critical",
+            metric_name="pipeline",
+            note_id=derive_note_id(str(manifest_path)),
+            source_path=str(manifest_path),
+            error_message=f"Manifest 讀取失敗: {exc}",
+        )
+        return None, alerts
+
+    source_path = manifest_data.get("input_path", str(manifest_path))
+    note_id = derive_note_id(source_path)
+
+    # 嘗試從同目錄的 binding_report.json 重新計算
+    binding_report_path = manifest_path.parent / "binding_report.json"
+    if not binding_report_path.exists():
+        _emit_alert(
+            alerts,
+            alert_type="rerun_failure",
+            severity="warning",
+            metric_name="pipeline",
+            note_id=note_id,
+            source_path=source_path,
+            error_message=f"binding_report.json 不存在: {binding_report_path}",
+        )
+        return None, alerts
+
+    try:
+        binding_report = json.loads(binding_report_path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError) as exc:
+        _emit_alert(
+            alerts,
+            alert_type="rerun_failure",
+            severity="critical",
+            metric_name="pipeline",
+            note_id=note_id,
+            source_path=source_path,
+            error_message=f"binding_report.json 讀取失敗: {exc}",
+        )
+        return None, alerts
+
+    # 從 manifest 取得 delivery_status
+    delivery_status = manifest_data.get("delivery_status")
+
+    # 重新計算指標
+    try:
+        from .metrics import calculate_polaris_metrics
+        polaris_metrics = calculate_polaris_metrics(
+            binding_report=binding_report,
+            delivery_status=delivery_status,
+        ).to_dict()
+    except Exception as exc:
+        _emit_alert(
+            alerts,
+            alert_type="rerun_failure",
+            severity="critical",
+            metric_name="pipeline",
+            note_id=note_id,
+            source_path=source_path,
+            error_message=f"指標計算失敗: {type(exc).__name__}: {exc}",
+        )
+        return None, alerts
+
+    # 更新 manifest 中的 polaris_metrics
+    manifest_data["polaris_metrics"] = polaris_metrics
+    manifest_data["metrics_rerun_at"] = datetime.now(timezone.utc).isoformat()
+    manifest_path.write_text(
+        json.dumps(manifest_data, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+        newline="\n",
+    )
+
+    collection_time = datetime.now(timezone.utc).isoformat()
+    record = MetricsRecord(
+        source_path=source_path,
+        manifest_path=str(manifest_path),
+        collection_time=collection_time,
+        note_id=note_id,
+        polaris_metrics=polaris_metrics,
+        delivery_manifest=manifest_data,
+    )
+
+    # 檢查指標是否低於門檻並產生告警
+    for metric_name, threshold in config.alert_thresholds.items():
+        metric_data = polaris_metrics.get(metric_name, {})
+        if metric_data.get("status") == "calculated":
+            score = metric_data.get("score", 0.0)
+            if score < threshold:
+                severity = "warning" if score >= threshold * 0.8 else "critical"
+                _emit_alert(
+                    alerts,
+                    alert_type="threshold_breach",
+                    severity=severity,
+                    metric_name=metric_name,
+                    note_id=note_id,
+                    source_path=source_path,
+                    threshold=threshold,
+                    actual_value=score,
+                    error_message=f"{metric_name}={score:.3f} < {threshold}",
+                )
+
+    logger.info(f"Rerun 完成: {note_id} ({source_path})")
+    return record, alerts

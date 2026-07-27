@@ -1,6 +1,6 @@
 """北極星指標計算管線測試。
 
-驗證指標蒐集、彙總、儲存、查詢與告警功能。
+驗證指標蒐集、彙總、儲存、查詢、重跑與告警功能。
 """
 from __future__ import annotations
 
@@ -13,6 +13,7 @@ from typing import Optional
 import pytest
 
 from note_filler.metrics_pipeline import (
+    MetricsAlert,
     MetricsCollectionConfig,
     MetricsRecord,
     MetricsSummary,
@@ -24,6 +25,10 @@ from note_filler.metrics_pipeline import (
     run_metrics_pipeline,
     query_metrics_history,
     query_latest_summary,
+    derive_note_id,
+    rerun_note,
+    save_alerts,
+    load_alerts,
 )
 
 
@@ -264,6 +269,7 @@ class TestCalculateSummaryStatistics:
                 source_path="input1.txt",
                 manifest_path="manifest1.json",
                 collection_time=datetime.now(timezone.utc).isoformat(),
+                note_id=derive_note_id("input1.txt"),
                 polaris_metrics=_create_test_polaris_metrics(
                     functional_gap_score=0.8,
                     user_value_score=0.7,
@@ -274,6 +280,7 @@ class TestCalculateSummaryStatistics:
                 source_path="input2.txt",
                 manifest_path="manifest2.json",
                 collection_time=datetime.now(timezone.utc).isoformat(),
+                note_id=derive_note_id("input2.txt"),
                 polaris_metrics=_create_test_polaris_metrics(
                     functional_gap_score=0.6,
                     user_value_score=0.5,
@@ -313,6 +320,7 @@ class TestCalculateSummaryStatistics:
                 source_path="input1.txt",
                 manifest_path="manifest1.json",
                 collection_time=datetime.now(timezone.utc).isoformat(),
+                note_id=derive_note_id("input1.txt"),
                 polaris_metrics=_create_test_polaris_metrics(
                     functional_gap_score=0.3,  # 低於預設門檻 0.5
                 ),
@@ -338,6 +346,7 @@ class TestCalculateSummaryStatistics:
                 source_path=source_path,
                 manifest_path=f"{source_path}.manifest.json",
                 collection_time=now,
+                note_id=derive_note_id(source_path),
                 polaris_metrics=_create_test_polaris_metrics(
                     traceability_score=traceability,
                     affected_argument_ids=affected,
@@ -355,6 +364,7 @@ class TestCalculateSummaryStatistics:
             source_path="note-b.txt",
             manifest_path="note-b.txt.manifest.json",
             collection_time=now,
+            note_id=derive_note_id("note-b.txt"),
             polaris_metrics=_create_test_polaris_metrics(
                 traceability_score=0.5,
                 affected_argument_ids=["argument:b"],
@@ -431,6 +441,7 @@ class TestSaveDetailedRecords:
                 source_path="input1.txt",
                 manifest_path="manifest1.json",
                 collection_time=datetime.now(timezone.utc).isoformat(),
+                note_id=derive_note_id("input1.txt"),
                 polaris_metrics=_create_test_polaris_metrics(),
                 delivery_manifest={},
             ),
@@ -581,3 +592,429 @@ class TestRunMetricsPipeline:
         # 驗證告警（鬆散檢查）
         # 注意：告警可能因為平均分數計算而變化，所以只檢查有告警機制
         assert hasattr(summary, 'alerts')
+
+
+class TestDeriveNoteId:
+    """測試筆記識別碼產生。"""
+
+    def test_deterministic(self):
+        """同一路徑產生相同 note_id。"""
+        id1 = derive_note_id("input.txt")
+        id2 = derive_note_id("input.txt")
+        assert id1 == id2
+
+    def test_different_paths_different_ids(self):
+        """不同路徑產生不同 note_id。"""
+        id1 = derive_note_id("input1.txt")
+        id2 = derive_note_id("input2.txt")
+        assert id1 != id2
+
+    def test_backslash_normalised(self):
+        """Windows 路徑反斜線正常化。"""
+        id1 = derive_note_id("C:\\Users\\test\\input.txt")
+        id2 = derive_note_id("C:/Users/test/input.txt")
+        assert id1 == id2
+
+    def test_length(self):
+        """note_id 長度為 12 碼。"""
+        note_id = derive_note_id("test.txt")
+        assert len(note_id) == 12
+
+    def test_collect_includes_note_id(self, tmp_path):
+        """collect_metrics_from_manifest 回傳的 record 包含 note_id。"""
+        polaris_metrics = _create_test_polaris_metrics()
+        manifest_path = _create_test_manifest(
+            tmp_path, "delivery_manifest.json", polaris_metrics
+        )
+        config = MetricsCollectionConfig()
+        record = collect_metrics_from_manifest(manifest_path, config)
+
+        assert record is not None
+        assert record.note_id == derive_note_id(str(tmp_path / "input.txt"))
+        assert len(record.note_id) == 12
+
+    def test_summary_includes_note_ids(self, tmp_path):
+        """MetricsSummary 包含去重排序的 note_ids。"""
+        records = [
+            MetricsRecord(
+                source_path="input1.txt",
+                manifest_path="m1.json",
+                collection_time=datetime.now(timezone.utc).isoformat(),
+                note_id=derive_note_id("input1.txt"),
+                polaris_metrics=_create_test_polaris_metrics(),
+                delivery_manifest={},
+            ),
+            MetricsRecord(
+                source_path="input2.txt",
+                manifest_path="m2.json",
+                collection_time=datetime.now(timezone.utc).isoformat(),
+                note_id=derive_note_id("input2.txt"),
+                polaris_metrics=_create_test_polaris_metrics(),
+                delivery_manifest={},
+            ),
+            MetricsRecord(
+                source_path="input1.txt",
+                manifest_path="m3.json",
+                collection_time=datetime.now(timezone.utc).isoformat(),
+                note_id=derive_note_id("input1.txt"),
+                polaris_metrics=_create_test_polaris_metrics(),
+                delivery_manifest={},
+            ),
+        ]
+        summary = calculate_summary_statistics(records, MetricsCollectionConfig())
+        assert len(summary.note_ids) == 2  # 去重
+        assert summary.note_ids == sorted(summary.note_ids)  # 排序
+
+    def test_detailed_records_include_note_id(self, tmp_path):
+        """儲存的詳細記錄包含 note_id。"""
+        records = [
+            MetricsRecord(
+                source_path="input1.txt",
+                manifest_path="manifest1.json",
+                collection_time=datetime.now(timezone.utc).isoformat(),
+                note_id=derive_note_id("input1.txt"),
+                polaris_metrics=_create_test_polaris_metrics(),
+                delivery_manifest={},
+            ),
+        ]
+        config = MetricsCollectionConfig(output_dir=tmp_path)
+        output_path = save_detailed_records(records, config)
+        data = json.loads(output_path.read_text(encoding="utf-8"))
+        assert data[0]["note_id"] == derive_note_id("input1.txt")
+
+    def test_improvement_priorities_include_note_id(self):
+        """追溯性改善優先級包含 note_id。"""
+        now = datetime.now(timezone.utc).isoformat()
+        records = [
+            MetricsRecord(
+                source_path="note-a.txt",
+                manifest_path="note-a.json",
+                collection_time=now,
+                note_id=derive_note_id("note-a.txt"),
+                polaris_metrics=_create_test_polaris_metrics(
+                    traceability_score=0.0,
+                    affected_argument_ids=["argument:a"],
+                ),
+                delivery_manifest={},
+            ),
+        ]
+        summary = calculate_summary_statistics(records, MetricsCollectionConfig())
+        assert len(summary.improvement_priorities) == 1
+        assert summary.improvement_priorities[0]["note_id"] == derive_note_id("note-a.txt")
+
+
+class TestRerunNote:
+    """測試重跑單筆指標計算。"""
+
+    def _setup_manifest_with_binding_report(self, tmp_path, input_path="input.txt"):
+        """建立含 binding_report 的 manifest 結構。"""
+        binding_report = {
+            "schema": "note_filler.binding_report.v1",
+            "arguments": [
+                {
+                    "argument_id": "argument:0",
+                    "source_ids": ["source:a"],
+                    "binding_status": "pass",
+                    "functional_gap": "需要解釋行政程序法的適用範圍，讓讀者了解具體法律效果",
+                    "user_value": "幫助讀者理解行政程序法的適用範圍與具體法律效果",
+                    "checks": {
+                        "at_least_one_source": True,
+                        "source_traceable": True,
+                        "no_omitted_traces": True,
+                        "no_extra_traces": True,
+                        "has_functional_gap": True,
+                        "has_user_value": True,
+                        "has_related_knowledge": True,
+                        "related_knowledge_consistent": True,
+                    },
+                    "angle_coverage": {
+                        "covered_facets": ["necessity:functional_gap", "necessity:user_value"],
+                        "effective_angle_count": 1,
+                    },
+                }
+            ],
+            "angle_coverage_summary": {
+                "unique_angle_types": [
+                    "definition", "limitation", "requirement",
+                    "effect", "procedure", "exception",
+                ],
+                "effective_angle_count": 6,
+                "duplicate_ratio": 0.0,
+            },
+        }
+        binding_report_path = tmp_path / "binding_report.json"
+        binding_report_path.write_text(
+            json.dumps(binding_report, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+
+        manifest_data = {
+            "output_path": str(tmp_path / "output.md"),
+            "input_path": str(tmp_path / input_path),
+            "status": "delivered",
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "content_hash": "abc123",
+            "format": "md",
+            "supplements": 1,
+            "verified": 1,
+            "delivery_status": {
+                "primary_note_ready": True,
+                "user_channel_sent": True,
+                "local_fallback_written": True,
+            },
+        }
+        manifest_path = tmp_path / "delivery_manifest.json"
+        manifest_path.write_text(
+            json.dumps(manifest_data, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+        return manifest_path
+
+    def test_rerun_success(self, tmp_path):
+        """重跑成功：重新計算指標並更新 manifest。"""
+        manifest_path = self._setup_manifest_with_binding_report(tmp_path)
+        config = MetricsCollectionConfig(output_dir=tmp_path / "metrics_output")
+
+        record, alerts = rerun_note(manifest_path, config)
+
+        assert record is not None
+        assert record.note_id == derive_note_id(str(tmp_path / "input.txt"))
+        assert record.polaris_metrics.get("overall_score", 0.0) > 0.0
+        assert len(alerts) == 0
+
+        # 驗證 manifest 已更新
+        updated = json.loads(manifest_path.read_text(encoding="utf-8"))
+        assert "polaris_metrics" in updated
+        assert "metrics_rerun_at" in updated
+
+    def test_rerun_manifest_not_found(self, tmp_path):
+        """manifest 不存在時回傳告警。"""
+        manifest_path = tmp_path / "nonexistent.json"
+        config = MetricsCollectionConfig(output_dir=tmp_path / "metrics_output")
+
+        record, alerts = rerun_note(manifest_path, config)
+
+        assert record is None
+        assert len(alerts) == 1
+        assert alerts[0].alert_type == "rerun_failure"
+        assert alerts[0].severity == "critical"
+
+    def test_rerun_binding_report_not_found(self, tmp_path):
+        """binding_report.json 不存在時回傳告警。"""
+        manifest_data = {
+            "output_path": str(tmp_path / "output.md"),
+            "input_path": str(tmp_path / "input.txt"),
+            "status": "delivered",
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "content_hash": "abc123",
+            "format": "md",
+            "supplements": 1,
+            "verified": 1,
+            "delivery_status": {
+                "primary_note_ready": True,
+                "user_channel_sent": True,
+                "local_fallback_written": True,
+            },
+        }
+        manifest_path = tmp_path / "delivery_manifest.json"
+        manifest_path.write_text(
+            json.dumps(manifest_data, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+        config = MetricsCollectionConfig(output_dir=tmp_path / "metrics_output")
+
+        record, alerts = rerun_note(manifest_path, config)
+
+        assert record is None
+        assert len(alerts) == 1
+        assert alerts[0].alert_type == "rerun_failure"
+        assert "binding_report.json 不存在" in alerts[0].error_message
+
+    def test_rerun_manifest_corrupt(self, tmp_path):
+        """manifest 損壞時回傳告警。"""
+        manifest_path = tmp_path / "delivery_manifest.json"
+        manifest_path.write_text("not valid json {{{", encoding="utf-8")
+        config = MetricsCollectionConfig(output_dir=tmp_path / "metrics_output")
+
+        record, alerts = rerun_note(manifest_path, config)
+
+        assert record is None
+        assert len(alerts) == 1
+        assert alerts[0].alert_type == "rerun_failure"
+
+    def test_rerun_idempotent(self, tmp_path):
+        """重跑冪等：兩次重跑結果一致。"""
+        manifest_path = self._setup_manifest_with_binding_report(tmp_path)
+        config = MetricsCollectionConfig(output_dir=tmp_path / "metrics_output")
+
+        record1, _ = rerun_note(manifest_path, config)
+        record2, _ = rerun_note(manifest_path, config)
+
+        assert record1 is not None
+        assert record2 is not None
+        assert record1.polaris_metrics["overall_score"] == record2.polaris_metrics["overall_score"]
+        assert record1.polaris_metrics["overall_status"] == record2.polaris_metrics["overall_status"]
+
+    def test_rerun_emits_threshold_alerts(self, tmp_path):
+        """重跑時指標低於門檻會產生告警。"""
+        binding_report = {
+            "schema": "note_filler.binding_report.v1",
+            "arguments": [
+                {
+                    "argument_id": "argument:0",
+                    "source_ids": [],
+                    "binding_status": "fail",
+                    "functional_gap": "",
+                    "user_value": "",
+                    "checks": {
+                        "at_least_one_source": False,
+                        "source_traceable": False,
+                        "no_omitted_traces": True,
+                        "no_extra_traces": True,
+                        "has_functional_gap": False,
+                        "has_user_value": False,
+                        "has_related_knowledge": False,
+                        "related_knowledge_consistent": False,
+                    },
+                    "angle_coverage": {
+                        "covered_facets": [],
+                        "effective_angle_count": 0,
+                    },
+                }
+            ],
+            "angle_coverage_summary": {
+                "unique_angle_types": [],
+                "effective_angle_count": 0,
+                "duplicate_ratio": 0.0,
+            },
+        }
+        binding_report_path = tmp_path / "binding_report.json"
+        binding_report_path.write_text(
+            json.dumps(binding_report, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+        manifest_data = {
+            "output_path": str(tmp_path / "output.md"),
+            "input_path": str(tmp_path / "input.txt"),
+            "status": "delivered",
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "content_hash": "abc123",
+            "format": "md",
+            "supplements": 0,
+            "verified": 0,
+            "delivery_status": {
+                "primary_note_ready": True,
+                "user_channel_sent": True,
+                "local_fallback_written": True,
+            },
+        }
+        manifest_path = tmp_path / "delivery_manifest.json"
+        manifest_path.write_text(
+            json.dumps(manifest_data, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+        config = MetricsCollectionConfig(output_dir=tmp_path / "metrics_output")
+
+        record, alerts = rerun_note(manifest_path, config)
+
+        assert record is not None
+        # 應該有 threshold_breach 告警
+        threshold_alerts = [a for a in alerts if a.alert_type == "threshold_breach"]
+        assert len(threshold_alerts) > 0
+
+
+class TestMetricsAlert:
+    """測試結構化告警。"""
+
+    def test_save_and_load_alerts(self, tmp_path):
+        """告警可儲存並載入。"""
+        config = MetricsCollectionConfig(output_dir=tmp_path)
+        alerts = [
+            MetricsAlert(
+                alert_id="alert1",
+                alert_time=datetime.now(timezone.utc).isoformat(),
+                alert_type="threshold_breach",
+                severity="warning",
+                metric_name="functional_gap_score",
+                note_id="note123",
+                source_path="input.txt",
+                threshold=0.5,
+                actual_value=0.3,
+                error_message="低於門檻",
+            ),
+        ]
+
+        save_alerts(alerts, config)
+        loaded = load_alerts(config)
+
+        assert len(loaded) == 1
+        assert loaded[0].alert_id == "alert1"
+        assert loaded[0].note_id == "note123"
+        assert loaded[0].actual_value == 0.3
+
+    def test_save_alerts_idempotent(self, tmp_path):
+        """重複儲存相同 alert_id 不會重複。"""
+        config = MetricsCollectionConfig(output_dir=tmp_path)
+        alerts = [
+            MetricsAlert(
+                alert_id="alert1",
+                alert_time=datetime.now(timezone.utc).isoformat(),
+                alert_type="rerun_failure",
+                severity="critical",
+                metric_name="pipeline",
+                note_id="note123",
+                source_path="input.txt",
+                threshold=None,
+                actual_value=None,
+                error_message="失敗",
+            ),
+        ]
+
+        save_alerts(alerts, config)
+        save_alerts(alerts, config)
+        loaded = load_alerts(config)
+
+        assert len(loaded) == 1
+
+    def test_load_alerts_empty(self, tmp_path):
+        """無告警檔案時回傳空清單。"""
+        config = MetricsCollectionConfig(output_dir=tmp_path)
+        loaded = load_alerts(config)
+        assert loaded == []
+
+    def test_rerun_saves_alerts_to_file(self, tmp_path):
+        """重跑失敗時告警會持久化到檔案。"""
+        manifest_path = tmp_path / "nonexistent.json"
+        config = MetricsCollectionConfig(output_dir=tmp_path / "metrics_output")
+
+        record, alerts = rerun_note(manifest_path, config)
+
+        assert record is None
+        assert len(alerts) > 0
+
+        # 儲存告警
+        save_alerts(alerts, config)
+        loaded = load_alerts(config)
+        assert len(loaded) == len(alerts)
+
+    def test_run_pipeline_saves_alerts(self, tmp_path):
+        """完整管線執行時告警會持久化。"""
+        _create_test_manifest(
+            tmp_path, "delivery_manifest.json", _create_test_polaris_metrics(
+                functional_gap_score=0.3,  # 低於門檻
+            )
+        )
+        output_dir = tmp_path / "metrics_output"
+        config = MetricsCollectionConfig(
+            scan_dirs=[tmp_path],
+            output_dir=output_dir,
+            file_pattern="delivery_manifest*.json",
+        )
+
+        run_metrics_pipeline(config)
+
+        alerts_path = output_dir / "metrics_alerts.json"
+        assert alerts_path.exists()
+        alerts = json.loads(alerts_path.read_text(encoding="utf-8"))
+        assert len(alerts) > 0
+        assert alerts[0]["alert_type"] == "threshold_breach"

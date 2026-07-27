@@ -1,6 +1,6 @@
 """北極星指標計算管線 CLI。
 
-執行週期性指標計算、查詢歷史結果與告警檢查。
+執行週期性指標計算、查詢歷史結果、重跑單筆指標與告警檢查。
 """
 from __future__ import annotations
 
@@ -24,8 +24,9 @@ def _print_improvement_priorities(priorities: list[dict]) -> None:
     print(f"\n追溯性改善優先級 ({len(priorities)}):")
     for item in priorities:
         affected = ",".join(item["affected_argument_ids"]) or "（缺少可定位論點）"
+        note_id = item.get("note_id", "unknown")
         print(
-            f"  #{item['rank']} {item['source_path']}: "
+            f"  #{item['rank']} [{note_id}] {item['source_path']}: "
             f"traceability={item['traceability_score']:.3f}, "
             f"overall={item['overall_score']:.3f}, "
             f"扣分={item['score_penalty']:.3f}, "
@@ -40,8 +41,8 @@ def main(argv: list[str] | None = None) -> int:
     )
     ap.add_argument(
         "command",
-        choices=["collect", "query", "latest"],
-        help="指令: collect=蒐集指標, query=查詢歷史, latest=查詢最新"
+        choices=["collect", "query", "latest", "rerun", "alerts"],
+        help="指令: collect=蒐集指標, query=查詢歷史, latest=查詢最新, rerun=重跑單筆, alerts=查詢告警"
     )
     ap.add_argument(
         "--scan-dirs",
@@ -73,6 +74,11 @@ def main(argv: list[str] | None = None) -> int:
         help="查詢歷史時的記錄數量限制（預設 10）"
     )
     ap.add_argument(
+        "--manifest",
+        default=None,
+        help="rerun 指令：指定 delivery_manifest.json 路徑"
+    )
+    ap.add_argument(
         "--verbose",
         action="store_true",
         help="詳細輸出"
@@ -90,6 +96,8 @@ def main(argv: list[str] | None = None) -> int:
             run_metrics_pipeline,
             query_metrics_history,
             query_latest_summary,
+            rerun_note,
+            load_alerts,
         )
     except ImportError as e:
         logger.error(f"無法導入 metrics_pipeline: {e}")
@@ -112,6 +120,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"  處理 manifest 數: {summary.total_manifests}")
         print(f"  成功蒐集: {summary.successful_collections}")
         print(f"  失敗: {summary.failed_collections}")
+        print(f"  筆記識別碼數: {len(summary.note_ids)}")
         print(f"  彙總期間: {summary.period_start} ~ {summary.period_end}")
         print(f"\n平均分數:")
         for metric_name, score in summary.average_scores.items():
@@ -144,6 +153,9 @@ def main(argv: list[str] | None = None) -> int:
             print(f"\n[{i}] {history['summary_time']}")
             print(f"  期間: {history['period_start']} ~ {history['period_end']}")
             print(f"  處理數: {history['total_manifests']}")
+            note_ids = history.get('note_ids', [])
+            if note_ids:
+                print(f"  筆記識別碼: {', '.join(note_ids[:5])}{'...' if len(note_ids) > 5 else ''}")
             print(f"  平均分數:")
             for metric_name, score in history['average_scores'].items():
                 print(f"    {metric_name}: {score:.3f}")
@@ -167,6 +179,9 @@ def main(argv: list[str] | None = None) -> int:
         print(f"\n最新彙總 ({latest['summary_time']}):")
         print(f"  期間: {latest['period_start']} ~ {latest['period_end']}")
         print(f"  處理數: {latest['total_manifests']}")
+        note_ids = latest.get('note_ids', [])
+        if note_ids:
+            print(f"  筆記識別碼: {', '.join(note_ids[:5])}{'...' if len(note_ids) > 5 else ''}")
         print(f"  平均分數:")
         for metric_name, score in latest['average_scores'].items():
             print(f"    {metric_name}: {score:.3f}")
@@ -182,6 +197,63 @@ def main(argv: list[str] | None = None) -> int:
                     f"< {alert['threshold']} ({alert['severity']})"
                 )
         _print_improvement_priorities(latest.get("improvement_priorities", []))
+        
+        return 0
+    
+    elif args.command == "rerun":
+        if not args.manifest:
+            logger.error("rerun 指令需要 --manifest 參數指定 delivery_manifest.json 路徑")
+            return 1
+        
+        manifest_path = Path(args.manifest)
+        logger.info(f"重跑指標計算: {manifest_path}")
+        record, alerts = rerun_note(manifest_path, config)
+        
+        if record is None:
+            print(f"\n重跑失敗:")
+            for alert in alerts:
+                print(f"  [{alert.severity}] {alert.error_message}")
+            # 儲存告警
+            if alerts:
+                from note_filler.metrics_pipeline import save_alerts
+                save_alerts(alerts, config)
+            return 1
+        
+        print(f"\n重跑完成:")
+        print(f"  筆記識別碼: {record.note_id}")
+        print(f"  來源路徑: {record.source_path}")
+        print(f"  Manifest: {record.manifest_path}")
+        
+        metrics = record.polaris_metrics
+        print(f"  整體狀態: {metrics.get('overall_status', 'unknown')}")
+        print(f"  整體分數: {metrics.get('overall_score', 0.0):.3f}")
+        
+        if alerts:
+            print(f"\n告警 ({len(alerts)}):")
+            for alert in alerts:
+                print(f"  [{alert.severity}] {alert.error_message}")
+            from note_filler.metrics_pipeline import save_alerts
+            save_alerts(alerts, config)
+        
+        return 0
+    
+    elif args.command == "alerts":
+        logger.info("查詢告警記錄...")
+        alerts = load_alerts(config)
+        
+        if not alerts:
+            print("無告警記錄")
+            return 0
+        
+        print(f"\n告警記錄 ({len(alerts)}):")
+        for alert in alerts:
+            status = "✓已解決" if alert.resolved else "✗未解決"
+            print(
+                f"  [{status}] {alert.alert_time} | "
+                f"{alert.alert_type} | {alert.severity} | "
+                f"{alert.metric_name} | {alert.note_id} | "
+                f"{alert.error_message}"
+            )
         
         return 0
     
