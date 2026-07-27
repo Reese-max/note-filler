@@ -1,0 +1,102 @@
+{
+  "note_id": "high_value_003",
+  "category": "high_value",
+  "ground_truth": "high_value",
+  "topic": "訴願法",
+  "original_note": "訴願是行政救濟程序的基本制度，相關規定在訴願法。",
+  "usage_signals": {
+    "citation_count": 15,
+    "reuse_count": 8,
+    "regeneration_avoided": true,
+    "user_feedback_positive": true,
+    "completion_rate": 0.95,
+    "reference_in_other_notes_count": 12,
+    "search_click_count": 42
+  },
+  "arguments": [
+    {
+      "argument_id": "argument:0",
+      "argument_index": 0,
+      "argument_text": "訴願係人民因行政機關之違法或不當行政處分，向原處分機關之上級機關或原處分機關提起之行政救濟程序。",
+      "functional_gap": "筆記未說明訴願之定義與提起要件，讀者無法判斷何時可提起訴願",
+      "user_value": "幫助讀者理解訴願的基本定義與提起要件，能正確判斷救濟時機",
+      "related_knowledge": "訴願係人民因行政機關之違法或不當行政處分，向原處分機關之上級機關或原處分機關提起之行政救濟程序。",
+      "sources": ["law:10"],
+      "binding_status": "pass",
+      "cardinality": "one_to_one",
+      "angle_coverage": {
+        "angle_type": "definition",
+        "covered_facets": ["necessity:functional_gap", "necessity:user_value"],
+        "effective_angle_count": 1
+      },
+      "checks": {
+        "at_least_one_source": true,
+        "source_traceable": true,
+        "no_omitted_traces": true,
+        "no_extra_traces": true,
+        "has_functional_gap": true,
+        "has_user_value": true,
+        "has_related_knowledge": true,
+        "related_knowledge_consistent": true
+      }
+    },
+    {
+      "argument_id": "argument:1",
+      "argument_index": 1,
+      "argument_text": "訴願前置程序之意義在於賦予行政機關自我審查之機會，並減輕行政法院之負擔。",
+      "functional_gap": "筆記未分析前置程序之立法目的，讀者無法理解制度設計之理由",
+      "user_value": "說明讀者理解訴願前置程序之制度目的與政策考量",
+      "related_knowledge": "訴願前置程序之意義在於賦予行政機關自我審查之機會，並減輕行政法院之負擔。",
+      "sources": ["law:11", "law:12"],
+      "binding_status": "pass",
+      "cardinality": "one_to_many",
+      "angle_coverage": {
+        "angle_type": "effect",
+        "covered_facets": ["necessity:functional_gap", "necessity:user_value"],
+        "effective_angle_count": 1
+      },
+      "checks": {
+        "at_least_one_source": true,
+        "source_traceable": true,
+        "no_omitted_traces": true,
+        "no_extra_traces": true,
+        "has_functional_gap": true,
+        "has_user_value": true,
+        "has_related_knowledge": true,
+        "related_knowledge_consistent": true
+      }
+    },
+    {
+      "argument_id": "argument:2",
+      "argument_index": 2,
+      "argument_text": "訴願審議委員會由五至十五人組成，其中社會公正人士、學者、專家不得少於二分之一。",
+      "functional_gap": "筆記未記載訴願審議委員會之組成要件與獨立性保障，讀者無法評估審議之公正性",
+      "user_value": "幫助讀者理解訴願審議委員會的組成結構與獨立性保障機制",
+      "related_knowledge": "訴願審議委員會由五至十五人組成，其中社會公正人士、學者、專家不得少於二分之一。",
+      "sources": ["law:13"],
+      "binding_status": "pass",
+      "cardinality": "one_to_one",
+      "angle_coverage": {
+        "angle_type": "requirement",
+        "covered_facets": ["necessity:functional_gap", "necessity:user_value"],
+        "effective_angle_count": 1
+      },
+      "checks": {
+        "at_least_one_source": true,
+        "source_traceable": true,
+        "no_omitted_traces": true,
+        "no_extra_traces": true,
+        "has_functional_gap": true,
+        "has_user_value": true,
+        "has_related_knowledge": true,
+        "related_knowledge_consistent": true
+      }
+    }
+  ],
+  "annotation_metadata": {
+    "annotator": "human",
+    "annotation_date": "2026-07-27",
+    "validation_status": "validated",
+    "notes": "高價值筆記（高使用率）：三個論點皆 verified，被廣泛引用且使用訊號強勁"
+  }
+}

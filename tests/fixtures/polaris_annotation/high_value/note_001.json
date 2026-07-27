@@ -1,8 +1,18 @@
 {
   "note_id": "high_value_001",
   "category": "high_value",
+  "ground_truth": "high_value",
   "topic": "行政處分",
   "original_note": "行政程序法要求行政行為應遵守正當程序。本筆記僅記錄部分重點，尚未展開。",
+  "usage_signals": {
+    "citation_count": 12,
+    "reuse_count": 6,
+    "regeneration_avoided": true,
+    "user_feedback_positive": true,
+    "completion_rate": 0.9,
+    "reference_in_other_notes_count": 8,
+    "search_click_count": 35
+  },
   "arguments": [
     {
       "argument_id": "argument:0",

@@ -1,26 +1,26 @@
 {
-  "note_id": "low_benefit_001",
+  "note_id": "low_benefit_004",
   "category": "low_benefit",
   "ground_truth": "low_benefit",
-  "topic": "行政處分",
-  "original_note": "行政程序法要求行政行為應遵守正當程序。本筆記僅記錄部分重點，尚未展開。",
+  "topic": "行政罰法",
+  "original_note": "行政罰是行政秩序罰的簡稱。",
   "usage_signals": {
-    "citation_count": 0,
+    "citation_count": 1,
     "reuse_count": 0,
     "regeneration_avoided": false,
     "user_feedback_positive": false,
-    "completion_rate": 0.1,
+    "completion_rate": 0.3,
     "reference_in_other_notes_count": 0,
-    "search_click_count": 0
+    "search_click_count": 2
   },
   "arguments": [
     {
       "argument_id": "argument:0",
       "argument_index": 0,
-      "argument_text": "行政處分是一種行政行為。",
-      "functional_gap": "內容不足",
-      "user_value": "補充此項資訊",
-      "related_knowledge": "行政處分是一種行政行為。",
+      "argument_text": "行政罰是行政機關對違反行政法義務者所為之裁罰性不利處分。",
+      "functional_gap": "待補",
+      "user_value": "解釋行政罰定義",
+      "related_knowledge": "行政罰是行政機關對違反行政法義務者所為之裁罰性不利處分。",
       "sources": [],
       "binding_status": "pending_evidence",
       "cardinality": "none",
@@ -43,15 +43,15 @@
     {
       "argument_id": "argument:1",
       "argument_index": 1,
-      "argument_text": "訴願是救濟程序。",
-      "functional_gap": "待補充",
-      "user_value": "增加內容完整性",
-      "related_knowledge": "訴願是救濟程序。",
-      "sources": ["law:1"],
+      "argument_text": "行政罰種類包括：罰鍰、沒入、勒令歇業等。",
+      "functional_gap": "僅列舉",
+      "user_value": "列舉行政罰種類",
+      "related_knowledge": "行政罰種類包括：罰鍰、沒入、勒令歇業等。",
+      "sources": ["law:40"],
       "binding_status": "fail",
       "cardinality": "one_to_one",
       "angle_coverage": {
-        "angle_type": "procedure",
+        "angle_type": "classification",
         "covered_facets": ["necessity:functional_gap"],
         "effective_angle_count": 1
       },
@@ -71,6 +71,6 @@
     "annotator": "human",
     "annotation_date": "2026-07-27",
     "validation_status": "validated",
-    "notes": "形式完整但低效益筆記範例：功能缺口模糊、使用者價值不明確、來源綁定不完整"
+    "notes": "低效益案例（邊界）：polaris 低但有一些使用訊號，測試 classifier 是否過度仰賴使用訊號"
   }
 }

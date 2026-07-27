@@ -1,0 +1,102 @@
+{
+  "note_id": "high_value_005",
+  "category": "high_value",
+  "ground_truth": "high_value",
+  "topic": "行政執行法",
+  "original_note": "行政執行是確保行政給付義務履行的重要手段。",
+  "usage_signals": {
+    "citation_count": 3,
+    "reuse_count": 2,
+    "regeneration_avoided": false,
+    "user_feedback_positive": true,
+    "completion_rate": 0.7,
+    "reference_in_other_notes_count": 1,
+    "search_click_count": 8
+  },
+  "arguments": [
+    {
+      "argument_id": "argument:0",
+      "argument_index": 0,
+      "argument_text": "行政執行法規範公法上金錢給付義務之強制執行，由法務部行政執行署所屬分署辦理。",
+      "functional_gap": "筆記未說明行政執行之管轄機關與執行程序，讀者無法了解執行流程",
+      "user_value": "幫助讀者理解行政執行之管轄機關與基本流程",
+      "related_knowledge": "行政執行法規範公法上金錢給付義務之強制執行，由法務部行政執行署所屬分署辦理。",
+      "sources": ["law:30"],
+      "binding_status": "pass",
+      "cardinality": "one_to_one",
+      "angle_coverage": {
+        "angle_type": "definition",
+        "covered_facets": ["necessity:functional_gap", "necessity:user_value"],
+        "effective_angle_count": 1
+      },
+      "checks": {
+        "at_least_one_source": true,
+        "source_traceable": true,
+        "no_omitted_traces": true,
+        "no_extra_traces": true,
+        "has_functional_gap": true,
+        "has_user_value": true,
+        "has_related_knowledge": true,
+        "related_knowledge_consistent": true
+      }
+    },
+    {
+      "argument_id": "argument:1",
+      "argument_index": 1,
+      "argument_text": "行政執行之要件：須有公法上金錢給付義務、須有執行名義、須經合法送達催繳通知。",
+      "functional_gap": "筆記未整理行政執行之三項要件與各要件之判斷標準",
+      "user_value": "說明明讀者檢查行政執行要件是否齊備之檢核表",
+      "related_knowledge": "行政執行之要件：須有公法上金錢給付義務、須有執行名義、須經合法送達催繳通知。",
+      "sources": ["law:31"],
+      "binding_status": "pass",
+      "cardinality": "one_to_one",
+      "angle_coverage": {
+        "angle_type": "requirement",
+        "covered_facets": ["necessity:functional_gap", "necessity:user_value"],
+        "effective_angle_count": 1
+      },
+      "checks": {
+        "at_least_one_source": true,
+        "source_traceable": true,
+        "no_omitted_traces": true,
+        "no_extra_traces": true,
+        "has_functional_gap": true,
+        "has_user_value": true,
+        "has_related_knowledge": true,
+        "related_knowledge_consistent": true
+      }
+    },
+    {
+      "argument_id": "argument:2",
+      "argument_index": 2,
+      "argument_text": "義務人對行政執行之救濟：得於執行程序終結前向執行機關聲明異議。",
+      "functional_gap": "筆記未記載義務人之救濟途徑與聲明異議之程序",
+      "user_value": "說明讀者理解義務人之救濟權利與聲明異議之程序",
+      "related_knowledge": "義務人對行政執行之救濟：得於執行程序終結前向執行機關聲明異議。",
+      "sources": ["law:32", "law:33"],
+      "binding_status": "pass",
+      "cardinality": "one_to_many",
+      "angle_coverage": {
+        "angle_type": "effect",
+        "covered_facets": ["necessity:functional_gap", "necessity:user_value"],
+        "effective_angle_count": 1
+      },
+      "checks": {
+        "at_least_one_source": true,
+        "source_traceable": true,
+        "no_omitted_traces": true,
+        "no_extra_traces": true,
+        "has_functional_gap": true,
+        "has_user_value": true,
+        "has_related_knowledge": true,
+        "related_knowledge_consistent": true
+      }
+    }
+  ],
+  "annotation_metadata": {
+    "annotator": "human",
+    "annotation_date": "2026-07-27",
+    "validation_status": "validated",
+    "notes": "高價值邊界案例：polaris 強但使用訊號普通，測試 classifier 是否仍能正確分類"
+  }
+}

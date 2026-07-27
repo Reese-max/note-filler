@@ -1,0 +1,102 @@
+{
+  "note_id": "high_value_004",
+  "category": "high_value",
+  "ground_truth": "high_value",
+  "topic": "國家賠償法",
+  "original_note": "國家賠償法規範公務員違法行為之損害賠償。",
+  "usage_signals": {
+    "citation_count": 7,
+    "reuse_count": 4,
+    "regeneration_avoided": true,
+    "user_feedback_positive": true,
+    "completion_rate": 0.85,
+    "reference_in_other_notes_count": 5,
+    "search_click_count": 18
+  },
+  "arguments": [
+    {
+      "argument_id": "argument:0",
+      "argument_index": 0,
+      "argument_text": "國家賠償法第二條規定，公務員於執行職務行使公權力時，因故意或過失不法侵害人民自由或權利者，國家應負損害賠償責任。",
+      "functional_gap": "筆記未詳列國賠要件（行為人、職務行為、故意過失、違法、損害、因果關係），讀者無法逐項檢驗",
+      "user_value": "幫助讀者逐一檢驗國家賠償請求要件，能正確評估國賠成立與否",
+      "related_knowledge": "國家賠償法第二條規定，公務員於執行職務行使公權力時，因故意或過失不法侵害人民自由或權利者，國家應負損害賠償責任。",
+      "sources": ["law:20", "law:21"],
+      "binding_status": "pass",
+      "cardinality": "one_to_many",
+      "angle_coverage": {
+        "angle_type": "definition",
+        "covered_facets": ["necessity:functional_gap", "necessity:user_value"],
+        "effective_angle_count": 1
+      },
+      "checks": {
+        "at_least_one_source": true,
+        "source_traceable": true,
+        "no_omitted_traces": true,
+        "no_extra_traces": true,
+        "has_functional_gap": true,
+        "has_user_value": true,
+        "has_related_knowledge": true,
+        "related_knowledge_consistent": true
+      }
+    },
+    {
+      "argument_id": "argument:1",
+      "argument_index": 1,
+      "argument_text": "公共設施國家賠償：公有公共設施因設置或管理有欠缺，致人民生命、身體或財產受損害者，國家應負損害賠償責任。",
+      "functional_gap": "筆記未區分公共設施國賠與公務員國賠之差異，讀者無法分辨兩種請求權基礎",
+      "user_value": "說明讀者理解兩種國家賠償類型之差異與各自的請求要件",
+      "related_knowledge": "公共設施國家賠償：公有公共設施因設置或管理有欠缺，致人民生命、身體或財產受損害者，國家應負損害賠償責任。",
+      "sources": ["law:22"],
+      "binding_status": "pass",
+      "cardinality": "one_to_one",
+      "angle_coverage": {
+        "angle_type": "classification",
+        "covered_facets": ["necessity:functional_gap", "necessity:user_value"],
+        "effective_angle_count": 1
+      },
+      "checks": {
+        "at_least_one_source": true,
+        "source_traceable": true,
+        "no_omitted_traces": true,
+        "no_extra_traces": true,
+        "has_functional_gap": true,
+        "has_user_value": true,
+        "has_related_knowledge": true,
+        "related_knowledge_consistent": true
+      }
+    },
+    {
+      "argument_id": "argument:2",
+      "argument_index": 2,
+      "argument_text": "國家賠償請求程序：應先以書面向賠償義務機關請求協議，協議不成始得提起損害賠償之訴。",
+      "functional_gap": "筆記未記載協議前置程序之流程與時效，讀者不知道如何啟動國賠請求",
+      "user_value": "幫助讀者理解國家賠償請求之程序步驟，能正確啟動請求流程",
+      "related_knowledge": "國家賠償請求程序：應先以書面向賠償義務機關請求協議，協議不成始得提起損害賠償之訴。",
+      "sources": ["law:23", "law:24"],
+      "binding_status": "pass",
+      "cardinality": "one_to_many",
+      "angle_coverage": {
+        "angle_type": "procedure",
+        "covered_facets": ["necessity:functional_gap", "necessity:user_value"],
+        "effective_angle_count": 1
+      },
+      "checks": {
+        "at_least_one_source": true,
+        "source_traceable": true,
+        "no_omitted_traces": true,
+        "no_extra_traces": true,
+        "has_functional_gap": true,
+        "has_user_value": true,
+        "has_related_knowledge": true,
+        "related_knowledge_consistent": true
+      }
+    }
+  ],
+  "annotation_metadata": {
+    "annotator": "human",
+    "annotation_date": "2026-07-27",
+    "validation_status": "validated",
+    "notes": "高價值筆記（中等使用率）：國家賠償主題，三個 verified 論點，使用訊號中等"
+  }
+}

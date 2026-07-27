@@ -1,8 +1,18 @@
 {
   "note_id": "high_value_002",
   "category": "high_value",
+  "ground_truth": "high_value",
   "topic": "行政契約",
   "original_note": "行政契約是行政機關與人民間的協議，相關規定散見於各法律。",
+  "usage_signals": {
+    "citation_count": 9,
+    "reuse_count": 5,
+    "regeneration_avoided": true,
+    "user_feedback_positive": true,
+    "completion_rate": 0.88,
+    "reference_in_other_notes_count": 6,
+    "search_click_count": 24
+  },
   "arguments": [
     {
       "argument_id": "argument:0",

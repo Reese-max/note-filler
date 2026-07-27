@@ -302,7 +302,7 @@ class TestAnnotationDiscrimination:
         with open(high_001_path, encoding="utf-8") as f:
             high_data = json.load(f)
         
-        assert high_data["category"] == "high_value"
+        assert high_data.get("ground_truth", high_data["category"]) == "high_value"
         assert len(high_data["arguments"]) >= 2
         for arg in high_data["arguments"]:
             assert len(arg["functional_gap"]) >= 10, "高價值筆記功能缺口應 >= 10 字元"
@@ -314,7 +314,7 @@ class TestAnnotationDiscrimination:
         with open(low_001_path, encoding="utf-8") as f:
             low_data = json.load(f)
         
-        assert low_data["category"] == "low_benefit"
+        assert low_data.get("ground_truth", low_data["category"]) == "low_benefit"
         assert len(low_data["arguments"]) >= 2
         for arg in low_data["arguments"]:
             assert len(arg["functional_gap"]) < 10, "低效益筆記功能缺口應 < 10 字元"

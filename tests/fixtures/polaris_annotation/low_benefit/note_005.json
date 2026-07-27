@@ -1,0 +1,76 @@
+{
+  "note_id": "low_benefit_005",
+  "category": "low_benefit",
+  "ground_truth": "low_benefit",
+  "topic": "政府資訊公開法",
+  "original_note": "政府資訊公開法保障人民知的權利。",
+  "usage_signals": {
+    "citation_count": 0,
+    "reuse_count": 0,
+    "regeneration_avoided": false,
+    "user_feedback_positive": false,
+    "completion_rate": 0.0,
+    "reference_in_other_notes_count": 0,
+    "search_click_count": 0
+  },
+  "arguments": [
+    {
+      "argument_id": "argument:0",
+      "argument_index": 0,
+      "argument_text": "政府資訊公開法規定政府機關應主動公開政府資訊，人民亦得申請提供政府資訊。",
+      "functional_gap": "筆記有提到定義但沒有具體說明公開範圍與例外，讀者無法判斷哪些資訊可請求",
+      "user_value": "此處說明政府資訊公開法基本原則幫助讀者掌握制度精神",
+      "related_knowledge": "政府資訊公開法規定政府機關應主動公開政府資訊，人民亦得申請提供政府資訊。",
+      "sources": ["law:50"],
+      "binding_status": "pass",
+      "cardinality": "one_to_one",
+      "angle_coverage": {
+        "angle_type": "definition",
+        "covered_facets": ["necessity:functional_gap", "necessity:user_value"],
+        "effective_angle_count": 1
+      },
+      "checks": {
+        "at_least_one_source": true,
+        "source_traceable": true,
+        "no_omitted_traces": true,
+        "no_extra_traces": true,
+        "has_functional_gap": true,
+        "has_user_value": true,
+        "has_related_knowledge": true,
+        "related_knowledge_consistent": true
+      }
+    },
+    {
+      "argument_id": "argument:1",
+      "argument_index": 1,
+      "argument_text": "政府資訊應主動公開之事項包括：法規命令、行政指導有關文書、施政計畫等。",
+      "functional_gap": "筆記僅列舉部分事項，未涵蓋所有類別，讀者可能遺漏重要類型",
+      "user_value": "幫助讀者了解哪些政府資訊應主動公開以利監督政府施政",
+      "related_knowledge": "政府資訊應主動公開之事項包括：法規命令、行政指導有關文書、施政計畫等。",
+      "sources": ["law:51", "law:52"],
+      "binding_status": "pass",
+      "cardinality": "one_to_many",
+      "angle_coverage": {
+        "angle_type": "requirement",
+        "covered_facets": ["necessity:functional_gap", "necessity:user_value"],
+        "effective_angle_count": 1
+      },
+      "checks": {
+        "at_least_one_source": true,
+        "source_traceable": true,
+        "no_omitted_traces": true,
+        "no_extra_traces": true,
+        "has_functional_gap": true,
+        "has_user_value": true,
+        "has_related_knowledge": true,
+        "related_knowledge_consistent": true
+      }
+    }
+  ],
+  "annotation_metadata": {
+    "annotator": "human",
+    "annotation_date": "2026-07-27",
+    "validation_status": "validated",
+    "notes": "重要邊界案例！polaris 指標優秀（雙論點皆 verified、FG/UV 過門檻、來源完整）但使用訊號為零。此案例測試純粹依賴 Polaris 指標會誤判為高價值，加入使用訊號後可正確降級為低效益"
+  }
+}

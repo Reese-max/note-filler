@@ -1,26 +1,26 @@
 {
-  "note_id": "low_benefit_001",
+  "note_id": "low_benefit_003",
   "category": "low_benefit",
   "ground_truth": "low_benefit",
-  "topic": "行政處分",
-  "original_note": "行政程序法要求行政行為應遵守正當程序。本筆記僅記錄部分重點，尚未展開。",
+  "topic": "行政程序法",
+  "original_note": "行政程序法有關送達之規定。",
   "usage_signals": {
     "citation_count": 0,
     "reuse_count": 0,
     "regeneration_avoided": false,
     "user_feedback_positive": false,
-    "completion_rate": 0.1,
+    "completion_rate": 0.0,
     "reference_in_other_notes_count": 0,
-    "search_click_count": 0
+    "search_click_count": 1
   },
   "arguments": [
     {
       "argument_id": "argument:0",
       "argument_index": 0,
-      "argument_text": "行政處分是一種行政行為。",
-      "functional_gap": "內容不足",
-      "user_value": "補充此項資訊",
-      "related_knowledge": "行政處分是一種行政行為。",
+      "argument_text": "送達是行政程序法中的重要制度。",
+      "functional_gap": "此處從略",
+      "user_value": "補充相關送達規定",
+      "related_knowledge": "送達是行政程序法中的重要制度。",
       "sources": [],
       "binding_status": "pending_evidence",
       "cardinality": "none",
@@ -43,20 +43,20 @@
     {
       "argument_id": "argument:1",
       "argument_index": 1,
-      "argument_text": "訴願是救濟程序。",
-      "functional_gap": "待補充",
+      "argument_text": "送達方式有多種，包括一般送達與公示送達。",
+      "functional_gap": "內容闕如",
       "user_value": "增加內容完整性",
-      "related_knowledge": "訴願是救濟程序。",
-      "sources": ["law:1"],
-      "binding_status": "fail",
-      "cardinality": "one_to_one",
+      "related_knowledge": "送達方式有多種，包括一般送達與公示送達。",
+      "sources": [],
+      "binding_status": "pending_evidence",
+      "cardinality": "none",
       "angle_coverage": {
-        "angle_type": "procedure",
+        "angle_type": "classification",
         "covered_facets": ["necessity:functional_gap"],
         "effective_angle_count": 1
       },
       "checks": {
-        "at_least_one_source": true,
+        "at_least_one_source": false,
         "source_traceable": false,
         "no_omitted_traces": true,
         "no_extra_traces": true,
@@ -71,6 +71,6 @@
     "annotator": "human",
     "annotation_date": "2026-07-27",
     "validation_status": "validated",
-    "notes": "形式完整但低效益筆記範例：功能缺口模糊、使用者價值不明確、來源綁定不完整"
+    "notes": "低效益案例：形式欄位齊全但 polaris 偏低且使用訊號歸零"
   }
 }

@@ -1,8 +1,18 @@
 {
   "note_id": "low_benefit_002",
   "category": "low_benefit",
+  "ground_truth": "low_benefit",
   "topic": "行政契約",
   "original_note": "行政契約是行政機關與人民間的協議，相關規定散見於各法律。",
+  "usage_signals": {
+    "citation_count": 0,
+    "reuse_count": 0,
+    "regeneration_avoided": false,
+    "user_feedback_positive": false,
+    "completion_rate": 0.05,
+    "reference_in_other_notes_count": 0,
+    "search_click_count": 0
+  },
   "arguments": [
     {
       "argument_id": "argument:0",
