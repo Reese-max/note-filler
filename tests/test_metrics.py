@@ -544,7 +544,10 @@ class TestPolarisMetrics:
         # 驗證基本結構
         assert "schema" in metrics_dict
         assert metrics_dict["schema"] == "note_filler.polaris_metrics.v1"
+        assert metrics_dict["formula_version"] == "1.0"
         assert "overall_status" in metrics_dict
+        assert metrics_dict["decision"] == metrics_dict["overall_status"]
+        assert metrics_dict["decision_rule"]
         assert "core_metrics_pass_count" in metrics_dict
         assert "core_metrics_total_count" in metrics_dict
         assert "calculated_at" in metrics_dict
@@ -555,6 +558,22 @@ class TestPolarisMetrics:
         assert "source_binding_integrity" in metrics_dict
         assert "angle_diversity_index" in metrics_dict
         assert "delivery_success_rate" in metrics_dict
+
+        expected_sources = {
+            "functional_gap_score": "binding_report.arguments[].functional_gap",
+            "user_value_score": "binding_report.arguments[].user_value",
+            "source_binding_integrity": "binding_report.arguments[].binding_status",
+            "angle_diversity_index": "binding_report.angle_coverage_summary.unique_angle_types",
+            "delivery_success_rate": "delivery_manifest.delivery_status.user_channel_sent",
+        }
+        for name, source_field in expected_sources.items():
+            metric = metrics_dict[name]
+            assert metric["formula_version"] == metrics_dict["formula_version"]
+            assert metric["formula"]
+            assert source_field in metric["source_fields"]
+            assert metric["decision"] == (
+                "pass" if metric["passes_threshold"] else "fail"
+            )
         
         # 驗證可 JSON 序列化
         json_str = json.dumps(metrics_dict, ensure_ascii=False)
@@ -577,6 +596,14 @@ class TestPolarisMetrics:
         assert metrics_dict["source_binding_integrity"]["status"] == "missing_data"
         assert metrics_dict["angle_diversity_index"]["status"] == "missing_data"
         assert metrics_dict["delivery_success_rate"]["status"] == "missing_data"
+        for name in (
+            "functional_gap_score",
+            "user_value_score",
+            "source_binding_integrity",
+            "angle_diversity_index",
+            "delivery_success_rate",
+        ):
+            assert metrics_dict[name]["decision"] == "missing_data"
 
     def test_error_status_propagation(self):
         """測試錯誤狀態的傳播。"""

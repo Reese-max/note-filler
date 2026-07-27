@@ -4,6 +4,8 @@
 基準 revision：`90229c30`
 Schema 版本：`note_filler.polaris_metrics.v1`
 
+公式版本：`1.0`
+
 ## 概述
 
 本規格定義可機器讀取的北極星筆記品質指標，包含「功能缺口分數」與「使用者價值分數」等核心指標的明確公式、判定規則、資料來源與缺值處理方式。每則筆記可被一致計分與追蹤，並產出可序列化的指標物件與報告欄位。
@@ -261,7 +263,10 @@ Schema 版本：`note_filler.polaris_metrics.v1`
 ```python
 {
     "schema": "note_filler.polaris_metrics.v1",
+    "formula_version": "1.0",            # 公式、門檻與來源欄位契約版本
     "overall_status": "excellent" | "good" | "acceptable" | "poor" | "error",
+    "decision": "excellent" | "good" | "acceptable" | "poor" | "error",
+    "decision_rule": str,
     "core_metrics_pass_count": int,      # 通過門檻的核心指標數
     "core_metrics_total_count": int,     # 核心指標總數（固定 5）
     "calculated_at": str,                # ISO 8601 UTC 時間戳
@@ -273,6 +278,13 @@ Schema 版本：`note_filler.polaris_metrics.v1`
 }
 ```
 
+五項指標物件都固定帶出 `formula_version`、`formula`、`source_fields`、
+`score`、`status`、`threshold`、`passes_threshold` 與 `decision`。其中
+`source_fields` 只列計分實際讀取的 `binding_report` 或
+`delivery_manifest.delivery_status` 欄位；`decision` 在可計算時為 `pass`／`fail`，
+缺值或錯誤時則分別為 `missing_data`／`error`。公式、門檻或來源欄位語意改變時，
+必須同步升級 `formula_version`。
+
 ---
 
 ## 資料流整合
@@ -281,11 +293,19 @@ Schema 版本：`note_filler.polaris_metrics.v1`
 
 北極星指標會自動整合到以下輸出：
 
-1. **delivery_manifest.json**
+1. **訂正稿 JSON**
+   - 頂層欄位：`polaris_metrics`
+   - 每次輸出時由 `CorrectionDoc` 與綁定報告自動計算
+
+2. **訂正稿 Markdown／DOCX**
+   - 文末 `北極星分數` 與 `北極星追蹤` 區塊
+   - 同步帶出公式版本、五項公式、來源欄位、分數與判定
+
+3. **delivery_manifest.json**
    - 頂層欄位：`polaris_metrics`
    - 每次成功送達時自動計算並寫入
 
-2. **binding_report.json**
+4. **binding_report.json**
    - 作為指標計算的主要資料來源
    - 提供論點層級的詳細資訊
 

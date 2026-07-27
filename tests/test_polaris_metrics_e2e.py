@@ -452,20 +452,23 @@ def test_metrics_output_formula_traceability(tmp_path):
     
     doc = run_pipeline(str(note), llm, twinkle, FakeLaw())
     polaris_metrics = _calculate_polaris_for_doc(doc)
-    
-    # 驗證功能缺口分數公式可追溯
-    fg = polaris_metrics["functional_gap_score"]
-    expected_score = fg["arguments_with_concrete_gap"] / fg["total_arguments"]
-    assert abs(fg["score"] - expected_score) < 0.001, (
-        f"功能缺口分數公式不符：預期 {expected_score}，實際 {fg['score']}"
-    )
-    
-    # 驗證使用者價值分數公式可追溯
-    uv = polaris_metrics["user_value_score"]
-    expected_score = uv["arguments_with_clear_value"] / uv["total_arguments"]
-    assert abs(uv["score"] - expected_score) < 0.001, (
-        f"使用者價值分數公式不符：預期 {expected_score}，實際 {uv['score']}"
-    )
+    assert polaris_metrics["formula_version"] == "1.0"
+
+    # 功能缺口與使用者價值須由四個子分數重算，不能只碰巧對上必要性比例。
+    for name in ("functional_gap_score", "user_value_score"):
+        metric = polaris_metrics[name]
+        expected_score = sum(
+            item["score"] * item["weight"]
+            for item in metric["subscores"].values()
+        )
+        assert abs(metric["score"] - expected_score) < 0.001, (
+            f"{name} 公式不符：預期 {expected_score}，實際 {metric['score']}"
+        )
+        assert metric["formula_version"] == polaris_metrics["formula_version"]
+        assert metric["formula"] == (
+            "traceability*0.25 + coverage_breadth*0.25 + "
+            "necessity_clarity*0.25 + decision_support*0.25"
+        )
     
     # 驗證來源綁定完整性公式可追溯
     sb = polaris_metrics["source_binding_integrity"]
@@ -480,6 +483,10 @@ def test_metrics_output_formula_traceability(tmp_path):
     assert abs(ad["score"] - expected_score) < 0.001, (
         f"角度多樣性公式不符：預期 {expected_score}，實際 {ad['score']}"
     )
+
+    delivery = polaris_metrics["delivery_success_rate"]
+    expected_score = delivery["successful_deliveries"] / delivery["total_attempts"]
+    assert abs(delivery["score"] - expected_score) < 0.001
 
 
 def test_metrics_output_source_traceability(tmp_path):
@@ -500,6 +507,7 @@ def test_metrics_output_source_traceability(tmp_path):
     
     # 驗證功能缺口分數來源可追溯
     fg = polaris_metrics["functional_gap_score"]
+    assert "binding_report.arguments[].functional_gap" in fg["source_fields"]
     assert fg["total_arguments"] == len(binding_report["arguments"]), (
         f"功能缺口分數 total_arguments 應等於 binding_report arguments 數量"
     )
@@ -515,6 +523,7 @@ def test_metrics_output_source_traceability(tmp_path):
     
     # 驗證使用者價值分數來源可追溯
     uv = polaris_metrics["user_value_score"]
+    assert "binding_report.arguments[].user_value" in uv["source_fields"]
     # 計算 binding_report 中明確使用者價值的數量
     clear_count = sum(
         1 for arg in binding_report["arguments"]
@@ -526,6 +535,7 @@ def test_metrics_output_source_traceability(tmp_path):
     
     # 驗證來源綁定完整性來源可追溯
     sb = polaris_metrics["source_binding_integrity"]
+    assert sb["source_fields"] == ["binding_report.arguments[].binding_status"]
     # 計算 binding_report 中通過綁定的數量
     pass_count = sum(
         1 for arg in binding_report["arguments"]
@@ -537,10 +547,18 @@ def test_metrics_output_source_traceability(tmp_path):
     
     # 驗證角度多樣性來源可追溯
     ad = polaris_metrics["angle_diversity_index"]
+    assert ad["source_fields"] == [
+        "binding_report.angle_coverage_summary.unique_angle_types"
+    ]
     angle_summary = binding_report.get("angle_coverage_summary", {})
     assert ad["unique_angle_types"] == len(angle_summary.get("unique_angle_types", [])), (
         f"角度多樣性 unique_angle_types 應等於 binding_report angle_coverage_summary 中的數量"
     )
+    assert polaris_metrics["delivery_success_rate"]["source_fields"] == [
+        "delivery_manifest.delivery_status.primary_note_ready",
+        "delivery_manifest.delivery_status.user_channel_sent",
+        "delivery_manifest.delivery_status.local_fallback_written",
+    ]
 
 
 def test_metrics_output_decision_traceability(tmp_path):
@@ -583,6 +601,17 @@ def test_metrics_output_decision_traceability(tmp_path):
     assert ad["passes_threshold"] == expected_pass, (
         f"角度多樣性 passes_threshold 判定不符：預期 {expected_pass}，實際 {ad['passes_threshold']}"
     )
+
+    for name in (
+        "functional_gap_score",
+        "user_value_score",
+        "source_binding_integrity",
+        "angle_diversity_index",
+        "delivery_success_rate",
+    ):
+        metric = polaris_metrics[name]
+        expected_decision = "pass" if metric["score"] >= metric["threshold"] else "fail"
+        assert metric["decision"] == expected_decision
     
     # 驗證整體品質判定規則
     pass_count = polaris_metrics["core_metrics_pass_count"]

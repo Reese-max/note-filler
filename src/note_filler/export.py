@@ -145,6 +145,25 @@ def _quality_score_breakdown_text(name: str, metric: dict[str, Any]) -> str:
     )
 
 
+def _polaris_trace_lines(polaris: dict[str, Any]) -> list[str]:
+    """將版本、公式、來源欄位、分數與判定輸出為固定可解析文字。"""
+    lines = [f"formula_version={polaris['formula_version']}"]
+    for name in (
+        "functional_gap_score",
+        "user_value_score",
+        "source_binding_integrity",
+        "angle_diversity_index",
+        "delivery_success_rate",
+    ):
+        metric = polaris[name]
+        lines.append(
+            f"metric={name}；formula={metric['formula']}；"
+            f"source_fields={','.join(metric['source_fields'])}；"
+            f"score={metric['score']:.6f}；decision={metric['decision']}"
+        )
+    return lines
+
+
 def to_json(doc: CorrectionDoc) -> dict:
     """序列化整份 CorrectionDoc；原文 immutable，僅讀不改。
 
@@ -404,6 +423,7 @@ def to_markdown(doc: CorrectionDoc) -> str:
         f"{_quality_score_breakdown_text('functional_gap', polaris['functional_gap_score'])}；"
         f"{_quality_score_breakdown_text('user_value', polaris['user_value_score'])}"
     )
+    md += "".join(f"\n> **北極星追蹤**：{line}" for line in _polaris_trace_lines(polaris))
 
     return md
 
@@ -524,5 +544,7 @@ def to_docx(doc: CorrectionDoc, path: str) -> None:
         f"{_quality_score_breakdown_text('functional_gap', polaris['functional_gap_score'])}；"
         f"{_quality_score_breakdown_text('user_value', polaris['user_value_score'])}"
     )
+    for line in _polaris_trace_lines(polaris):
+        out.add_paragraph(f"北極星追蹤：{line}")
 
     out.save(path)

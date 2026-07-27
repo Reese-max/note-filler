@@ -40,6 +40,79 @@ QUALITY_SCORE_FORMULA = (
     "necessity_clarity*0.25 + decision_support*0.25"
 )
 
+# 公式、門檻或來源欄位語意改變時必須升版，讓歷次成品可重算與比較。
+POLARIS_FORMULA_VERSION = "1.0"
+POLARIS_METRIC_DEFINITIONS: dict[str, dict[str, Any]] = {
+    "functional_gap_score": {
+        "formula": QUALITY_SCORE_FORMULA,
+        "source_fields": (
+            "binding_report.arguments[].functional_gap",
+            "binding_report.arguments[].source_ids",
+            "binding_report.arguments[].checks.at_least_one_source",
+            "binding_report.arguments[].checks.source_traceable",
+            "binding_report.arguments[].checks.no_omitted_traces",
+            "binding_report.arguments[].checks.no_extra_traces",
+            "binding_report.arguments[].checks.has_functional_gap",
+            "binding_report.arguments[].checks.has_related_knowledge",
+            "binding_report.arguments[].checks.related_knowledge_consistent",
+            "binding_report.arguments[].angle_coverage.covered_facets",
+            "binding_report.arguments[].angle_coverage.effective_angle_count",
+        ),
+    },
+    "user_value_score": {
+        "formula": QUALITY_SCORE_FORMULA,
+        "source_fields": (
+            "binding_report.arguments[].user_value",
+            "binding_report.arguments[].source_ids",
+            "binding_report.arguments[].checks.at_least_one_source",
+            "binding_report.arguments[].checks.source_traceable",
+            "binding_report.arguments[].checks.no_omitted_traces",
+            "binding_report.arguments[].checks.no_extra_traces",
+            "binding_report.arguments[].checks.has_user_value",
+            "binding_report.arguments[].checks.has_related_knowledge",
+            "binding_report.arguments[].checks.related_knowledge_consistent",
+            "binding_report.arguments[].angle_coverage.covered_facets",
+            "binding_report.arguments[].angle_coverage.effective_angle_count",
+        ),
+    },
+    "source_binding_integrity": {
+        "formula": "arguments_pass / total_arguments",
+        "source_fields": ("binding_report.arguments[].binding_status",),
+    },
+    "angle_diversity_index": {
+        "formula": "unique_angle_types / expected_angle_types",
+        "source_fields": ("binding_report.angle_coverage_summary.unique_angle_types",),
+    },
+    "delivery_success_rate": {
+        "formula": "successful_deliveries / total_attempts",
+        "source_fields": (
+            "delivery_manifest.delivery_status.primary_note_ready",
+            "delivery_manifest.delivery_status.user_channel_sent",
+            "delivery_manifest.delivery_status.local_fallback_written",
+        ),
+    },
+}
+POLARIS_OVERALL_DECISION_RULE = (
+    "error if any metric status=error; excellent if pass_count=5; "
+    "good if pass_count>=3; acceptable if pass_count>=2; otherwise poor"
+)
+
+
+def _metric_contract(
+    metric_name: str,
+    *,
+    status: MetricStatus,
+    passes_threshold: bool,
+) -> dict[str, Any]:
+    definition = POLARIS_METRIC_DEFINITIONS[metric_name]
+    decision = status if status != "calculated" else ("pass" if passes_threshold else "fail")
+    return {
+        "formula_version": POLARIS_FORMULA_VERSION,
+        "formula": definition["formula"],
+        "source_fields": list(definition["source_fields"]),
+        "decision": decision,
+    }
+
 
 @dataclass
 class FunctionalGapScore:
@@ -311,17 +384,24 @@ class PolarisMetrics:
         """序列化為 dict，便於 JSON 輸出。"""
         return {
             "schema": "note_filler.polaris_metrics.v1",
+            "formula_version": POLARIS_FORMULA_VERSION,
             "overall_status": self.overall_status,
+            "decision": self.overall_status,
+            "decision_rule": POLARIS_OVERALL_DECISION_RULE,
             "core_metrics_pass_count": self.core_metrics_pass_count,
             "core_metrics_total_count": self.core_metrics_total_count,
             "calculated_at": self.calculated_at,
             "functional_gap_score": {
+                **_metric_contract(
+                    "functional_gap_score",
+                    status=self.functional_gap_score.status,
+                    passes_threshold=self.functional_gap_score.passes_threshold,
+                ),
                 "score": self.functional_gap_score.score,
                 "total_score": self.functional_gap_score.score,
                 "status": self.functional_gap_score.status,
                 "threshold": self.functional_gap_score.threshold,
                 "passes_threshold": self.functional_gap_score.passes_threshold,
-                "formula": self.functional_gap_score.formula,
                 "subscores": self.functional_gap_score.subscores,
                 "calculation_basis": self.functional_gap_score.calculation_basis,
                 "basis_mode": self.functional_gap_score.basis_mode,
@@ -331,12 +411,16 @@ class PolarisMetrics:
                 "arguments_missing_field": self.functional_gap_score.arguments_missing_field,
             },
             "user_value_score": {
+                **_metric_contract(
+                    "user_value_score",
+                    status=self.user_value_score.status,
+                    passes_threshold=self.user_value_score.passes_threshold,
+                ),
                 "score": self.user_value_score.score,
                 "total_score": self.user_value_score.score,
                 "status": self.user_value_score.status,
                 "threshold": self.user_value_score.threshold,
                 "passes_threshold": self.user_value_score.passes_threshold,
-                "formula": self.user_value_score.formula,
                 "subscores": self.user_value_score.subscores,
                 "calculation_basis": self.user_value_score.calculation_basis,
                 "basis_mode": self.user_value_score.basis_mode,
@@ -346,6 +430,11 @@ class PolarisMetrics:
                 "arguments_missing_field": self.user_value_score.arguments_missing_field,
             },
             "source_binding_integrity": {
+                **_metric_contract(
+                    "source_binding_integrity",
+                    status=self.source_binding_integrity.status,
+                    passes_threshold=self.source_binding_integrity.passes_threshold,
+                ),
                 "score": self.source_binding_integrity.score,
                 "status": self.source_binding_integrity.status,
                 "threshold": self.source_binding_integrity.threshold,
@@ -357,6 +446,11 @@ class PolarisMetrics:
                 "arguments_missing_status": self.source_binding_integrity.arguments_missing_status,
             },
             "angle_diversity_index": {
+                **_metric_contract(
+                    "angle_diversity_index",
+                    status=self.angle_diversity_index.status,
+                    passes_threshold=self.angle_diversity_index.passes_threshold,
+                ),
                 "score": self.angle_diversity_index.score,
                 "status": self.angle_diversity_index.status,
                 "threshold": self.angle_diversity_index.threshold,
@@ -368,6 +462,11 @@ class PolarisMetrics:
                 "unique_angle_type_names": list(self.angle_diversity_index.unique_angle_type_names),
             },
             "delivery_success_rate": {
+                **_metric_contract(
+                    "delivery_success_rate",
+                    status=self.delivery_success_rate.status,
+                    passes_threshold=self.delivery_success_rate.passes_threshold,
+                ),
                 "score": self.delivery_success_rate.score,
                 "status": self.delivery_success_rate.status,
                 "threshold": self.delivery_success_rate.threshold,

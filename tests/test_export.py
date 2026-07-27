@@ -369,6 +369,8 @@ class TestPolarisMetricsIntegration:
         assert "polaris_metrics" in data, "JSON 輸出應含 polaris_metrics"
         polaris = data["polaris_metrics"]
         assert polaris["schema"] == "note_filler.polaris_metrics.v1"
+        assert polaris["formula_version"] == "1.0"
+        assert polaris["decision"] == polaris["overall_status"]
         assert polaris["overall_status"] in ["excellent", "good", "acceptable", "poor", "error"]
         assert isinstance(polaris["core_metrics_pass_count"], int)
         assert isinstance(polaris["core_metrics_total_count"], int)
@@ -392,6 +394,10 @@ class TestPolarisMetricsIntegration:
             assert "score" in subscore, f"{key} 應含 score"
             assert "status" in subscore, f"{key} 應含 status"
             assert "passes_threshold" in subscore, f"{key} 應含 passes_threshold"
+            assert subscore["formula_version"] == polaris["formula_version"]
+            assert subscore["formula"]
+            assert subscore["source_fields"]
+            assert subscore["decision"] in {"pass", "fail", "missing_data", "error"}
             assert 0.0 <= subscore["score"] <= 1.0, f"{key}.score 應在 0-1 之間"
 
     def test_to_json_polaris_metrics_judgment_basis(self):
@@ -483,6 +489,12 @@ class TestPolarisMetricsIntegration:
             assert "functional_gap_threshold=0.70" in text
             assert "user_value_threshold=0.70" in text
             assert "formula=weighted_sum" in text
+            assert "formula_version=1.0" in text
+            assert "metric=functional_gap_score" in text
+            assert "source_fields=binding_report.arguments[].functional_gap" in text
+            assert "metric=delivery_success_rate" in text
+            assert "delivery_manifest.delivery_status.user_channel_sent" in text
+            assert "decision=" in text
 
     def test_note_json_breakdown_keeps_pending_evidence_fail_closed(self):
         """無實際來源的論點仍為 pending，且可追溯性子分數不得誤給分。"""
