@@ -1,173 +1,93 @@
 # 北極星品質指標人工標註準則
 
-## 目的
+日期：2026-07-27
+機器可讀契約：`tests/fixtures/polaris_annotation/acceptance_contract.json`
 
-本文件定義「高價值筆記」與「形式完整但低效益筆記」的人工標註準則，用於建立標註測試資料集，驗證北極星品質指標能有效區分兩類筆記。
+## 目的與邊界
 
-## 標註類別定義
+本資料集是固定的離線回歸驗收集，用來驗證指標能否區分「高價值筆記」與「形式完整但效益低筆記」。所有案例都必須先依本準則完成人工標註，再執行指標，禁止以模型分數反推標籤。
 
-### 1. 高價值筆記 (High-Value Notes)
+目前共 10 筆合成案例，每類各 5 筆。這能證明既定案例的回歸區分能力，不代表真實使用者母體的泛化成效；來源鍵也只驗證綁定語義，正式法條引用仍須通過既有離線查核。
 
-**定義**：具備明確功能缺口、高使用者價值、完整來源綁定的筆記。
+## 共通形式完整性
 
-**標註準則**：
-- **功能缺口 (functional_gap)**：
-  - 必須具體描述筆記中缺失的關鍵資訊
-  - 長度 >= 10 字元
-  - 明確指出讀者理解或應用上的具體缺口
-  - 範例：「筆記未展開定義，讀者無法理解核心概念」、「筆記未提及救濟途徑，讀者不知道如何申訴」
+兩類筆記都必須具備以下非空欄位，避免用「缺欄位」假裝低效益：
 
-- **使用者價值 (user_value)**：
-  - 必須包含關鍵詞：「讀者」、「說明」、「理解」
-  - 明確描述補充資訊對讀者的具體助益
-  - 範例：「幫助讀者理解行政處分之對外效力要件，能正確判斷具體案例」
+- 筆記層：`note_id`、`category`、`ground_truth`、`topic`、`original_note`、`arguments`、`usage_signals`、`annotation_metadata`。
+- 論點層：`argument_text`、`functional_gap`、`user_value`、`related_knowledge`、`sources`、`binding_status`、`cardinality`、`angle_coverage`、`checks`。
+- `annotation_metadata.annotator` 必須為 `human`，`validation_status` 必須為 `validated`。
+- 無來源的論點必須是 `pending_evidence`；`binding_status = pass` 時必須有來源且 `source_traceable = true`。
 
-- **來源綁定 (source_binding)**：
-  - 每個論點至少有一個來源
-  - 來源等級為 A 級或 B 級
-  - 綁定狀態為「pass」
-  - 來源識別碼與引用標記正確對應
+## 價值標註準則
 
-- **相關知識 (related_knowledge)**：
-  - 提供與功能缺口相關的背景知識
-  - 與功能缺口和使用者價值保持一致
+### 高價值筆記（`high_value`）
 
-### 2. 形式完整但低效益筆記 (Form-Complete Low-Benefit Notes)
+每個論點都必須同時符合：
 
-**定義**：形式欄位齊全但實質效益低的筆記，通常功能缺口模糊、使用者價值不明確、來源綁定不完整。
+- 功能缺口具體：`functional_gap` 至少 10 字元，明確指出缺漏資訊。
+- 使用者助益明確：`user_value` 至少包含「讀者」、「說明」或「理解」之一，且描述可理解或可決策的助益。
+- 來源可追溯：至少一個實際使用的來源鍵、`binding_status = pass`、`source_traceable = true`。
+- 使用成效不只靠單一訊號：七項 `usage_signals` 中至少四項為正值。
 
-**標註準則**：
-- **功能缺口 (functional_gap)**：
-  - 描述模糊或不具體
-  - 長度 < 10 字元
-  - 未明確指出讀者理解或應用上的具體缺口
-  - 範例：「內容不足」、「待補充」、「此處待補」
+### 形式完整但效益低筆記（`low_benefit`）
 
-- **使用者價值 (user_value)**：
-  - 不包含關鍵詞：「讀者」、「說明」、「理解」
-  - 描述籠統，未明確指出對讀者的具體助益
-  - 範例：「補充此項資訊」、「增加內容完整性」
+形式欄位仍須齊全，但必須符合：
 
-- **來源綁定 (source_binding)**：
-  - 論點無來源或來源不足
-  - 綁定狀態為「fail」或「pending_evidence」
-  - 來源等級為 C 級或無等級
+- 七項 `usage_signals` 中至多三項為正值；且
+- 實質內容或來源追溯未達高價值準則，或全部使用成效訊號為零。
 
-- **相關知識 (related_knowledge)**：
-  - 與功能缺口和使用者價值不一致
-  - 內容空洞或重複
+這個「或」刻意保留兩種負例：
 
-## 標註流程
+- `low_benefit_001` 至 `004`：欄位都有值，但描述空泛、來源缺失或追溯失敗。
+- `low_benefit_005`：內容與來源形式分數高，但使用訊號全為零，避免純 Polaris 形式分數被誤當成實際價值。
 
-### 步驟 1：準備原始筆記
-選擇具代表性的法律或行政法主題筆記作為標註對象。
+## 固定資料清單與覆蓋
 
-### 步驟 2：識別功能缺口
-分析筆記內容，識別缺失的關鍵資訊：
-- 定義是否完整？
-- 種類是否分類清楚？
-- 程序是否說明明確？
-- 救濟途徑是否提及？
+| 類別 | 必須存在的 note_id |
+|---|---|
+| 高價值 | `high_value_001`、`high_value_002`、`high_value_003`、`high_value_004`、`high_value_005` |
+| 低效益 | `low_benefit_001`、`low_benefit_002`、`low_benefit_003`、`low_benefit_004`、`low_benefit_005` |
 
-### 步驟 3：撰寫功能缺口描述
-根據標註類別準則，撰寫具體或模糊的功能缺口描述。
+資料集必須恰好符合契約清單，不得重複、遺漏或放入錯誤類別目錄，且整體需覆蓋 `none`、`one_to_one`、`one_to_many` 三種來源綁定基數。
 
-### 步驟 4：定義使用者價值
-根據標註類別準則，描述補充資訊對讀者的助益。
+## 指標與決策規則
 
-### 步驟 5：綁定來源
-為每個論點綁定適當的來源，確保來源品質與綁定狀態符合類別定義。
+### Polaris 單項既有門檻
 
-### 步驟 6：撰寫相關知識
-提供與功能缺口相關的背景知識，確保內容一致性。
+| 指標 | 通過門檻 |
+|---|---:|
+| 功能缺口分數 | 0.70 |
+| 使用者價值分數 | 0.70 |
+| 來源綁定完整性 | 0.80 |
+| 角度多樣性 | 0.60 |
+| 送達成功率 | 0.90 |
 
-## 標註驗證
+不可量測或部分可量測資料維持既有 fail-closed 規則：`status != calculated` 時不得通過門檻。
 
-### 自動驗證規則
-- 功能缺口長度檢查：高價值 >= 10 字元，低效益 < 10 字元
-- 使用者價值關鍵詞檢查：高價值包含關鍵詞，低效益不包含
-- 來源綁定狀態檢查：高價值為 pass，低效益為 fail 或 pending_evidence
-- 來源數量檢查：高價值 >= 1 個來源，低效益 <= 1 個來源
+### 分類決策
 
-### 人工驗證規則
-- 功能缺口描述是否具體指向讀者理解缺口？
-- 使用者價值是否明確描述對讀者的助益？
-- 來源是否與論點內容相關？
-- 相關知識是否與功能缺口和使用者價值一致？
-
-## 標註資料集結構
-
-### 目錄結構
-```
-tests/fixtures/polaris_annotation/
-├── high_value/
-│   ├── note_001.json          # 高價值筆記 1
-│   ├── note_002.json          # 高價值筆記 2
-│   └── ...
-└── low_benefit/
-    ├── note_001.json          # 低效益筆記 1
-    ├── note_002.json          # 低效益筆記 2
-    └── ...
+```text
+Polaris baseline = high_value if polaris_overall_score >= 0.5
+composite_score = 0.5 * polaris_overall_score + 0.5 * usage_effectiveness_score
+composite label = high_value if composite_score >= 0.5
 ```
 
-### JSON 格式
-```json
-{
-  "note_id": "high_value_001",
-  "category": "high_value",
-  "original_note": "原始筆記內容...",
-  "arguments": [
-    {
-      "argument_id": "argument:0",
-      "functional_gap": "筆記未展開定義，讀者無法理解核心概念",
-      "user_value": "幫助讀者理解行政處分之對外效力要件，能正確判斷具體案例",
-      "related_knowledge": "行政處分係指行政機關就公法上具體事件所為之對外直接發生法律效果之單方行政行為",
-      "sources": ["law:1", "law:2"],
-      "binding_status": "pass"
-    }
-  ],
-  "annotation_metadata": {
-    "annotator": "human",
-    "annotation_date": "2026-07-27",
-    "validation_status": "validated"
-  }
-}
+## 可驗收門檻
+
+| 範圍 | 門檻 |
+|---|---:|
+| 每類最少案例 | 5 |
+| Polaris baseline F1／Recall／Specificity | 各 >= 0.80 |
+| Composite Precision／Recall／Specificity／Accuracy／F1 | 各 >= 0.90 |
+| 最低類別分數間隔 | >= 0.10 |
+| Composite 相較 Polaris baseline 的最低 F1 增益 | >= 0.05 |
+
+最低類別分數間隔定義為：`min(高價值 composite_score) - max(低效益 composite_score)`。任何完整清單、標註準則或門檻未通過，整體驗收即失敗。
+
+## 重跑方式
+
+```powershell
+& "D:/Users/Administrator/Desktop/筆記補齊/.venv/Scripts/python.exe" -X utf8 -m pytest tests/test_value_classifier.py tests/test_polaris_annotation_validation.py -q
 ```
 
-## 量化門檻
-
-### 北極星指標門檻
-- **功能缺口分數門檻**：0.7 (70%)
-- **使用者價值分數門檻**：0.7 (70%)
-- **來源綁定完整性門檻**：0.8 (80%)
-- **角度多樣性門檻**：0.6 (60%)
-- **送達成功率門檻**：0.9 (90%)
-
-### 預期指標表現
-
-#### 高價值筆記
-- 功能缺口分數：>= 0.7
-- 使用者價值分數：>= 0.7
-- 來源綁定完整性：>= 0.8
-- 整體品質判定：excellent 或 good
-
-#### 形式完整但低效益筆記
-- 功能缺口分數：< 0.7
-- 使用者價值分數：< 0.7 (或接近門檻)
-- 來源綁定完整性：< 0.8
-- 整體品質判定：poor 或 acceptable
-
-## 評估結果記錄
-
-評估結果應包含：
-1. 每個筆記的北極星指標分數
-2. 指標門檻通過情況
-3. 高價值與低效益筆記的分數差距
-4. 整體品質判定結果
-5. 指標區分能力的有效性分析
-
-## 參考資料
-
-- 北極星品質指標規格：`src/note_filler/metrics.py`
-- 現有對照測試：`tests/test_polaris_metrics_comparison.py`
-- 現有端到端測試：`tests/test_polaris_metrics_e2e.py`
+驗收實作位於 `tests/test_value_classifier.py::TestDatasetEvaluation` 與 `TestThresholdOptimization`；評估數值記錄於 `docs/polaris-annotation-evaluation-report.md`。

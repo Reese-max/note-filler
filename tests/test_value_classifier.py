@@ -10,7 +10,9 @@
 """
 from __future__ import annotations
 
+import json
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -21,8 +23,11 @@ from note_filler.metrics import (
     calculate_polaris_metrics,
 )
 from note_filler.value_classifier import (
+    COMPOSITE_THRESHOLD,
+    POLARIS_COMPOSITE_WEIGHT,
     USAGE_SIGNAL_CONFIG,
     USAGE_SIGNAL_DEFAULTS,
+    USAGE_COMPOSITE_WEIGHT,
     NoteValueClassification,
     calculate_usage_effectiveness,
     classify_note_value,
@@ -37,6 +42,21 @@ from note_filler.value_classifier import (
 
 
 FIXTURE_DIR = Path(__file__).parent / "fixtures" / "polaris_annotation"
+ACCEPTANCE_CONTRACT = json.loads(
+    (FIXTURE_DIR / "acceptance_contract.json").read_text(encoding="utf-8")
+)
+
+
+def _positive_usage_signal_count(signals: dict) -> int:
+    return sum(
+        value is True
+        or (
+            isinstance(value, (int, float))
+            and not isinstance(value, bool)
+            and value > 0
+        )
+        for value in signals.values()
+    )
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -341,39 +361,138 @@ class TestConfusionMatrix:
 class TestDatasetEvaluation:
 
     def test_all_fixtures_loadable(self):
-        """所有 fixture 必須能載入且含有必要欄位。"""
-        for subdir in ("high_value", "low_benefit"):
-            d = FIXTURE_DIR / subdir
-            for f in sorted(d.glob("*.json")):
+        """契約中的完整清單、形式欄位與人工標註準則必須同時成立。"""
+        labels = ACCEPTANCE_CONTRACT["labels"]
+        required_note_fields = set(ACCEPTANCE_CONTRACT["required_note_fields"])
+        required_argument_fields = set(ACCEPTANCE_CONTRACT["required_argument_fields"])
+        high_rubric = labels["high_value"]
+        expected_ids = {
+            note_id
+            for rubric in labels.values()
+            for note_id in rubric["expected_note_ids"]
+        }
+        seen: dict[str, dict] = {}
+        cardinalities: set[str] = set()
+
+        for label, rubric in labels.items():
+            files = sorted((FIXTURE_DIR / label).glob("*.json"))
+            assert len(files) >= ACCEPTANCE_CONTRACT["acceptance_thresholds"][
+                "minimum_examples_per_label"
+            ]
+            for f in files:
                 data = load_annotation_fixture(f)
-                assert "note_id" in data
-                assert "arguments" in data
+                assert not required_note_fields - data.keys(), f"{f.name} 缺少筆記欄位"
+                for field in ("note_id", "topic", "original_note"):
+                    assert str(data[field]).strip(), f"{f.name} 的 {field} 不完整"
                 assert len(data["arguments"]) >= 1
-                assert data.get("ground_truth") in ("high_value", "low_benefit")
-                assert "usage_signals" in data
+                assert data["note_id"] not in seen, f"重複 note_id：{data['note_id']}"
+                assert data["category"] == data["ground_truth"] == label
+                assert data["annotation_metadata"]["annotator"] == "human"
+                assert data["annotation_metadata"]["validation_status"] == "validated"
+                assert set(data["usage_signals"]) == set(USAGE_SIGNAL_DEFAULTS)
+
+                positive_usage = _positive_usage_signal_count(data["usage_signals"])
+                substantive_or_traceability_weak = False
+                for argument in data["arguments"]:
+                    assert not required_argument_fields - argument.keys(), (
+                        f"{data['note_id']}:{argument.get('argument_id')} 缺少論點欄位"
+                    )
+                    for field in (
+                        "argument_text",
+                        "functional_gap",
+                        "user_value",
+                        "related_knowledge",
+                    ):
+                        assert str(argument[field]).strip(), (
+                            f"{data['note_id']}:{argument['argument_id']} 的 {field} 不完整"
+                        )
+
+                    sources = argument["sources"]
+                    checks = argument["checks"]
+                    assert argument["angle_coverage"] and checks
+                    cardinalities.add(argument["cardinality"])
+                    assert checks["at_least_one_source"] is bool(sources)
+                    if not sources:
+                        assert argument["binding_status"] == "pending_evidence"
+                    if argument["binding_status"] == "pass":
+                        assert sources and checks["source_traceable"] is True
+
+                    gap_is_concrete = len(argument["functional_gap"]) >= high_rubric[
+                        "minimum_functional_gap_characters"
+                    ]
+                    value_is_clear = any(
+                        keyword in argument["user_value"]
+                        for keyword in high_rubric["user_value_keywords"]
+                    )
+                    binding_is_complete = (
+                        len(sources) >= high_rubric["minimum_sources_per_argument"]
+                        and argument["binding_status"]
+                        == high_rubric["required_binding_status"]
+                    )
+                    substantive_or_traceability_weak |= not (
+                        gap_is_concrete and value_is_clear and binding_is_complete
+                    )
+
+                    if label == "high_value":
+                        assert gap_is_concrete
+                        assert value_is_clear
+                        assert binding_is_complete
+
+                if label == "high_value":
+                    assert positive_usage >= rubric["minimum_positive_usage_signals"]
+                else:
+                    assert positive_usage <= rubric["maximum_positive_usage_signals"]
+                    assert substantive_or_traceability_weak or (
+                        rubric["zero_usage_satisfies_weakness_rule"]
+                        and positive_usage == 0
+                    )
+
+                seen[data["note_id"]] = data
+
+        assert set(seen) == expected_ids, "標註資料集與契約清單不一致"
+        assert cardinalities == set(ACCEPTANCE_CONTRACT["required_cardinalities"])
 
     def test_full_dataset_evaluation(self):
         """對整個標註資料集進行評估，並回報混淆矩陣。"""
         results, cm = evaluate_classifier_on_dataset(FIXTURE_DIR)
-        assert len(results) >= 9, f"應至少有 9 筆標註資料，實際 {len(results)}"
+        expected_total = sum(
+            len(rubric["expected_note_ids"])
+            for rubric in ACCEPTANCE_CONTRACT["labels"].values()
+        )
+        assert len(results) == expected_total
         assert cm.total == len(results)
 
-        # 基本效能門檻
-        assert cm.f1_score >= 0.7, (
-            f"F1 分數 {cm.f1_score:.3f} 應 >= 0.7"
-        )
-        assert cm.accuracy >= 0.7, (
-            f"準確率 {cm.accuracy:.3f} 應 >= 0.7"
-        )
+        thresholds = ACCEPTANCE_CONTRACT["acceptance_thresholds"]["composite"]
+        for metric in ("precision", "recall", "specificity", "accuracy", "f1"):
+            actual = cm.f1_score if metric == "f1" else getattr(cm, metric)
+            assert actual >= thresholds[f"minimum_{metric}"], (
+                f"{metric}={actual:.3f} 未達驗收門檻"
+            )
+
+        high_scores = [
+            result.composite_score
+            for result in results
+            if result.ground_truth == "high_value"
+        ]
+        low_scores = [
+            result.composite_score
+            for result in results
+            if result.ground_truth == "low_benefit"
+        ]
+        assert min(high_scores) - max(low_scores) >= thresholds["minimum_score_margin"]
 
     def test_dataset_class_distribution(self):
         """驗證資料集類別平衡性。"""
-        results, cm = evaluate_classifier_on_dataset(FIXTURE_DIR)
-        total = len(results)
-        fp_fn = cm.false_positive + cm.false_negative
-        assert fp_fn / total <= 0.4, (
-            f"誤判率 {fp_fn}/{total} = {fp_fn/total:.3f} 應 <= 0.4"
-        )
+        results, _ = evaluate_classifier_on_dataset(FIXTURE_DIR)
+        actual = {
+            label: sum(result.ground_truth == label for result in results)
+            for label in ACCEPTANCE_CONTRACT["labels"]
+        }
+        expected = {
+            label: len(rubric["expected_note_ids"])
+            for label, rubric in ACCEPTANCE_CONTRACT["labels"].items()
+        }
+        assert actual == expected
 
     def test_misclassification_report_generated(self):
         """誤判案例報告必須能產生。"""
@@ -399,26 +518,48 @@ class TestThresholdOptimization:
         """掃描門檻組合應能找出最佳 F1 對應的門檻值。"""
         optimal = find_optimal_thresholds(
             FIXTURE_DIR,
-            polaris_thresholds=[0.3, 0.5, 0.7],
+            polaris_thresholds=[
+                ACCEPTANCE_CONTRACT["decision"]["polaris_baseline_threshold"]
+            ],
             composite_thresholds=[0.3, 0.5, 0.7],
         )
-        assert optimal["f1_score"] > 0
-        assert "polaris_threshold" in optimal
-        assert "composite_threshold" in optimal
-        assert "confusion_matrix" in optimal
+        assert optimal["composite_threshold"] == ACCEPTANCE_CONTRACT["decision"][
+            "composite_threshold"
+        ]
+        assert optimal["f1_score"] >= ACCEPTANCE_CONTRACT["acceptance_thresholds"][
+            "composite"
+        ]["minimum_f1"]
 
     def test_default_threshold_acceptance(self):
-        """預設門檻 (0.5/0.5) 必須滿足最低效能標準。"""
+        """預設複合門檻須優於 Polaris 基線並滿足契約門檻。"""
+        decision = ACCEPTANCE_CONTRACT["decision"]
+        assert COMPOSITE_THRESHOLD == decision["composite_threshold"]
+        assert POLARIS_COMPOSITE_WEIGHT == decision["polaris_weight"]
+        assert USAGE_COMPOSITE_WEIGHT == decision["usage_weight"]
+
         results, cm = evaluate_classifier_on_dataset(FIXTURE_DIR)
-        assert cm.f1_score >= 0.65, (
-            f"預設門檻 F1 {cm.f1_score:.3f} < 0.65"
-        )
-        assert cm.precision >= 0.6, (
-            f"預設門檻 precision {cm.precision:.3f} < 0.6"
-        )
-        assert cm.recall >= 0.6, (
-            f"預設門檻 recall {cm.recall:.3f} < 0.6"
-        )
+        baseline = compute_confusion_matrix([
+            SimpleNamespace(
+                ground_truth=result.ground_truth,
+                predicted_label=(
+                    "high_value"
+                    if result.polaris_overall_score
+                    >= decision["polaris_baseline_threshold"]
+                    else "low_benefit"
+                ),
+            )
+            for result in results
+        ])
+
+        baseline_thresholds = ACCEPTANCE_CONTRACT["acceptance_thresholds"][
+            "polaris_baseline"
+        ]
+        assert baseline.f1_score >= baseline_thresholds["minimum_f1"]
+        assert baseline.recall >= baseline_thresholds["minimum_recall"]
+        assert baseline.specificity >= baseline_thresholds["minimum_specificity"]
+        assert cm.f1_score - baseline.f1_score >= ACCEPTANCE_CONTRACT[
+            "acceptance_thresholds"
+        ]["composite"]["minimum_f1_gain_over_polaris"]
 
 
 # ══════════════════════════════════════════════════════════════════════════════

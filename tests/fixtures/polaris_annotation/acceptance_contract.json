@@ -1,0 +1,87 @@
+{
+  "schema": "note_filler.value_annotation_acceptance.v1",
+  "labels": {
+    "high_value": {
+      "description": "功能缺口、使用者助益與來源綁定均具體，且至少四項使用成效訊號為正值",
+      "expected_note_ids": [
+        "high_value_001",
+        "high_value_002",
+        "high_value_003",
+        "high_value_004",
+        "high_value_005"
+      ],
+      "minimum_functional_gap_characters": 10,
+      "user_value_keywords": [
+        "讀者",
+        "說明",
+        "理解"
+      ],
+      "minimum_sources_per_argument": 1,
+      "required_binding_status": "pass",
+      "minimum_positive_usage_signals": 4
+    },
+    "low_benefit": {
+      "description": "形式欄位齊全，但實質內容、來源追溯或實際使用成效至少一項不足",
+      "expected_note_ids": [
+        "low_benefit_001",
+        "low_benefit_002",
+        "low_benefit_003",
+        "low_benefit_004",
+        "low_benefit_005"
+      ],
+      "maximum_positive_usage_signals": 3,
+      "zero_usage_satisfies_weakness_rule": true
+    }
+  },
+  "required_note_fields": [
+    "note_id",
+    "category",
+    "ground_truth",
+    "topic",
+    "original_note",
+    "arguments",
+    "usage_signals",
+    "annotation_metadata"
+  ],
+  "required_argument_fields": [
+    "argument_id",
+    "argument_index",
+    "argument_text",
+    "functional_gap",
+    "user_value",
+    "related_knowledge",
+    "sources",
+    "binding_status",
+    "cardinality",
+    "angle_coverage",
+    "checks"
+  ],
+  "required_cardinalities": [
+    "none",
+    "one_to_one",
+    "one_to_many"
+  ],
+  "decision": {
+    "polaris_baseline_threshold": 0.5,
+    "composite_threshold": 0.5,
+    "polaris_weight": 0.5,
+    "usage_weight": 0.5
+  },
+  "acceptance_thresholds": {
+    "minimum_examples_per_label": 5,
+    "polaris_baseline": {
+      "minimum_f1": 0.8,
+      "minimum_recall": 0.8,
+      "minimum_specificity": 0.8
+    },
+    "composite": {
+      "minimum_precision": 0.9,
+      "minimum_recall": 0.9,
+      "minimum_specificity": 0.9,
+      "minimum_accuracy": 0.9,
+      "minimum_f1": 0.9,
+      "minimum_score_margin": 0.1,
+      "minimum_f1_gain_over_polaris": 0.05
+    }
+  }
+}

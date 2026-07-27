@@ -1,179 +1,85 @@
-# 北極星品質指標標註測試資料集評估報告
+# 北極星品質指標標註驗證集評估報告
 
-## 評估目的
+日期：2026-07-27
 
-本報告記錄「高價值筆記」與「形式完整但低效益筆記」標註測試資料集的評估結果，驗證北極星品質指標能有效區分兩類筆記並記錄量化門檻。
+標註準則：`docs/polaris-annotation-guidelines.md`
 
-## 評估方法
-
-### 測試資料集
-- **高價值筆記**：2 筆（note_001, note_002）
-- **低效益筆記**：2 筆（note_001, note_002）
-- **標註準則**：依據 `docs/polaris-annotation-guidelines.md`
-
-### 驗證方法
-- 載入標註資料並轉換為 binding_report 格式
-- 計算北極星品質指標
-- 驗證指標門檻通過情況
-- 比較高價值與低效益筆記的指標差距
-
-## 評估結果
-
-### 高價值筆記指標表現
-
-#### 高價值筆記 001（行政處分主題）
-- **功能缺口分數**：>= 0.7 ✓
-- **使用者價值分數**：>= 0.7 ✓
-- **來源綁定完整性**：>= 0.8 ✓
-- **整體品質判定**：excellent 或 good ✓
-- **通過門檻指標數**：>= 3 個 ✓
-
-**特徵**：
-- 3 個論點，功能缺口描述具體（>= 10 字元）
-- 使用者價值明確（包含「讀者」、「說明」、「理解」關鍵詞）
-- 來源綁定完整（皆為 pass 狀態）
-- 每個論點有 1-2 個 A 級來源
-
-#### 高價值筆記 002（行政契約主題）
-- **功能缺口分數**：>= 0.7 ✓
-- **使用者價值分數**：>= 0.7 ✓
-- **來源綁定完整性**：>= 0.8 ✓
-- **整體品質判定**：excellent 或 good ✓
-- **通過門檻指標數**：>= 3 個 ✓
-
-**特徵**：
-- 3 個論點，功能缺口描述具體（>= 10 字元）
-- 使用者價值明確（包含「讀者」、「說明」、「理解」關鍵詞）
-- 來源綁定完整（皆為 pass 狀態）
-- 每個論點有 1-2 個來源
-
-### 低效益筆記指標表現
-
-#### 低效益筆記 001（行政處分主題）
-- **功能缺口分數**：< 0.7 ✓
-- **使用者價值分數**：< 0.7 ✓
-- **來源綁定完整性**：< 0.8 ✓
-- **整體品質判定**：poor 或 acceptable ✓
-- **具體功能缺口數**：0 個 ✓
-
-**特徵**：
-- 2 個論點，功能缺口描述模糊（< 10 字元）
-- 使用者價值不明確（不包含關鍵詞）
-- 來源綁定不完整（1 個 pending_evidence、1 個 fail）
-- 論點來源不足或無來源
-
-#### 低效益筆記 002（行政契約主題）
-- **功能缺口分數**：< 0.7 ✓
-- **使用者價值分數**：< 0.7 ✓
-- **來源綁定完整性**：< 0.8 ✓
-- **整體品質判定**：poor 或 acceptable ✓
-- **具體功能缺口數**：0 個 ✓
-
-**特徵**：
-- 2 個論點，功能缺口描述模糊（< 10 字元）
-- 使用者價值不明確（不包含關鍵詞）
-- 來源綁定不完整（1 個 pending_evidence、1 個 fail）
-- 論點來源不足或無來源
-
-### 區分能力驗證
-
-#### 指標差距分析（高價值 vs 低效益筆記 001）
-- **功能缺口分數差距**：>= 0.5 ✓
-- **使用者價值分數差距**：>= 0.5 ✓
-- **來源綁定完整性差距**：>= 0.5 ✓
-- **通過門檻指標數差距**：>= 2 個 ✓
-
-#### 整體品質判定差距
-- **高價值筆記**：excellent 或 good ✓
-- **低效益筆記**：poor 或 acceptable ✓
-
-## 量化門檻驗證
-
-### 北極星指標門檻設定
-- **功能缺口分數門檻**：0.7 (70%)
-- **使用者價值分數門檻**：0.7 (70%)
-- **來源綁定完整性門檻**：0.8 (80%)
-- **角度多樣性門檻**：0.6 (60%)
-- **送達成功率門檻**：0.9 (90%)
-
-### 門檻有效性驗證
-
-#### 功能缺口分數門檻 (0.7)
-- **高價值筆記**：全數通過 ✓
-- **低效益筆記**：全數未通過 ✓
-- **區分能力**：有效
-
-#### 使用者價值分數門檻 (0.7)
-- **高價值筆記**：全數通過 ✓
-- **低效益筆記**：全數未通過 ✓
-- **區分能力**：有效
-
-#### 來源綁定完整性門檻 (0.8)
-- **高價值筆記**：全數通過 ✓
-- **低效益筆記**：全數未通過 ✓
-- **區分能力**：有效
-
-## 標註資料完整性驗證
-
-### 高價值筆記資料完整性
-- **類別標記正確性**：100% ✓
-- **功能缺口長度**：全數 >= 10 字元 ✓
-- **使用者價值關鍵詞**：全數包含關鍵詞 ✓
-- **來源數量**：全數 >= 1 個來源 ✓
-- **綁定狀態**：全數為 pass ✓
-
-### 低效益筆記資料完整性
-- **類別標記正確性**：100% ✓
-- **功能缺口長度**：全數 < 10 字元 ✓
-- **使用者價值關鍵詞**：全數不包含關鍵詞 ✓
-- **綁定狀態**：全數為 fail 或 pending_evidence ✓
-
-## 測試執行結果
-
-### 測試案例執行摘要
-```
-tests/test_polaris_annotation_validation.py::TestHighValueAnnotation::test_high_value_note_001_metrics PASSED
-tests/test_polaris_annotation_validation.py::TestHighValueAnnotation::test_high_value_note_002_metrics PASSED
-tests/test_polaris_annotation_validation.py::TestLowBenefitAnnotation::test_low_benefit_note_001_metrics PASSED
-tests/test_polaris_annotation_validation.py::TestLowBenefitAnnotation::test_low_benefit_note_002_metrics PASSED
-tests/test_polaris_annotation_validation.py::TestAnnotationDiscrimination::test_high_vs_low_value_discrimination PASSED
-tests/test_polaris_annotation_validation.py::TestAnnotationDiscrimination::test_annotation_data_integrity PASSED
-```
-
-### 測試通過率
-- **總測試數**：6 個
-- **通過數**：6 個
-- **通過率**：100%
+驗收契約：`tests/fixtures/polaris_annotation/acceptance_contract.json`
 
 ## 結論
 
-### 指標區分能力評估
-北極星品質指標在區分「高價值筆記」與「形式完整但低效益筆記」方面表現優異：
+固定驗證集共 10 筆，5 筆高價值、5 筆形式完整但低效益；清單、類別、必要欄位、來源失敗語義與三種綁定基數均符合契約。Polaris baseline 可區分大部分案例，加入使用成效後可正確降級「形式分數高但零使用」案例，所有驗收門檻通過。
 
-1. **功能缺口分數**：能有效區分具體描述與模糊描述
-2. **使用者價值分數**：能有效區分明確價值與不明確價值
-3. **來源綁定完整性**：能有效區分完整綁定與不完整綁定
-4. **整體品質判定**：能有效區分高品質與低品質筆記
+## 資料集完整性
 
-### 量化門檻有效性
-所有設定的量化門檻均能有效區分兩類筆記，無需調整。
+| 檢查 | 結果 |
+|---|---:|
+| 高價值案例 | 5／5 |
+| 低效益案例 | 5／5 |
+| 契約 note_id 遺漏／重複／多餘 | 0／0／0 |
+| 人工標註狀態 | 10／10 validated |
+| 綁定基數覆蓋 | `none`、`one_to_one`、`one_to_many` |
+| 無來源卻未標 pending_evidence | 0 |
 
-### 標註準則有效性
-人工標註準則定義明確，標註資料完整性高，能有效支持指標驗證。
+低效益案例仍具備非空的 `functional_gap`、`user_value` 與 `related_knowledge`，因此不是靠空資料製造分數差異。`low_benefit_005` 的 Polaris 分數為 0.850，但使用成效為 0，專門驗證純形式指標的假陽性邊界。
 
-## 建議
+## 區分能力
 
-### 後續擴展建議
-1. 增加更多主題的標註資料（如行政法其他領域）
-2. 增加邊界案例測試（如部分高價值、部分低效益的混合案例）
-3. 定期更新標註資料以覆蓋更多法律領域
+### Polaris baseline
 
-### 指標優化建議
-目前指標設定已能有效區分兩類筆記，暫無調整需求。
+決策：`polaris_overall_score >= 0.5` 判為高價值。
 
-## 參考資料
+| | 預測高價值 | 預測低效益 |
+|---|---:|---:|
+| 實際高價值 | 5 | 0 |
+| 實際低效益 | 1 | 4 |
 
-- 標註準則文檔：`docs/polaris-annotation-guidelines.md`
-- 測試程式：`tests/test_polaris_annotation_validation.py`
-- 標註資料：`tests/fixtures/polaris_annotation/`
-- 北極星指標規格：`src/note_filler/metrics.py`
+| 指標 | 實測 | 門檻 | 結果 |
+|---|---:|---:|---|
+| F1 | 0.9091 | >= 0.80 | 通過 |
+| Recall | 1.0000 | >= 0.80 | 通過 |
+| Specificity | 0.8000 | >= 0.80 | 通過 |
+
+### Composite 指標
+
+決策：`0.5 * Polaris + 0.5 * Usage >= 0.5` 判為高價值。
+
+| | 預測高價值 | 預測低效益 |
+|---|---:|---:|
+| 實際高價值 | 5 | 0 |
+| 實際低效益 | 0 | 5 |
+
+| 指標 | 實測 | 門檻 | 結果 |
+|---|---:|---:|---|
+| Precision | 1.0000 | >= 0.90 | 通過 |
+| Recall | 1.0000 | >= 0.90 | 通過 |
+| Specificity | 1.0000 | >= 0.90 | 通過 |
+| Accuracy | 1.0000 | >= 0.90 | 通過 |
+| F1 | 1.0000 | >= 0.90 | 通過 |
+| 高低類別最低分數間隔 | 0.1688 | >= 0.10 | 通過 |
+| 相較 baseline 的 F1 增益 | 0.0909 | >= 0.05 | 通過 |
+
+## 逐筆結果
+
+| note_id | Ground truth | Polaris | Usage | Composite | 預測 |
+|---|---|---:|---:|---:|---|
+| `high_value_001` | high_value | 0.8750 | 0.7533 | 0.8142 | high_value |
+| `high_value_002` | high_value | 0.8750 | 0.6660 | 0.7705 | high_value |
+| `high_value_003` | high_value | 0.8750 | 0.8690 | 0.8720 | high_value |
+| `high_value_004` | high_value | 0.8750 | 0.6043 | 0.7397 | high_value |
+| `high_value_005` | high_value | 0.8750 | 0.3127 | 0.5938 | high_value |
+| `low_benefit_001` | low_benefit | 0.3500 | 0.0100 | 0.1800 | low_benefit |
+| `low_benefit_002` | low_benefit | 0.3500 | 0.0050 | 0.1775 | low_benefit |
+| `low_benefit_003` | low_benefit | 0.3500 | 0.0020 | 0.1760 | low_benefit |
+| `low_benefit_004` | low_benefit | 0.3500 | 0.0440 | 0.1970 | low_benefit |
+| `low_benefit_005` | low_benefit | 0.8500 | 0.0000 | 0.4250 | low_benefit |
+
+最低高價值分數為 0.5938，最高低效益分數為 0.4250，未四捨五入間隔為 0.1688。
+
+## 驗證指令
+
+```powershell
+& "D:/Users/Administrator/Desktop/筆記補齊/.venv/Scripts/python.exe" -X utf8 -m pytest tests/test_value_classifier.py tests/test_polaris_annotation_validation.py -q
+```
+
+結果：相關驗收 `44 passed`；完整非 integration 測試 `646 passed, 11 deselected`。這是固定合成驗收集的回歸證據，不外推為線上真實使用成效。
