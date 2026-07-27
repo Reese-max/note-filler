@@ -80,6 +80,25 @@ Schema 版本：`note_filler.polaris_metrics.v1`
 - 檢查結果：`binding_report._evaluate_argument()` → `binding_report.arguments[].checks`
 - 角度覆蓋：`angle_coverage.build_angle_coverage()` → `binding_report.arguments[].angle_coverage`
 
+### 1.6 適用範圍
+
+#### 適用筆記類型
+- 所有經由 note_filler 管線處理的法律、規範、制度類筆記
+
+#### 適用段落類型
+- `type = supplement` 的補充段落，即系統偵測到功能缺口後主動補齊的內容
+
+#### 不適用情形
+- 原稿段落（`type = original`）：不計算此指標，因為原稿為逐字不可變的基準內容
+- 無補充論點的筆記：若 `binding_report.arguments` 為空，`status = missing_data`
+- 降級補齊且標記為 `pending_evidence` 的段落：追溯性子分數會反映此狀態，但不影響整體適用性判定
+
+#### 跨筆記行為
+- 本指標為單筆記粒度，不跨筆記彙總或平均；每則筆記獨立計算一個分數
+
+#### 責任歸屬
+- 適用於所有進入 `process_file()` 管線的筆記成品，無論送達狀態為 `delivered` 或 `failed`
+
 ### 1.6 更新頻率
 
 #### 計算週期
@@ -220,6 +239,28 @@ Schema 版本：`note_filler.polaris_metrics.v1`
 - 檢查結果：`binding_report._evaluate_argument()` → `binding_report.arguments[].checks`
 - 角度覆蓋：`angle_coverage.build_angle_coverage()` → `binding_report.arguments[].angle_coverage`
 
+### 2.6 適用範圍
+
+#### 適用筆記類型
+- 所有經由 note_filler 管線處理的法律、規範、制度類筆記
+
+#### 適用段落類型
+- `type = supplement` 的補充段落，即系統偵測到功能缺口後主動補齊的內容
+
+#### 不適用情形
+- 原稿段落（`type = original`）：不計算此指標，因為原稿為逐字不可變的基準內容
+- 無補充論點的筆記：若 `binding_report.arguments` 為空，`status = missing_data`
+- 降級補齊且標記為 `pending_evidence` 的段落：追溯性子分數會反映此狀態，但不影響整體適用性判定
+
+#### 跨筆記行為
+- 本指標為單筆記粒度，不跨筆記彙總或平均；每則筆記獨立計算一個分數
+
+#### 責任歸屬
+- 適用於所有進入 `process_file()` 管線的筆記成品，無論送達狀態為 `delivered` 或 `failed`
+
+#### 關鍵詞檢查範圍
+- 必要性明確度子分數要求 `user_value` 包含「讀者」、「說明」、「理解」或對應英文語意（`reader`、`understand`、`explanation`），以確保價值說明非模板化填充
+
 ### 2.6 更新頻率
 
 #### 計算週期
@@ -347,4 +388,5 @@ Schema 版本：`note_filler.polaris_metrics.v1`
 
 ## 6. 變更紀錄
 
+- 2026-07-27：為功能缺口分數與使用者價值分數新增「適用範圍」章節，明確界定適用筆記類型、段落類型、不適用情形、跨筆記行為、責任歸屬與關鍵詞檢查範圍
 - 2026-07-27：初始版本，定義功能缺口與使用者價值兩項核心指標的完整規格，包含責任人資訊
