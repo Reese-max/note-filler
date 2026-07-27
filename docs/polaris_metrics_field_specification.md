@@ -52,6 +52,8 @@
 | `angle_tags` | list[string] | `Segment.angle_tags` / `binding_report.arguments[].angle_tags` | 角度標籤列表，來自角度覆蓋分析 |
 | `delivery_status` | dict | `delivery_manifest.delivery_status` | 送達狀態，包含多個布林欄位 |
 | `binding_status` | string | `binding_report.arguments[].binding_status` | 綁定狀態：pass/fail/pending_evidence |
+| `checks` | dict | `binding_report.arguments[].checks` | 來源對齊、必要性與關聯知識一致性的布林判定 |
+| `angle_coverage` | dict | `binding_report.arguments[].angle_coverage` | 每個論點的有效角度與 covered facets |
 | `angle_coverage_summary` | dict | `binding_report.angle_coverage_summary` | 角度覆蓋摘要，用於角度多樣性計算 |
 
 ### 2.2 欄位詳細定義
@@ -65,7 +67,7 @@
 - **計算時機**: 在 `assemble_correction` 中從 `gap.reason` 直接賦值
 - **缺值處理**: 
   - 空字串: 視為無具體描述，不計入功能缺口分數分子
-  - 欄位缺失: 視為缺值，指標狀態為 `missing_data`
+  - 欄位缺失: 該論點的必要性明確度子分數記為 0
 
 #### 2.2.2 user_value
 
@@ -76,7 +78,7 @@
 - **計算時機**: 在 `assemble_correction` 中以模板 `"補齊讀者對「{question}」所需的說明"` 生成
 - **缺值處理**:
   - 空字串: 視為無明確價值，不計入使用者價值分數分子
-  - 欄位缺失: 視為缺值，指標狀態為 `missing_data`
+  - 欄位缺失: 該論點的必要性明確度子分數記為 0
 
 #### 2.2.3 source_ids
 
@@ -146,6 +148,17 @@
   - 欄位缺失: 視為缺值，指標狀態為 `missing_data`
   - 子欄位缺失: 僅根據現有子欄位計算，可能在日誌中警告
 
+### 2.3 功能缺口與使用者價值的量化公式
+
+兩項分數皆採四子分數等權加總：
+
+```text
+總分 = traceability*0.25 + coverage_breadth*0.25
+       + necessity_clarity*0.25 + decision_support*0.25
+```
+
+每個子分數皆為「符合條件論點數 / 總論點數」。可追溯性要求有實際 `source_ids` 且來源追溯完整對齊；覆蓋廣度要求有效角度含對應的 `necessity:functional_gap` 或 `necessity:user_value` facet；必要性明確度依功能缺口字數或使用者理解語意判斷；決策助益要求關聯知識存在且跨欄位一致。輸出保留各子分數的 numerator、denominator、rule、weight，以及逐 `argument_id` 的 `calculation_basis`。
+
 ---
 
 ## 3. 缺值處理規則
@@ -154,8 +167,8 @@
 
 | 指標名稱 | 必需欄位 | 缺值處理策略 | 指標狀態 |
 |----------|----------|--------------|----------|
-| FunctionalGapScore | `functional_gap` | 欄位缺失或總論點數為 0 | `missing_data` |
-| UserValueScore | `user_value` | 欄位缺失或總論點數為 0 | `missing_data` |
+| FunctionalGapScore | `functional_gap`、`source_ids`、`checks`、`angle_coverage` | 個別欄位缺失時對應子分數記 0；總論點數為 0 | `calculated`／`missing_data` |
+| UserValueScore | `user_value`、`source_ids`、`checks`、`angle_coverage` | 個別欄位缺失時對應子分數記 0；總論點數為 0 | `calculated`／`missing_data` |
 | SourceBindingIntegrity | `binding_status` | 欄位缺失或總論點數為 0 | `missing_data` |
 | AngleDiversityIndex | `angle_coverage_summary` | 欄位缺失 | `missing_data` |
 | DeliverySuccessRate | `delivery_status` | 欄位缺失 | `missing_data` |
@@ -366,6 +379,24 @@
       "missing_data_handling": "status=missing_data",
       "valid_values": ["pass", "fail", "pending_evidence"]
     },
+    "checks": {
+      "data_type": "dict",
+      "source_location": "binding_report.arguments[].checks",
+      "binding_report_path": "arguments[].checks",
+      "generation_stage": "build_binding_report",
+      "default_value": null,
+      "required_for_metrics": ["FunctionalGapScore", "UserValueScore"],
+      "missing_data_handling": "affected_subscores=0"
+    },
+    "angle_coverage": {
+      "data_type": "dict",
+      "source_location": "binding_report.arguments[].angle_coverage",
+      "binding_report_path": "arguments[].angle_coverage",
+      "generation_stage": "build_binding_report",
+      "default_value": null,
+      "required_for_metrics": ["FunctionalGapScore", "UserValueScore"],
+      "missing_data_handling": "coverage_breadth=0"
+    },
     "angle_coverage_summary": {
       "data_type": "dict",
       "source_location": "binding_report.angle_coverage_summary",
@@ -384,16 +415,39 @@
   },
   "metric_definitions": {
     "FunctionalGapScore": {
-      "required_fields": ["functional_gap"],
-      "calculation_formula": "arguments_with_concrete_gap / total_arguments",
+      "required_fields": ["functional_gap", "source_ids", "checks", "angle_coverage"],
+      "calculation_formula": "traceability*0.25 + coverage_breadth*0.25 + necessity_clarity*0.25 + decision_support*0.25",
       "threshold": 0.7,
-      "concrete_definition": "length >= 10 characters"
+      "subscore_weights": {
+        "traceability": 0.25,
+        "coverage_breadth": 0.25,
+        "necessity_clarity": 0.25,
+        "decision_support": 0.25
+      },
+      "subscore_rules": {
+        "traceability": "actual source_ids and aligned source trace checks / total_arguments",
+        "coverage_breadth": "effective angles with necessity:functional_gap facet / total_arguments",
+        "necessity_clarity": "functional_gap length >= 10 / total_arguments",
+        "decision_support": "related knowledge present and cross-field consistent / total_arguments"
+      }
     },
     "UserValueScore": {
-      "required_fields": ["user_value"],
-      "calculation_formula": "arguments_with_clear_value / total_arguments",
+      "required_fields": ["user_value", "source_ids", "checks", "angle_coverage"],
+      "calculation_formula": "traceability*0.25 + coverage_breadth*0.25 + necessity_clarity*0.25 + decision_support*0.25",
       "threshold": 0.7,
-      "clear_value_keywords": ["讀者", "說明", "理解", "reader", "understand", "explanation"]
+      "clear_value_keywords": ["讀者", "說明", "理解", "reader", "understand", "explanation"],
+      "subscore_weights": {
+        "traceability": 0.25,
+        "coverage_breadth": 0.25,
+        "necessity_clarity": 0.25,
+        "decision_support": 0.25
+      },
+      "subscore_rules": {
+        "traceability": "actual source_ids and aligned source trace checks / total_arguments",
+        "coverage_breadth": "effective angles with necessity:user_value facet / total_arguments",
+        "necessity_clarity": "user_value with explicit reader understanding semantics / total_arguments",
+        "decision_support": "related knowledge present and cross-field consistent / total_arguments"
+      }
     },
     "SourceBindingIntegrity": {
       "required_fields": ["binding_status"],

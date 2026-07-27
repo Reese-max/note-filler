@@ -32,8 +32,8 @@ def _calculate_polaris_for_doc(doc: CorrectionDoc) -> dict[str, Any]:
       4. 回傳可序列化的 dict（含 overall_status、各分項分數、判定依據）
     
     判定依據：
-      - functional_gap_score：功能缺口具體描述比例
-      - user_value_score：使用者價值關鍵詞覆蓋比例
+      - functional_gap_score：可追溯性、覆蓋廣度、必要性明確度、決策助益加權分數
+      - user_value_score：可追溯性、覆蓋廣度、必要性明確度、決策助益加權分數
       - source_binding_integrity：來源綁定通過比例
       - angle_diversity_index：角度多樣性覆蓋比例
       - delivery_success_rate：端到端送達成功率
@@ -123,6 +123,25 @@ def _visible_summary_text(argument: dict) -> str:
         f"；functional_gap={argument['functional_gap'] or '（未提供）'}"
         f"；user_value={argument['user_value'] or '（未提供）'}"
         f"；related_knowledge={related}"
+    )
+
+
+def _quality_score_breakdown_text(name: str, metric: dict[str, Any]) -> str:
+    """將四子分數、總分門檻與公式壓成單行可解析文字。"""
+    subscores = metric["subscores"]
+    ordered = (
+        "traceability",
+        "coverage_breadth",
+        "necessity_clarity",
+        "decision_support",
+    )
+    values = ",".join(f"{key}:{subscores[key]['score']:.2f}" for key in ordered)
+    return (
+        f"{name}_subscores={values}；"
+        f"{name}_total={metric['total_score']:.2f}；"
+        f"{name}_threshold={metric['threshold']:.2f}；"
+        f"{name}_formula=weighted_sum_0.25_each；"
+        f"{name}_basis={metric['basis_mode']}:{len(metric['calculation_basis'])}_arguments"
     )
 
 
@@ -381,7 +400,9 @@ def to_markdown(doc: CorrectionDoc) -> str:
         f"angle_diversity={polaris['angle_diversity_index']['score']:.2f}"
         f"（{'✓' if polaris['angle_diversity_index']['passes_threshold'] else '✗'}）；"
         f"delivery={polaris['delivery_success_rate']['score']:.2f}"
-        f"（{'✓' if polaris['delivery_success_rate']['passes_threshold'] else '✗'}）"
+        f"（{'✓' if polaris['delivery_success_rate']['passes_threshold'] else '✗'}）；"
+        f"{_quality_score_breakdown_text('functional_gap', polaris['functional_gap_score'])}；"
+        f"{_quality_score_breakdown_text('user_value', polaris['user_value_score'])}"
     )
 
     return md
@@ -499,7 +520,9 @@ def to_docx(doc: CorrectionDoc, path: str) -> None:
         f"angle_diversity={polaris['angle_diversity_index']['score']:.2f}"
         f"（{'✓' if polaris['angle_diversity_index']['passes_threshold'] else '✗'}）；"
         f"delivery={polaris['delivery_success_rate']['score']:.2f}"
-        f"（{'✓' if polaris['delivery_success_rate']['passes_threshold'] else '✗'}）"
+        f"（{'✓' if polaris['delivery_success_rate']['passes_threshold'] else '✗'}）；"
+        f"{_quality_score_breakdown_text('functional_gap', polaris['functional_gap_score'])}；"
+        f"{_quality_score_breakdown_text('user_value', polaris['user_value_score'])}"
     )
 
     out.save(path)

@@ -68,6 +68,24 @@
       "missing_data_handling": "status=missing_data",
       "valid_values": ["pass", "fail", "pending_evidence"]
     },
+    "checks": {
+      "data_type": "dict",
+      "source_location": "binding_report.arguments[].checks",
+      "binding_report_path": "arguments[].checks",
+      "generation_stage": "build_binding_report",
+      "default_value": null,
+      "required_for_metrics": ["FunctionalGapScore", "UserValueScore"],
+      "missing_data_handling": "affected_subscores=0"
+    },
+    "angle_coverage": {
+      "data_type": "dict",
+      "source_location": "binding_report.arguments[].angle_coverage",
+      "binding_report_path": "arguments[].angle_coverage",
+      "generation_stage": "build_binding_report",
+      "default_value": null,
+      "required_for_metrics": ["FunctionalGapScore", "UserValueScore"],
+      "missing_data_handling": "coverage_breadth=0"
+    },
     "angle_coverage_summary": {
       "data_type": "dict",
       "source_location": "binding_report.angle_coverage_summary",
@@ -86,16 +104,39 @@
   },
   "metric_definitions": {
     "FunctionalGapScore": {
-      "required_fields": ["functional_gap"],
-      "calculation_formula": "arguments_with_concrete_gap / total_arguments",
+      "required_fields": ["functional_gap", "source_ids", "checks", "angle_coverage"],
+      "calculation_formula": "traceability*0.25 + coverage_breadth*0.25 + necessity_clarity*0.25 + decision_support*0.25",
       "threshold": 0.7,
-      "concrete_definition": "length >= 10 characters"
+      "subscore_weights": {
+        "traceability": 0.25,
+        "coverage_breadth": 0.25,
+        "necessity_clarity": 0.25,
+        "decision_support": 0.25
+      },
+      "subscore_rules": {
+        "traceability": "actual source_ids and aligned source trace checks / total_arguments",
+        "coverage_breadth": "effective angles with necessity:functional_gap facet / total_arguments",
+        "necessity_clarity": "functional_gap length >= 10 / total_arguments",
+        "decision_support": "related knowledge present and cross-field consistent / total_arguments"
+      }
     },
     "UserValueScore": {
-      "required_fields": ["user_value"],
-      "calculation_formula": "arguments_with_clear_value / total_arguments",
+      "required_fields": ["user_value", "source_ids", "checks", "angle_coverage"],
+      "calculation_formula": "traceability*0.25 + coverage_breadth*0.25 + necessity_clarity*0.25 + decision_support*0.25",
       "threshold": 0.7,
-      "clear_value_keywords": ["讀者", "說明", "理解", "reader", "understand", "explanation"]
+      "clear_value_keywords": ["讀者", "說明", "理解", "reader", "understand", "explanation"],
+      "subscore_weights": {
+        "traceability": 0.25,
+        "coverage_breadth": 0.25,
+        "necessity_clarity": 0.25,
+        "decision_support": 0.25
+      },
+      "subscore_rules": {
+        "traceability": "actual source_ids and aligned source trace checks / total_arguments",
+        "coverage_breadth": "effective angles with necessity:user_value facet / total_arguments",
+        "necessity_clarity": "user_value with explicit reader understanding semantics / total_arguments",
+        "decision_support": "related knowledge present and cross-field consistent / total_arguments"
+      }
     },
     "SourceBindingIntegrity": {
       "required_fields": ["binding_status"],

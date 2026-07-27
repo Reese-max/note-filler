@@ -464,6 +464,43 @@ class TestPolarisMetricsIntegration:
         # 每項分數後應有 ✓ 或 ✗ 標記
         assert "✓" in line or "✗" in line, "北極星分數行應含通過/未通過標記"
 
+    def test_human_readable_metrics_include_quantified_breakdown(self, tmp_path):
+        """Markdown 與 DOCX 都須帶出四個子分數、總分門檻及公式。"""
+        from docx import Document as DocxDocument
+
+        doc = _sample_doc()
+        md = to_markdown(doc)
+        out = tmp_path / "breakdown.docx"
+        to_docx(doc, str(out))
+        docx_text = "\n".join(p.text for p in DocxDocument(out).paragraphs)
+
+        for text in (md, docx_text):
+            assert "functional_gap_subscores=traceability:" in text
+            assert "user_value_subscores=traceability:" in text
+            assert "coverage_breadth:" in text
+            assert "necessity_clarity:" in text
+            assert "decision_support:" in text
+            assert "functional_gap_threshold=0.70" in text
+            assert "user_value_threshold=0.70" in text
+            assert "formula=weighted_sum" in text
+
+    def test_note_json_breakdown_keeps_pending_evidence_fail_closed(self):
+        """無實際來源的論點仍為 pending，且可追溯性子分數不得誤給分。"""
+        data = to_json(_sample_doc())
+        metrics = data["polaris_metrics"]
+        pending_basis = metrics["functional_gap_score"]["calculation_basis"][1]
+
+        assert data["segments"][0]["text"] == "原文第一段。"
+        assert pending_basis["source_ids"] == []
+        assert pending_basis["binding_status"] == "pending_evidence"
+        assert pending_basis["traceability"] is False
+        assert set(metrics["user_value_score"]["subscores"]) == {
+            "traceability",
+            "coverage_breadth",
+            "necessity_clarity",
+            "decision_support",
+        }
+
     def test_to_markdown_polaris_metrics_machine_parseable(self):
         """Markdown 北極星分數行必須可被機器解析。"""
         import re

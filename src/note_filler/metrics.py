@@ -28,13 +28,26 @@ ANGLE_DIVERSITY_THRESHOLD = 0.6  # 60% 以上為合格
 # 端到端送達成功率門檻
 DELIVERY_SUCCESS_THRESHOLD = 0.9  # 90% 以上為合格
 
+# 功能缺口與使用者價值共用的四面向量化公式；等權重避免隱藏偏好。
+QUALITY_SUBSCORE_WEIGHTS = {
+    "traceability": 0.25,
+    "coverage_breadth": 0.25,
+    "necessity_clarity": 0.25,
+    "decision_support": 0.25,
+}
+QUALITY_SCORE_FORMULA = (
+    "traceability*0.25 + coverage_breadth*0.25 + "
+    "necessity_clarity*0.25 + decision_support*0.25"
+)
+
 
 @dataclass
 class FunctionalGapScore:
     """功能缺口分數。
     
     計算公式：
-        功能缺口分數 = (具體描述的功能缺口數) / (總論點數)
+        功能缺口分數 = 可追溯性×0.25 + 覆蓋廣度×0.25
+                         + 必要性明確度×0.25 + 決策助益×0.25
     
     判定規則：
         - 具體描述：functional_gap 欄位非空且長度 >= 10 字元
@@ -43,11 +56,11 @@ class FunctionalGapScore:
     
     資料來源：
         - binding_report.arguments[].functional_gap
-        - binding_report.arguments[].binding_status
+        - binding_report.arguments[].source_ids / checks / angle_coverage
     
     缺值處理：
         - functional_gap 為空字串：視為無具體描述，不計入分子
-        - 論點無 functional_gap 欄位：視為缺值，status = missing_data
+        - 論點無 functional_gap 欄位：該論點必要性明確度為 0
         - 總論點數為 0：status = missing_data
     """
     score: float  # 0.0 ~ 1.0
@@ -63,6 +76,10 @@ class FunctionalGapScore:
     
     # 原始資料（用於驗證與追溯）
     raw_functional_gaps: list[str] = field(default_factory=list)
+    formula: str = QUALITY_SCORE_FORMULA
+    subscores: dict[str, dict[str, Any]] = field(default_factory=dict)
+    calculation_basis: list[dict[str, Any]] = field(default_factory=list)
+    basis_mode: str = "binding_report"
     
     def __post_init__(self):
         if self.status == "calculated":
@@ -74,7 +91,8 @@ class UserValueScore:
     """使用者價值分數。
     
     計算公式：
-        使用者價值分數 = (明確使用者價值的論點數) / (總論點數)
+        使用者價值分數 = 可追溯性×0.25 + 覆蓋廣度×0.25
+                         + 必要性明確度×0.25 + 決策助益×0.25
     
     判定規則：
         - 明確使用者價值：user_value 欄位非空且包含關鍵詞「讀者」、「說明」、「理解」
@@ -83,11 +101,11 @@ class UserValueScore:
     
     資料來源：
         - binding_report.arguments[].user_value
-        - binding_report.arguments[].binding_status
+        - binding_report.arguments[].source_ids / checks / angle_coverage
     
     缺值處理：
         - user_value 為空字串：視為無明確價值，不計入分子
-        - 論點無 user_value 欄位：視為缺值，status = missing_data
+        - 論點無 user_value 欄位：該論點必要性明確度為 0
         - 總論點數為 0：status = missing_data
     """
     score: float  # 0.0 ~ 1.0
@@ -103,6 +121,10 @@ class UserValueScore:
     
     # 原始資料（用於驗證與追溯）
     raw_user_values: list[str] = field(default_factory=list)
+    formula: str = QUALITY_SCORE_FORMULA
+    subscores: dict[str, dict[str, Any]] = field(default_factory=dict)
+    calculation_basis: list[dict[str, Any]] = field(default_factory=list)
+    basis_mode: str = "binding_report"
     
     def __post_init__(self):
         if self.status == "calculated":
@@ -295,9 +317,14 @@ class PolarisMetrics:
             "calculated_at": self.calculated_at,
             "functional_gap_score": {
                 "score": self.functional_gap_score.score,
+                "total_score": self.functional_gap_score.score,
                 "status": self.functional_gap_score.status,
                 "threshold": self.functional_gap_score.threshold,
                 "passes_threshold": self.functional_gap_score.passes_threshold,
+                "formula": self.functional_gap_score.formula,
+                "subscores": self.functional_gap_score.subscores,
+                "calculation_basis": self.functional_gap_score.calculation_basis,
+                "basis_mode": self.functional_gap_score.basis_mode,
                 "total_arguments": self.functional_gap_score.total_arguments,
                 "arguments_with_concrete_gap": self.functional_gap_score.arguments_with_concrete_gap,
                 "arguments_with_empty_gap": self.functional_gap_score.arguments_with_empty_gap,
@@ -305,9 +332,14 @@ class PolarisMetrics:
             },
             "user_value_score": {
                 "score": self.user_value_score.score,
+                "total_score": self.user_value_score.score,
                 "status": self.user_value_score.status,
                 "threshold": self.user_value_score.threshold,
                 "passes_threshold": self.user_value_score.passes_threshold,
+                "formula": self.user_value_score.formula,
+                "subscores": self.user_value_score.subscores,
+                "calculation_basis": self.user_value_score.calculation_basis,
+                "basis_mode": self.user_value_score.basis_mode,
                 "total_arguments": self.user_value_score.total_arguments,
                 "arguments_with_clear_value": self.user_value_score.arguments_with_clear_value,
                 "arguments_with_empty_value": self.user_value_score.arguments_with_empty_value,
@@ -347,17 +379,133 @@ class PolarisMetrics:
         }
 
 
+def _quality_score_breakdown(
+    arguments: list[dict[str, Any]],
+    *,
+    facet: str,
+    clarity_flags: list[bool],
+    coverage_rule: str,
+    clarity_rule: str,
+) -> tuple[float, dict[str, dict[str, Any]], list[dict[str, Any]], str]:
+    """以既有 binding_report 訊號產生四子分數與逐論點依據。"""
+    total = len(arguments)
+    has_detailed_basis = any(
+        isinstance(arg.get("checks"), dict)
+        or isinstance(arg.get("angle_coverage"), dict)
+        for arg in arguments
+    )
+
+    traceability_flags: list[bool] = []
+    coverage_flags: list[bool] = []
+    decision_flags: list[bool] = []
+    basis: list[dict[str, Any]] = []
+
+    for index, (arg, necessity_clear) in enumerate(zip(arguments, clarity_flags)):
+        checks = arg.get("checks") if isinstance(arg.get("checks"), dict) else {}
+        coverage = (
+            arg.get("angle_coverage")
+            if isinstance(arg.get("angle_coverage"), dict)
+            else {}
+        )
+        source_ids = [
+            source_id
+            for source_id in arg.get("source_ids", [])
+            if isinstance(source_id, str) and source_id.strip()
+        ] if isinstance(arg.get("source_ids"), list) else []
+
+        if has_detailed_basis:
+            traceable = bool(
+                source_ids
+                and checks.get("at_least_one_source") is True
+                and checks.get("source_traceable") is True
+                and checks.get("no_omitted_traces") is True
+                and checks.get("no_extra_traces") is True
+            )
+            covered_facets = coverage.get("covered_facets", [])
+            covered = bool(
+                coverage.get("effective_angle_count") == 1
+                and isinstance(covered_facets, list)
+                and facet in covered_facets
+            )
+            decision_support = bool(
+                checks.get("has_related_knowledge") is True
+                and checks.get("related_knowledge_consistent") is True
+            )
+        else:
+            # 相容舊呼叫端的精簡 arguments；正式 binding_report 不走此分支。
+            traceable = covered = decision_support = necessity_clear
+
+        traceability_flags.append(traceable)
+        coverage_flags.append(covered)
+        decision_flags.append(decision_support)
+        basis.append(
+            {
+                "argument_id": arg.get("argument_id", f"argument:{index}"),
+                "source_ids": source_ids,
+                "binding_status": arg.get("binding_status"),
+                "traceability": traceable,
+                "coverage_breadth": covered,
+                "necessity_clarity": necessity_clear,
+                "decision_support": decision_support,
+            }
+        )
+
+    rules = {
+        "traceability": "有實際來源且來源與追溯識別碼完整對齊的論點比例",
+        "coverage_breadth": coverage_rule,
+        "necessity_clarity": clarity_rule,
+        "decision_support": "關聯知識明示決策助益且與功能缺口及使用者價值一致的論點比例",
+    }
+    flag_groups = {
+        "traceability": traceability_flags,
+        "coverage_breadth": coverage_flags,
+        "necessity_clarity": clarity_flags,
+        "decision_support": decision_flags,
+    }
+    subscores: dict[str, dict[str, Any]] = {}
+    for name, flags in flag_groups.items():
+        numerator = sum(flags)
+        score = numerator / total if total else 0.0
+        weight = QUALITY_SUBSCORE_WEIGHTS[name]
+        subscores[name] = {
+            "score": score,
+            "weight": weight,
+            "weighted_score": score * weight,
+            "numerator": numerator,
+            "denominator": total,
+            "rule": rules[name],
+        }
+
+    total_score = sum(item["weighted_score"] for item in subscores.values())
+    basis_mode = (
+        "missing_data" if not arguments
+        else "binding_report" if has_detailed_basis
+        else "primary_field_fallback"
+    )
+    return total_score, subscores, basis, basis_mode
+
+
 def calculate_functional_gap_score(arguments: list[dict[str, Any]]) -> FunctionalGapScore:
     """計算功能缺口分數。"""
     if not arguments:
+        score, subscores, basis, basis_mode = _quality_score_breakdown(
+            [],
+            facet="necessity:functional_gap",
+            clarity_flags=[],
+            coverage_rule="具有效且未去重角度及功能缺口 facet 的論點比例",
+            clarity_rule="功能缺口非空且至少 10 字元的論點比例",
+        )
         return FunctionalGapScore(
-            score=0.0,
+            score=score,
             status="missing_data",
             total_arguments=0,
             arguments_with_concrete_gap=0,
             arguments_with_empty_gap=0,
             arguments_missing_field=0,
             raw_functional_gaps=[],
+            subscores=subscores,
+            calculation_basis=basis,
+            basis_mode=basis_mode,
         )
     
     total = len(arguments)
@@ -365,10 +513,12 @@ def calculate_functional_gap_score(arguments: list[dict[str, Any]]) -> Functiona
     empty_count = 0
     missing_count = 0
     raw_gaps = []
+    clarity_flags: list[bool] = []
     
     for arg in arguments:
         if "functional_gap" not in arg:
             missing_count += 1
+            clarity_flags.append(False)
             continue
         
         gap = arg.get("functional_gap", "")
@@ -378,23 +528,25 @@ def calculate_functional_gap_score(arguments: list[dict[str, Any]]) -> Functiona
             gap = str(gap)
         
         # 具體描述：非空且長度 >= 10 字元
-        if gap.strip() and len(gap.strip()) >= 10:
+        checks = arg.get("checks") if isinstance(arg.get("checks"), dict) else {}
+        necessity_clear = bool(
+            gap.strip()
+            and len(gap.strip()) >= 10
+            and checks.get("has_functional_gap") is not False
+        )
+        clarity_flags.append(necessity_clear)
+        if necessity_clear:
             concrete_count += 1
         else:
             empty_count += 1
     
-    if total == 0:
-        return FunctionalGapScore(
-            score=0.0,
-            status="missing_data",
-            total_arguments=0,
-            arguments_with_concrete_gap=0,
-            arguments_with_empty_gap=0,
-            arguments_missing_field=0,
-            raw_functional_gaps=[],
-        )
-    
-    score = concrete_count / total if total > 0 else 0.0
+    score, subscores, basis, basis_mode = _quality_score_breakdown(
+        arguments,
+        facet="necessity:functional_gap",
+        clarity_flags=clarity_flags,
+        coverage_rule="具有效且未去重角度及功能缺口 facet 的論點比例",
+        clarity_rule="功能缺口非空且至少 10 字元的論點比例",
+    )
     
     return FunctionalGapScore(
         score=score,
@@ -404,20 +556,33 @@ def calculate_functional_gap_score(arguments: list[dict[str, Any]]) -> Functiona
         arguments_with_empty_gap=empty_count,
         arguments_missing_field=missing_count,
         raw_functional_gaps=raw_gaps,
+        subscores=subscores,
+        calculation_basis=basis,
+        basis_mode=basis_mode,
     )
 
 
 def calculate_user_value_score(arguments: list[dict[str, Any]]) -> UserValueScore:
     """計算使用者價值分數。"""
     if not arguments:
+        score, subscores, basis, basis_mode = _quality_score_breakdown(
+            [],
+            facet="necessity:user_value",
+            clarity_flags=[],
+            coverage_rule="具有效且未去重角度及使用者價值 facet 的論點比例",
+            clarity_rule="使用者價值非空且含讀者、說明或理解語意的論點比例",
+        )
         return UserValueScore(
-            score=0.0,
+            score=score,
             status="missing_data",
             total_arguments=0,
             arguments_with_clear_value=0,
             arguments_with_empty_value=0,
             arguments_missing_field=0,
             raw_user_values=[],
+            subscores=subscores,
+            calculation_basis=basis,
+            basis_mode=basis_mode,
         )
     
     total = len(arguments)
@@ -425,6 +590,7 @@ def calculate_user_value_score(arguments: list[dict[str, Any]]) -> UserValueScor
     empty_count = 0
     missing_count = 0
     raw_values = []
+    clarity_flags: list[bool] = []
     
     # 關鍵詞判斷明確使用者價值（支援中英文）
     value_keywords = ["讀者", "說明", "理解", "reader", "understand", "explanation"]
@@ -432,6 +598,7 @@ def calculate_user_value_score(arguments: list[dict[str, Any]]) -> UserValueScor
     for arg in arguments:
         if "user_value" not in arg:
             missing_count += 1
+            clarity_flags.append(False)
             continue
         
         value = arg.get("user_value", "")
@@ -441,23 +608,25 @@ def calculate_user_value_score(arguments: list[dict[str, Any]]) -> UserValueScor
             value = str(value)
         
         # 明確使用者價值：非空且包含關鍵詞
-        if value.strip() and any(keyword in value for keyword in value_keywords):
+        checks = arg.get("checks") if isinstance(arg.get("checks"), dict) else {}
+        necessity_clear = bool(
+            value.strip()
+            and any(keyword in value for keyword in value_keywords)
+            and checks.get("has_user_value") is not False
+        )
+        clarity_flags.append(necessity_clear)
+        if necessity_clear:
             clear_count += 1
         else:
             empty_count += 1
     
-    if total == 0:
-        return UserValueScore(
-            score=0.0,
-            status="missing_data",
-            total_arguments=0,
-            arguments_with_clear_value=0,
-            arguments_with_empty_value=0,
-            arguments_missing_field=0,
-            raw_user_values=[],
-        )
-    
-    score = clear_count / total if total > 0 else 0.0
+    score, subscores, basis, basis_mode = _quality_score_breakdown(
+        arguments,
+        facet="necessity:user_value",
+        clarity_flags=clarity_flags,
+        coverage_rule="具有效且未去重角度及使用者價值 facet 的論點比例",
+        clarity_rule="使用者價值非空且含讀者、說明或理解語意的論點比例",
+    )
     
     return UserValueScore(
         score=score,
@@ -467,6 +636,9 @@ def calculate_user_value_score(arguments: list[dict[str, Any]]) -> UserValueScor
         arguments_with_empty_value=empty_count,
         arguments_missing_field=missing_count,
         raw_user_values=raw_values,
+        subscores=subscores,
+        calculation_basis=basis,
+        basis_mode=basis_mode,
     )
 
 

@@ -14,8 +14,16 @@ Schema 版本：`note_filler.polaris_metrics.v1`
 
 #### 計算公式
 ```
-功能缺口分數 = (具體描述的功能缺口數) / (總論點數)
+功能缺口分數 = 可追溯性 × 0.25 + 覆蓋廣度 × 0.25
+               + 必要性明確度 × 0.25 + 決策助益 × 0.25
 ```
+
+四個子分數均為符合條件的論點數除以總論點數：
+
+- **可追溯性**：有實際來源，且來源與追溯識別碼完整對齊。
+- **覆蓋廣度**：論點具有未被去重的有效角度，且包含 `necessity:functional_gap` facet。
+- **必要性明確度**：`functional_gap` 非空且至少 10 字元。
+- **決策助益**：關聯知識明示決策助益，且與功能缺口及使用者價值一致。
 
 #### 判定規則
 - **具體描述定義**：`functional_gap` 欄位非空且長度 >= 10 字元
@@ -25,20 +33,32 @@ Schema 版本：`note_filler.polaris_metrics.v1`
 
 #### 資料來源
 - `binding_report.arguments[].functional_gap`
-- `binding_report.arguments[].binding_status`
+- `binding_report.arguments[].source_ids`
+- `binding_report.arguments[].checks`
+- `binding_report.arguments[].angle_coverage`
 
 #### 缺值處理
 - `functional_gap` 為空字串：視為無具體描述，不計入分子
-- 論點無 `functional_gap` 欄位：視為缺值，`status = missing_data`
+- 論點無 `functional_gap` 欄位：該論點的必要性明確度記為 0
 - 總論點數為 0：`status = missing_data`
 
 #### 詳細統計欄位
 ```python
 {
     "score": float,              # 0.0 ~ 1.0
+    "total_score": float,        # 與 score 相同，明示加權總分
     "status": "calculated" | "missing_data" | "error",
     "threshold": 0.7,
     "passes_threshold": bool,
+    "formula": "traceability*0.25 + ...",
+    "subscores": {
+        "traceability": {"score": float, "weight": 0.25, "numerator": int, "denominator": int, "rule": str},
+        "coverage_breadth": { ... },
+        "necessity_clarity": { ... },
+        "decision_support": { ... },
+    },
+    "calculation_basis": list[dict],  # 每個 argument_id 的四項布林判定與實際 source_ids
+    "basis_mode": "binding_report" | "primary_field_fallback" | "missing_data",
     "total_arguments": int,      # 總論點數
     "arguments_with_concrete_gap": int,   # 具體描述的功能缺口數
     "arguments_with_empty_gap": int,       # 空功能缺口數
@@ -52,8 +72,16 @@ Schema 版本：`note_filler.polaris_metrics.v1`
 
 #### 計算公式
 ```
-使用者價值分數 = (明確使用者價值的論點數) / (總論點數)
+使用者價值分數 = 可追溯性 × 0.25 + 覆蓋廣度 × 0.25
+                 + 必要性明確度 × 0.25 + 決策助益 × 0.25
 ```
+
+四個子分數均為符合條件的論點數除以總論點數：
+
+- **可追溯性**：有實際來源，且來源與追溯識別碼完整對齊。
+- **覆蓋廣度**：論點具有未被去重的有效角度，且包含 `necessity:user_value` facet。
+- **必要性明確度**：`user_value` 非空，且含「讀者」、「說明」、「理解」或對應英文語意。
+- **決策助益**：關聯知識明示決策助益，且與功能缺口及使用者價值一致。
 
 #### 判定規則
 - **明確使用者價值定義**：`user_value` 欄位非空且包含關鍵詞「讀者」、「說明」、「理解」
@@ -63,20 +91,32 @@ Schema 版本：`note_filler.polaris_metrics.v1`
 
 #### 資料來源
 - `binding_report.arguments[].user_value`
-- `binding_report.arguments[].binding_status`
+- `binding_report.arguments[].source_ids`
+- `binding_report.arguments[].checks`
+- `binding_report.arguments[].angle_coverage`
 
 #### 缺值處理
 - `user_value` 為空字串：視為無明確價值，不計入分子
-- 論點無 `user_value` 欄位：視為缺值，`status = missing_data`
+- 論點無 `user_value` 欄位：該論點的必要性明確度記為 0
 - 總論點數為 0：`status = missing_data`
 
 #### 詳細統計欄位
 ```python
 {
     "score": float,
+    "total_score": float,
     "status": "calculated" | "missing_data" | "error",
     "threshold": 0.7,
     "passes_threshold": bool,
+    "formula": "traceability*0.25 + ...",
+    "subscores": {
+        "traceability": { ... },
+        "coverage_breadth": { ... },
+        "necessity_clarity": { ... },
+        "decision_support": { ... },
+    },
+    "calculation_basis": list[dict],
+    "basis_mode": "binding_report" | "primary_field_fallback" | "missing_data",
     "total_arguments": int,
     "arguments_with_clear_value": int,     # 明確使用者價值的論點數
     "arguments_with_empty_value": int,     # 空使用者價值數

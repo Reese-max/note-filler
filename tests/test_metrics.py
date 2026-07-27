@@ -672,3 +672,113 @@ class TestMetricsIntegration:
         assert parsed_manifest["polaris_metrics"]["overall_status"] in [
             "excellent", "good", "acceptable", "poor"
         ]
+
+
+def test_functional_gap_and_user_value_scores_expose_quantified_breakdown():
+    """四個子分數、加權總分與逐論點依據必須可由輸出重算。"""
+    arguments = [
+        {
+            "argument_id": "argument:0",
+            "source_ids": ["source:a"],
+            "binding_status": "pass",
+            "functional_gap": "原稿未說明行政處分的成立要件",
+            "user_value": "補齊讀者理解行政處分成立要件所需的說明",
+            "checks": {
+                "at_least_one_source": True,
+                "source_traceable": True,
+                "no_omitted_traces": True,
+                "no_extra_traces": True,
+                "has_functional_gap": True,
+                "has_user_value": True,
+                "has_related_knowledge": True,
+                "related_knowledge_consistent": True,
+            },
+            "angle_coverage": {
+                "covered_facets": [
+                    "necessity:functional_gap",
+                    "necessity:user_value",
+                ],
+                "effective_angle_count": 1,
+            },
+        },
+        {
+            "argument_id": "argument:1",
+            "source_ids": [],
+            "binding_status": "pending_evidence",
+            "functional_gap": "太短",
+            "user_value": "提供資訊",
+            "checks": {
+                "at_least_one_source": False,
+                "source_traceable": True,
+                "no_omitted_traces": True,
+                "no_extra_traces": True,
+                "has_functional_gap": True,
+                "has_user_value": True,
+                "has_related_knowledge": True,
+                "related_knowledge_consistent": False,
+            },
+            "angle_coverage": {
+                "covered_facets": ["necessity:functional_gap"],
+                "effective_angle_count": 1,
+            },
+        },
+    ]
+
+    metrics = calculate_polaris_metrics(
+        {"arguments": arguments, "angle_coverage_summary": {}},
+    ).to_dict()
+    functional_gap = metrics["functional_gap_score"]
+    user_value = metrics["user_value_score"]
+
+    assert functional_gap["subscores"] == {
+        "traceability": {
+            "score": 0.5,
+            "weight": 0.25,
+            "weighted_score": 0.125,
+            "numerator": 1,
+            "denominator": 2,
+            "rule": "有實際來源且來源與追溯識別碼完整對齊的論點比例",
+        },
+        "coverage_breadth": {
+            "score": 1.0,
+            "weight": 0.25,
+            "weighted_score": 0.25,
+            "numerator": 2,
+            "denominator": 2,
+            "rule": "具有效且未去重角度及功能缺口 facet 的論點比例",
+        },
+        "necessity_clarity": {
+            "score": 0.5,
+            "weight": 0.25,
+            "weighted_score": 0.125,
+            "numerator": 1,
+            "denominator": 2,
+            "rule": "功能缺口非空且至少 10 字元的論點比例",
+        },
+        "decision_support": {
+            "score": 0.5,
+            "weight": 0.25,
+            "weighted_score": 0.125,
+            "numerator": 1,
+            "denominator": 2,
+            "rule": "關聯知識明示決策助益且與功能缺口及使用者價值一致的論點比例",
+        },
+    }
+    assert functional_gap["total_score"] == functional_gap["score"] == 0.625
+    assert user_value["total_score"] == user_value["score"] == 0.5
+    assert user_value["subscores"]["coverage_breadth"]["score"] == 0.5
+    assert functional_gap["threshold"] == user_value["threshold"] == 0.7
+    assert functional_gap["formula"] == (
+        "traceability*0.25 + coverage_breadth*0.25 + "
+        "necessity_clarity*0.25 + decision_support*0.25"
+    )
+    assert functional_gap["basis_mode"] == "binding_report"
+    assert functional_gap["calculation_basis"][1] == {
+        "argument_id": "argument:1",
+        "source_ids": [],
+        "binding_status": "pending_evidence",
+        "traceability": False,
+        "coverage_breadth": True,
+        "necessity_clarity": False,
+        "decision_support": False,
+    }
