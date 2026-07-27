@@ -118,6 +118,17 @@ def test_process_file_writes_md_and_counts(tmp_path, monkeypatch):
     ]
     assert isinstance(metrics["source_binding_integrity"]["score"], float)
     assert metrics["source_binding_integrity"]["decision"] in {"pass", "fail"}
+    trace_fields = (
+        "traceability_markers",
+        "claim_source_map",
+        "citation_span_map",
+    )
+    assert tuple(metrics)[-3:] == trace_fields
+    binding_report = json.loads(
+        (tmp_path / "binding_report.json").read_text(encoding="utf-8")
+    )
+    for field in trace_fields:
+        assert metrics[field] == binding_report[field]
 
 
 def test_process_file_json_format_and_outdir(tmp_path, monkeypatch):

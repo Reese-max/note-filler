@@ -141,6 +141,7 @@ class Segment:
     confidence: Literal["verified", "pending_evidence"]
     conflict_note: str | None = None
     traceability: list[dict] = field(default_factory=list)
+    citation_spans: list[dict] = field(default_factory=list)
     source_id: str = ""
     source_ids: list[str] = field(default_factory=list)
     functional_gap: str = ""
@@ -224,6 +225,7 @@ def assemble_correction(doc, gaps, retrieved, written, validations) -> Correctio
                         "paragraph_idx": p.idx,
                     }
                 ],
+                citation_spans=[],
                 source_id=f"input:{doc.source_path}#p{p.idx}",
                 source_ids=[],
                 functional_gap="",
@@ -335,6 +337,9 @@ def assemble_correction(doc, gaps, retrieved, written, validations) -> Correctio
                         }
                     ]
                 ),
+                citation_spans=[dict(span) for span in (w.citation_spans or [])]
+                if w is not None
+                else [],
                 source_id=source_id,
                 source_ids=list(used_ids) if used_ids else [],
                 # 必要性雙視角：功能缺口取 gap.reason；使用者價值由問題推導，

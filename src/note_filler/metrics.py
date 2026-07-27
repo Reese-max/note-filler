@@ -345,6 +345,11 @@ class PolarisMetrics:
     source_binding_integrity: SourceBindingIntegrity
     angle_diversity_index: AngleDiversityIndex
     delivery_success_rate: DeliverySuccessRate
+
+    # 成品追溯資料；由 binding_report 原樣帶入，不在指標層重新推測。
+    traceability_markers: list[dict[str, Any]] = field(default_factory=list)
+    claim_source_map: dict[str, list[str]] = field(default_factory=dict)
+    citation_span_map: list[dict[str, Any]] = field(default_factory=list)
     
     # 整體評估
     overall_status: Literal["excellent", "good", "acceptable", "poor", "error"] = "poor"
@@ -479,6 +484,14 @@ class PolarisMetrics:
                 "successful_deliveries": self.delivery_success_rate.successful_deliveries,
                 "failed_deliveries": self.delivery_success_rate.failed_deliveries,
             },
+            "traceability_markers": [
+                dict(marker) for marker in self.traceability_markers
+            ],
+            "claim_source_map": {
+                argument_id: list(source_ids)
+                for argument_id, source_ids in self.claim_source_map.items()
+            },
+            "citation_span_map": [dict(span) for span in self.citation_span_map],
         }
 
 
@@ -935,5 +948,8 @@ def calculate_polaris_metrics(
         source_binding_integrity=source_binding_integrity,
         angle_diversity_index=angle_diversity_index,
         delivery_success_rate=delivery_success_rate,
+        traceability_markers=list(binding_report.get("traceability_markers") or []),
+        claim_source_map=dict(binding_report.get("claim_source_map") or {}),
+        citation_span_map=list(binding_report.get("citation_span_map") or []),
         calculated_at=datetime.utcnow().isoformat(),
     )

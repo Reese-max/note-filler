@@ -59,6 +59,7 @@
                 [Level {{ s.level }}] {{ s.title }}
                 {% if s.url %} — <a href="{{ s.url }}" target="_blank" rel="noopener">{{ s.url }}</a>{% endif %}
                 <br><small>擷取日:{{ s.fetched_date }}{% if s.doc_date %} / 文件日:{{ s.doc_date }}{% endif %}</small>
+                <div class="source-fragment" data-source-id="{{ s.id }}">來源片段：{{ s.content }}</div>
               </li>
             {% endfor %}
             </ul>
@@ -69,6 +70,20 @@
           <dl class="argument-metadata">
             <dt>argument_id</dt>
             <dd>{{ seg.argument_id or "未提供" }}</dd>
+            <dt>claim_fragment（主張片段）</dt>
+            <dd>{{ seg.text }}</dd>
+            <dt>citation_spans（引用範圍）</dt>
+            <dd>
+              {% if seg.citation_spans %}
+              <ul class="citation-spans">
+                {% for span in seg.citation_spans %}
+                <li>{{ span.source_id }}@{{ span.span_start }}:{{ span.span_end }}={{ span.marker_text }}</li>
+                {% endfor %}
+              </ul>
+              {% else %}
+              []
+              {% endif %}
+            </dd>
             <dt>functional_gap（功能缺口）</dt>
             <dd>{{ seg.functional_gap or "未提供" }}</dd>
             <dt>user_value（使用者價值）</dt>

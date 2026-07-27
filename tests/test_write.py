@@ -36,11 +36,34 @@ def test_used_source_ids_from_markers():
     assert len(llm.calls) == 1
 
 
+def test_citation_spans_keep_every_occurrence_after_invalid_marker_cleanup():
+    srcs = _sources()
+    llm = FakeLLM(["無效[^9]移除後，甲[^2]、乙[^1]、再引[^2]。"])
+
+    out = write_supplement(_gap(), srcs, llm)
+
+    assert out.text == "無效移除後，甲[^2]、乙[^1]、再引[^2]。"
+    assert out.used_source_ids == [srcs[1].id, srcs[0].id]
+    assert [span["source_id"] for span in out.citation_spans] == [
+        srcs[1].id,
+        srcs[0].id,
+        srcs[1].id,
+    ]
+    assert all(
+        out.text[span["span_start"]:span["span_end"]] == span["marker_text"]
+        for span in out.citation_spans
+    )
+    assert [tuple(span) for span in out.citation_spans] == [
+        ("source_id", "span_start", "span_end", "marker_text")
+    ] * 3
+
+
 def test_pending_evidence_when_insufficient():
     llm = FakeLLM(["【待補證】現有來源未提及附款撤回的效果。"])
     out = write_supplement(_gap(), _sources(), llm)
     assert out.text.startswith("【待補證】")
     assert out.used_source_ids == []
+    assert out.citation_spans == []
 
 
 def test_out_of_range_marker_removed_and_not_used():

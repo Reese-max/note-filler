@@ -50,11 +50,17 @@ def _fixed_doc() -> CorrectionDoc:
     )
     seg_supp_ok = Segment(
         type="supplement",
-        text="行政處分係指行政機關就公法上具體事件所為之單方決定。",
+        text="行政處分係指行政機關就公法上具體事件所為之單方決定。[^1]",
         anchor_idx=0,
         sources=[src],
         confidence="verified",
         traceability=[{"kind": "source", "id": "s1"}],
+        citation_spans=[{
+            "source_id": "s1",
+            "span_start": len("行政處分係指行政機關就公法上具體事件所為之單方決定。"),
+            "span_end": len("行政處分係指行政機關就公法上具體事件所為之單方決定。") + 4,
+            "marker_text": "[^1]",
+        }],
         functional_gap="原稿未定義行政處分",
         user_value="讓讀者辨識行政處分的適用範圍",
         related_knowledge=build_related_knowledge(
@@ -129,6 +135,10 @@ async def test_run_renders_two_columns(async_client, monkeypatch):
     assert "角度清單" in body
     assert "definition" in body
     assert "來源：pending（無來源）" in body
+    assert "claim_fragment（主張片段）" in body
+    assert "citation_spans（引用範圍）" in body
+    assert "s1@" in body and "=[^1]" in body
+    assert "來源片段：本法所稱行政處分" in body
     # 關聯知識、必要性雙視角與 ID 必須同卡顯示，不能只留在內部報告。
     assert "摘要可見" in body
     assert 'data-argument-id="argument:0"' in body

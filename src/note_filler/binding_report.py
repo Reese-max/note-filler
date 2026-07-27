@@ -32,9 +32,26 @@ from note_filler.correction import (
     related_knowledge_explains_value,
     related_knowledge_matches_views,
 )
+from note_filler.write import CITATION_SPAN_KEYS, citation_span_issues
 
 SCHEMA_ID = "note_filler.binding_report.v1"
 BINDING_REPORT_NAME = "binding_report.json"
+
+TRACEABILITY_MARKER_KEYS = ("argument_id", "kind", "id", "binding_status")
+SOURCE_FRAGMENT_KEYS = ("source_id", "text")
+CITATION_SPAN_MAP_KEYS = (
+    "segment_index",
+    "argument_id",
+    "source_id",
+    "span_start",
+    "span_end",
+    "marker_text",
+)
+TRACEABILITY_FIELD_KEYS = (
+    "traceability_markers",
+    "claim_source_map",
+    "citation_span_map",
+)
 
 Cardinality = Literal["one_to_one", "one_to_many", "none"]
 BindingStatus = Literal["pass", "fail", "pending_evidence"]
@@ -49,6 +66,7 @@ REQUIRED_TOP_KEYS = frozenset(
         "arguments",
         "source_usage",
         "angle_coverage_summary",
+        *TRACEABILITY_FIELD_KEYS,
     }
 )
 REQUIRED_ARGUMENT_ANGLE_KEYS = frozenset(
@@ -73,6 +91,8 @@ REQUIRED_ARGUMENT_KEYS = frozenset(
         "source_count",
         "source_ids",
         "trace_source_ids",
+        "source_fragments",
+        "citation_spans",
         "source_id_field",
         "checks",
         "binding_status",
@@ -215,6 +235,22 @@ def _trace_source_ids(seg) -> list[str]:
     return ids
 
 
+def _source_fragments(seg) -> list[dict[str, str]]:
+    """把實際掛入成品的來源內容投影為固定鍵序片段。"""
+    return [
+        {"source_id": src.id, "text": src.content}
+        for src in (getattr(seg, "sources", None) or [])
+        if isinstance(getattr(src, "id", None), str)
+    ]
+
+
+def _citation_spans(seg) -> list:
+    raw = getattr(seg, "citation_spans", None)
+    if not isinstance(raw, list):
+        return []
+    return [dict(item) if isinstance(item, dict) else item for item in raw]
+
+
 def _cardinality(source_count: int) -> Cardinality:
     if source_count <= 0:
         return "none"
@@ -261,6 +297,14 @@ def _pending_traceable(seg) -> bool:
 def _evaluate_argument(seg, *, argument_index: int, segment_index: int) -> dict[str, Any]:
     source_ids = _source_ids(seg)
     trace_ids = _trace_source_ids(seg)
+    raw_citation_spans = getattr(seg, "citation_spans", None)
+    citation_spans = _citation_spans(seg)
+    span_issues = citation_span_issues(text=getattr(seg, "text", "") or "", source_ids=source_ids, citation_spans=raw_citation_spans)
+    span_ids = [
+        item.get("source_id")
+        for item in citation_spans
+        if isinstance(item, dict) and isinstance(item.get("source_id"), str)
+    ]
     sid_field = getattr(seg, "source_id", None) or ""
     confidence = getattr(seg, "confidence", None) or ""
     text = getattr(seg, "text", None) or ""
@@ -318,25 +362,31 @@ def _evaluate_argument(seg, *, argument_index: int, segment_index: int) -> dict[
 
     source_set = set(source_ids)
     trace_set = set(trace_ids)
-    no_omitted = source_set <= trace_set  # 每個 source 都有 trace
-    no_extra = trace_set <= source_set  # 無多餘 trace
+    span_set = set(span_ids)
+    no_omitted = source_set <= trace_set and source_set <= span_set
+    no_extra = trace_set <= source_set and span_set <= source_set
 
     if source_ids:
         expected_field = f"sources:{','.join(source_ids)}"
         source_id_aligned = sid_field == expected_field
         at_least_one = True
-        # 可追溯：trace 與 sources 順序與集合皆對齊
-        source_traceable = trace_ids == source_ids and no_omitted and no_extra
+        # 可追溯：來源、trace 與主張內 citation span 三向對齊。
+        source_traceable = (
+            trace_ids == source_ids
+            and not span_issues
+            and no_omitted
+            and no_extra
+        )
     else:
         expected_field_ok = isinstance(sid_field, str) and sid_field.startswith(
             "pending:gap:"
         )
         source_id_aligned = expected_field_ok
         at_least_one = False
-        source_traceable = _pending_traceable(seg)
-        # 無來源時「無遺漏／無多餘」對空集合為真
+        source_traceable = _pending_traceable(seg) and not span_issues
+        # 無來源時不可殘留來源 trace 或 citation span。
         no_omitted = True
-        no_extra = True
+        no_extra = not trace_set and not span_set
 
     no_empty_fragments = _no_empty_fragments(seg)
 
@@ -412,6 +462,8 @@ def _evaluate_argument(seg, *, argument_index: int, segment_index: int) -> dict[
         "source_count": len(source_ids),
         "source_ids": list(source_ids),
         "trace_source_ids": list(trace_ids),
+        "source_fragments": _source_fragments(seg),
+        "citation_spans": citation_spans,
         "source_id_field": sid_field,
         "checks": checks,
         "binding_status": status,
@@ -420,6 +472,68 @@ def _evaluate_argument(seg, *, argument_index: int, segment_index: int) -> dict[
         "user_value": user_value,
         "related_knowledge": related_knowledge,
         "angle_coverage": angle_coverage,
+    }
+
+
+def _build_traceability_fields(
+    segments: list,
+    arguments: list[dict[str, Any]],
+) -> dict[str, Any]:
+    """由同一份 argument/segment 資料建立三個固定序列化投影。"""
+    markers: list[dict[str, Any]] = []
+    claim_source_map: dict[str, list[str]] = {}
+    span_map: list[dict[str, Any]] = []
+
+    for argument in arguments:
+        argument_id = argument["argument_id"]
+        segment_index = argument["segment_index"]
+        segment = segments[segment_index]
+        claim_source_map[argument_id] = list(argument["source_ids"])
+
+        for ref in getattr(segment, "traceability", None) or []:
+            if not isinstance(ref, dict) or ref.get("kind") not in (
+                "source",
+                "processing_record",
+            ):
+                continue
+            ref_id = ref.get("id")
+            if not isinstance(ref_id, str) or not ref_id.strip():
+                continue
+            markers.append(
+                {
+                    "argument_id": argument_id,
+                    "kind": ref["kind"],
+                    "id": ref_id,
+                    "binding_status": argument["binding_status"],
+                }
+            )
+
+        for span in argument["citation_spans"]:
+            if not isinstance(span, dict) or tuple(span) != CITATION_SPAN_KEYS:
+                continue
+            span_map.append(
+                {
+                    "segment_index": segment_index,
+                    "argument_id": argument_id,
+                    "source_id": span["source_id"],
+                    "span_start": span["span_start"],
+                    "span_end": span["span_end"],
+                    "marker_text": span["marker_text"],
+                }
+            )
+
+    span_map.sort(
+        key=lambda item: (
+            item["segment_index"],
+            item["span_start"],
+            item["span_end"],
+            item["source_id"],
+        )
+    )
+    return {
+        "traceability_markers": markers,
+        "claim_source_map": claim_source_map,
+        "citation_span_map": span_map,
     }
 
 
@@ -481,6 +595,7 @@ def build_binding_report(correction) -> dict[str, Any]:
     source_usage = dict(sorted(
         {k: sorted(v) for k, v in source_usage.items()}.items()
     ))
+    traceability_fields = _build_traceability_fields(segments, arguments)
 
     return {
         "schema": SCHEMA_ID,
@@ -490,6 +605,7 @@ def build_binding_report(correction) -> dict[str, Any]:
         "arguments": arguments,
         "source_usage": source_usage,
         "angle_coverage_summary": angle_summary,
+        **traceability_fields,
     }
 
 
@@ -504,6 +620,133 @@ def _reject_key_drift(actual: Any, required: frozenset[str], *, where: str) -> N
     extra = keys - required
     if extra:
         raise ValueError(f"{where} 含未知欄位（欄位漂移）: {sorted(extra)}")
+
+
+def _validate_traceability_fields(
+    data: dict[str, Any],
+    arguments: list[dict[str, Any]],
+) -> None:
+    """鎖定三欄結構、順序及其與逐論點資料的一致性。"""
+    argument_ids = [argument["argument_id"] for argument in arguments]
+    by_id = {argument["argument_id"]: argument for argument in arguments}
+
+    claim_map = data.get("claim_source_map")
+    if not isinstance(claim_map, dict) or list(claim_map) != argument_ids:
+        raise ValueError("claim_source_map 鍵序或 argument_id 覆蓋不一致")
+    expected_claim_map = {
+        argument["argument_id"]: list(argument["source_ids"])
+        for argument in arguments
+    }
+    if claim_map != expected_claim_map:
+        raise ValueError("claim_source_map 與 arguments[].source_ids 不一致")
+
+    markers = data.get("traceability_markers")
+    if not isinstance(markers, list):
+        raise ValueError("traceability_markers 必須為 list")
+    marker_groups: dict[str, list[dict[str, Any]]] = {
+        argument_id: [] for argument_id in argument_ids
+    }
+    for index, marker in enumerate(markers):
+        where = f"traceability_markers[{index}]"
+        if not isinstance(marker, dict) or tuple(marker) != TRACEABILITY_MARKER_KEYS:
+            raise ValueError(f"{where} 欄位或序列漂移")
+        argument = by_id.get(marker["argument_id"])
+        if argument is None:
+            raise ValueError(f"{where}.argument_id 指向未知論點")
+        if marker["kind"] not in ("source", "processing_record"):
+            raise ValueError(f"{where}.kind 非法")
+        if not isinstance(marker["id"], str) or not marker["id"].strip():
+            raise ValueError(f"{where}.id 必須為非空字串")
+        if marker["binding_status"] != argument["binding_status"]:
+            raise ValueError(f"{where}.binding_status 與論點不一致")
+        marker_groups[marker["argument_id"]].append(marker)
+
+    spans = data.get("citation_span_map")
+    if not isinstance(spans, list):
+        raise ValueError("citation_span_map 必須為 list")
+    for index, span in enumerate(spans):
+        if not isinstance(span, dict) or tuple(span) != CITATION_SPAN_MAP_KEYS:
+            raise ValueError(f"citation_span_map[{index}] 欄位或序列漂移")
+    expected_spans = [
+        {
+            "segment_index": argument["segment_index"],
+            "argument_id": argument["argument_id"],
+            "source_id": span["source_id"],
+            "span_start": span["span_start"],
+            "span_end": span["span_end"],
+            "marker_text": span["marker_text"],
+        }
+        for argument in arguments
+        for span in argument["citation_spans"]
+    ]
+    expected_spans.sort(
+        key=lambda item: (
+            item["segment_index"],
+            item["span_start"],
+            item["span_end"],
+            item["source_id"],
+        )
+    )
+    if spans != expected_spans:
+        raise ValueError("citation_span_map 與 arguments[].citation_spans 不一致")
+
+    span_pairs = {
+        (span["argument_id"], span["source_id"])
+        for span in spans
+    }
+    marker_pairs = {
+        (marker["argument_id"], marker["id"])
+        for marker in markers
+        if marker["kind"] == "source"
+    }
+    source_pairs = {
+        (argument_id, source_id)
+        for argument_id, source_ids in claim_map.items()
+        for source_id in source_ids
+    }
+    for argument in arguments:
+        argument_id = argument["argument_id"]
+        grouped = marker_groups[argument_id]
+        source_marker_ids = [
+            marker["id"] for marker in grouped if marker["kind"] == "source"
+        ]
+        processing_markers = [
+            marker for marker in grouped if marker["kind"] == "processing_record"
+        ]
+        if source_marker_ids != argument["trace_source_ids"]:
+            raise ValueError(f"{argument_id} 的 traceability_markers 與 trace_source_ids 不一致")
+        if argument["source_ids"] and processing_markers:
+            raise ValueError(f"{argument_id} 不得混用 source 與 processing_record marker")
+        if (
+            not argument["source_ids"]
+            and argument["checks"]["source_traceable"]
+            and len(processing_markers) != 1
+        ):
+            raise ValueError(f"{argument_id} 待補證 marker 遺漏或重複")
+
+    if source_pairs != marker_pairs or source_pairs != span_pairs:
+        mismatched_ids = {
+            argument_id
+            for argument_id in argument_ids
+            if {
+                pair for pair in source_pairs if pair[0] == argument_id
+            }
+            != {pair for pair in marker_pairs if pair[0] == argument_id}
+            or {
+                pair for pair in source_pairs if pair[0] == argument_id
+            }
+            != {pair for pair in span_pairs if pair[0] == argument_id}
+        }
+        passed = [
+            argument["argument_id"]
+            for argument in arguments
+            if argument["argument_id"] in mismatched_ids
+            and (argument["binding_status"] == "pass" or argument["binding_ok"])
+        ]
+        if passed:
+            raise ValueError(
+                "可追溯性三欄不一致但論點仍標通過: " + ",".join(passed)
+            )
 
 
 def parse_binding_report(data: Any) -> dict[str, Any]:
@@ -572,6 +815,95 @@ def parse_binding_report(data: Any) -> dict[str, Any]:
             raise ValueError(f"arguments[{i}].trace_source_ids 必須為 list[str]")
         if any(not x.strip() for x in arg["trace_source_ids"]):
             raise ValueError(f"arguments[{i}].trace_source_ids 不可含空字串（空欄）")
+        source_fragments = arg.get("source_fragments")
+        if not isinstance(source_fragments, list):
+            raise ValueError(f"arguments[{i}].source_fragments 必須為 list")
+        fragment_ids: list[str] = []
+        for j, fragment in enumerate(source_fragments):
+            where = f"arguments[{i}].source_fragments[{j}]"
+            if not isinstance(fragment, dict) or tuple(fragment) != SOURCE_FRAGMENT_KEYS:
+                raise ValueError(f"{where} 欄位或序列漂移")
+            if not isinstance(fragment["source_id"], str) or not fragment["source_id"].strip():
+                raise ValueError(f"{where}.source_id 必須為非空字串")
+            if not isinstance(fragment["text"], str):
+                raise ValueError(f"{where}.text 必須為 str")
+            fragment_ids.append(fragment["source_id"])
+        if fragment_ids != arg["source_ids"]:
+            raise ValueError(
+                f"arguments[{i}].source_fragments 與 source_ids 不一致"
+            )
+
+        citation_spans = arg.get("citation_spans")
+        if not isinstance(citation_spans, list):
+            raise ValueError(f"arguments[{i}].citation_spans 必須為 list")
+        for j, span in enumerate(citation_spans):
+            if not isinstance(span, dict) or tuple(span) != CITATION_SPAN_KEYS:
+                raise ValueError(
+                    f"arguments[{i}].citation_spans[{j}] 欄位或序列漂移"
+                )
+        span_issues = citation_span_issues(
+            arg["argument_text"],
+            arg["source_ids"],
+            citation_spans,
+        )
+        span_ids = [
+            span["source_id"]
+            for span in citation_spans
+            if isinstance(span, dict) and tuple(span) == CITATION_SPAN_KEYS
+        ]
+        source_set = set(arg["source_ids"])
+        trace_set = set(arg["trace_source_ids"])
+        span_set = set(span_ids)
+        expected_no_omitted = source_set <= trace_set and source_set <= span_set
+        expected_no_extra = trace_set <= source_set and span_set <= source_set
+        expected_source_traceable = (
+            arg["trace_source_ids"] == arg["source_ids"]
+            and not span_issues
+            and expected_no_omitted
+            and expected_no_extra
+        )
+        expected_at_least_one = bool(arg["source_ids"])
+        expected_no_duplicates = (
+            len(arg["source_ids"]) == len(source_set)
+            and len(arg["trace_source_ids"]) == len(trace_set)
+        )
+        if not isinstance(arg.get("source_id_field"), str):
+            raise ValueError(f"arguments[{i}].source_id_field 必須為 str")
+        expected_source_id = (
+            f"sources:{','.join(arg['source_ids'])}"
+            if arg["source_ids"]
+            else None
+        )
+        expected_source_id_aligned = (
+            arg["source_id_field"] == expected_source_id
+            if expected_source_id is not None
+            else arg["source_id_field"].startswith("pending:gap:")
+        )
+        expected_no_empty_fragments = all(
+            fragment["text"].strip() for fragment in source_fragments
+        )
+        for check_name, expected in (
+            ("at_least_one_source", expected_at_least_one),
+            ("no_duplicate_sources", expected_no_duplicates),
+            ("source_id_field_aligned", expected_source_id_aligned),
+            ("no_empty_fragments", expected_no_empty_fragments),
+        ):
+            if checks[check_name] is not expected:
+                raise ValueError(
+                    f"arguments[{i}].checks.{check_name} 與來源資料不一致"
+                )
+        if checks["no_omitted_traces"] is not expected_no_omitted:
+            raise ValueError(f"arguments[{i}].checks.no_omitted_traces 與追溯資料不一致")
+        if checks["no_extra_traces"] is not expected_no_extra:
+            raise ValueError(f"arguments[{i}].checks.no_extra_traces 與追溯資料不一致")
+        if arg["source_ids"] and checks["source_traceable"] is not expected_source_traceable:
+            raise ValueError(f"arguments[{i}].checks.source_traceable 與引用範圍不一致")
+        if span_issues and (
+            arg["binding_ok"] is not False or arg["binding_status"] == "pass"
+        ):
+            raise ValueError(
+                f"arguments[{i}] 引用範圍不完整但未明確標為 fail: {span_issues}"
+            )
         if arg.get("argument_index") != i:
             raise ValueError(
                 f"arguments[{i}].argument_index 應為 {i}，實際 {arg.get('argument_index')!r}"
@@ -856,6 +1188,8 @@ def parse_binding_report(data: Any) -> dict[str, Any]:
                         f"arguments[{i}] angle_facet_complete 為 True 但 {sub_key} 未標 True"
                     )
 
+    _validate_traceability_fields(data, arguments)
+
     # 重新量測原始角度欄位，拒絕 relation／排除／有效數被竄改。
     base_coverages = [
         {
@@ -1006,6 +1340,15 @@ def write_binding_report(output_path: Path, correction) -> Path:
     ]
     if summary_issues:
         raise RuntimeError(f"摘要一致性驗收失敗：{'；'.join(summary_issues)}")
+    traceability_issues = [
+        f"{arg['argument_id']}.來源、追溯標記與 citation_spans 不一致"
+        for arg in report["arguments"]
+        if arg["source_count"] and not arg["checks"]["source_traceable"]
+    ]
+    if traceability_issues:
+        raise RuntimeError(
+            f"引用範圍追溯驗收失敗：{'；'.join(traceability_issues)}"
+        )
     related_issues = [
         f"{arg['argument_id']}.related_knowledge 缺決策品質／使用者理解說明"
         for arg in report["arguments"]

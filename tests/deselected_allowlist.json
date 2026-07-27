@@ -429,8 +429,8 @@
     "exclusion_reason": "預設 -m 'not integration' 排除；固定來源的 grounded writer 語意需真實 grok proxy (127.0.0.1:8318)，proxy 不可達時由 skipif 略過",
     "exclusion_evidence": [
       {"source": "pyproject.toml:32", "anchor": "-m 'not integration'", "claim": "預設集合排除 integration marker"},
-      {"source": "tests/test_write.py:63", "anchor": "@pytest.mark.integration", "claim": "真 writer 補測標記為 integration"},
-      {"source": "tests/test_write.py:64", "anchor": "@pytest.mark.skipif", "claim": "grok proxy 不可達時 runtime skip"}
+      {"source": "tests/test_write.py:86", "anchor": "@pytest.mark.integration", "claim": "真 writer 補測標記為 integration"},
+      {"source": "tests/test_write.py:87", "anchor": "@pytest.mark.skipif", "claim": "grok proxy 不可達時 runtime skip"}
     ],
     "covered_function": "note_filler.write.write_supplement — 固定兩筆 Level A 來源下的真 Grok grounded 輸出",
     "substitute_tests": [
@@ -439,7 +439,7 @@
     ],
     "substitute_evidence": [
       {"test_id": "tests/test_write.py::test_used_source_ids_from_markers", "source": "tests/test_write.py:34", "anchor": "assert out.used_source_ids ==", "claim": "FakeLLM 鎖定合法註腳到實際來源 ID 的映射"},
-      {"test_id": "tests/test_write.py::test_pending_evidence_when_insufficient", "source": "tests/test_write.py:42", "anchor": "assert out.text.startswith", "claim": "FakeLLM 鎖定來源不足時保守回 pending_evidence 文本"}
+      {"test_id": "tests/test_write.py::test_pending_evidence_when_insufficient", "source": "tests/test_write.py:64", "anchor": "assert out.text.startswith", "claim": "FakeLLM 鎖定來源不足時保守回 pending_evidence 文本"}
     ],
     "coverage_gap": "真模型能否只依固定來源寫出帶有效註腳的補充仍須 integration 執行",
     "gap_mitigation_evidence": [

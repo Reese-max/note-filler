@@ -1,11 +1,18 @@
 from __future__ import annotations
 
 import json
+from copy import deepcopy
 
 import pytest
 from docx import Document as DocxDocument
 
 from note_filler.correction import Segment, assemble_correction
+from note_filler.binding_report import (
+    TRACEABILITY_FIELD_KEYS,
+    build_binding_report,
+    parse_binding_report,
+    write_binding_report,
+)
 from note_filler.export import to_docx, to_json, to_markdown
 from note_filler.gap import Gap
 from note_filler.llm import FakeLLM
@@ -100,6 +107,121 @@ def test_traceability_gate_rejects_source_id_drift(caplog):
 
     assert "note_traceability_failed" in caplog.text
     assert "trace-test" in caplog.text
+
+
+def test_traceability_payload_links_claim_source_fragments_and_spans(tmp_path):
+    product = _product()
+    report = parse_binding_report(build_binding_report(product))
+    data = to_json(product)
+    metrics = data["polaris_metrics"]
+
+    assert tuple(report)[-3:] == TRACEABILITY_FIELD_KEYS
+    assert tuple(metrics)[-3:] == TRACEABILITY_FIELD_KEYS
+    for key in TRACEABILITY_FIELD_KEYS:
+        assert metrics[key] == report[key]
+
+    sourced = report["arguments"][0]
+    segment = data["segments"][sourced["segment_index"]]
+    assert sourced["argument_text"] == segment["text"]
+    assert sourced["source_fragments"] == [
+        {"source_id": "law:92", "text": "行政處分之定義。"}
+    ]
+    assert sourced["citation_spans"] == segment["citation_spans"]
+    assert metrics["claim_source_map"] == {
+        "argument:0": ["law:92"],
+        "argument:1": [],
+    }
+    span = metrics["citation_span_map"][0]
+    assert segment["text"][span["span_start"]:span["span_end"]] == "[^1]"
+    assert (span["argument_id"], span["source_id"]) == ("argument:0", "law:92")
+    assert [tuple(marker) for marker in metrics["traceability_markers"]] == [
+        ("argument_id", "kind", "id", "binding_status"),
+        ("argument_id", "kind", "id", "binding_status"),
+    ]
+    assert [tuple(item) for item in metrics["citation_span_map"]] == [
+        (
+            "segment_index",
+            "argument_id",
+            "source_id",
+            "span_start",
+            "span_end",
+            "marker_text",
+        )
+    ]
+
+    markdown = to_markdown(product)
+    assert "**論點追溯**" in markdown
+    assert "claim_fragment=" in markdown
+    assert 'source_fragments=[{"source_id":"law:92"' in markdown
+    assert 'citation_spans=[{"source_id":"law:92"' in markdown
+
+    output = tmp_path / "traceability-fields.docx"
+    to_docx(product, str(output))
+    docx_text = "\n".join(p.text for p in DocxDocument(output).paragraphs)
+    assert "論點追溯：argument_id=argument:0" in docx_text
+    assert "source_fragments=" in docx_text
+    assert "citation_spans=" in docx_text
+
+
+@pytest.mark.parametrize(
+    "mutate,match",
+    [
+        (lambda seg: seg.citation_spans.clear(), "citation_spans 遺漏來源"),
+        (
+            lambda seg: seg.citation_spans[0].__setitem__("source_id", "wrong-source"),
+            "citation_spans.*來源",
+        ),
+        (
+            lambda seg: seg.citation_spans[0].__setitem__("span_start", 0),
+            "範圍與 marker_text 不一致",
+        ),
+    ],
+)
+def test_traceability_gate_rejects_missing_wrong_or_shifted_span(mutate, match):
+    product = _product()
+    mutate(product.segments[1])
+
+    with pytest.raises(RuntimeError, match=match):
+        require_traceable_note_product(product, source="span-negative")
+
+    argument = build_binding_report(product)["arguments"][0]
+    assert argument["checks"]["source_traceable"] is False
+    assert argument["binding_status"] == "fail"
+
+
+def test_traceability_report_rejects_missing_or_reordered_fixed_fields():
+    report = build_binding_report(_product())
+    missing = deepcopy(report)
+    del missing["claim_source_map"]
+    with pytest.raises(ValueError, match="缺少欄位"):
+        parse_binding_report(missing)
+
+    reordered = deepcopy(report)
+    span = reordered["citation_span_map"][0]
+    reordered["citation_span_map"][0] = {
+        "argument_id": span["argument_id"],
+        "segment_index": span["segment_index"],
+        "source_id": span["source_id"],
+        "span_start": span["span_start"],
+        "span_end": span["span_end"],
+        "marker_text": span["marker_text"],
+    }
+    with pytest.raises(ValueError, match="欄位或序列漂移"):
+        parse_binding_report(reordered)
+
+
+def test_binding_report_writer_persists_failure_then_rejects_missing_span(tmp_path):
+    product = _product()
+    product.segments[1].citation_spans = []
+
+    with pytest.raises(RuntimeError, match="引用範圍追溯驗收失敗.*argument:0"):
+        write_binding_report(tmp_path / "note.md", product)
+
+    persisted = json.loads(
+        (tmp_path / "binding_report.json").read_text(encoding="utf-8")
+    )
+    assert persisted["arguments"][0]["binding_status"] == "fail"
+    assert persisted["arguments"][0]["checks"]["source_traceable"] is False
 
 
 # ---- 來源識別碼 (source_id) 新測試 ------------------------------------------

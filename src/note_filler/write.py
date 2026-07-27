@@ -19,6 +19,7 @@ from .retrieve.models import Source
 logger = logging.getLogger(__name__)
 
 _MARKER = re.compile(r"\[\^(\d+)\]")
+CITATION_SPAN_KEYS = ("source_id", "span_start", "span_end", "marker_text")
 
 _PROMPT = """你是嚴謹的法律補充撰寫員。只根據下列「來源」回答問題,寫成通順的一段。\
 請盡量根據手上的來源(尤其是 Level A 的法條原文)回答問題,不要因為來源不完美就輕易放棄。
@@ -38,6 +39,102 @@ _PROMPT = """你是嚴謹的法律補充撰寫員。只根據下列「來源」�
 class WrittenSupplement:
     text: str
     used_source_ids: list  # list[str]
+    citation_spans: list[dict] | None = None
+
+    def __post_init__(self) -> None:
+        # 既有呼叫端可只傳 text + used_source_ids；在寫作資料模型這一層解析，
+        # 避免輸出層日後只看 source_ids 反向猜測引用位置。
+        if self.citation_spans is None:
+            self.citation_spans = _infer_citation_spans(
+                self.text, self.used_source_ids
+            )
+
+
+def _span(source_id: str, match: re.Match) -> dict:
+    """建立固定鍵序的引用範圍。"""
+    return {
+        "source_id": source_id,
+        "span_start": match.start(),
+        "span_end": match.end(),
+        "marker_text": match.group(0),
+    }
+
+
+def _infer_citation_spans(text: str, used_source_ids: list[str]) -> list[dict]:
+    """相容既有 WrittenSupplement fixture 的最小解析。
+
+    used_source_ids 的既有契約是依不同有效 marker 首次出現順序排列，故可在
+    WrittenSupplement 建立時逐一對回；正式 writer 會直接傳入精確 spans。
+    """
+    marker_sources: dict[str, str] = {}
+    source_iter = iter(used_source_ids)
+    spans: list[dict] = []
+    for match in _MARKER.finditer(text):
+        marker = match.group(1)
+        if marker not in marker_sources:
+            source_id = next(source_iter, None)
+            if source_id is None:
+                continue
+            marker_sources[marker] = source_id
+        spans.append(_span(marker_sources[marker], match))
+    return spans
+
+
+def citation_span_issues(
+    text: str,
+    source_ids: list[str],
+    citation_spans: object,
+) -> list[str]:
+    """檢查引用範圍的固定結構、字面、邊界與來源覆蓋。"""
+    if not isinstance(citation_spans, list):
+        return ["citation_spans 必須為 list"]
+
+    issues: list[str] = []
+    valid: list[dict] = []
+    for index, item in enumerate(citation_spans):
+        where = f"citation_spans[{index}]"
+        if not isinstance(item, dict):
+            issues.append(f"{where} 必須為 dict")
+            continue
+        if tuple(item) != CITATION_SPAN_KEYS:
+            issues.append(f"{where} 欄位或序列漂移")
+            continue
+        source_id = item["source_id"]
+        start = item["span_start"]
+        end = item["span_end"]
+        marker = item["marker_text"]
+        if not isinstance(source_id, str) or not source_id.strip():
+            issues.append(f"{where}.source_id 必須為非空字串")
+            continue
+        if type(start) is not int or type(end) is not int:
+            issues.append(f"{where} 範圍必須為 int")
+            continue
+        if not isinstance(marker, str) or _MARKER.fullmatch(marker) is None:
+            issues.append(f"{where}.marker_text 不是有效 inline 引用")
+            continue
+        if not (0 <= start < end <= len(text)):
+            issues.append(f"{where} 範圍越界")
+            continue
+        if text[start:end] != marker:
+            issues.append(f"{where} 範圍與 marker_text 不一致")
+            continue
+        valid.append(item)
+
+    ordered = sorted(valid, key=lambda item: (item["span_start"], item["span_end"]))
+    for previous, current in zip(ordered, ordered[1:]):
+        if current["span_start"] < previous["span_end"]:
+            issues.append("citation_spans 不得重疊")
+            break
+
+    expected = set(source_ids)
+    actual = {item["source_id"] for item in valid}
+    missing = expected - actual
+    extra = actual - expected
+    if missing:
+        issues.append(f"citation_spans 遺漏來源: {sorted(missing)}")
+    if extra:
+        issues.append(f"citation_spans 含未知來源: {sorted(extra)}")
+    return issues
 
 
 def _sources_block(sources: list[Source]) -> str:
@@ -56,25 +153,16 @@ def write_supplement(gap: Gap, sources: list[Source], llm: LLMClient) -> Written
             level=logging.INFO,
             reason="LLM returned pending evidence marker",
         )
-        return WrittenSupplement(text=raw, used_source_ids=[])
+        return WrittenSupplement(
+            text=_MARKER.sub("", raw),
+            used_source_ids=[],
+            citation_spans=[],
+        )
 
     n = len(sources)
-    used: list[str] = []
-
     def _sub(m: re.Match) -> str:
         idx = int(m.group(1))
         if 1 <= idx <= n:
-            sid = sources[idx - 1].id
-            if sid not in used:            # 依出現序去重
-                used.append(sid)
-            else:
-                audit_event(
-                    logger,
-                    "citation_source_deduplicated",
-                    sid,
-                    level=logging.INFO,
-                    question=gap.question,
-                )
             return m.group(0)              # 有效標記保留
         audit_event(
             logger,
@@ -86,6 +174,21 @@ def write_supplement(gap: Gap, sources: list[Source], llm: LLMClient) -> Written
         return ""                          # 越界標記移除
 
     text = _MARKER.sub(_sub, raw)
+    used: list[str] = []
+    citation_spans: list[dict] = []
+    for match in _MARKER.finditer(text):
+        source_id = sources[int(match.group(1)) - 1].id
+        citation_spans.append(_span(source_id, match))
+        if source_id not in used:
+            used.append(source_id)
+        else:
+            audit_event(
+                logger,
+                "citation_source_deduplicated",
+                source_id,
+                level=logging.INFO,
+                question=gap.question,
+            )
     if not used:
         audit_event(
             logger,
@@ -94,4 +197,8 @@ def write_supplement(gap: Gap, sources: list[Source], llm: LLMClient) -> Written
             reason="generated text cited no valid source IDs",
             outcome="pending_evidence",
         )
-    return WrittenSupplement(text=text, used_source_ids=used)
+    return WrittenSupplement(
+        text=text,
+        used_source_ids=used,
+        citation_spans=citation_spans,
+    )

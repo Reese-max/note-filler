@@ -372,6 +372,19 @@ def test_one_to_many_binding_checks():
     assert arg["checks"]["no_duplicate_sources"] is True
     assert arg["checks"]["no_omitted_traces"] is True
     assert arg["binding_ok"] is True
+    assert [item["source_id"] for item in arg["source_fragments"]] == arg["source_ids"]
+    assert [item["source_id"] for item in arg["citation_spans"]] == arg["source_ids"]
+    assert report["claim_source_map"] == {
+        "argument:0": ["law:92", "law:93", "web:abc"]
+    }
+    assert {
+        (item["argument_id"], item["source_id"])
+        for item in report["citation_span_map"]
+    } == {
+        ("argument:0", "law:92"),
+        ("argument:0", "law:93"),
+        ("argument:0", "web:abc"),
+    }
 
 
 def test_mixed_one_to_one_and_one_to_many():

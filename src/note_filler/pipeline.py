@@ -8,7 +8,11 @@ from .domain import detect_domain              # T3
 from .questions import generate_questions      # T4
 from .gap import detect_gaps                   # T5
 from .retrieve import retrieve_for_gap          # T9
-from .write import WrittenSupplement, write_supplement            # Q3
+from .write import (                                            # Q3
+    WrittenSupplement,
+    citation_span_issues,
+    write_supplement,
+)
 from .verify import cross_validate            # T10
 from .knowledge.law_citation_check import check_law_citations   # T8
 from .correction import assemble_correction       # T12
@@ -117,6 +121,12 @@ def require_traceable_note_product(correction, *, source: object = "pipeline") -
                 f"{loc} source_ids 與 sources.id 不一致: "
                 f"{source_ids} vs {seg_source_ids}"
             )
+        span_issues = citation_span_issues(
+            seg.text,
+            source_ids,
+            getattr(seg, "citation_spans", None),
+        )
+        errors.extend(f"{loc} {issue}" for issue in span_issues)
         if source_ids:
             expected = [{"kind": "source", "id": source_id} for source_id in source_ids]
             expected_sid = f"sources:{','.join(source_ids)}"

@@ -9,6 +9,7 @@ from note_filler.export import to_docx, to_json, to_markdown, _calculate_polaris
 
 
 def _sample_doc() -> CorrectionDoc:
+    claim = "依行政程序法第92條，行政處分係指行政機關就公法上具體事件所為之決定。"
     original = Document(
         source_path="/tmp/note.docx",
         paragraphs=(Paragraph(idx=0, text="原文第一段。"),),
@@ -47,14 +48,33 @@ def _sample_doc() -> CorrectionDoc:
         ),
         Segment(
             type="supplement",
-            text="依行政程序法第92條，行政處分係指行政機關就公法上具體事件所為之決定。",
+            text=f"{claim}[^1][^2]",
             anchor_idx=0,
             sources=[src_a, src_b],
             confidence="verified",
             traceability=[{"kind": "source", "id": "s1"}, {"kind": "source", "id": "s2"}],
+            citation_spans=[
+                {
+                    "source_id": "s1",
+                    "span_start": len(claim),
+                    "span_end": len(claim) + 4,
+                    "marker_text": "[^1]",
+                },
+                {
+                    "source_id": "s2",
+                    "span_start": len(claim) + 4,
+                    "span_end": len(claim) + 8,
+                    "marker_text": "[^2]",
+                },
+            ],
             source_id="sources:s1,s2",
             functional_gap="原稿未定義行政處分",
             user_value="補齊讀者對「行政處分如何定義？」所需的說明",
+            related_knowledge=build_related_knowledge(
+                knowledge_body=claim,
+                functional_gap="原稿未定義行政處分",
+                user_value="補齊讀者對「行政處分如何定義？」所需的說明",
+            ),
             argument_id="argument:0",
         ),
         Segment(

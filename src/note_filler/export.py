@@ -1,11 +1,12 @@
 from __future__ import annotations
 
+import json
 from dataclasses import asdict
 
 from typing import Any, Literal
 
 from note_filler.angle_coverage import coverage_from_segment
-from note_filler.binding_report import build_binding_report
+from note_filler.binding_report import TRACEABILITY_FIELD_KEYS, build_binding_report
 from note_filler.citation_formatter import build_reference_lines
 from note_filler.correction import CorrectionDoc
 from note_filler.metrics import calculate_polaris_metrics
@@ -126,6 +127,48 @@ def _visible_summary_text(argument: dict) -> str:
     )
 
 
+def _argument_trace_text(argument: dict) -> str:
+    """同列輸出來源片段、主張片段與主張內引用範圍。"""
+    compact = {"ensure_ascii": False, "separators": (",", ":")}
+    return (
+        f"argument_id={argument['argument_id']}；"
+        f"claim_fragment={json.dumps(argument['argument_text'], **compact)}；"
+        f"source_fragments={json.dumps(argument['source_fragments'], **compact)}；"
+        f"citation_spans={json.dumps(argument['citation_spans'], **compact)}"
+    )
+
+
+def _render_supplement_text(seg, source_numbers: dict[str, int]) -> str:
+    """把 segment-local marker 改成成品全域註腳號，不新增虛構 marker。"""
+    text = seg.text
+    spans = [
+        span
+        for span in (getattr(seg, "citation_spans", None) or [])
+        if isinstance(span, dict)
+    ]
+    for span in sorted(
+        spans,
+        key=lambda item: item.get("span_start")
+        if type(item.get("span_start")) is int
+        else -1,
+        reverse=True,
+    ):
+        if span.get("source_id") not in source_numbers:
+            continue
+        start = span.get("span_start")
+        end = span.get("span_end")
+        marker = span.get("marker_text")
+        if (
+            type(start) is int
+            and type(end) is int
+            and isinstance(marker, str)
+            and 0 <= start < end <= len(text)
+            and text[start:end] == marker
+        ):
+            text = f"{text[:start]}[^{source_numbers[span['source_id']]}]{text[end:]}"
+    return text
+
+
 def _quality_score_breakdown_text(name: str, metric: dict[str, Any]) -> str:
     """將四子分數、總分門檻與公式壓成單行可解析文字。"""
     subscores = metric["subscores"]
@@ -161,6 +204,10 @@ def _polaris_trace_lines(polaris: dict[str, Any]) -> list[str]:
             f"source_fields={','.join(metric['source_fields'])}；"
             f"score={metric['score']:.6f}；decision={metric['decision']}"
         )
+    lines.extend(
+        f"{key}={json.dumps(polaris[key], ensure_ascii=False, separators=(',', ':'))}"
+        for key in TRACEABILITY_FIELD_KEYS
+    )
     return lines
 
 
@@ -266,6 +313,10 @@ def to_json(doc: CorrectionDoc) -> dict:
                 "source_ids": _seg_source_ids(seg),
                 "cardinality": _cardinality(len(_seg_source_ids(seg))),
                 "traceability": list(getattr(seg, "traceability", [])),
+                "citation_spans": [
+                    dict(span)
+                    for span in (getattr(seg, "citation_spans", None) or [])
+                ],
                 "sources": [_source_to_dict(s) for s in seg.sources],
                 "functional_gap": getattr(seg, "functional_gap", ""),
                 "user_value": getattr(seg, "user_value", ""),
@@ -323,11 +374,11 @@ def to_markdown(doc: CorrectionDoc) -> str:
             original_traces.clear()
 
         # supplement：依序為每個來源配一個 footnote，並蒐集到 cited
-        marks = ""
+        source_numbers: dict[str, int] = {}
         for src in seg.sources:
             counter += 1
             cited.append(src)
-            marks += f"[^{counter}]"
+            source_numbers[src.id] = counter
 
         prefix = "> 【補充】"
         if seg.confidence == "pending_evidence":
@@ -335,7 +386,7 @@ def to_markdown(doc: CorrectionDoc) -> str:
         conflict = getattr(seg, "conflict_note", None)
         if conflict:
             body.append(f"> ⚠️ **衝突告警**: {conflict}")
-        body.append(f"{prefix}{seg.text}{marks}")
+        body.append(f"{prefix}{_render_supplement_text(seg, source_numbers)}")
         if trace := _trace_text(seg):
             body.append(f"> 追溯：{trace}")
 
@@ -367,6 +418,7 @@ def to_markdown(doc: CorrectionDoc) -> str:
         if argument:
             body.append(f"> **摘要可見**：{_visible_summary_text(argument)}")
             body.append(f"> **角度覆蓋**：{_argument_coverage_text(argument)}")
+            body.append(f"> **論點追溯**：{_argument_trace_text(argument)}")
 
         argument_id = getattr(seg, "argument_id", "")
         if argument_id:
@@ -455,11 +507,11 @@ def to_docx(doc: CorrectionDoc, path: str) -> None:
             for trace in original_traces:
                 out.add_paragraph(f"追溯：{trace}")
             original_traces.clear()
-        marks = ""
+        source_numbers: dict[str, int] = {}
         for src in seg.sources:
             counter += 1
             cited.append(src)
-            marks += f"[^{counter}]"
+            source_numbers[src.id] = counter
         conflict = getattr(seg, "conflict_note", None)
         if conflict:
             p_conflict = out.add_paragraph()
@@ -467,7 +519,7 @@ def to_docx(doc: CorrectionDoc, path: str) -> None:
             run_conflict.bold = True
         prefix = "【補充】" + ("⚠待補證 " if seg.confidence == "pending_evidence" else "")
         p = out.add_paragraph()
-        run = p.add_run(f"{prefix}{seg.text}{marks}")
+        run = p.add_run(f"{prefix}{_render_supplement_text(seg, source_numbers)}")
         run.italic = True  # 補充段視覺區隔於原文
         if trace := _trace_text(seg):
             out.add_paragraph(f"追溯：{trace}")
@@ -500,6 +552,7 @@ def to_docx(doc: CorrectionDoc, path: str) -> None:
         if argument:
             out.add_paragraph(f"摘要可見：{_visible_summary_text(argument)}")
             out.add_paragraph(f"角度覆蓋：{_argument_coverage_text(argument)}")
+            out.add_paragraph(f"論點追溯：{_argument_trace_text(argument)}")
 
         argument_id = getattr(seg, "argument_id", "")
         if argument_id:

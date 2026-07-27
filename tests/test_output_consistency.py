@@ -397,6 +397,8 @@ class TestOutputConsistency:
                 continue
             if stripped.startswith("> **角度覆蓋摘要**"):
                 continue
+            if stripped.startswith("> **論點追溯**"):
+                continue
             # Skip polaris metrics line
             if stripped.startswith("> **北極星分數**"):
                 continue
@@ -426,6 +428,8 @@ class TestOutputConsistency:
             if stripped.startswith("角度覆蓋："):
                 continue
             if stripped.startswith("角度覆蓋摘要："):
+                continue
+            if stripped.startswith("論點追溯："):
                 continue
             if stripped.startswith("北極星分數："):
                 continue
