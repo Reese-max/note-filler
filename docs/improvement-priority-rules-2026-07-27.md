@@ -2,7 +2,7 @@
 
 日期：2026-07-27
 基準 revision：`90229c30`
-公式版本：`1.1`
+公式版本：`1.2`
 
 ## 概述
 
@@ -17,6 +17,20 @@
 3. **關聯性整合**：改善項目間的依賴關係與整合效應
 4. **資源效率**：以最小改動獲得最大品質提升
 
+### 機器可讀逐筆排序
+
+`metrics_summary_*.json` 的 `improvement_priorities` 只列
+`traceability_score.degraded = true` 的筆記，並依下列鍵穩定排序：
+
+1. `score_penalty` 由高至低
+2. `overall_score` 由低至高
+3. `source_path`、`manifest_path` 字典序
+
+每筆固定輸出 `rank`、來源路徑、目前總分、固定其他分項時回補追溯扣分後的總分、追溯分數、扣分、
+`affected_argument_ids`、需修正來源欄位及 `acceptance`。後續修正完成的驗收條件為
+`traceability_score = 1.0`、`score_penalty = 0.0` 且受影響論點清單為空；未降分筆記
+不得混入排序清單。
+
 ### 優先級等級
 
 | 等級 | 說明 | 處理時程 |
@@ -29,6 +43,23 @@
 ---
 
 ## 改善清單
+
+### 0. 追溯性總分扣分（P0）
+
+**指標**：`traceability_score`
+**目標值**：`1.0`
+
+| ID | 改善項目 | 基準值 | 目標值 | 負責範圍 | 驗收查詢方式 |
+|----|---------|--------|--------|---------|-------------|
+| TRC-01 | 補齊排序列出的受影響論點 | 報表逐筆值 | `affected_argument_ids = []` | `claim_source_map`、`traceability_markers`、`citation_span_map` | `improvement_priorities[].affected_argument_ids` |
+| TRC-02 | 消除北極星追溯扣分 | 報表逐筆值 | `score_penalty = 0.0` | `binding_report.arguments[].source_ids/checks` | `improvement_priorities` 不再含該筆記 |
+
+#### 驗收標準
+
+- `traceability_score.score = 1.0`
+- `traceability_score.penalty = 0.0`
+- `traceability_score.degraded = false`
+- `traceability_score.affected_argument_ids = []`
 
 ### 1. 功能缺口分數改善（P1）
 

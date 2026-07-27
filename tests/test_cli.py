@@ -112,7 +112,7 @@ def test_process_file_writes_md_and_counts(tmp_path, monkeypatch):
     assert expected_ds.items() <= r["delivery_status"].items()
     manifest = json.loads((tmp_path / "delivery_manifest.json").read_text(encoding="utf-8"))
     metrics = manifest["polaris_metrics"]
-    assert metrics["formula_version"] == "1.1"
+    assert metrics["formula_version"] == "1.2"
     assert metrics["source_binding_integrity"]["source_fields"] == [
         "binding_report.arguments[].binding_status"
     ]

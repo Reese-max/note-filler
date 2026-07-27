@@ -81,6 +81,69 @@ class MetricsSummary:
     # 告警記錄
     alerts: list[dict[str, Any]] = field(default_factory=list)
 
+    # 因追溯性不足而降分的逐筆改善排序
+    traceability_degraded_count: int = 0
+    improvement_priorities: list[dict[str, Any]] = field(default_factory=list)
+
+
+def _traceability_improvement_priorities(
+    records: list[MetricsRecord],
+) -> list[dict[str, Any]]:
+    """依追溯扣分、總分及路徑產生穩定且可驗收的逐筆排序。"""
+    priorities = []
+    seen_manifests: set[str] = set()
+    for record in records:
+        metrics = record.polaris_metrics
+        traceability = metrics.get("traceability_score")
+        if not isinstance(traceability, dict) or traceability.get("degraded") is not True:
+            continue
+        penalty = traceability.get("penalty")
+        score = traceability.get("score")
+        overall_score = metrics.get("overall_score")
+        if not all(
+            isinstance(value, (int, float)) and not isinstance(value, bool)
+            for value in (penalty, score, overall_score)
+        ):
+            continue
+        complete_score = metrics.get("score_if_traceability_complete")
+        if not (
+            isinstance(complete_score, (int, float))
+            and not isinstance(complete_score, bool)
+        ):
+            complete_score = overall_score + penalty
+        affected_argument_ids = traceability.get("affected_argument_ids")
+        repair_fields = traceability.get("source_fields")
+        acceptance = traceability.get("acceptance")
+        if record.manifest_path in seen_manifests:
+            continue
+        seen_manifests.add(record.manifest_path)
+        priorities.append({
+            "source_path": record.source_path,
+            "manifest_path": record.manifest_path,
+            "reason": "traceability_below_target",
+            "overall_score": float(overall_score),
+            "score_if_traceability_complete": float(complete_score),
+            "traceability_score": float(score),
+            "score_penalty": float(penalty),
+            "affected_argument_ids": (
+                list(affected_argument_ids)
+                if isinstance(affected_argument_ids, list)
+                else []
+            ),
+            "repair_fields": list(repair_fields) if isinstance(repair_fields, list) else [],
+            "acceptance": dict(acceptance) if isinstance(acceptance, dict) else {},
+        })
+
+    priorities.sort(key=lambda item: (
+        -item["score_penalty"],
+        item["overall_score"],
+        item["source_path"],
+        item["manifest_path"],
+    ))
+    for rank, item in enumerate(priorities, 1):
+        item["rank"] = rank
+    return priorities
+
 
 def collect_metrics_from_manifest(
     manifest_path: Path,
@@ -208,6 +271,16 @@ def calculate_summary_statistics(
             summary.average_scores[metric_name] = sum(scores) / len(scores)
         else:
             summary.average_scores[metric_name] = 0.0
+
+    overall_scores = [
+        float(score)
+        for record in records
+        if isinstance((score := record.polaris_metrics.get("overall_score")), (int, float))
+        and not isinstance(score, bool)
+    ]
+    summary.average_scores["overall_score"] = (
+        sum(overall_scores) / len(overall_scores) if overall_scores else 0.0
+    )
     
     # 統計品質分佈
     quality_counts = {"excellent": 0, "good": 0, "acceptable": 0, "poor": 0, "error": 0}
@@ -218,6 +291,9 @@ def calculate_summary_statistics(
         else:
             quality_counts["error"] += 1
     summary.quality_distribution = quality_counts
+
+    summary.improvement_priorities = _traceability_improvement_priorities(records)
+    summary.traceability_degraded_count = len(summary.improvement_priorities)
     
     # 檢查告警門檻
     for metric_name, threshold in config.alert_thresholds.items():
@@ -260,6 +336,8 @@ def save_metrics_summary(
         "average_scores": summary.average_scores,
         "quality_distribution": summary.quality_distribution,
         "alerts": summary.alerts,
+        "traceability_degraded_count": summary.traceability_degraded_count,
+        "improvement_priorities": summary.improvement_priorities,
         "records_count": len(summary.metrics_records),
     }
     

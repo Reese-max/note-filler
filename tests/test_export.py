@@ -389,9 +389,12 @@ class TestPolarisMetricsIntegration:
         assert "polaris_metrics" in data, "JSON 輸出應含 polaris_metrics"
         polaris = data["polaris_metrics"]
         assert polaris["schema"] == "note_filler.polaris_metrics.v1"
-        assert polaris["formula_version"] == "1.1"
+        assert polaris["formula_version"] == "1.2"
         assert polaris["decision"] == polaris["overall_status"]
         assert polaris["overall_status"] in ["excellent", "good", "acceptable", "poor", "error"]
+        assert 0.0 <= polaris["overall_score"] <= 1.0
+        assert polaris["traceability_score"]["degraded"] is True
+        assert polaris["traceability_score"]["affected_argument_ids"]
         assert isinstance(polaris["core_metrics_pass_count"], int)
         assert isinstance(polaris["core_metrics_total_count"], int)
         assert polaris["core_metrics_total_count"] == 5
@@ -474,6 +477,9 @@ class TestPolarisMetricsIntegration:
         line = polaris_lines[0]
         # 驗證包含 overall_status
         assert "overall=" in line
+        assert "overall_score=" in line
+        assert "traceability=" in line
+        assert "扣分 " in line
         # 驗證包含各分項分數
         assert "functional_gap=" in line
         assert "user_value=" in line
@@ -509,7 +515,10 @@ class TestPolarisMetricsIntegration:
             assert "functional_gap_threshold=0.70" in text
             assert "user_value_threshold=0.70" in text
             assert "formula=weighted_sum" in text
-            assert "formula_version=1.1" in text
+            assert "formula_version=1.2" in text
+            assert "overall_score=" in text
+            assert "traceability_penalty=" in text
+            assert "affected_argument_ids=" in text
             assert "metric=functional_gap_score" in text
             assert "source_fields=binding_report.arguments[].functional_gap" in text
             assert "metric=delivery_success_rate" in text

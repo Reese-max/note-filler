@@ -180,7 +180,7 @@ def _verify_quality_score_formula(metric: dict, name: str):
     assert abs(metric["score"] - expected) < 0.001, (
         f"{name} 總分 {metric['score']:.4f} ≠ 子分數加權和 {expected:.4f}"
     )
-    assert metric["formula_version"] == "1.1"
+    assert metric["formula_version"] == "1.2"
     assert metric["formula"] == (
         "traceability*0.25 + coverage_breadth*0.25 + "
         "necessity_clarity*0.25 + decision_support*0.25"

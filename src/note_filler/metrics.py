@@ -41,7 +41,31 @@ QUALITY_SCORE_FORMULA = (
 )
 
 # 公式、門檻或來源欄位語意改變時必須升版，讓歷次成品可重算與比較。
-POLARIS_FORMULA_VERSION = "1.1"
+POLARIS_FORMULA_VERSION = "1.2"
+POLARIS_OVERALL_COMPONENT_WEIGHTS = {
+    "functional_gap_score": 0.2,
+    "user_value_score": 0.2,
+    "source_binding_integrity": 0.2,
+    "angle_diversity_index": 0.2,
+    "delivery_success_rate": 0.2,
+}
+POLARIS_OVERALL_SCORE_FORMULA = (
+    "(functional_gap_score + user_value_score + source_binding_integrity + "
+    "angle_diversity_index + delivery_success_rate) / 5"
+)
+TRACEABILITY_SCORE_FORMULA = "traceable_arguments / total_arguments"
+TRACEABILITY_TARGET_SCORE = 1.0
+TRACEABILITY_OVERALL_WEIGHT = QUALITY_SUBSCORE_WEIGHTS["traceability"] * (
+    POLARIS_OVERALL_COMPONENT_WEIGHTS["functional_gap_score"]
+    + POLARIS_OVERALL_COMPONENT_WEIGHTS["user_value_score"]
+)
+TRACEABILITY_SOURCE_FIELDS = (
+    "binding_report.arguments[].source_ids",
+    "binding_report.arguments[].checks.at_least_one_source",
+    "binding_report.arguments[].checks.source_traceable",
+    "binding_report.arguments[].checks.no_omitted_traces",
+    "binding_report.arguments[].checks.no_extra_traces",
+)
 POLARIS_METRIC_DEFINITIONS: dict[str, dict[str, Any]] = {
     "functional_gap_score": {
         "formula": QUALITY_SCORE_FORMULA,
@@ -355,6 +379,14 @@ class PolarisMetrics:
     overall_status: Literal["excellent", "good", "acceptable", "poor", "error"] = "poor"
     core_metrics_pass_count: int = 0
     core_metrics_total_count: int = 5
+    overall_score: float = field(default=0.0, init=False)
+    score_if_traceability_complete: float = field(default=0.0, init=False)
+    overall_score_components: dict[str, float] = field(default_factory=dict, init=False)
+    traceability_score: float = field(default=0.0, init=False)
+    traceability_status: MetricStatus = field(default="missing_data", init=False)
+    traceability_penalty: float = field(default=0.0, init=False)
+    traceability_degraded: bool = field(default=False, init=False)
+    traceability_issue_argument_ids: list[str] = field(default_factory=list, init=False)
     
     # 計算時間戳
     calculated_at: str = ""
@@ -388,6 +420,51 @@ class PolarisMetrics:
             self.overall_status = "acceptable"
         else:
             self.overall_status = "poor"
+
+        traceability = self.functional_gap_score.subscores.get("traceability", {})
+        traceability_value = traceability.get("score")
+        if (
+            self.functional_gap_score.status == "calculated"
+            and isinstance(traceability_value, (int, float))
+            and not isinstance(traceability_value, bool)
+        ):
+            self.traceability_score = min(1.0, max(0.0, float(traceability_value)))
+            self.traceability_status = "calculated"
+        else:
+            self.traceability_status = (
+                "error"
+                if self.functional_gap_score.status == "error"
+                else "missing_data"
+            )
+
+        self.traceability_issue_argument_ids = [
+            str(item.get("argument_id"))
+            for item in self.functional_gap_score.calculation_basis
+            if item.get("traceability") is not True and item.get("argument_id")
+        ]
+        self.traceability_degraded = (
+            self.traceability_status != "calculated"
+            or self.traceability_score < TRACEABILITY_TARGET_SCORE
+        )
+
+        self.overall_score_components = {
+            "functional_gap_score": self.functional_gap_score.score,
+            "user_value_score": self.user_value_score.score,
+            "source_binding_integrity": self.source_binding_integrity.score,
+            "angle_diversity_index": self.angle_diversity_index.score,
+            "delivery_success_rate": self.delivery_success_rate.score,
+        }
+        self.overall_score = sum(
+            self.overall_score_components[name] * weight
+            for name, weight in POLARIS_OVERALL_COMPONENT_WEIGHTS.items()
+        )
+        self.traceability_penalty = (
+            TRACEABILITY_TARGET_SCORE - self.traceability_score
+        ) * TRACEABILITY_OVERALL_WEIGHT
+        self.score_if_traceability_complete = min(
+            1.0,
+            self.overall_score + self.traceability_penalty,
+        )
     
     def to_dict(self) -> dict[str, Any]:
         """序列化為 dict，便於 JSON 輸出。"""
@@ -399,6 +476,34 @@ class PolarisMetrics:
             "decision_rule": POLARIS_OVERALL_DECISION_RULE,
             "core_metrics_pass_count": self.core_metrics_pass_count,
             "core_metrics_total_count": self.core_metrics_total_count,
+            "overall_score": self.overall_score,
+            "overall_score_formula": POLARIS_OVERALL_SCORE_FORMULA,
+            "score_if_traceability_complete": self.score_if_traceability_complete,
+            "overall_score_components": {
+                name: {
+                    "score": self.overall_score_components[name],
+                    "weight": weight,
+                    "weighted_score": self.overall_score_components[name] * weight,
+                }
+                for name, weight in POLARIS_OVERALL_COMPONENT_WEIGHTS.items()
+            },
+            "traceability_score": {
+                "score": self.traceability_score,
+                "status": self.traceability_status,
+                "formula": TRACEABILITY_SCORE_FORMULA,
+                "source_fields": list(TRACEABILITY_SOURCE_FIELDS),
+                "weight": TRACEABILITY_OVERALL_WEIGHT,
+                "weighted_score": self.traceability_score * TRACEABILITY_OVERALL_WEIGHT,
+                "target_score": TRACEABILITY_TARGET_SCORE,
+                "penalty": self.traceability_penalty,
+                "degraded": self.traceability_degraded,
+                "affected_argument_ids": list(self.traceability_issue_argument_ids),
+                "acceptance": {
+                    "target_score": TRACEABILITY_TARGET_SCORE,
+                    "target_penalty": 0.0,
+                    "affected_argument_ids": [],
+                },
+            },
             "calculated_at": self.calculated_at,
             "functional_gap_score": {
                 **_metric_contract(

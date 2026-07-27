@@ -4,7 +4,7 @@
 基準 revision：`90229c30`
 Schema 版本：`note_filler.polaris_metrics.v1`
 
-公式版本：`1.1`
+公式版本：`1.2`
 
 ## 概述
 
@@ -295,6 +295,26 @@ Schema 版本：`note_filler.polaris_metrics.v1`
 
 ## 整體品質評估
 
+### 北極星數值總分與追溯扣分
+
+令 `M1..M5` 依序為既有五項核心指標分數，`T` 為功能缺口與使用者價值共用、已由
+`source_ids` 與四個來源對齊 checks 重算的 `traceability` 子分數。五項核心指標等權；
+因 `T` 在前兩項各占 0.25，故它對總分的直接權重為 `0.25 × (0.2 + 0.2) = 0.1`：
+
+```text
+overall_score = (M1 + M2 + M3 + M4 + M5) / 5
+traceability_penalty = (1 - T) * 0.1
+score_if_traceability_complete = overall_score + traceability_penalty
+```
+
+`score_if_traceability_complete` 固定其他分項，只回補 `T` 在功能缺口與使用者價值中的
+直接扣分；若修正也讓來源綁定完整性上升，實際重算總分可以更高。
+
+`T < 1` 或追溯資料不可量測時，`traceability_score.degraded = true`；逐論點
+`calculation_basis[].traceability != true` 的 `argument_id` 必須列入
+`affected_argument_ids`。驗收必須同時達到 `T = 1`、`penalty = 0`、
+`affected_argument_ids = []`。五項既有門檻與 `overall_status` 判定不變。
+
 ### PolarisMetrics 總覽
 
 #### 整體品質判定規則
@@ -316,12 +336,29 @@ Schema 版本：`note_filler.polaris_metrics.v1`
 ```python
 {
     "schema": "note_filler.polaris_metrics.v1",
-    "formula_version": "1.1",            # 公式、門檻與來源欄位契約版本
+    "formula_version": "1.2",            # 公式、門檻與來源欄位契約版本
     "overall_status": "excellent" | "good" | "acceptable" | "poor" | "error",
     "decision": "excellent" | "good" | "acceptable" | "poor" | "error",
     "decision_rule": str,
     "core_metrics_pass_count": int,      # 通過門檻的核心指標數
     "core_metrics_total_count": int,     # 核心指標總數（固定 5）
+    "overall_score": float,              # 五項核心指標等權，前兩項明確含追溯性
+    "overall_score_formula": str,
+    "score_if_traceability_complete": float,
+    "overall_score_components": dict,
+    "traceability_score": {
+        "score": float,
+        "status": "calculated" | "missing_data" | "error",
+        "weight": 0.1,
+        "penalty": float,
+        "degraded": bool,
+        "affected_argument_ids": list[str],
+        "acceptance": {
+            "target_score": 1.0,
+            "target_penalty": 0.0,
+            "affected_argument_ids": [],
+        },
+    },
     "calculated_at": str,                # ISO 8601 UTC 時間戳
     "functional_gap_score": { ... },     # 功能缺口分數詳情
     "user_value_score": { ... },          # 使用者價值分數詳情
@@ -527,8 +564,9 @@ source_pairs = marker_pairs = span_pairs
 等式成立且每筆 span 的字面、範圍與 segment 關聯皆有效，才可令既有
 `checks.source_traceable`、`checks.no_omitted_traces` 與 `checks.no_extra_traces` 通過。
 任一欄位結構缺失時 fail-closed，該筆記不得判為高品質或成功送達；欄位完整但集合
-不一致時，逐論點標為 `fail`。這三欄是既有追溯資料的可驗收投影，不改變五項分數的
-數值公式，因此 `formula_version` 維持 `1.1`。
+不一致時，逐論點標為 `fail`。這三欄是既有追溯資料的可驗收投影；五項分數公式
+維持不變，但新增的北極星數值總分納入獨立追溯分量，因此 `formula_version` 升為
+`1.2`。
 
 ---
 

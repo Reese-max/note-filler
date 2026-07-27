@@ -452,7 +452,7 @@ def test_metrics_output_formula_traceability(tmp_path):
     
     doc = run_pipeline(str(note), llm, twinkle, FakeLaw())
     polaris_metrics = _calculate_polaris_for_doc(doc)
-    assert polaris_metrics["formula_version"] == "1.1"
+    assert polaris_metrics["formula_version"] == "1.2"
 
     # 功能缺口與使用者價值須由四個子分數重算，不能只碰巧對上必要性比例。
     for name in ("functional_gap_score", "user_value_score"):

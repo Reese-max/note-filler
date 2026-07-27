@@ -29,8 +29,8 @@ def _calculate_polaris_for_doc(doc: CorrectionDoc) -> dict[str, Any]:
     計算方式：
       1. 從 build_binding_report 取得綁定報告
       2. 依每個 segment 的 confidence 建構 delivery_status
-      3. 透過 calculate_polaris_metrics 計算五項分項分數
-      4. 回傳可序列化的 dict（含 overall_status、各分項分數、判定依據）
+      3. 透過 calculate_polaris_metrics 計算五項分項與追溯性總分
+      4. 回傳可序列化的 dict（含 overall_score、各分項分數、判定依據）
     
     判定依據：
       - functional_gap_score：可追溯性、覆蓋廣度、必要性明確度、決策助益加權分數
@@ -190,7 +190,16 @@ def _quality_score_breakdown_text(name: str, metric: dict[str, Any]) -> str:
 
 def _polaris_trace_lines(polaris: dict[str, Any]) -> list[str]:
     """將版本、公式、來源欄位、分數與判定輸出為固定可解析文字。"""
-    lines = [f"formula_version={polaris['formula_version']}"]
+    traceability = polaris["traceability_score"]
+    lines = [
+        f"formula_version={polaris['formula_version']}",
+        f"overall_score={polaris['overall_score']:.6f}；"
+        f"formula={polaris['overall_score_formula']}；"
+        f"score_if_traceability_complete={polaris['score_if_traceability_complete']:.6f}；"
+        f"traceability_score={traceability['score']:.6f}；"
+        f"traceability_penalty={traceability['penalty']:.6f}；"
+        f"affected_argument_ids={','.join(traceability['affected_argument_ids'])}",
+    ]
     for name in (
         "functional_gap_score",
         "user_value_score",
@@ -219,6 +228,7 @@ def to_json(doc: CorrectionDoc) -> dict:
     
     polaris_metrics 包含：
       - overall_status：整體品質判定（excellent/good/acceptable/poor/error）
+      - overall_score / traceability_score：含追溯扣分與受影響論點的總分
       - core_metrics_pass_count：通過門檻的核心指標數
       - functional_gap_score / user_value_score / source_binding_integrity / 
         angle_diversity_index / delivery_success_rate：各分項分數與判定依據
@@ -462,6 +472,10 @@ def to_markdown(doc: CorrectionDoc) -> str:
         "\n> **北極星分數**："
         f"overall={polaris['overall_status']}"
         f"（pass {polaris['core_metrics_pass_count']}/{polaris['core_metrics_total_count']}）；"
+        f"overall_score={polaris['overall_score']:.2f}；"
+        f"traceability={polaris['traceability_score']['score']:.2f}"
+        f"（扣分 {polaris['traceability_score']['penalty']:.2f}；"
+        f"待修 {','.join(polaris['traceability_score']['affected_argument_ids']) or '無'}）；"
         f"functional_gap={polaris['functional_gap_score']['score']:.2f}"
         f"（{'✓' if polaris['functional_gap_score']['passes_threshold'] else '✗'}）；"
         f"user_value={polaris['user_value_score']['score']:.2f}"
@@ -584,6 +598,10 @@ def to_docx(doc: CorrectionDoc, path: str) -> None:
     out.add_paragraph(
         f"北極星分數：overall={polaris['overall_status']}"
         f"（pass {polaris['core_metrics_pass_count']}/{polaris['core_metrics_total_count']}）；"
+        f"overall_score={polaris['overall_score']:.2f}；"
+        f"traceability={polaris['traceability_score']['score']:.2f}"
+        f"（扣分 {polaris['traceability_score']['penalty']:.2f}；"
+        f"待修 {','.join(polaris['traceability_score']['affected_argument_ids']) or '無'}）；"
         f"functional_gap={polaris['functional_gap_score']['score']:.2f}"
         f"（{'✓' if polaris['functional_gap_score']['passes_threshold'] else '✗'}）；"
         f"user_value={polaris['user_value_score']['score']:.2f}"

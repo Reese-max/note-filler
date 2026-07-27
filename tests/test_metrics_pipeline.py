@@ -67,16 +67,42 @@ def _create_test_polaris_metrics(
     source_binding_integrity: float = 0.9,
     angle_diversity_index: float = 0.6,
     delivery_success_rate: float = 1.0,
+    traceability_score: float = 1.0,
+    affected_argument_ids: Optional[list[str]] = None,
 ) -> dict:
     """建立測試用北極星指標。"""
+    overall_score = sum((
+        functional_gap_score,
+        user_value_score,
+        source_binding_integrity,
+        angle_diversity_index,
+        delivery_success_rate,
+    )) / 5
+    traceability_penalty = (1.0 - traceability_score) * 0.1
     return {
         "schema": "note_filler.polaris_metrics.v1",
-        "formula_version": "1.1",
+        "formula_version": "1.2",
         "overall_status": overall_status,
         "decision": overall_status,
         "decision_rule": "test rule",
         "core_metrics_pass_count": 4,
         "core_metrics_total_count": 5,
+        "overall_score": overall_score,
+        "score_if_traceability_complete": overall_score + traceability_penalty,
+        "traceability_score": {
+            "score": traceability_score,
+            "status": "calculated",
+            "source_fields": ["binding_report.arguments[].source_ids"],
+            "target_score": 1.0,
+            "penalty": traceability_penalty,
+            "degraded": traceability_score < 1.0,
+            "affected_argument_ids": affected_argument_ids or [],
+            "acceptance": {
+                "target_score": 1.0,
+                "target_penalty": 0.0,
+                "affected_argument_ids": [],
+            },
+        },
         "calculated_at": datetime.now(timezone.utc).isoformat(),
         "functional_gap_score": {
             "score": functional_gap_score,
@@ -303,6 +329,65 @@ class TestCalculateSummaryStatistics:
             alert["metric_name"] == "functional_gap_score"
             for alert in summary.alerts
         )
+
+    def test_traceability_degradation_is_ranked_and_saved_for_acceptance(self, tmp_path):
+        """只列被追溯扣分的筆記，扣分同分時以路徑穩定排序。"""
+        now = datetime.now(timezone.utc).isoformat()
+        records = [
+            MetricsRecord(
+                source_path=source_path,
+                manifest_path=f"{source_path}.manifest.json",
+                collection_time=now,
+                polaris_metrics=_create_test_polaris_metrics(
+                    traceability_score=traceability,
+                    affected_argument_ids=affected,
+                ),
+                delivery_manifest={},
+            )
+            for source_path, traceability, affected in (
+                ("note-c.txt", 0.0, ["argument:c"]),
+                ("note-good.txt", 1.0, []),
+                ("note-b.txt", 0.5, ["argument:b"]),
+                ("note-a.txt", 0.0, ["argument:a1", "argument:a2"]),
+            )
+        ]
+        records.append(MetricsRecord(
+            source_path="note-b.txt",
+            manifest_path="note-b.txt.manifest.json",
+            collection_time=now,
+            polaris_metrics=_create_test_polaris_metrics(
+                traceability_score=0.5,
+                affected_argument_ids=["argument:b"],
+            ),
+            delivery_manifest={},
+        ))
+
+        summary = calculate_summary_statistics(records, MetricsCollectionConfig())
+
+        assert summary.traceability_degraded_count == 3
+        assert [item["source_path"] for item in summary.improvement_priorities] == [
+            "note-a.txt", "note-c.txt", "note-b.txt",
+        ]
+        assert [item["rank"] for item in summary.improvement_priorities] == [1, 2, 3]
+        assert summary.improvement_priorities[0]["affected_argument_ids"] == [
+            "argument:a1", "argument:a2",
+        ]
+        assert summary.improvement_priorities[0]["acceptance"] == {
+            "target_score": 1.0,
+            "target_penalty": 0.0,
+            "affected_argument_ids": [],
+        }
+        assert summary.average_scores["overall_score"] == pytest.approx(sum(
+            record.polaris_metrics["overall_score"] for record in records
+        ) / len(records))
+
+        report_path = save_metrics_summary(
+            summary,
+            MetricsCollectionConfig(output_dir=tmp_path),
+        )
+        report = json.loads(report_path.read_text(encoding="utf-8"))
+        assert report["traceability_degraded_count"] == 3
+        assert report["improvement_priorities"] == summary.improvement_priorities
 
 
 class TestSaveMetricsSummary:

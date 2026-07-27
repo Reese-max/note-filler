@@ -567,7 +567,7 @@ class TestPolarisMetrics:
         # 驗證基本結構
         assert "schema" in metrics_dict
         assert metrics_dict["schema"] == "note_filler.polaris_metrics.v1"
-        assert metrics_dict["formula_version"] == "1.1"
+        assert metrics_dict["formula_version"] == "1.2"
         assert "overall_status" in metrics_dict
         assert metrics_dict["decision"] == metrics_dict["overall_status"]
         assert metrics_dict["decision_rule"]
@@ -627,6 +627,9 @@ class TestPolarisMetrics:
             "delivery_success_rate",
         ):
             assert metrics_dict[name]["decision"] == "missing_data"
+        assert metrics_dict["traceability_score"]["status"] == "missing_data"
+        assert metrics_dict["traceability_score"]["degraded"] is True
+        assert metrics_dict["traceability_score"]["penalty"] == pytest.approx(0.1)
 
     def test_error_status_propagation(self):
         """測試錯誤狀態的傳播。"""
@@ -831,3 +834,70 @@ def test_functional_gap_and_user_value_scores_expose_quantified_breakdown():
         "necessity_clarity": False,
         "decision_support": False,
     }
+
+
+def test_overall_score_exposes_traceability_penalty_and_affected_arguments():
+    """總分須可重算，且直接指出因追溯不足被扣分的論點。"""
+    traceable = _argument_with_quantifiable_basis(
+        "原稿未說明行政處分的成立要件",
+        "補齊讀者理解行政處分成立要件所需的說明",
+    )
+    traceable["argument_id"] = "argument:traceable"
+    pending = _argument_with_quantifiable_basis(
+        "原稿未說明行政處分的法律效果",
+        "補齊讀者理解行政處分法律效果所需的說明",
+    )
+    pending.update({
+        "argument_id": "argument:pending",
+        "source_ids": [],
+        "binding_status": "pending_evidence",
+    })
+    pending["checks"]["at_least_one_source"] = False
+    mismatched = _argument_with_quantifiable_basis(
+        "原稿未說明行政處分的救濟方式",
+        "補齊讀者理解行政處分救濟方式所需的說明",
+    )
+    mismatched.update({
+        "argument_id": "argument:mismatched",
+        "binding_status": "fail",
+    })
+    mismatched["checks"]["source_traceable"] = False
+
+    metrics = calculate_polaris_metrics(
+        {
+            "arguments": [traceable, pending, mismatched],
+            "angle_coverage_summary": {
+                "unique_angle_types": [
+                    "definition", "limitation", "requirement", "effect",
+                    "procedure", "exception", "comparison", "application",
+                ],
+                "effective_angle_count": 8,
+                "duplicate_ratio": 0.0,
+            },
+        },
+        {
+            "primary_note_ready": True,
+            "user_channel_sent": True,
+            "local_fallback_written": True,
+        },
+    ).to_dict()
+
+    traceability = metrics["traceability_score"]
+    assert traceability["score"] == pytest.approx(1 / 3)
+    assert traceability["penalty"] == pytest.approx(1 / 15)
+    assert traceability["degraded"] is True
+    assert traceability["affected_argument_ids"] == [
+        "argument:pending", "argument:mismatched",
+    ]
+    assert traceability["acceptance"] == {
+        "target_score": 1.0,
+        "target_penalty": 0.0,
+        "affected_argument_ids": [],
+    }
+    assert metrics["overall_score"] == pytest.approx(sum(
+        item["weighted_score"]
+        for item in metrics["overall_score_components"].values()
+    ))
+    assert metrics["score_if_traceability_complete"] == pytest.approx(
+        metrics["overall_score"] + traceability["penalty"]
+    )

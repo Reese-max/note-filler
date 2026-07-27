@@ -18,6 +18,21 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+def _print_improvement_priorities(priorities: list[dict]) -> None:
+    if not priorities:
+        return
+    print(f"\n追溯性改善優先級 ({len(priorities)}):")
+    for item in priorities:
+        affected = ",".join(item["affected_argument_ids"]) or "（缺少可定位論點）"
+        print(
+            f"  #{item['rank']} {item['source_path']}: "
+            f"traceability={item['traceability_score']:.3f}, "
+            f"overall={item['overall_score']:.3f}, "
+            f"扣分={item['score_penalty']:.3f}, "
+            f"待修論點={affected}"
+        )
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(
         prog="run_metrics_pipeline",
@@ -112,6 +127,7 @@ def main(argv: list[str] | None = None) -> int:
                     f"  {alert['metric_name']}: {alert['actual_value']:.3f} "
                     f"< {alert['threshold']} ({alert['severity']})"
                 )
+        _print_improvement_priorities(summary.improvement_priorities)
         
         return 0
     
@@ -136,6 +152,7 @@ def main(argv: list[str] | None = None) -> int:
                 print(f"    {status}: {count}")
             if history['alerts']:
                 print(f"  告警數: {len(history['alerts'])}")
+            _print_improvement_priorities(history.get("improvement_priorities", []))
         
         return 0
     
@@ -164,6 +181,7 @@ def main(argv: list[str] | None = None) -> int:
                     f"  {alert['metric_name']}: {alert['actual_value']:.3f} "
                     f"< {alert['threshold']} ({alert['severity']})"
                 )
+        _print_improvement_priorities(latest.get("improvement_priorities", []))
         
         return 0
     
