@@ -1,0 +1,92 @@
+{
+  "note_id": "high_value_001",
+  "category": "high_value",
+  "topic": "行政處分",
+  "original_note": "行政程序法要求行政行為應遵守正當程序。本筆記僅記錄部分重點，尚未展開。",
+  "arguments": [
+    {
+      "argument_id": "argument:0",
+      "argument_index": 0,
+      "argument_text": "行政處分係指行政機關就公法上具體事件所為之對外直接發生法律效果之單方行政行為。此定義包含三要素：行政機關、公法上具體事件、對外直接發生法律效果。",
+      "functional_gap": "筆記未展開定義，讀者無法理解核心概念",
+      "user_value": "幫助讀者理解行政處分之對外效力要件，能正確判斷具體案例",
+      "related_knowledge": "行政處分係指行政機關就公法上具體事件所為之對外直接發生法律效果之單方行政行為。此定義包含三要素：行政機關、公法上具體事件、對外直接發生法律效果。",
+      "sources": ["law:1", "law:2"],
+      "binding_status": "pass",
+      "cardinality": "one_to_many",
+      "angle_coverage": {
+        "angle_type": "definition",
+        "covered_facets": ["necessity:functional_gap", "necessity:user_value"],
+        "effective_angle_count": 1
+      },
+      "checks": {
+        "at_least_one_source": true,
+        "source_traceable": true,
+        "no_omitted_traces": true,
+        "no_extra_traces": true,
+        "has_functional_gap": true,
+        "has_user_value": true,
+        "has_related_knowledge": true,
+        "related_knowledge_consistent": true
+      }
+    },
+    {
+      "argument_id": "argument:1",
+      "argument_index": 1,
+      "argument_text": "人民對違法或不當行政處分應先經訴願程序始得提起行政訴訟。訴願前置程序保障行政自我監督，減輕司法負擔。",
+      "functional_gap": "筆記未提及救濟途徑，讀者不知道如何申訴",
+      "user_value": "說明讀者理解訴願前置程序的重要性，知道正確的救濟途徑",
+      "related_knowledge": "人民對違法或不當行政處分應先經訴願程序始得提起行政訴訟。訴願前置程序保障行政自我監督，減輕司法負擔。",
+      "sources": ["law:3", "law:4"],
+      "binding_status": "pass",
+      "cardinality": "one_to_many",
+      "angle_coverage": {
+        "angle_type": "procedure",
+        "covered_facets": ["necessity:functional_gap", "necessity:user_value"],
+        "effective_angle_count": 1
+      },
+      "checks": {
+        "at_least_one_source": true,
+        "source_traceable": true,
+        "no_omitted_traces": true,
+        "no_extra_traces": true,
+        "has_functional_gap": true,
+        "has_user_value": true,
+        "has_related_knowledge": true,
+        "related_knowledge_consistent": true
+      }
+    },
+    {
+      "argument_id": "argument:2",
+      "argument_index": 2,
+      "argument_text": "行政處分依性質可分為：負擔處分（如罰鍰）、授益處分（如許可）、雙重效果處分。分類有助於判斷適用程序與救濟途徑。",
+      "functional_gap": "筆記未分類說明，讀者無法掌握適用範圍",
+      "user_value": "幫助讀者理解不同類型行政處分的適用程序與救濟途徑",
+      "related_knowledge": "行政處分依性質可分為：負擔處分（如罰鍰）、授益處分（如許可）、雙重效果處分。分類有助於判斷適用程序與救濟途徑。",
+      "sources": ["law:1", "law:2"],
+      "binding_status": "pass",
+      "cardinality": "one_to_many",
+      "angle_coverage": {
+        "angle_type": "classification",
+        "covered_facets": ["necessity:functional_gap", "necessity:user_value"],
+        "effective_angle_count": 1
+      },
+      "checks": {
+        "at_least_one_source": true,
+        "source_traceable": true,
+        "no_omitted_traces": true,
+        "no_extra_traces": true,
+        "has_functional_gap": true,
+        "has_user_value": true,
+        "has_related_knowledge": true,
+        "related_knowledge_consistent": true
+      }
+    }
+  ],
+  "annotation_metadata": {
+    "annotator": "human",
+    "annotation_date": "2026-07-27",
+    "validation_status": "validated",
+    "notes": "高價值筆記範例：功能缺口具體、使用者價值明確、來源綁定完整"
+  }
+}

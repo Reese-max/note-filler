@@ -1,0 +1,66 @@
+{
+  "note_id": "low_benefit_001",
+  "category": "low_benefit",
+  "topic": "行政處分",
+  "original_note": "行政程序法要求行政行為應遵守正當程序。本筆記僅記錄部分重點，尚未展開。",
+  "arguments": [
+    {
+      "argument_id": "argument:0",
+      "argument_index": 0,
+      "argument_text": "行政處分是一種行政行為。",
+      "functional_gap": "內容不足",
+      "user_value": "補充此項資訊",
+      "related_knowledge": "行政處分是一種行政行為。",
+      "sources": [],
+      "binding_status": "pending_evidence",
+      "cardinality": "none",
+      "angle_coverage": {
+        "angle_type": "definition",
+        "covered_facets": ["necessity:functional_gap"],
+        "effective_angle_count": 1
+      },
+      "checks": {
+        "at_least_one_source": false,
+        "source_traceable": false,
+        "no_omitted_traces": true,
+        "no_extra_traces": true,
+        "has_functional_gap": true,
+        "has_user_value": true,
+        "has_related_knowledge": true,
+        "related_knowledge_consistent": true
+      }
+    },
+    {
+      "argument_id": "argument:1",
+      "argument_index": 1,
+      "argument_text": "訴願是救濟程序。",
+      "functional_gap": "待補充",
+      "user_value": "增加內容完整性",
+      "related_knowledge": "訴願是救濟程序。",
+      "sources": ["law:1"],
+      "binding_status": "fail",
+      "cardinality": "one_to_one",
+      "angle_coverage": {
+        "angle_type": "procedure",
+        "covered_facets": ["necessity:functional_gap"],
+        "effective_angle_count": 1
+      },
+      "checks": {
+        "at_least_one_source": true,
+        "source_traceable": false,
+        "no_omitted_traces": true,
+        "no_extra_traces": true,
+        "has_functional_gap": true,
+        "has_user_value": true,
+        "has_related_knowledge": true,
+        "related_knowledge_consistent": false
+      }
+    }
+  ],
+  "annotation_metadata": {
+    "annotator": "human",
+    "annotation_date": "2026-07-27",
+    "validation_status": "validated",
+    "notes": "形式完整但低效益筆記範例：功能缺口模糊、使用者價值不明確、來源綁定不完整"
+  }
+}

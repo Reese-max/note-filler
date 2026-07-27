@@ -1,0 +1,92 @@
+{
+  "note_id": "high_value_002",
+  "category": "high_value",
+  "topic": "行政契約",
+  "original_note": "行政契約是行政機關與人民間的協議，相關規定散見於各法律。",
+  "arguments": [
+    {
+      "argument_id": "argument:0",
+      "argument_index": 0,
+      "argument_text": "行政契約係指行政機關與人民間，為達成行政目的，基於平等原則所締結之契約。其特點包括行政機關享有優越地位、契約內容受公法拘束。",
+      "functional_gap": "筆記未定義行政契約的核心概念，讀者無法理解其與私法契約的區別",
+      "user_value": "幫助讀者理解行政契約的法律定義與核心特徵，能正確識別行政契約",
+      "related_knowledge": "行政契約係指行政機關與人民間，為達成行政目的，基於平等原則所締結之契約。其特點包括行政機關享有優越地位、契約內容受公法拘束。",
+      "sources": ["law:5", "law:6"],
+      "binding_status": "pass",
+      "cardinality": "one_to_many",
+      "angle_coverage": {
+        "angle_type": "definition",
+        "covered_facets": ["necessity:functional_gap", "necessity:user_value"],
+        "effective_angle_count": 1
+      },
+      "checks": {
+        "at_least_one_source": true,
+        "source_traceable": true,
+        "no_omitted_traces": true,
+        "no_extra_traces": true,
+        "has_functional_gap": true,
+        "has_user_value": true,
+        "has_related_knowledge": true,
+        "related_knowledge_consistent": true
+      }
+    },
+    {
+      "argument_id": "argument:1",
+      "argument_index": 1,
+      "argument_text": "行政契約種類包括：公共工程契約、公共服務特許契約、研究開發契約、行政指導契約等。不同類型適用不同程序與監督規則。",
+      "functional_gap": "筆記未分類行政契約類型，讀者無法掌握適用範圍與程序差異",
+      "user_value": "說明讀者理解不同類型行政契約的適用場景與程序要求",
+      "related_knowledge": "行政契約種類包括：公共工程契約、公共服務特許契約、研究開發契約、行政指導契約等。不同類型適用不同程序與監督規則。",
+      "sources": ["law:7"],
+      "binding_status": "pass",
+      "cardinality": "one_to_one",
+      "angle_coverage": {
+        "angle_type": "classification",
+        "covered_facets": ["necessity:functional_gap", "necessity:user_value"],
+        "effective_angle_count": 1
+      },
+      "checks": {
+        "at_least_one_source": true,
+        "source_traceable": true,
+        "no_omitted_traces": true,
+        "no_extra_traces": true,
+        "has_functional_gap": true,
+        "has_user_value": true,
+        "has_related_knowledge": true,
+        "related_knowledge_consistent": true
+      }
+    },
+    {
+      "argument_id": "argument:2",
+      "argument_index": 2,
+      "argument_text": "行政契約爭議解決途徑包括：協商、調解、訴願、行政訴訟。行政機關享有單方調整契約內容的權力，但需符合比例原則。",
+      "functional_gap": "筆記未說明爭議解決途徑，讀者不知道發生糾紛時如何救濟",
+      "user_value": "幫助讀者理解行政契約爭議的解決途徑與行政機關的權力界限",
+      "related_knowledge": "行政契約爭議解決途徑包括：協商、調解、訴願、行政訴訟。行政機關享有單方調整契約內容的權力，但需符合比例原則。",
+      "sources": ["law:8", "law:9"],
+      "binding_status": "pass",
+      "cardinality": "one_to_many",
+      "angle_coverage": {
+        "angle_type": "procedure",
+        "covered_facets": ["necessity:functional_gap", "necessity:user_value"],
+        "effective_angle_count": 1
+      },
+      "checks": {
+        "at_least_one_source": true,
+        "source_traceable": true,
+        "no_omitted_traces": true,
+        "no_extra_traces": true,
+        "has_functional_gap": true,
+        "has_user_value": true,
+        "has_related_knowledge": true,
+        "related_knowledge_consistent": true
+      }
+    }
+  ],
+  "annotation_metadata": {
+    "annotator": "human",
+    "annotation_date": "2026-07-27",
+    "validation_status": "validated",
+    "notes": "高價值筆記範例：行政契約主題，功能缺口具體、使用者價值明確、來源綁定完整"
+  }
+}
