@@ -6,6 +6,14 @@
 - 專案：`D:/Users/Administrator/Desktop/筆記補齊`
 - 目的：把前端/路由行為以可追溯條列，避免口頭契約漂移。
 
+## 追溯資訊
+
+- **設計編號**: D-01
+- **需求編號**: R-01（目標與一句話定義）, R-02（範圍 - MVP）, R-08（LLM 接法）, R-09（UI MVP）
+- **驗收編號**: A-01（test_index_returns_upload_form）, A-02（test_run_renders_two_columns）, A-03（test_export_returns_markdown_attachment）, A-04（test_export_without_run_returns_404）
+- **追溯狀態**: 完整
+- **追溯索引**: `docs/specs/design-traceability-index.md`
+
 ## 1) 路由介面契約
 
 ### `GET /`（上傳頁）

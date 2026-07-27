@@ -5,6 +5,14 @@
 - 日期：2026-07-19
 - 目標：把可見行為與資料流狀態收斂成最小可核實規格。
 
+## 追溯資訊
+
+- **設計編號**: D-02
+- **需求編號**: R-06（自建模組 - 訂正稿資料結構）, R-07（品質閘）
+- **驗收編號**: A-04（test_export_without_run_returns_404）, A-05（test_run_pipeline_invariant）, A-06（test_e2e_minimal_quality_gates_offline_regression）
+- **追溯狀態**: 完整
+- **追溯索引**: `docs/specs/design-traceability-index.md`
+
 ## 1) 頁面/流程狀態（與最後路由行為一致）
 
 ### 狀態定義

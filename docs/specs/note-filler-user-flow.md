@@ -4,6 +4,14 @@
 
 - 日期：2026-07-19
 
+## 追溯資訊
+
+- **設計編號**: D-03
+- **需求編號**: R-01（目標與一句話定義）, R-04（系統架構）, R-05（自建模組 - Gap 偵測）, R-06（自建模組 - 訂正稿資料結構）
+- **驗收編號**: A-02（test_run_renders_two_columns）, A-03（test_export_returns_markdown_attachment）, A-05（test_run_pipeline_invariant）, A-07（test_e2e_structural_invariants）
+- **追溯狀態**: 完整
+- **追溯索引**: `docs/specs/design-traceability-index.md`
+
 ## 1) 正常流程（流程圖）
 
 ```mermaid

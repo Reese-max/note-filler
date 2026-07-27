@@ -4,6 +4,14 @@
 
 - 日期：2026-07-19
 
+## 追溯資訊
+
+- **設計編號**: D-04
+- **需求編號**: R-03（復用策略）, R-04（系統架構）, R-10（開發方式）
+- **驗收編號**: A-01（test_index_returns_upload_form）, A-05（test_run_pipeline_invariant）, A-06（test_e2e_minimal_quality_gates_offline_regression）, A-08（test_retrieved_five_but_only_two_cited）
+- **追溯狀態**: 完整
+- **追溯索引**: `docs/specs/design-traceability-index.md`
+
 ## 1) 入口/展示元件
 
 | 元件 | 責任 | 應用檔 |

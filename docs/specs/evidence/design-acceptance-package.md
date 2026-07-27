@@ -5,6 +5,8 @@
 > schema：`note-filler.design-acceptance/v1`
 >
 > **每一項主張必須同時具備：規格檔、實作錨點檔、測試錨點；禁止只靠敘述或彙總數字驗收。**
+>
+> **追溯更新：2026-07-27 新增需求編號與驗收項目編號追溯對照。**
 
 ## Git / 落盤狀態（刷新前）
 
@@ -13,6 +15,50 @@
 - status_porcelain_before_refresh：`M docs/specs/evidence/design-acceptance-claims.json
  M scripts/refresh_design_acceptance.py
  M tests/test_design_acceptance.py`
+
+## 追溯對照表
+
+> 完整追溯索引見 `docs/specs/design-traceability-index.md`
+
+### 需求編號索引
+
+| 需求編號 | 需求標題 |
+|----------|----------|
+| R-01 | 目標與一句話定義 |
+| R-02 | 範圍 - MVP |
+| R-03 | 復用策略 |
+| R-04 | 系統架構 |
+| R-05 | 自建模組 - Gap 偵測 |
+| R-06 | 自建模組 - 訂正稿資料結構 |
+| R-07 | 品質閘 |
+| R-08 | LLM 接法 |
+| R-09 | UI MVP |
+| R-10 | 開發方式 |
+| R-11 | MVP 不做清單 |
+| R-12 | 驗收標準 |
+
+### 驗收項目編號索引
+
+| 驗收編號 | 測試項目 |
+|----------|----------|
+| A-01 | test_index_returns_upload_form |
+| A-02 | test_run_renders_two_columns |
+| A-03 | test_export_returns_markdown_attachment |
+| A-04 | test_export_without_run_returns_404 |
+| A-05 | test_run_pipeline_invariant |
+| A-06 | test_e2e_minimal_quality_gates_offline_regression |
+| A-07 | test_e2e_structural_invariants |
+| A-08 | test_retrieved_five_but_only_two_cited |
+
+### 設計 → 需求 → 驗收追溯對照
+
+| 設計編號 | 設計標題 | 需求編號 | 驗收編號 |
+|----------|----------|----------|----------|
+| D-01 | 介面規格 | R-01, R-02, R-08, R-09 | A-01, A-02, A-03, A-04 |
+| D-02 | 狀態轉移 | R-06, R-07 | A-04, A-05, A-06 |
+| D-03 | 使用者流程 | R-01, R-04, R-05, R-06 | A-02, A-03, A-05, A-07 |
+| D-04 | 元件責任 | R-03, R-04, R-10 | A-01, A-05, A-06, A-08 |
+| D-05 | 畫面佐證 | R-02, R-09 | A-01, A-02, A-03, A-04 |
 
 ## 主張 ↔ 產物對照
 

@@ -4,6 +4,14 @@
 
 - 日期：2026-07-19
 
+## 追溯資訊
+
+- **設計編號**: D-05
+- **需求編號**: R-02（範圍 - MVP）, R-09（UI MVP）
+- **驗收編號**: A-01（test_index_returns_upload_form）, A-02（test_run_renders_two_columns）, A-03（test_export_returns_markdown_attachment）, A-04（test_export_without_run_returns_404）
+- **追溯狀態**: 完整
+- **追溯索引**: `docs/specs/design-traceability-index.md`
+
 ## 1) 可核實的 UI 觀察點
 
 | 項目 | 位置 | 佐證 |
