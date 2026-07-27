@@ -1,9 +1,9 @@
 ## CI Deselected 測試稽核（防漏跑）
-- 產生時間: 2026-07-23 03:51:21+0800
+- 產生時間: 2026-07-27 21:09:18+0800
 - 工具: validate_deselection_ci.py
 
-- 全量 collected: 171
-- 預設 selected: 160
+- 全量 collected: 620
+- 預設 selected: 609
 - 預設 deselected: 11
 - allowlist/預期數量: 11
 
@@ -55,7 +55,7 @@
    - 核准決策: acceptable_unexecuted
    - 安全風險: 高
    - 憑證: 預設 -m 'not integration' 在 collection 階段排除；只要真實 grok proxy 才能執行，Twinkle 與 law 雖以 fake 隔離仍保留 integration 邊界
-   - 替代覆蓋數: 5
+   - 替代覆蓋數: 6
 
 8. `tests/test_questions.py::test_generate_questions_real_grok`
    - 採集原因: deselected by -m 'not integration'
@@ -69,7 +69,7 @@
    - 核准決策: acceptable_unexecuted
    - 安全風險: 高
    - 憑證: 預設 -m 'not integration' 在 collection 階段排除；真跑需要 data/law_index.db、grok proxy 與 TWINKLE_HUB_TOKEN
-   - 替代覆蓋數: 9
+   - 替代覆蓋數: 10
 
 10. `tests/test_twinkle.py::test_search_real_twinkle_hub`
    - 採集原因: deselected by -m 'not integration'
