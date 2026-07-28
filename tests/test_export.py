@@ -829,6 +829,40 @@ def test_conflicting_arguments_final_product_has_annotations_links_and_immutable
     assert all(url in markdown and any(url in line for line in docx_paragraphs) for url in links)
 
 
+@pytest.mark.parametrize(
+    ("argument_index", "expected_source_ids"),
+    [
+        (0, ["apa-24-general", "apa-24-limit"]),
+        (1, ["aaj-112-general", "aaj-112-limit"]),
+    ],
+)
+def test_each_conflicting_argument_has_complete_positive_acceptance(
+    argument_index, expected_source_ids
+):
+    product, original_texts, validations = _conflicting_arguments_product()
+    data = to_json(product)
+    supplements = [
+        segment for segment in data["segments"] if segment["type"] == "supplement"
+    ]
+
+    assert len(supplements) == len(validations) == 2
+    argument = supplements[argument_index]
+    annotation = argument["three_part_annotation"]
+    assert validations[list(validations)[argument_index]].conflict
+    assert argument["source_ids"] == expected_source_ids
+    assert annotation["discrepancy_notes"] == [
+        f"來源衝突：{argument['conflict_note']}"
+    ]
+    assert len(annotation["usage_conditions"]) == len(expected_source_ids)
+    assert all("現有資料無法判定適用條件" in text for text in annotation["usage_conditions"])
+    assert "來源互相衝突" in annotation["conclusion"]
+    assert "保留各來源" in annotation["conclusion"]
+    assert data["full_text"] == "\n\n".join(original_texts)
+    assert [
+        segment["text"] for segment in data["segments"] if segment["type"] == "original"
+    ] == list(original_texts)
+
+
 @pytest.mark.integration
 def test_conflicting_arguments_final_product_reading_links_are_open():
     import urllib.request
