@@ -313,7 +313,6 @@ def _integrated_conclusion(
         parts.append(f"並以 {'、'.join(s.title for s in others)} 交叉驗證")
     if functional_gap:
         parts.append(f"對應功能缺口：{functional_gap}")
-    parts.append("無可用來源時判定為【待補來源】")
     return "。".join(parts) + "。"
 
 
