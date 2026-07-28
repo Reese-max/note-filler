@@ -145,7 +145,7 @@ def test_to_json_contains_binding_summary() -> None:
     data = to_json(_sample_doc())
     bs = data.get("binding_summary")
     assert bs is not None, "JSON 輸出應含 binding_summary"
-    assert bs["schema"] == "note_filler.binding_report.v1"
+    assert bs["schema"] == "note_filler.binding_report.v2"
     assert isinstance(bs["argument_count"], int)
     assert isinstance(bs["pass"], int)
     assert isinstance(bs["fail"], int)

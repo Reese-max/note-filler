@@ -225,7 +225,7 @@ def test_high_value_note_traceability(tmp_path):
     binding_report = build_binding_report(doc)
     
     # 驗證 binding_report 結構
-    assert binding_report["schema"] == "note_filler.binding_report.v1"
+    assert binding_report["schema"] == "note_filler.binding_report.v2"
     assert "arguments" in binding_report
     assert len(binding_report["arguments"]) == 3
     
@@ -345,7 +345,7 @@ def test_low_value_note_traceability(tmp_path):
     binding_report = build_binding_report(doc)
     
     # 驗證 binding_report 結構
-    assert binding_report["schema"] == "note_filler.binding_report.v1"
+    assert binding_report["schema"] == "note_filler.binding_report.v2"
     assert "arguments" in binding_report
     assert len(binding_report["arguments"]) == 2
     

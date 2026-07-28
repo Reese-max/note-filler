@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 from typing import Any, Literal
 
@@ -34,7 +35,8 @@ from note_filler.correction import (
 )
 from note_filler.write import CITATION_SPAN_KEYS, citation_span_issues
 
-SCHEMA_ID = "note_filler.binding_report.v1"
+SCHEMA_V1 = "note_filler.binding_report.v1"
+SCHEMA_ID = "note_filler.binding_report.v2"
 BINDING_REPORT_NAME = "binding_report.json"
 
 TRACEABILITY_MARKER_KEYS = ("argument_id", "kind", "id", "binding_status")
@@ -79,39 +81,66 @@ REQUIRED_ARGUMENT_ANGLE_KEYS = frozenset(
         "angle_field_issues",
     }
 )
-REQUIRED_ARGUMENT_KEYS = frozenset(
-    {
-        "argument_index",
-        "argument_id",
-        "segment_index",
-        "argument_text",
-        "summary",
-        "confidence",
-        "cardinality",
-        "source_count",
-        "source_ids",
-        "trace_source_ids",
-        "source_fragments",
-        "citation_spans",
-        "source_id_field",
-        "checks",
-        "binding_status",
-        "binding_ok",
-        "functional_gap",
-        "user_value",
-        # 關聯知識：與同一 argument_id 綁定，明示決策品質／使用者理解
-        "related_knowledge",
-        "angle_coverage",
-        # 延伸閱讀：檢索到但未被引用的候選來源
-        "extended_readings",
-        "extended_readings_status",
-        "pending_evidence_reason",
-        # 可開啟連結：論點區塊至少需 2 條真實可開啟 URL
-        "openable_links_count",
-        "openable_links_status",
-        "openable_links_incomplete_reason",
-    }
-) | REQUIRED_ARGUMENT_ANGLE_KEYS
+SOURCE_CONFLICT_KEYS = (
+    "kind",
+    "status",
+    "source_ids",
+    "detector",
+    "rule",
+    "message",
+)
+SOURCE_PREFERENCE_REASON_KEYS = (
+    "status",
+    "preferred_source_id",
+    "reason_code",
+    "detail",
+)
+APPLICABLE_CONDITIONS_KEYS = ("status", "items")
+APPLICABLE_CONDITION_ITEM_KEYS = ("kind", "value", "source_ids")
+CONFLICT_SUMMARY_FIELD_KEYS = (
+    "source_conflicts",
+    "source_preference_reason",
+    "applicable_conditions",
+    "readable_conclusion",
+)
+
+# 既有 v1 欄位順序不動；v2 只在尾端附加衝突摘要。
+V1_ARGUMENT_KEY_ORDER = (
+    "argument_index",
+    "argument_id",
+    "segment_index",
+    "argument_text",
+    "summary",
+    "confidence",
+    "cardinality",
+    "source_count",
+    "source_ids",
+    "trace_source_ids",
+    "source_fragments",
+    "citation_spans",
+    "source_id_field",
+    "checks",
+    "binding_status",
+    "binding_ok",
+    "functional_gap",
+    "user_value",
+    "related_knowledge",
+    "angle_coverage",
+    "extended_readings",
+    "extended_readings_status",
+    "pending_evidence_reason",
+    "openable_links_count",
+    "openable_links_status",
+    "openable_links_incomplete_reason",
+    "angle_tags",
+    "valid_angle_count",
+    "deduped_angle_count",
+    "duplicate_angles",
+    "angle_field_issues",
+)
+V2_ARGUMENT_KEY_ORDER = V1_ARGUMENT_KEY_ORDER + CONFLICT_SUMMARY_FIELD_KEYS
+REQUIRED_ARGUMENT_KEYS_V1 = frozenset(V1_ARGUMENT_KEY_ORDER)
+REQUIRED_ARGUMENT_KEYS = frozenset(V2_ARGUMENT_KEY_ORDER)
 REQUIRED_CHECK_KEYS = frozenset(
     {
         "at_least_one_source",
@@ -302,6 +331,70 @@ def _pending_traceable(seg) -> bool:
         and bool(ref.get("question"))
         and ref.get("outcome") == conf
     )
+
+
+def _source_conflict_fields(seg, source_ids: list[str]) -> dict[str, Any]:
+    """建立只含實際引用來源、且可被 v2 解析器接受的衝突摘要。"""
+    conflict_note = getattr(seg, "conflict_note", None) or ""
+    conditions = {"status": "not_assessed", "items": []}
+    has_source_pair = len(source_ids) >= 2 and len(source_ids) == len(set(source_ids))
+    if conflict_note and has_source_pair:
+        match = re.search(r"「(.+?)」", conflict_note)
+        rule = match.group(1) if match else conflict_note
+        return {
+            "source_conflicts": [
+                {
+                    "kind": "semantic_contradiction",
+                    "status": "unresolved",
+                    "source_ids": list(source_ids),
+                    "detector": "keyword_heuristic",
+                    "rule": rule,
+                    "message": conflict_note,
+                }
+            ],
+            "source_preference_reason": {
+                "status": "not_selected",
+                "preferred_source_id": None,
+                "reason_code": "unresolved_conflict",
+                "detail": "現有資料無法判定優先來源。",
+            },
+            "applicable_conditions": conditions,
+            "readable_conclusion": "來源表述不一致；尚未選定優先來源，需人工判讀適用條件。",
+        }
+    if source_ids:
+        insufficient = bool(conflict_note)
+        return {
+            "source_conflicts": [],
+            "source_preference_reason": {
+                "status": "not_applicable",
+                "preferred_source_id": None,
+                "reason_code": (
+                    "insufficient_conflict_sources" if insufficient else "no_conflict"
+                ),
+                "detail": (
+                    "實際引用來源不足兩個，未建立來源衝突摘要。"
+                    if insufficient
+                    else "未偵測到來源衝突。"
+                ),
+            },
+            "applicable_conditions": conditions,
+            "readable_conclusion": (
+                "實際引用來源不足兩個，無法建立來源間衝突摘要。"
+                if insufficient
+                else "未偵測到來源衝突。"
+            ),
+        }
+    return {
+        "source_conflicts": [],
+        "source_preference_reason": {
+            "status": "not_applicable",
+            "preferred_source_id": None,
+            "reason_code": "no_source",
+            "detail": "無引用來源，不適用衝突判定。",
+        },
+        "applicable_conditions": conditions,
+        "readable_conclusion": "無引用來源，待補證。",
+    }
 
 
 def _evaluate_argument(seg, *, argument_index: int, segment_index: int) -> dict[str, Any]:
@@ -612,6 +705,12 @@ def build_binding_report(correction) -> dict[str, Any]:
             argument["binding_ok"] = False
             argument["binding_status"] = "fail"
 
+    # 最後附加 v2 欄位並套用固定鍵序，保留既有 v1 欄位順序。
+    for index, argument in enumerate(arguments):
+        segment = segments[argument["segment_index"]]
+        argument.update(_source_conflict_fields(segment, argument["source_ids"]))
+        arguments[index] = {key: argument[key] for key in V2_ARGUMENT_KEY_ORDER}
+
     # 反向索引：每個 source_id → 使用了它的 argument_indices
     source_usage: dict[str, list[int]] = {}
     for a in arguments:
@@ -774,6 +873,103 @@ def _validate_traceability_fields(
             )
 
 
+def _validate_conflict_summary(arg: dict[str, Any], index: int) -> None:
+    """校驗 v2 衝突摘要只描述同一論點的實際引用來源。"""
+    prefix = f"arguments[{index}]"
+    conflicts = arg["source_conflicts"]
+    if not isinstance(conflicts, list):
+        raise ValueError(f"{prefix}.source_conflicts 必須為 list")
+    for conflict_index, conflict in enumerate(conflicts):
+        where = f"{prefix}.source_conflicts[{conflict_index}]"
+        if not isinstance(conflict, dict) or tuple(conflict) != SOURCE_CONFLICT_KEYS:
+            raise ValueError(f"{where} 欄位或序列漂移")
+        if conflict["kind"] != "semantic_contradiction":
+            raise ValueError(f"{where}.kind 非法")
+        if conflict["status"] not in (
+            "unresolved",
+            "resolved_by_conditions",
+            "preferred",
+        ):
+            raise ValueError(f"{where}.status 非法")
+        conflict_ids = conflict["source_ids"]
+        if not isinstance(conflict_ids, list) or len(conflict_ids) < 2:
+            raise ValueError(f"{where}.source_ids 至少需兩個元素")
+        if any(not isinstance(sid, str) or not sid.strip() for sid in conflict_ids):
+            raise ValueError(f"{where}.source_ids 不可含空字串")
+        if len(conflict_ids) != len(set(conflict_ids)):
+            raise ValueError(f"{where}.source_ids 不可重複")
+        if any(sid not in arg["source_ids"] for sid in conflict_ids):
+            raise ValueError(f"{where}.source_ids 含非本論點引用來源")
+        expected_ids = [sid for sid in arg["source_ids"] if sid in set(conflict_ids)]
+        if conflict_ids != expected_ids:
+            raise ValueError(f"{where}.source_ids 順序與論點引用來源不一致")
+        if conflict["detector"] != "keyword_heuristic":
+            raise ValueError(f"{where}.detector 非法")
+        if any(
+            not isinstance(conflict[key], str) or not conflict[key].strip()
+            for key in ("rule", "message")
+        ):
+            raise ValueError(f"{where}.rule 與 message 必須為非空字串")
+
+    preference = arg["source_preference_reason"]
+    where = f"{prefix}.source_preference_reason"
+    if (
+        not isinstance(preference, dict)
+        or tuple(preference) != SOURCE_PREFERENCE_REASON_KEYS
+    ):
+        raise ValueError(f"{where} 欄位或序列漂移")
+    if preference["status"] not in ("not_applicable", "not_selected", "selected"):
+        raise ValueError(f"{where}.status 非法")
+    if not isinstance(preference["reason_code"], str) or not preference[
+        "reason_code"
+    ].strip():
+        raise ValueError(f"{where}.reason_code 不可為空欄")
+    if not isinstance(preference["detail"], str) or not preference["detail"].strip():
+        raise ValueError(f"{where}.detail 不可為空欄")
+    preferred_id = preference["preferred_source_id"]
+    if preference["status"] == "selected":
+        if not isinstance(preferred_id, str) or preferred_id not in arg["source_ids"]:
+            raise ValueError(f"{where}.preferred_source_id 必須為本論點引用來源")
+    elif preferred_id is not None:
+        raise ValueError(f"{where}.preferred_source_id 必須為 null")
+    if bool(conflicts) != (preference["status"] != "not_applicable"):
+        raise ValueError(f"{where}.status 與 source_conflicts 不一致")
+
+    conditions = arg["applicable_conditions"]
+    where = f"{prefix}.applicable_conditions"
+    if not isinstance(conditions, dict) or tuple(conditions) != APPLICABLE_CONDITIONS_KEYS:
+        raise ValueError(f"{where} 欄位或序列漂移")
+    if conditions["status"] not in ("not_assessed", "assessed"):
+        raise ValueError(f"{where}.status 非法")
+    if not isinstance(conditions["items"], list):
+        raise ValueError(f"{where}.items 必須為 list")
+    if conditions["status"] == "not_assessed" and conditions["items"]:
+        raise ValueError(f"{where}.not_assessed 不得含 items")
+    for condition_index, condition in enumerate(conditions["items"]):
+        item_where = f"{where}.items[{condition_index}]"
+        if (
+            not isinstance(condition, dict)
+            or tuple(condition) != APPLICABLE_CONDITION_ITEM_KEYS
+        ):
+            raise ValueError(f"{item_where} 欄位或序列漂移")
+        if condition["kind"] not in ("時間", "地域", "主體", "程序", "例外"):
+            raise ValueError(f"{item_where}.kind 非法")
+        if not isinstance(condition["value"], str) or not condition["value"].strip():
+            raise ValueError(f"{item_where}.value 不可為空欄")
+        condition_ids = condition["source_ids"]
+        if not isinstance(condition_ids, list) or not condition_ids:
+            raise ValueError(f"{item_where}.source_ids 必須為非空 list")
+        if any(not isinstance(sid, str) or not sid.strip() for sid in condition_ids):
+            raise ValueError(f"{item_where}.source_ids 不可含空字串")
+        if len(condition_ids) != len(set(condition_ids)):
+            raise ValueError(f"{item_where}.source_ids 不可重複")
+        if any(sid not in arg["source_ids"] for sid in condition_ids):
+            raise ValueError(f"{item_where}.source_ids 含非本論點引用來源")
+    conclusion = arg["readable_conclusion"]
+    if not isinstance(conclusion, str) or not conclusion.strip():
+        raise ValueError(f"{prefix}.readable_conclusion 不可為空欄")
+
+
 def parse_binding_report(data: Any) -> dict[str, Any]:
     """嚴格解析並校驗綁定報告結構；不符則 raise ValueError。
 
@@ -790,10 +986,14 @@ def parse_binding_report(data: Any) -> dict[str, Any]:
 
     _reject_key_drift(data, REQUIRED_TOP_KEYS, where="binding report")
 
-    if data.get("schema") != SCHEMA_ID:
+    schema = data.get("schema")
+    if schema not in (SCHEMA_V1, SCHEMA_ID):
         raise ValueError(
-            f"binding report schema 不符: 期望 {SCHEMA_ID!r}，實際 {data.get('schema')!r}"
+            f"binding report schema 不符: 支援 {SCHEMA_V1!r}、{SCHEMA_ID!r}，實際 {schema!r}"
         )
+    required_argument_keys = (
+        REQUIRED_ARGUMENT_KEYS if schema == SCHEMA_ID else REQUIRED_ARGUMENT_KEYS_V1
+    )
 
     if not isinstance(data.get("argument_count"), int) or data["argument_count"] < 0:
         raise ValueError("argument_count 必須為非負整數")
@@ -814,7 +1014,9 @@ def parse_binding_report(data: Any) -> dict[str, Any]:
     for i, arg in enumerate(arguments):
         if not isinstance(arg, dict):
             raise ValueError(f"arguments[{i}] 必須為 dict")
-        _reject_key_drift(arg, REQUIRED_ARGUMENT_KEYS, where=f"arguments[{i}]")
+        _reject_key_drift(arg, required_argument_keys, where=f"arguments[{i}]")
+        if schema == SCHEMA_ID and tuple(arg) != V2_ARGUMENT_KEY_ORDER:
+            raise ValueError(f"arguments[{i}] 欄位順序漂移")
         checks = arg.get("checks")
         _reject_key_drift(checks, REQUIRED_CHECK_KEYS, where=f"arguments[{i}].checks")
         for ck in REQUIRED_CHECK_KEYS:
@@ -1265,6 +1467,8 @@ def parse_binding_report(data: Any) -> dict[str, Any]:
             raise ValueError(
                 f"arguments[{i}] openable_links_status 為 insufficient 但 incomplete_reason 為空"
             )
+        if schema == SCHEMA_ID:
+            _validate_conflict_summary(arg, i)
 
     _validate_traceability_fields(data, arguments)
 
