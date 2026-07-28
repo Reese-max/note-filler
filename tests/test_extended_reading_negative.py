@@ -654,8 +654,14 @@ class TestMinimumTwoURLsRequirement:
 
     def test_sufficient_when_two_or_more_urls(self):
         """可開啟連結 >= 2 條時 status = sufficient。"""
-        src_a = _source("src_a", "A來源", "內容", "A", url="https://a.com", distance=0.3)
-        src_b = _source("src_b", "B來源", "內容", "B", url="https://b.com", distance=0.4)
+        src_a = _source(
+            "src_a", "行政處分法規", "行政處分的法定定義。", "A",
+            url="https://a.com", distance=0.3,
+        )
+        src_b = _source(
+            "src_b", "行政處分解釋", "行政處分的要件說明。", "B",
+            url="https://b.com", distance=0.4,
+        )
         
         gap = Gap("行政處分之要件為何？", "missing", "原稿未展開")
         product = assemble_correction(
@@ -743,3 +749,67 @@ class TestMinimumTwoURLsRequirement:
         has_url_msg = "可開啟連結不足 2 條" in reason
         has_general_msg = "來源不足" in reason
         assert has_url_msg or has_general_msg
+
+
+# ---------------------------------------------------------------------------
+# 案例五：來源綁定品質負例
+# ---------------------------------------------------------------------------
+
+@pytest.mark.parametrize(
+    ("unrelated", "expected_count", "reason_fragment"),
+    [
+        (None, 1, "僅有 1 條可開啟連結"),
+        (
+            _source(
+                "web:climate",
+                "全球氣候觀測報告",
+                "本報告整理海水溫度、降雨與碳排放趨勢。",
+                "C",
+                url="https://example.com/climate",
+            ),
+            2,
+            "直接相關僅 1 條",
+        ),
+    ],
+    ids=["有引用但延伸閱讀不足", "可開啟延伸連結與論點無關"],
+)
+def test_source_binding_quality_negative_cases(unrelated, expected_count, reason_fragment):
+    """兩種負例皆降級，且回報 argument_id 下的延伸閱讀綁定缺口。"""
+    cited = _source(
+        "law:92",
+        "行政程序法第92條",
+        "行政處分是行政機關就公法具體事件所為的決定。",
+        "A",
+        url="https://law.moj.gov.tw/LawClass/LawSingle.aspx?pcode=A0030055&flno=92",
+    )
+    gap = Gap("行政處分的定義為何？", "missing", "原稿未展開行政處分定義")
+    sources = [cited] + ([unrelated] if unrelated else [])
+    omitted_ids = [unrelated.id] if unrelated else []
+    product = assemble_correction(
+        _doc(),
+        [gap],
+        {gap.question: sources},
+        {
+            gap.question: WrittenSupplement(
+                "行政處分是具體公權力決定[^1]。",
+                [cited.id],
+                omitted_source_ids=omitted_ids,
+            )
+        },
+        {gap.question: cross_validate(gap.question, [cited])},
+    )
+
+    seg = product.segments[-1]
+    report_arg = parse_binding_report(build_binding_report(product))["arguments"][0]
+    reason = report_arg["openable_links_incomplete_reason"]
+    markdown = to_markdown(product)
+
+    assert seg.openable_links_count == expected_count
+    assert seg.openable_links_status == "insufficient"
+    assert [source.id for source in seg.sources] == [cited.id]
+    assert [r["source_id"] for r in seg.extended_readings] == omitted_ids
+    assert report_arg["checks"]["at_least_two_openable_links"] is False
+    assert "argument:0.extended_readings" in reason
+    assert reason_fragment in reason
+    assert "【待補來源】" in markdown and "argument:0.extended_readings" in markdown
+    assert product.original.full_text == "原稿逐字保留。"

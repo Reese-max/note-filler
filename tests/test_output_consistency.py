@@ -67,8 +67,8 @@ def _pipeline_canned() -> tuple:
 
     twinkle = FakeTwinkle([
         [],  # gap1 no sources
-        [_src("s1", "行政院公報", "https://a", "A"),
-         _src("s2", "立法院議案", "https://b", "B")],  # gap2 two sources
+        [_src("s1", "聽證程序行政院公報", "https://a", "A"),
+         _src("s2", "聽證程序立法院議案", "https://b", "B")],  # gap2 two sources
     ])
     law = FakeLaw()
     return llm, twinkle, law
@@ -418,6 +418,8 @@ class TestOutputConsistency:
                 continue
             if stripped.startswith("> **待補證原因**"):
                 continue
+            if stripped.startswith("> **【待補來源】**"):
+                continue
             if stripped.startswith("> - ["):
                 continue
             md_originals.append(stripped)
@@ -466,6 +468,8 @@ class TestOutputConsistency:
             if stripped.startswith("延伸閱讀："):
                 continue
             if stripped.startswith("待補證原因："):
+                continue
+            if stripped.startswith("【待補來源】"):
                 continue
             if stripped.startswith("  ["):
                 continue

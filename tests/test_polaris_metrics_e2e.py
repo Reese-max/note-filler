@@ -45,14 +45,14 @@ def _docx(tmp_path: Path, name: str, *paragraphs: str) -> Path:
     return p
 
 
-def _src(sid: str = "s1", level: str = "A") -> Source:
+def _src(sid: str = "s1", level: str = "A", topic: str = "行政程序") -> Source:
     """建立測試用來源。"""
     return Source(
         id=sid,
-        title=f"來源{sid}",
+        title=f"{topic}來源{sid}",
         url=f"https://example.gov.tw/{sid}",
         level=level,
-        content=f"官方結構化記錄全文 {sid}……",
+        content=f"{topic}的官方結構化記錄全文 {sid}……",
         fetched_date="2026-07-15",
         doc_date="2026-01-01",
         distance=0.5,
@@ -95,9 +95,9 @@ def _high_value_note_canned_llm():
 def _high_value_note_twinkle():
     """高價值筆記的來源：多個獨立來源，綁定完整。"""
     return FakeTwinkle([
-        [_src("s1", "A"), _src("s2", "A")],  # 定義：兩個 A 級來源
-        [_src("s3", "A"), _src("s4", "A")],  # 訴願：兩個 A 級來源
-        [_src("s1", "A"), _src("s2", "A")],  # 種類：重複使用前兩個 A 級來源（引用 [^1][^2]）
+        [_src("s1", "A", "行政處分"), _src("s2", "A", "行政處分")],
+        [_src("s3", "A", "訴願前置程序"), _src("s4", "A", "訴願前置程序")],
+        [_src("s1", "A", "行政處分種類"), _src("s2", "A", "行政處分種類")],
     ])
 
 

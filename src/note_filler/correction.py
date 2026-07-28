@@ -56,6 +56,9 @@ _RELATED_TOPIC_NOISE = re.compile(
     r"說明|理解|重要性?|影響|價值"
 )
 _RELATED_TOPIC_RUN = re.compile(r"[A-Za-z0-9]+|[\u4e00-\u9fff]+")
+_DIRECT_RELEVANCE_NOISE = re.compile(
+    r"問題|為何|如何|何謂|哪些|是否|要件|規定|之|的|與|及|或"
+)
 
 
 def build_related_knowledge(
@@ -104,6 +107,18 @@ def _related_topic_tokens(text: str) -> set[str]:
         for size in range(2, min(8, len(run)) + 1):
             tokens.update(run[i : i + size] for i in range(len(run) - size + 1))
     return tokens
+
+
+def _source_directly_related(question: str, source) -> bool:
+    """來源標題／正文至少須與論點問題共享一個具體主題詞。"""
+    question_topics = _related_topic_tokens(
+        _DIRECT_RELEVANCE_NOISE.sub(" ", question or "")
+    )
+    if not question_topics:
+        return True
+    source_text = f"{getattr(source, 'title', '')} {getattr(source, 'content', '')}"
+    # ponytail: 先用可重現的詞彙重疊；有同義改寫誤拒量測時再換離線語義模型。
+    return bool(question_topics & _related_topic_tokens(source_text))
 
 
 def related_knowledge_matches_views(
@@ -407,6 +422,13 @@ def assemble_correction(doc, gaps, retrieved, written, validations) -> Correctio
             for sid in prioritized_candidates
             if sid in by_id_full and is_openable_url(by_id_full[sid].url)
         ]
+        directly_related_openable_ids = [
+            sid
+            for sid in prioritized_candidates
+            if sid in by_id_full
+            and is_openable_url(by_id_full[sid].url)
+            and _source_directly_related(q, by_id_full[sid])
+        ]
         
         # 區分引用與延伸來源（用於錯誤訊息）
         cited_urls = [
@@ -421,31 +443,41 @@ def assemble_correction(doc, gaps, retrieved, written, validations) -> Correctio
         ]
         
         openable_links_count = len(prioritized_openable_urls)
+        directly_related_openable_count = len(directly_related_openable_ids)
         has_any_candidates = bool(used_ids or omitted_ids)
         
         # 無任何候選來源時（pure pending），不強制要求可開啟連結
         if not has_any_candidates:
             openable_links_status = "sufficient"
             openable_links_incomplete_reason = ""
-        elif openable_links_count >= MIN_OPENABLE_LINKS:
+        elif directly_related_openable_count >= MIN_OPENABLE_LINKS:
             openable_links_status = "sufficient"
             openable_links_incomplete_reason = ""
-        elif openable_links_count > 0:
+        else:
             openable_links_status = "insufficient"
-            if cited_urls:
+            related_cited_count = sum(sid in used_ids for sid in directly_related_openable_ids)
+            missing_binding = (
+                f"{argument_id}.extended_readings"
+                if related_cited_count
+                else f"{argument_id}.source_ids"
+            )
+            if openable_links_count == 0:
                 openable_links_incomplete_reason = (
-                    f"僅有 {openable_links_count} 條可開啟連結"
+                    f"{missing_binding} 缺失：無可開啟連結"
+                    "（引用來源與延伸閱讀均無有效 URL）"
+                )
+            elif openable_links_count < MIN_OPENABLE_LINKS:
+                openable_links_incomplete_reason = (
+                    f"{missing_binding} 缺失：僅有 {openable_links_count} 條可開啟連結"
                     f"（引用來源 {len(cited_urls)} 條、延伸閱讀 {len(extended_urls)} 條），"
                     f"不足 {MIN_OPENABLE_LINKS} 條"
                 )
             else:
                 openable_links_incomplete_reason = (
-                    f"引用來源無可開啟連結，延伸閱讀僅 {openable_links_count} 條，"
+                    f"{missing_binding} 缺失：雖有 {openable_links_count} 條可開啟連結，"
+                    f"但與論點直接相關僅 {directly_related_openable_count} 條，"
                     f"不足 {MIN_OPENABLE_LINKS} 條"
                 )
-        else:
-            openable_links_status = "insufficient"
-            openable_links_incomplete_reason = "無可開啟連結（引用來源與延伸閱讀均無有效 URL）"
 
         # pending_evidence_reason：說明為何此論點缺乏足夠來源（含優先級與URL數量）
         pending_evidence_reason = ""

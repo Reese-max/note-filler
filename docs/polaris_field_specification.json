@@ -121,7 +121,7 @@
       "required_for_metrics": [],
       "valid_values": ["none", "insufficient", "sufficient"],
       "missing_data_handling": "validation_error",
-      "description": "可開啟連結充足性：sufficient（>=2 條或 pure pending）、insufficient（<2 條）"
+      "description": "來源連結充足性：sufficient（>=2 條可開啟且與論點直接相關，或 pure pending）、insufficient（數量或直接相關性不足）"
     },
     "openable_links_incomplete_reason": {
       "data_type": "string",
@@ -131,7 +131,7 @@
       "default_value": "",
       "required_for_metrics": [],
       "missing_data_handling": "validation_error",
-      "description": "可開啟連結不足時的原因說明；sufficient 時必須為空"
+      "description": "來源連結不足時的原因與 argument_id.source_ids／argument_id.extended_readings 缺口；sufficient 時必須為空"
     }
   },
   "metric_definitions": {

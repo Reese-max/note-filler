@@ -28,7 +28,6 @@ from note_filler.angle_coverage import (
     validate_argument_angle,
 )
 from note_filler.correction import (
-    MIN_OPENABLE_LINKS,
     build_related_knowledge,
     related_knowledge_explains_value,
     related_knowledge_matches_views,
@@ -138,7 +137,7 @@ REQUIRED_CHECK_KEYS = frozenset(
         "angle_functional_gap_present",
         "angle_user_value_present",
         "angle_question_present",
-        # 可開啟連結：論點區塊至少需 MIN_OPENABLE_LINKS 條真實可開啟 URL
+        # 來源連結：論點區塊至少需 2 條可開啟且直接相關的 URL
         "at_least_two_openable_links",
     }
 )
@@ -405,10 +404,8 @@ def _evaluate_argument(seg, *, argument_index: int, segment_index: int) -> dict[
     openable_links_count = getattr(seg, "openable_links_count", 0) or 0
     openable_links_status = getattr(seg, "openable_links_status", "none") or "none"
     openable_links_incomplete_reason = getattr(seg, "openable_links_incomplete_reason", "") or ""
-    at_least_two_openable = (
-        openable_links_count >= MIN_OPENABLE_LINKS
-        or openable_links_status == "sufficient"
-    )
+    # URL 數量足夠仍可能因與論點不直接相關而降級；status 是組裝層的完整判定。
+    at_least_two_openable = openable_links_status == "sufficient"
 
     checks = {
         "at_least_one_source": at_least_one,
@@ -1255,10 +1252,7 @@ def parse_binding_report(data: Any) -> dict[str, Any]:
                 f"arguments[{i}].openable_links_incomplete_reason 必須為 str"
             )
         # 可開啟連結與 checks 一致性
-        expected_at_least_two = (
-            openable_count >= MIN_OPENABLE_LINKS
-            or openable_status == "sufficient"
-        )
+        expected_at_least_two = openable_status == "sufficient"
         if checks.get("at_least_two_openable_links") is not expected_at_least_two:
             raise ValueError(
                 f"arguments[{i}].checks.at_least_two_openable_links 與 openable_links_count 不一致"
