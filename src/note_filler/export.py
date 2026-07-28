@@ -220,6 +220,78 @@ def _polaris_trace_lines(polaris: dict[str, Any]) -> list[str]:
     return lines
 
 
+def _source_comparison_rows(sources: list[Source]) -> list[dict]:
+    """來源比較表：依層級（A→D）與相關性（distance 遞增）排序。"""
+    sorted_srcs = sorted(
+        sources,
+        key=lambda s: ("ABCD".index(s.level) if s.level in "ABCD" else 99, s.distance),
+    )
+    return [
+        {
+            "id": s.id,
+            "level": s.level,
+            "title": s.title,
+            "url": s.url,
+            "doc_date": s.doc_date or s.fetched_date,
+            "distance": s.distance,
+            "content_summary": (s.content[:80] + "…") if len(s.content) > 80 else s.content,
+        }
+        for s in sorted_srcs
+    ]
+
+
+def _discrepancy_notes(sources: list[Source]) -> list[str]:
+    """來源差異分析：層級／日期／相關性差異。"""
+    if not sources:
+        return ["【待補來源】尚無可用來源"]
+    notes = []
+    levels = sorted({s.level for s in sources if s.level in "ABCD"})
+    if len(levels) > 1:
+        notes.append(f"來源層級不一致（{'/'.join(levels)}）")
+    dates = {s.doc_date or s.fetched_date for s in sources if s.doc_date or s.fetched_date}
+    if len(dates) > 1:
+        notes.append("來源日期不同")
+    dists = [s.distance for s in sources]
+    if len(dists) >= 2 and max(dists) - min(dists) > 0.2:
+        notes.append("來源相關性距離差距顯著")
+    return notes or ["來源一致，無顯著差異"]
+
+
+def _usage_conditions(sources: list[Source]) -> list[str]:
+    """適用條件：依層級與距離建議各來源用途。"""
+    if not sources:
+        return ["【待補來源】缺乏可用來源，待補充後再評估"]
+    sorted_srcs = sorted(
+        sources,
+        key=lambda s: ("ABCD".index(s.level) if s.level in "ABCD" else 99, s.distance),
+    )
+    return [
+        (
+            f"{s.title}（Level {s.level}，距離 {s.distance:.2f}）："
+            f"適合作為{'主要依據' if i == 0 else '補充比對'}"
+        )
+        for i, s in enumerate(sorted_srcs)
+    ]
+
+
+def _integrated_conclusion(sources: list[Source], functional_gap: str, user_value: str) -> str:
+    """可讀結論：說明何種情境採用哪個來源、何時判定為待補來源。"""
+    if not sources:
+        return "【待補來源】目前無可用來源，此論點需補齊相關資料後再行評估。"
+    best = max(
+        sources,
+        key=lambda s: ({"A": 4, "B": 3, "C": 2, "D": 1}.get(s.level, 0), -s.distance),
+    )
+    parts = [f"建議以 {best.title}（Level {best.level}）為主要引用來源"]
+    if len(sources) > 1:
+        others = [s for s in sources if s.id != best.id]
+        parts.append(f"並以 {'、'.join(s.title for s in others)} 交叉驗證")
+    if functional_gap:
+        parts.append(f"對應功能缺口：{functional_gap}")
+    parts.append("無可用來源時判定為【待補來源】")
+    return "。".join(parts) + "。"
+
+
 def to_json(doc: CorrectionDoc) -> dict:
     """序列化整份 CorrectionDoc；原文 immutable，僅讀不改。
 
@@ -335,6 +407,16 @@ def to_json(doc: CorrectionDoc) -> dict:
                 "angle_labels": list(getattr(seg, "angle_labels", None) or []),
                 "angle_key": getattr(seg, "angle_key", "") or "",
                 "angle_coverage": _seg_angle_coverage(seg, i),
+                "three_part_annotation": {
+                    "source_comparison": _source_comparison_rows(list(seg.sources)),
+                    "discrepancy_notes": _discrepancy_notes(list(seg.sources)),
+                    "usage_conditions": _usage_conditions(list(seg.sources)),
+                    "conclusion": _integrated_conclusion(
+                        list(seg.sources),
+                        getattr(seg, "functional_gap", ""),
+                        getattr(seg, "user_value", ""),
+                    ),
+                } if seg.type == "supplement" else None,
             }
             for i, seg in enumerate(doc.segments)
         ],
@@ -433,6 +515,18 @@ def to_markdown(doc: CorrectionDoc) -> str:
         argument_id = getattr(seg, "argument_id", "")
         if argument_id:
             body.append(f"> **論點ID**：{argument_id}")
+
+        # 三段式附註：來源差異／適用條件／可讀結論
+        srcs = list(seg.sources)
+        src_diff = " vs ".join(f"{s.id}（Level {s.level}）" for s in srcs) if srcs else "【待補來源】"
+        body.append(f"> **來源差異**：{src_diff}")
+        for note in _discrepancy_notes(srcs):
+            body.append(f"> **差異分析**：{note}")
+        for cond in _usage_conditions(srcs):
+            body.append(f"> **適用條件**：{cond}")
+        body.append(
+            f"> **結論**：{_integrated_conclusion(srcs, getattr(seg, 'functional_gap', ''), getattr(seg, 'user_value', ''))}"
+        )
 
     body.extend(original_traces)
 
@@ -571,6 +665,18 @@ def to_docx(doc: CorrectionDoc, path: str) -> None:
         argument_id = getattr(seg, "argument_id", "")
         if argument_id:
             out.add_paragraph(f"論點ID：{argument_id}")
+
+        # 三段式附註：來源差異／適用條件／可讀結論
+        srcs = list(seg.sources)
+        src_diff = " vs ".join(f"{s.id}（Level {s.level}）" for s in srcs) if srcs else "【待補來源】"
+        out.add_paragraph(f"來源差異：{src_diff}")
+        for note in _discrepancy_notes(srcs):
+            out.add_paragraph(f"差異分析：{note}")
+        for cond in _usage_conditions(srcs):
+            out.add_paragraph(f"適用條件：{cond}")
+        out.add_paragraph(
+            f"結論：{_integrated_conclusion(srcs, getattr(seg, 'functional_gap', ''), getattr(seg, 'user_value', ''))}"
+        )
 
     for trace in original_traces:
         out.add_paragraph(f"追溯：{trace}")

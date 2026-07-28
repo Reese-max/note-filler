@@ -404,6 +404,15 @@ class TestOutputConsistency:
                 continue
             if stripped.startswith("> **北極星追蹤**"):
                 continue
+            # Skip three-part annotation lines
+            if stripped.startswith("> **來源差異**"):
+                continue
+            if stripped.startswith("> **差異分析**"):
+                continue
+            if stripped.startswith("> **適用條件**"):
+                continue
+            if stripped.startswith("> **結論**"):
+                continue
             md_originals.append(stripped)
 
         # Original paragraphs from docx (first N paragraphs where N = original count)
@@ -436,6 +445,15 @@ class TestOutputConsistency:
             if stripped.startswith("北極星追蹤："):
                 continue
             if stripped.startswith("追溯："):
+                continue
+            # Skip three-part annotation lines
+            if stripped.startswith("來源差異："):
+                continue
+            if stripped.startswith("差異分析："):
+                continue
+            if stripped.startswith("適用條件："):
+                continue
+            if stripped.startswith("結論："):
                 continue
             docx_filtered.append(stripped)
         docx_originals = docx_filtered[:len(json_originals)]
