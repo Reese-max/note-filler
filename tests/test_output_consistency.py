@@ -405,7 +405,9 @@ class TestOutputConsistency:
             if stripped.startswith("> **北極星追蹤**"):
                 continue
             # Skip three-part annotation lines
-            if stripped.startswith("> **來源差異**"):
+            if stripped.startswith("> **來源比較**"):
+                continue
+            if stripped.startswith("> - "):
                 continue
             if stripped.startswith("> **差異分析**"):
                 continue
@@ -456,7 +458,9 @@ class TestOutputConsistency:
             if stripped.startswith("追溯："):
                 continue
             # Skip three-part annotation lines
-            if stripped.startswith("來源差異："):
+            if stripped.startswith("來源比較："):
+                continue
+            if stripped.startswith("  "):
                 continue
             if stripped.startswith("差異分析："):
                 continue

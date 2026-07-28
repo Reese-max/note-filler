@@ -809,9 +809,9 @@ def test_conflicting_arguments_final_product_has_annotations_links_and_immutable
     json_supplements = [segment for segment in data["segments"] if segment["type"] == "supplement"]
     assert all(segment["three_part_annotation"] is None for segment in data["segments"] if segment["type"] == "original")
     assert len([line for line in markdown.splitlines() if line.startswith("> 【補充】")]) == 2
-    assert markdown.count("> **來源差異**：") == 2
+    assert markdown.count("> **來源比較**：") == 2
     assert markdown.count("> **適用條件**：") == 4
-    assert sum(line.startswith("來源差異：") for line in docx_paragraphs) == 2
+    assert sum(line.startswith("來源比較：") for line in docx_paragraphs) == 2
     assert sum(line.startswith("適用條件：") for line in docx_paragraphs) == 4
 
     annotations = [segment["three_part_annotation"] for segment in json_supplements]

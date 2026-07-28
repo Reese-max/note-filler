@@ -593,11 +593,20 @@ def to_markdown(doc: CorrectionDoc) -> str:
         if argument_id:
             body.append(f"> **論點ID**：{argument_id}")
 
-        # 三段式附註：來源差異／適用條件／可讀結論
-        srcs = list(seg.sources)
+        # 三段式附註：來源比較／差異分析／適用條件／可讀結論
         annotation = _three_part_annotation(seg)
-        src_diff = " vs ".join(f"{s.id}（Level {s.level}）" for s in srcs) if srcs else "【待補來源】"
-        body.append(f"> **來源差異**：{src_diff}")
+        if annotation["source_comparison"]:
+            body.append("> **來源比較**：")
+            for row in annotation["source_comparison"]:
+                row_id = row.get("id", "?")
+                level = row.get("level", "?")
+                title = row.get("title", "?")
+                url = row.get("url") or "無URL"
+                distance = row.get("distance", 0.0)
+                summary = row.get("content_summary", "")
+                body.append(f"> - {row_id}（Level {level}）{title} | URL: {url} | 距離: {distance:.2f} | {summary}")
+        else:
+            body.append("> **來源比較**：【待補來源】")
         for note in annotation["discrepancy_notes"]:
             body.append(f"> **差異分析**：{note}")
         for cond in annotation["usage_conditions"]:
@@ -751,11 +760,20 @@ def to_docx(doc: CorrectionDoc, path: str) -> None:
         if argument_id:
             out.add_paragraph(f"論點ID：{argument_id}")
 
-        # 三段式附註：來源差異／適用條件／可讀結論
-        srcs = list(seg.sources)
+        # 三段式附註：來源比較／差異分析／適用條件／可讀結論
         annotation = _three_part_annotation(seg)
-        src_diff = " vs ".join(f"{s.id}（Level {s.level}）" for s in srcs) if srcs else "【待補來源】"
-        out.add_paragraph(f"來源差異：{src_diff}")
+        if annotation["source_comparison"]:
+            out.add_paragraph("來源比較：")
+            for row in annotation["source_comparison"]:
+                row_id = row.get("id", "?")
+                level = row.get("level", "?")
+                title = row.get("title", "?")
+                url = row.get("url") or "無URL"
+                distance = row.get("distance", 0.0)
+                summary = row.get("content_summary", "")
+                out.add_paragraph(f"  {row_id}（Level {level}）{title} | URL: {url} | 距離: {distance:.2f} | {summary}")
+        else:
+            out.add_paragraph("來源比較：【待補來源】")
         for note in annotation["discrepancy_notes"]:
             out.add_paragraph(f"差異分析：{note}")
         for cond in annotation["usage_conditions"]:
