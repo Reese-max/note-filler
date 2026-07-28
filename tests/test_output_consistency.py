@@ -413,6 +413,13 @@ class TestOutputConsistency:
                 continue
             if stripped.startswith("> **結論**"):
                 continue
+            # Skip extended readings lines
+            if stripped.startswith("> **延伸閱讀**"):
+                continue
+            if stripped.startswith("> **待補證原因**"):
+                continue
+            if stripped.startswith("> - ["):
+                continue
             md_originals.append(stripped)
 
         # Original paragraphs from docx (first N paragraphs where N = original count)
@@ -454,6 +461,13 @@ class TestOutputConsistency:
             if stripped.startswith("適用條件："):
                 continue
             if stripped.startswith("結論："):
+                continue
+            # Skip extended readings lines
+            if stripped.startswith("延伸閱讀："):
+                continue
+            if stripped.startswith("待補證原因："):
+                continue
+            if stripped.startswith("  ["):
                 continue
             docx_filtered.append(stripped)
         docx_originals = docx_filtered[:len(json_originals)]

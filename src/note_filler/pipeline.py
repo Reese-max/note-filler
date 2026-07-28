@@ -207,6 +207,9 @@ def run_pipeline(path, llm, twinkle, law):
                 source_ids=omitted_ids,
                 reason="not actually cited by generated supplement",
             )
+            # 補齊 omitted_source_ids：讓最終成品可輸出延伸閱讀
+            if not w.omitted_source_ids:
+                w.omitted_source_ids = list(omitted_ids)
         written[gap.question] = w
         validations[gap.question] = cross_validate(gap.question, used)  # T10(只驗 used)
 

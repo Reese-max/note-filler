@@ -102,6 +102,10 @@ REQUIRED_ARGUMENT_KEYS = frozenset(
         # 關聯知識：與同一 argument_id 綁定，明示決策品質／使用者理解
         "related_knowledge",
         "angle_coverage",
+        # 延伸閱讀：檢索到但未被引用的候選來源
+        "extended_readings",
+        "extended_readings_status",
+        "pending_evidence_reason",
     }
 ) | REQUIRED_ARGUMENT_ANGLE_KEYS
 REQUIRED_CHECK_KEYS = frozenset(
@@ -472,6 +476,9 @@ def _evaluate_argument(seg, *, argument_index: int, segment_index: int) -> dict[
         "user_value": user_value,
         "related_knowledge": related_knowledge,
         "angle_coverage": angle_coverage,
+        "extended_readings": list(getattr(seg, "extended_readings", None) or []),
+        "extended_readings_status": getattr(seg, "extended_readings_status", "none"),
+        "pending_evidence_reason": getattr(seg, "pending_evidence_reason", ""),
     }
 
 
@@ -926,6 +933,31 @@ def parse_binding_report(data: Any) -> dict[str, Any]:
             raise ValueError(f"arguments[{i}].user_value 必須為 str")
         if not isinstance(arg.get("related_knowledge"), str):
             raise ValueError(f"arguments[{i}].related_knowledge 必須為 str")
+        # 延伸閱讀欄位驗證
+        extended_readings = arg.get("extended_readings")
+        if not isinstance(extended_readings, list):
+            raise ValueError(f"arguments[{i}].extended_readings 必須為 list")
+        for j, er in enumerate(extended_readings):
+            where = f"arguments[{i}].extended_readings[{j}]"
+            if not isinstance(er, dict):
+                raise ValueError(f"{where} 必須為 dict")
+            for ek in ("source_id", "title", "level"):
+                if not isinstance(er.get(ek), str) or not er[ek].strip():
+                    raise ValueError(f"{where}.{ek} 必須為非空字串")
+        er_status = arg.get("extended_readings_status")
+        if er_status not in ("none", "available", "pending_evidence"):
+            raise ValueError(
+                f"arguments[{i}].extended_readings_status 非法: {er_status!r}"
+            )
+        if not isinstance(arg.get("pending_evidence_reason"), str):
+            raise ValueError(
+                f"arguments[{i}].pending_evidence_reason 必須為 str"
+            )
+        # 延伸閱讀與待補證一致性：pending_evidence 必有 reason
+        if er_status == "pending_evidence" and not arg["pending_evidence_reason"].strip():
+            raise ValueError(
+                f"arguments[{i}] extended_readings_status 為 pending_evidence 但 pending_evidence_reason 為空"
+            )
         expected_summary_match = arg["summary"] == arg["argument_text"]
         if checks["summary_matches_product"] is not expected_summary_match:
             raise ValueError(

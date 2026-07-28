@@ -679,7 +679,9 @@ class TestEndToEndFaultInjection:
         assert "error" not in receipt
         assert "✅" in captured.err
         assert "完成 1/1 檔。" in captured.err
-        assert "source-provider-fallback" not in delivered
+        # 來源不應出現在補充段正文，但允許出現在延伸閱讀附註區塊
+        supplement_body = delivered.split("延伸閱讀")[0] if "延伸閱讀" in delivered else delivered
+        assert "source-provider-fallback" not in supplement_body
         assert "provider-internal-token=secret" not in visible
         assert error_type not in visible
         assert "Traceback" not in visible

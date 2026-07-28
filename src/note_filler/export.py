@@ -240,6 +240,27 @@ def _source_comparison_rows(sources: list[Source]) -> list[dict]:
     ]
 
 
+def _extended_readings_block(seg) -> list[str]:
+    """延伸閱讀區塊：列出檢索到但未被引用的候選來源（附加區塊，不影響原稿）。"""
+    readings = list(getattr(seg, "extended_readings", None) or [])
+    status = getattr(seg, "extended_readings_status", "none")
+    reason = getattr(seg, "pending_evidence_reason", "")
+    lines: list[str] = []
+    if readings:
+        lines.append("> **延伸閱讀**：")
+        for r in readings:
+            level = r.get("level", "?")
+            title = r.get("title", "未知")
+            rid = r.get("source_id", "")
+            lines.append(f"> - [{rid}] Level {level} {title}")
+    if status == "pending_evidence" and reason:
+        lines.append(f"> **待補證原因**：{reason}")
+    elif status == "available" and not readings:
+        # 狀態為 available 但無候選 → 不應出現，防禦性跳過
+        pass
+    return lines
+
+
 def _discrepancy_notes(
     sources: list[Source], conflict_note: str | None = None
 ) -> list[str]:
@@ -457,6 +478,9 @@ def to_json(doc: CorrectionDoc) -> dict:
                 "three_part_annotation": _three_part_annotation(seg)
                 if seg.type == "supplement"
                 else None,
+                "extended_readings": list(getattr(seg, "extended_readings", None) or []),
+                "extended_readings_status": getattr(seg, "extended_readings_status", "none"),
+                "pending_evidence_reason": getattr(seg, "pending_evidence_reason", ""),
             }
             for i, seg in enumerate(doc.segments)
         ],
@@ -566,6 +590,9 @@ def to_markdown(doc: CorrectionDoc) -> str:
         for cond in annotation["usage_conditions"]:
             body.append(f"> **適用條件**：{cond}")
         body.append(f"> **結論**：{annotation['conclusion']}")
+
+        # 延伸閱讀區塊：附加於論點尾端，不影響原稿
+        body.extend(_extended_readings_block(seg))
 
     body.extend(original_traces)
 
@@ -715,6 +742,20 @@ def to_docx(doc: CorrectionDoc, path: str) -> None:
         for cond in annotation["usage_conditions"]:
             out.add_paragraph(f"適用條件：{cond}")
         out.add_paragraph(f"結論：{annotation['conclusion']}")
+
+        # 延伸閱讀區塊：附加於論點尾端，不影響原稿
+        readings = list(getattr(seg, "extended_readings", None) or [])
+        status = getattr(seg, "extended_readings_status", "none")
+        reason = getattr(seg, "pending_evidence_reason", "")
+        if readings:
+            out.add_paragraph("延伸閱讀：")
+            for r in readings:
+                level = r.get("level", "?")
+                title = r.get("title", "未知")
+                rid = r.get("source_id", "")
+                out.add_paragraph(f"  [{rid}] Level {level} {title}")
+        if status == "pending_evidence" and reason:
+            out.add_paragraph(f"待補證原因：{reason}")
 
     for trace in original_traces:
         out.add_paragraph(f"追溯：{trace}")

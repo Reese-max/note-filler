@@ -158,6 +158,10 @@ class Segment:
     valid_angle_count: int = 0
     deduped_angle_count: int = 0
     duplicate_angles: list[str] = field(default_factory=list)
+    # 延伸閱讀：檢索到但未被引用的來源（附加區塊，不影響原稿）
+    extended_readings: list[dict] = field(default_factory=list)
+    extended_readings_status: str = "none"  # "none" | "available" | "pending_evidence"
+    pending_evidence_reason: str = ""  # 為何此論點缺乏足夠來源
 
 
 @dataclass
@@ -318,6 +322,40 @@ def assemble_correction(doc, gaps, retrieved, written, validations) -> Correctio
             user_value=user_value,
         )
 
+        # 延伸閱讀：從 retrieved 中取出未被引用的來源
+        all_retrieved = retrieved.get(q, [])
+        omitted_ids = w.omitted_source_ids if w is not None else []
+        by_id_full = {s.id: s for s in all_retrieved}
+        extended_readings = [
+            {
+                "source_id": sid,
+                "title": by_id_full[sid].title,
+                "url": by_id_full[sid].url,
+                "level": by_id_full[sid].level,
+                "distance": by_id_full[sid].distance,
+            }
+            for sid in omitted_ids
+            if sid in by_id_full
+        ]
+        if extended_readings:
+            extended_readings_status = "available"
+        elif confidence == "pending_evidence":
+            extended_readings_status = "pending_evidence"
+        else:
+            extended_readings_status = "none"
+
+        # pending_evidence_reason：說明為何此論點缺乏足夠來源
+        pending_evidence_reason = ""
+        if confidence == "pending_evidence":
+            if not used_ids and not extended_readings:
+                pending_evidence_reason = "檢索無可用來源"
+            elif not used_ids and extended_readings:
+                pending_evidence_reason = "有候選來源但未被引用"
+            elif text.startswith("【待補證】"):
+                pending_evidence_reason = "來源與問題完全無關或無從作答"
+            else:
+                pending_evidence_reason = "引用來源不足或未通過驗證"
+
         segments.append(
             Segment(
                 type="supplement",
@@ -352,6 +390,9 @@ def assemble_correction(doc, gaps, retrieved, written, validations) -> Correctio
                 angle_type=angle_cov["angle_type"],
                 angle_labels=list(angle_cov["angle_labels"]),
                 angle_key=angle_cov["angle_key"],
+                extended_readings=extended_readings,
+                extended_readings_status=extended_readings_status,
+                pending_evidence_reason=pending_evidence_reason,
             )
         )
 

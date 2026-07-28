@@ -40,6 +40,7 @@ class WrittenSupplement:
     text: str
     used_source_ids: list  # list[str]
     citation_spans: list[dict] | None = None
+    omitted_source_ids: list[str] | None = None  # 檢索到但未被引用的來源 ID
 
     def __post_init__(self) -> None:
         # 既有呼叫端可只傳 text + used_source_ids；在寫作資料模型這一層解析，
@@ -48,6 +49,8 @@ class WrittenSupplement:
             self.citation_spans = _infer_citation_spans(
                 self.text, self.used_source_ids
             )
+        if self.omitted_source_ids is None:
+            self.omitted_source_ids = []
 
 
 def _span(source_id: str, match: re.Match) -> dict:
