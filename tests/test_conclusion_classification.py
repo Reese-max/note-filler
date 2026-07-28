@@ -67,6 +67,7 @@ def test_classification_covers_all_eight_allowlist_nodes() -> None:
     assert classified_ids <= allow_ids
     assert allow_ids - classified_ids == {
         "tests/test_domain.py::test_detect_domain_real_grok_representative_domains",
+        "tests/test_export.py::test_conflicting_arguments_final_product_reading_links_are_open",
         "tests/test_gap.py::test_detect_gaps_real_grok_semantic_matrix",
         "tests/test_write.py::test_write_supplement_real_grok_grounded_output",
     }

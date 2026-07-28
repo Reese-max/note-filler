@@ -1,11 +1,29 @@
 import json
+from pathlib import Path
+from urllib.parse import urlparse
 
 import pytest
 
 from note_filler.parse import Document, Paragraph
-from note_filler.correction import CorrectionDoc, Segment, build_related_knowledge
+from note_filler.correction import (
+    CorrectionDoc,
+    Segment,
+    assemble_correction,
+    build_related_knowledge,
+)
+from note_filler.gap import Gap
+from note_filler.knowledge.law_citation_check import check_law_citations
+from note_filler.knowledge.law_lookup import LawLookup
 from note_filler.retrieve.models import Source
 from note_filler.export import to_docx, to_json, to_markdown, _calculate_polaris_for_doc
+from note_filler.verify import cross_validate
+from note_filler.write import WrittenSupplement
+
+
+_REAL_READING_URLS = (
+    "https://law.moj.gov.tw/LawClass/LawSingle.aspx?pcode=A0030055&flno=24",
+    "https://law.moj.gov.tw/LawClass/LawSingle.aspx?pcode=A0030154&flno=112",
+)
 
 
 def _sample_doc() -> CorrectionDoc:
@@ -684,3 +702,147 @@ class TestPolarisMetricsIntegration:
         ] if polaris[key]["passes_threshold"])
         
         assert polaris["core_metrics_pass_count"] == pass_count
+
+
+def _conflicting_arguments_product():
+    def source(source_id, title, url, content, distance):
+        return Source(
+            source_id, title, url, "A", content, "2026-07-28", None, distance
+        )
+
+    original_texts = (
+        "代理與反訴的適用範圍仍待補充。",
+        "原稿中的空白  與標點，必須逐字保留。",
+    )
+    original = Document(
+        source_path="fixtures/conflicting-arguments.txt",
+        paragraphs=tuple(Paragraph(i, text) for i, text in enumerate(original_texts)),
+        full_text="\n\n".join(original_texts),
+    )
+    cases = (
+        (
+            Gap("行政程序代理得否委任？", "missing", "原稿未區分代理的一般原則與限制"),
+            (
+                source(
+                    "apa-24-general",
+                    "行政程序法第24條一般原則",
+                    _REAL_READING_URLS[0],
+                    "當事人得委任代理人。",
+                    0.01,
+                ),
+                source(
+                    "apa-24-limit",
+                    "行政程序法第24條授權限制",
+                    _REAL_READING_URLS[0],
+                    "依法規或行政程序之性質不得授權者，不得為之。",
+                    0.02,
+                ),
+            ),
+            "行政程序法第24條原則上允許當事人委任代理人，但依法規或程序性質不得授權時不得為之。[^1][^2]",
+        ),
+        (
+            Gap("行政訴訟被告得否提起反訴？", "missing", "原稿未區分反訴的一般原則與限制"),
+            (
+                source(
+                    "aaj-112-general",
+                    "行政訴訟法第112條一般原則",
+                    _REAL_READING_URLS[1],
+                    "被告於言詞辯論終結前，得在本訴繫屬之行政法院提起反訴。",
+                    0.01,
+                ),
+                source(
+                    "aaj-112-limit",
+                    "行政訴訟法第112條反訴限制",
+                    _REAL_READING_URLS[1],
+                    "對於撤銷訴訟及課予義務訴訟，不得提起反訴。",
+                    0.02,
+                ),
+            ),
+            "行政訴訟法第112條原則上允許被告於言詞辯論終結前提起反訴，但撤銷訴訟及課予義務訴訟不得提起反訴。[^1][^2]",
+        ),
+    )
+    gaps = [case[0] for case in cases]
+    retrieved = {gap.question: list(sources) for gap, sources, _ in cases}
+    written = {
+        gap.question: WrittenSupplement(text, [source.id for source in sources])
+        for gap, sources, text in cases
+    }
+    validations = {
+        gap.question: cross_validate(gap.question, list(sources))
+        for gap, sources, _ in cases
+    }
+    return (
+        assemble_correction(original, gaps, retrieved, written, validations),
+        original_texts,
+        validations,
+    )
+
+
+def test_conflicting_arguments_final_product_has_annotations_links_and_immutable_original(
+    tmp_path,
+):
+    product, original_texts, validations = _conflicting_arguments_product()
+    supplements = [segment for segment in product.segments if segment.type == "supplement"]
+
+    assert len(validations) == len(supplements) == 2
+    assert all(validation.conflict for validation in validations.values())
+    assert all("得/不得" in segment.conflict_note for segment in supplements)
+    assert all(segment.confidence == "verified" for segment in supplements)
+
+    law_db = Path(__file__).resolve().parents[1] / "data" / "law_index.db"
+    assert law_db.is_file()
+    law = LawLookup(law_db)
+    assert all(check_law_citations(segment.text, law) == [] for segment in supplements)
+
+    data = to_json(product)
+    markdown = to_markdown(product)
+    docx_path = tmp_path / "conflicting-arguments.docx"
+    to_docx(product, str(docx_path))
+    from docx import Document as DocxDocument
+
+    docx_paragraphs = [paragraph.text for paragraph in DocxDocument(docx_path).paragraphs]
+    json_originals = [segment["text"] for segment in data["segments"] if segment["type"] == "original"]
+    assert json_originals == list(original_texts)
+    assert [line for line in markdown.splitlines() if line in original_texts] == list(original_texts)
+    assert docx_paragraphs[: len(original_texts)] == list(original_texts)
+
+    json_supplements = [segment for segment in data["segments"] if segment["type"] == "supplement"]
+    assert all(segment["three_part_annotation"] is None for segment in data["segments"] if segment["type"] == "original")
+    assert len([line for line in markdown.splitlines() if line.startswith("> 【補充】")]) == 2
+    assert markdown.count("> **來源差異**：") == 2
+    assert markdown.count("> **適用條件**：") == 4
+    assert sum(line.startswith("來源差異：") for line in docx_paragraphs) == 2
+    assert sum(line.startswith("適用條件：") for line in docx_paragraphs) == 4
+
+    annotations = [segment["three_part_annotation"] for segment in json_supplements]
+    assert all(annotation["discrepancy_notes"] for annotation in annotations)
+    assert all(len(annotation["usage_conditions"]) == 2 for annotation in annotations)
+    assert all(annotation["conclusion"] for annotation in annotations)
+    links = {
+        row["url"]
+        for annotation in annotations
+        for row in annotation["source_comparison"]
+    }
+    assert links == set(_REAL_READING_URLS)
+    assert 2 <= len(links) <= 3
+    assert all(urlparse(url).scheme == "https" and urlparse(url).netloc == "law.moj.gov.tw" for url in links)
+    assert all(url in markdown and any(url in line for line in docx_paragraphs) for url in links)
+
+
+@pytest.mark.integration
+def test_conflicting_arguments_final_product_reading_links_are_open():
+    import urllib.request
+
+    product, _, _ = _conflicting_arguments_product()
+    links = {
+        source.url
+        for segment in product.segments
+        if segment.type == "supplement"
+        for source in segment.sources
+    }
+    assert links == set(_REAL_READING_URLS)
+    for url in links:
+        request = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+        with urllib.request.urlopen(request, timeout=15) as response:
+            assert 200 <= response.status < 400
+            assert response.read(1)

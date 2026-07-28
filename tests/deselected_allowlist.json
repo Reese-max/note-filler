@@ -451,6 +451,34 @@
         "limitation": "需 grok proxy (:8318) 可用"
       }
     ]
+  },
+  {
+    "test_id": "tests/test_export.py::test_conflicting_arguments_final_product_reading_links_are_open",
+    "marker": "integration",
+    "decision": "acceptable_unexecuted",
+    "collection_reason": "deselected by -m 'not integration'",
+    "exclusion_reason": "預設 -m 'not integration' 排除；即時開啟檢查依賴外部法務部網站與網路可用性，離線驗收已鎖定同一組官方 HTTPS 連結及完整成品契約",
+    "exclusion_evidence": [
+      {"source": "pyproject.toml:32", "anchor": "-m 'not integration'", "claim": "預設集合排除 integration marker"},
+      {"source": "tests/test_export.py:832", "anchor": "@pytest.mark.integration", "claim": "即時連結開啟檢查標記為 integration"}
+    ],
+    "covered_function": "note_filler.export — 來源衝突成品內延伸閱讀連結的即時 HTTP 可開啟性",
+    "substitute_tests": [
+      "tests/test_export.py::test_conflicting_arguments_final_product_has_annotations_links_and_immutable_original"
+    ],
+    "substitute_evidence": [
+      {"test_id": "tests/test_export.py::test_conflicting_arguments_final_product_has_annotations_links_and_immutable_original", "source": "tests/test_export.py:826", "anchor": "assert links == set(_REAL_READING_URLS)", "claim": "離線正向驗收鎖定兩組衝突、2 至 3 條官方 HTTPS 連結、差異與適用條件、附加區塊及原稿逐字不變"}
+    ],
+    "coverage_gap": "法務部網站當下可用性與外部網路連通性仍須 integration 執行",
+    "gap_mitigation_evidence": [
+      {
+        "process": "本機或 CI 有外網時，以 -m integration 單跑即時連結驗收",
+        "source": "tests/test_export.py:833",
+        "anchor": "test_conflicting_arguments_final_product_reading_links_are_open",
+        "scope": "逐一 GET 成品引用的兩條法務部官方連結並要求 HTTP 2xx 或 3xx 與非空回應",
+        "limitation": "外部網站維護或網路中斷時無法代表本地輸出邏輯回歸"
+      }
+    ]
   }
 ]
 
