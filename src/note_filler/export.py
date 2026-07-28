@@ -241,18 +241,29 @@ def _source_comparison_rows(sources: list[Source]) -> list[dict]:
 
 
 def _extended_readings_block(seg) -> list[str]:
-    """延伸閱讀區塊：列出檢索到但未被引用的候選來源（附加區塊，不影響原稿）。"""
+    """延伸閱讀區塊：依優先級規則列出候選來源（Level A→D，同層級按 distance 遞增）。"""
     readings = list(getattr(seg, "extended_readings", None) or [])
     status = getattr(seg, "extended_readings_status", "none")
     reason = getattr(seg, "pending_evidence_reason", "")
     lines: list[str] = []
-    if readings:
+    
+    # 依優先級排序延伸閱讀：Level A > B > C > D，同層級按 distance 遞增
+    def reading_priority_key(r):
+        level_order = {"A": 0, "B": 1, "C": 2, "D": 3}
+        level_priority = level_order.get(r.get("level", "?"), 99)
+        distance = r.get("distance", 1.0)
+        return (level_priority, distance)
+    
+    sorted_readings = sorted(readings, key=reading_priority_key)
+    
+    if sorted_readings:
         lines.append("> **延伸閱讀**：")
-        for r in readings:
+        for r in sorted_readings:
             level = r.get("level", "?")
             title = r.get("title", "未知")
             rid = r.get("source_id", "")
-            lines.append(f"> - [{rid}] Level {level} {title}")
+            distance = r.get("distance", 0.0)
+            lines.append(f"> - [{rid}] Level {level} {title} (相關性: {distance:.2f})")
     if reason:
         # pending_evidence 或 available 但未被引用：一律輸出待補證原因
         lines.append(f"> **待補證原因**：{reason}")
@@ -756,17 +767,28 @@ def to_docx(doc: CorrectionDoc, path: str) -> None:
             incomplete_reason = getattr(seg, "openable_links_incomplete_reason", "")
             out.add_paragraph(f"【待補來源】可開啟連結不足——{incomplete_reason}")
 
-        # 延伸閱讀區塊：附加於論點尾端，不影響原稿
+        # 延伸閱讀區塊：依優先級規則列出（Level A→D，同層級按 distance 遞增）
         readings = list(getattr(seg, "extended_readings", None) or [])
         status = getattr(seg, "extended_readings_status", "none")
         reason = getattr(seg, "pending_evidence_reason", "")
-        if readings:
+        
+        # 依優先級排序延伸閱讀
+        def reading_priority_key(r):
+            level_order = {"A": 0, "B": 1, "C": 2, "D": 3}
+            level_priority = level_order.get(r.get("level", "?"), 99)
+            distance = r.get("distance", 1.0)
+            return (level_priority, distance)
+        
+        sorted_readings = sorted(readings, key=reading_priority_key)
+        
+        if sorted_readings:
             out.add_paragraph("延伸閱讀：")
-            for r in readings:
+            for r in sorted_readings:
                 level = r.get("level", "?")
                 title = r.get("title", "未知")
                 rid = r.get("source_id", "")
-                out.add_paragraph(f"  [{rid}] Level {level} {title}")
+                distance = r.get("distance", 0.0)
+                out.add_paragraph(f"  [{rid}] Level {level} {title} (相關性: {distance:.2f})")
         if reason:
             out.add_paragraph(f"待補證原因：{reason}")
 

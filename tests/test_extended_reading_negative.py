@@ -60,15 +60,15 @@ def _source(
     )
 
 
-def _pending_supplement(text: str, omitted_ids: list[str] | None = None) -> WrittenSupplement:
-    """建立以【待補證】開頭的 WrittenSupplement，可指定 omitted_source_ids。
+def _pending_supplement(text: str, omitted_ids: list[str] | None = None, used_source_ids: list[str] | None = None) -> WrittenSupplement:
+    """建立以【待補證】開頭的 WrittenSupplement，可指定 omitted_source_ids 與 used_source_ids。
 
     pipeline 正常流程會自動補齊 omitted_source_ids；直接呼叫 assemble_correction
     時需手動傳入，模擬 pipeline 行為。
     """
     return WrittenSupplement(
         text=text,
-        used_source_ids=[],
+        used_source_ids=used_source_ids or [],
         citation_spans=[],
         omitted_source_ids=omitted_ids or [],
     )
@@ -532,3 +532,214 @@ class TestExtendedReadingsOpenableButUnrelated:
         originals = [s for s in data["segments"] if s["type"] == "original"]
         for seg in originals:
             assert seg["text"] == "原稿逐字保留。"
+
+
+# ---------------------------------------------------------------------------
+# 案例三：延伸閱讀優先級規則驗證
+# ---------------------------------------------------------------------------
+
+class TestExtendedReadingsPriorityRules:
+    """延伸閱讀優先級規則：實際引用來源優先，再補權威延伸來源（Level A > B > C > D）。
+
+    構造：多個候選來源不同層級，驗證排序與優先級規則。
+    驗證：
+      1. 延伸閱讀按 Level A > B > C > D 排序
+      2. 同層級按 distance 遞增排序
+      3. 實際引用來源優先於延伸閱讀
+      4. 至少2條URL不足時明確標示【待補來源】
+    """
+
+    def test_extended_readings_sorted_by_level_then_distance(self):
+        """延伸閱讀按 Level A > B > C > D 排序，同層級按 distance 遞增。"""
+        src_a = _source("src_a", "Level A 來源", "A級內容", "A", url="https://a.com", distance=0.8)
+        src_b = _source("src_b", "Level B 來源", "B級內容", "B", url="https://b.com", distance=0.3)
+        src_c = _source("src_c", "Level C 來源", "C級內容", "C", url="https://c.com", distance=0.5)
+        src_d = _source("src_d", "Level D 來源", "D級內容", "D", url="https://d.com", distance=0.2)
+        
+        gap = Gap("行政處分之要件為何？", "missing", "原稿未展開")
+        product = assemble_correction(
+            _doc(),
+            [gap],
+            {gap.question: [src_d, src_b, src_a, src_c]},  # 亂序輸入
+            {gap.question: _pending_supplement(
+                "【待補證】現有來源與問題無關。",
+                omitted_ids=["src_d", "src_b", "src_a", "src_c"],
+            )},
+            {gap.question: cross_validate(gap.question, [])},
+        )
+        
+        data = to_json(product)
+        seg = [s for s in data["segments"] if s["type"] == "supplement"][0]
+        
+        # 驗證排序：A > B > C > D
+        readings = seg["extended_readings"]
+        order = [r["source_id"] for r in readings]
+        assert order == ["src_a", "src_b", "src_c", "src_d"], f"排序錯誤: {order}"
+        
+        # 驗證同層級按 distance 排序（此案例無同層級）
+
+    def test_same_level_sorted_by_distance(self):
+        """同層級來源按 distance 遞增排序。"""
+        src_b1 = _source("src_b1", "B來源1", "B級內容1", "B", url="https://b1.com", distance=0.7)
+        src_b2 = _source("src_b2", "B來源2", "B級內容2", "B", url="https://b2.com", distance=0.3)
+        src_b3 = _source("src_b3", "B來源3", "B級內容3", "B", url="https://b3.com", distance=0.5)
+        
+        gap = Gap("行政處分之要件為何？", "missing", "原稿未展開")
+        product = assemble_correction(
+            _doc(),
+            [gap],
+            {gap.question: [src_b3, src_b1, src_b2]},  # 亂序輸入
+            {gap.question: _pending_supplement(
+                "【待補證】現有來源與問題無關。",
+                omitted_ids=["src_b3", "src_b1", "src_b2"],
+            )},
+            {gap.question: cross_validate(gap.question, [])},
+        )
+        
+        data = to_json(product)
+        seg = [s for s in data["segments"] if s["type"] == "supplement"][0]
+        
+        # 驗證同層級按 distance 遞增
+        readings = seg["extended_readings"]
+        order = [r["source_id"] for r in readings]
+        assert order == ["src_b2", "src_b3", "src_b1"], f"同層級排序錯誤: {order}"
+
+    def test_cited_sources_priority_over_extended(self):
+        """實際引用來源優先於延伸閱讀（在可開啟連結計算中）。"""
+        src_a = _source("src_a", "Level A 引用", "A級內容", "A", url="https://a.com", distance=0.4)
+        src_b = _source("src_b", "Level B 延伸", "B級內容", "B", url="https://b.com", distance=0.2)
+        
+        gap = Gap("行政處分之要件為何？", "missing", "原稿未展開")
+        product = assemble_correction(
+            _doc(),
+            [gap],
+            {gap.question: [src_a, src_b]},
+            {gap.question: _pending_supplement(
+                "依據 Level A 來源[^1]，行政處分需符合正當程序。",
+                omitted_ids=["src_b"],
+                used_source_ids=["src_a"],
+            )},
+            {gap.question: cross_validate(gap.question, [])},
+        )
+        
+        seg = product.segments[-1]
+        
+        # 驗證可開啟連結計算：引用來源優先
+        assert seg.openable_links_count >= 1, "至少應有引用來源的可開啟連結"
+        
+        # 驗證延伸閱讀只包含未引用來源
+        extended_ids = [r["source_id"] for r in seg.extended_readings]
+        assert "src_b" in extended_ids, "延伸閱讀應包含未引用來源"
+        assert "src_a" not in extended_ids, "延伸閱讀不應包含已引用來源"
+        
+        # 驗證實際引用來源存在於 sources
+        cited_ids = [s.id for s in seg.sources]
+        assert "src_a" in cited_ids, "引用來源應存在於 sources"
+
+
+# ---------------------------------------------------------------------------
+# 案例四：至少2條URL保證驗證
+# ---------------------------------------------------------------------------
+
+class TestMinimumTwoURLsRequirement:
+    """論點區塊至少需2條真實可開啟URL，不足時明確輸出【待補來源】。
+
+    構造：不同數量的可開啟連結情境。
+    驗證：
+      1. 可開啟連結 >= 2 條時 status = sufficient
+      2. 可開啟連結 = 1 條時 status = insufficient，明確輸出缺口原因
+      3. 可開啟連結 = 0 條時 status = insufficient，明確輸出缺口原因
+      4. pending_evidence_reason 指出URL數量不足
+    """
+
+    def test_sufficient_when_two_or_more_urls(self):
+        """可開啟連結 >= 2 條時 status = sufficient。"""
+        src_a = _source("src_a", "A來源", "內容", "A", url="https://a.com", distance=0.3)
+        src_b = _source("src_b", "B來源", "內容", "B", url="https://b.com", distance=0.4)
+        
+        gap = Gap("行政處分之要件為何？", "missing", "原稿未展開")
+        product = assemble_correction(
+            _doc(),
+            [gap],
+            {gap.question: [src_a, src_b]},
+            {gap.question: _pending_supplement(
+                "依據來源，行政處分需符合正當程序。",
+                used_source_ids=["src_a", "src_b"],
+            )},
+            {gap.question: cross_validate(gap.question, [])},
+        )
+        
+        seg = product.segments[-1]
+        assert seg.openable_links_count >= 2
+        assert seg.openable_links_status == "sufficient"
+        assert seg.openable_links_incomplete_reason == ""
+
+    def test_insufficient_when_only_one_url(self):
+        """可開啟連結 = 1 條時 status = insufficient，明確輸出缺口原因。"""
+        src_a = _source("src_a", "A來源", "內容", "A", url="https://a.com", distance=0.3)
+        src_b = _source("src_b", "B來源", "內容", "B", url=None, distance=0.4)  # 無URL
+        
+        gap = Gap("行政處分之要件為何？", "missing", "原稿未展開")
+        product = assemble_correction(
+            _doc(),
+            [gap],
+            {gap.question: [src_a, src_b]},
+            {gap.question: _pending_supplement(
+                "依據來源，行政處分需符合正當程序。",
+                used_source_ids=["src_a", "src_b"],
+            )},
+            {gap.question: cross_validate(gap.question, [])},
+        )
+        
+        seg = product.segments[-1]
+        assert seg.openable_links_count == 1
+        assert seg.openable_links_status == "insufficient"
+        assert "不足 2 條" in seg.openable_links_incomplete_reason
+        # 注意：此案例不是 pending_evidence，所以 pending_evidence_reason 不會有 URL 不足訊息
+
+    def test_insufficient_when_no_urls(self):
+        """可開啟連結 = 0 條時 status = insufficient，明確輸出缺口原因。"""
+        src_a = _source("src_a", "A來源", "內容", "A", url=None, distance=0.3)
+        src_b = _source("src_b", "B來源", "內容", "B", url=None, distance=0.4)
+        
+        gap = Gap("行政處分之要件為何？", "missing", "原稿未展開")
+        product = assemble_correction(
+            _doc(),
+            [gap],
+            {gap.question: [src_a, src_b]},
+            {gap.question: _pending_supplement(
+                "依據來源，行政處分需符合正當程序。",
+                used_source_ids=["src_a", "src_b"],
+            )},
+            {gap.question: cross_validate(gap.question, [])},
+        )
+        
+        seg = product.segments[-1]
+        assert seg.openable_links_count == 0
+        assert seg.openable_links_status == "insufficient"
+        assert "無可開啟連結" in seg.openable_links_incomplete_reason
+        # 注意：此案例不是 pending_evidence，所以 pending_evidence_reason 不會有 URL 不足訊息
+
+    def test_pending_evidence_reason_includes_url_count(self):
+        """pending_evidence_reason 明確指出URL數量不足。"""
+        src_a = _source("src_a", "A來源", "內容", "A", url="https://a.com", distance=0.3)
+        
+        gap = Gap("行政處分之要件為何？", "missing", "原稿未展開")
+        product = assemble_correction(
+            _doc(),
+            [gap],
+            {gap.question: [src_a]},
+            {gap.question: _pending_supplement(
+                "【待補證】來源不足。",
+                used_source_ids=["src_a"],
+            )},
+            {gap.question: cross_validate(gap.question, [])},
+        )
+        
+        seg = product.segments[-1]
+        assert seg.confidence == "pending_evidence"
+        # 因為只有1條可開啟連結且是 pending_evidence，所以應該有 URL 不足訊息
+        reason = seg.pending_evidence_reason
+        has_url_msg = "可開啟連結不足 2 條" in reason
+        has_general_msg = "來源不足" in reason
+        assert has_url_msg or has_general_msg

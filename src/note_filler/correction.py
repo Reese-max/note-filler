@@ -344,11 +344,38 @@ def assemble_correction(doc, gaps, retrieved, written, validations) -> Correctio
             user_value=user_value,
         )
 
-        # 延伸閱讀：從 retrieved 中取出未被引用的來源
+        # 延伸閱讀：依優先級規則收集（實際引用→權威延伸）
         all_retrieved = retrieved.get(q, [])
         omitted_ids = w.omitted_source_ids if w is not None else []
         by_id_full = {s.id: s for s in all_retrieved}
-        extended_readings = [
+        
+        # 優先級規則：先收集實際引用來源，再補權威延伸來源
+        # 權威排序：Level A > B > C > D，同層級按 distance 遞增
+        def source_priority_key(sid):
+            if sid not in by_id_full:
+                return (99, 1.0)  # 最低優先級
+            src = by_id_full[sid]
+            level_order = {"A": 0, "B": 1, "C": 2, "D": 3}
+            level_priority = level_order.get(src.level, 99)
+            return (level_priority, src.distance)
+        
+        # 收集所有候選來源（引用 + 延伸），按優先級排序
+        all_candidate_ids = list(used_ids) + list(omitted_ids)
+        # 去重但保持優先級（used_ids 優先）
+        seen = set()
+        prioritized_candidates = []
+        for sid in all_candidate_ids:
+            if sid in seen:
+                continue
+            seen.add(sid)
+            if sid in by_id_full:
+                prioritized_candidates.append(sid)
+        
+        # 按優先級排序
+        prioritized_candidates.sort(key=source_priority_key)
+        
+        # 延伸閱讀只包含未被引用的來源，並依優先級排序
+        extended_readings_unsorted = [
             {
                 "source_id": sid,
                 "title": by_id_full[sid].title,
@@ -359,6 +386,13 @@ def assemble_correction(doc, gaps, retrieved, written, validations) -> Correctio
             for sid in omitted_ids
             if sid in by_id_full
         ]
+        # 依優先級排序延伸閱讀：Level A > B > C > D，同層級按 distance 遞增
+        extended_readings = sorted(extended_readings_unsorted, key=lambda r: (
+            {"A": 0, "B": 1, "C": 2, "D": 3}.get(r.get("level", "?"), 99),
+            r.get("distance", 1.0)
+        ))
+        
+        # 狀態判定：依延伸閱讀是否存在與 confidence 狀態
         if extended_readings:
             extended_readings_status = "available"
         elif confidence == "pending_evidence":
@@ -366,19 +400,15 @@ def assemble_correction(doc, gaps, retrieved, written, validations) -> Correctio
         else:
             extended_readings_status = "none"
 
-        # pending_evidence_reason：說明為何此論點缺乏足夠來源
-        pending_evidence_reason = ""
-        if confidence == "pending_evidence":
-            if not used_ids and not extended_readings:
-                pending_evidence_reason = "檢索無可用來源"
-            elif not used_ids and extended_readings:
-                pending_evidence_reason = "有候選來源但未被引用"
-            elif text.startswith("【待補證】"):
-                pending_evidence_reason = "來源與問題完全無關或無從作答"
-            else:
-                pending_evidence_reason = "引用來源不足或未通過驗證"
-
-        # 可開啟連結：優先取實際引用來源的 URL，再補延伸閱讀
+        # 可開啟連結：依優先級規則收集（實際引用→權威延伸），保證至少2條URL
+        # 使用優先級排序的候選來源
+        prioritized_openable_urls = [
+            by_id_full[sid].url
+            for sid in prioritized_candidates
+            if sid in by_id_full and is_openable_url(by_id_full[sid].url)
+        ]
+        
+        # 區分引用與延伸來源（用於錯誤訊息）
         cited_urls = [
             by_id_full[sid].url
             for sid in used_ids
@@ -389,10 +419,11 @@ def assemble_correction(doc, gaps, retrieved, written, validations) -> Correctio
             for sid in omitted_ids
             if sid in by_id_full and is_openable_url(by_id_full[sid].url)
         ]
-        all_openable_urls = cited_urls + extended_urls
-        openable_links_count = len(all_openable_urls)
-        # 無任何候選來源時（pure pending），不強制要求可開啟連結
+        
+        openable_links_count = len(prioritized_openable_urls)
         has_any_candidates = bool(used_ids or omitted_ids)
+        
+        # 無任何候選來源時（pure pending），不強制要求可開啟連結
         if not has_any_candidates:
             openable_links_status = "sufficient"
             openable_links_incomplete_reason = ""
@@ -415,6 +446,23 @@ def assemble_correction(doc, gaps, retrieved, written, validations) -> Correctio
         else:
             openable_links_status = "insufficient"
             openable_links_incomplete_reason = "無可開啟連結（引用來源與延伸閱讀均無有效 URL）"
+
+        # pending_evidence_reason：說明為何此論點缺乏足夠來源（含優先級與URL數量）
+        pending_evidence_reason = ""
+        if confidence == "pending_evidence":
+            if not used_ids and not extended_readings:
+                pending_evidence_reason = "檢索無可用來源"
+            elif not used_ids and extended_readings:
+                pending_evidence_reason = "有候選來源但未被引用"
+            elif openable_links_count < MIN_OPENABLE_LINKS and has_any_candidates:
+                pending_evidence_reason = (
+                    f"可開啟連結不足 {MIN_OPENABLE_LINKS} 條"
+                    f"（實際 {openable_links_count} 條），無法滿足論點區塊最低要求"
+                )
+            elif text.startswith("【待補證】"):
+                pending_evidence_reason = "來源與問題完全無關或無從作答"
+            else:
+                pending_evidence_reason = "引用來源不足或未通過驗證"
 
         segments.append(
             Segment(
