@@ -253,11 +253,9 @@ def _extended_readings_block(seg) -> list[str]:
             title = r.get("title", "未知")
             rid = r.get("source_id", "")
             lines.append(f"> - [{rid}] Level {level} {title}")
-    if status == "pending_evidence" and reason:
+    if reason:
+        # pending_evidence 或 available 但未被引用：一律輸出待補證原因
         lines.append(f"> **待補證原因**：{reason}")
-    elif status == "available" and not readings:
-        # 狀態為 available 但無候選 → 不應出現，防禦性跳過
-        pass
     return lines
 
 
@@ -769,7 +767,7 @@ def to_docx(doc: CorrectionDoc, path: str) -> None:
                 title = r.get("title", "未知")
                 rid = r.get("source_id", "")
                 out.add_paragraph(f"  [{rid}] Level {level} {title}")
-        if status == "pending_evidence" and reason:
+        if reason:
             out.add_paragraph(f"待補證原因：{reason}")
 
     for trace in original_traces:

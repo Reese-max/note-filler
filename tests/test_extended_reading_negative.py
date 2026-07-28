@@ -381,6 +381,68 @@ class TestExtendedReadingsOpenableButUnrelated:
         assert any("延伸閱讀" in t for t in texts)
         assert any("web:unrelated" in t for t in texts)
 
+    def test_markdown_available_status_shows_reason_when_present(self):
+        """Markdown 輸出：status=available 但 reason 非空時，待補證原因仍應顯示。"""
+        unrelated_src = _source(
+            "web:unrelated",
+            "與行政處分無關的網頁",
+            "這是一篇關於氣候變遷的報導。",
+            "C",
+            url="https://example.com/climate",
+        )
+        gap = Gap("行政處分之要件為何？", "missing", "原稿未展開")
+        product = assemble_correction(
+            _doc(),
+            [gap],
+            {gap.question: [unrelated_src]},
+            {gap.question: _pending_supplement(
+                "【待補證】現有來源與問題無關。",
+                omitted_ids=["web:unrelated"],
+            )},
+            {gap.question: cross_validate(gap.question, [])},
+        )
+        seg = product.segments[-1]
+        assert seg.extended_readings_status == "available"
+        assert seg.pending_evidence_reason.strip()
+        md = to_markdown(product)
+        # available 狀態下延伸閱讀區塊存在
+        assert "> **延伸閱讀**" in md
+        assert "> - [web:unrelated]" in md
+        # 待補證原因仍應顯示（不再只限於 pending_evidence 狀態）
+        assert "> **待補證原因**：有候選來源但未被引用" in md
+
+    def test_docx_available_status_shows_reason_when_present(self):
+        """DOCX 輸出：status=available 但 reason 非空時，待補證原因仍應顯示。"""
+        unrelated_src = _source(
+            "web:unrelated",
+            "與行政處分無關的網頁",
+            "這是一篇關於氣候變遷的報導。",
+            "C",
+            url="https://example.com/climate",
+        )
+        gap = Gap("行政處分之要件為何？", "missing", "原稿未展開")
+        product = assemble_correction(
+            _doc(),
+            [gap],
+            {gap.question: [unrelated_src]},
+            {gap.question: _pending_supplement(
+                "【待補證】現有來源與問題無關。",
+                omitted_ids=["web:unrelated"],
+            )},
+            {gap.question: cross_validate(gap.question, [])},
+        )
+        with tempfile.NamedTemporaryFile(suffix=".docx", delete=False) as f:
+            out_path = f.name
+        to_docx(product, out_path)
+        out_doc = DocxDocument(out_path)
+        texts = [p.text for p in out_doc.paragraphs]
+        # available 狀態下延伸閱讀段落存在
+        assert any("延伸閱讀" in t for t in texts)
+        assert any("web:unrelated" in t for t in texts)
+        # 待補證原因仍應顯示
+        assert any("待補證原因" in t for t in texts)
+        assert any("有候選來源但未被引用" in t for t in texts)
+
     def test_pending_evidence_reason_points_to_uncited(self):
         """pending_evidence_reason 指出「有候選來源但未被引用」。"""
         unrelated_src = _source(
