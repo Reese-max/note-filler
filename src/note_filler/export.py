@@ -481,6 +481,9 @@ def to_json(doc: CorrectionDoc) -> dict:
                 "extended_readings": list(getattr(seg, "extended_readings", None) or []),
                 "extended_readings_status": getattr(seg, "extended_readings_status", "none"),
                 "pending_evidence_reason": getattr(seg, "pending_evidence_reason", ""),
+                "openable_links_count": getattr(seg, "openable_links_count", 0),
+                "openable_links_status": getattr(seg, "openable_links_status", "none"),
+                "openable_links_incomplete_reason": getattr(seg, "openable_links_incomplete_reason", ""),
             }
             for i, seg in enumerate(doc.segments)
         ],
@@ -590,6 +593,12 @@ def to_markdown(doc: CorrectionDoc) -> str:
         for cond in annotation["usage_conditions"]:
             body.append(f"> **適用條件**：{cond}")
         body.append(f"> **結論**：{annotation['conclusion']}")
+
+        # 可開啟連結不足時輸出【待補來源】標記
+        openable_status = getattr(seg, "openable_links_status", "none")
+        if openable_status == "insufficient":
+            incomplete_reason = getattr(seg, "openable_links_incomplete_reason", "")
+            body.append(f"> **【待補來源】**：可開啟連結不足——{incomplete_reason}")
 
         # 延伸閱讀區塊：附加於論點尾端，不影響原稿
         body.extend(_extended_readings_block(seg))
@@ -742,6 +751,12 @@ def to_docx(doc: CorrectionDoc, path: str) -> None:
         for cond in annotation["usage_conditions"]:
             out.add_paragraph(f"適用條件：{cond}")
         out.add_paragraph(f"結論：{annotation['conclusion']}")
+
+        # 可開啟連結不足時輸出【待補來源】標記
+        openable_status = getattr(seg, "openable_links_status", "none")
+        if openable_status == "insufficient":
+            incomplete_reason = getattr(seg, "openable_links_incomplete_reason", "")
+            out.add_paragraph(f"【待補來源】可開啟連結不足——{incomplete_reason}")
 
         # 延伸閱讀區塊：附加於論點尾端，不影響原稿
         readings = list(getattr(seg, "extended_readings", None) or [])

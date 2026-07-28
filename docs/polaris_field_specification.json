@@ -100,6 +100,38 @@
         "duplicate_ratio": {"type": "float", "default": 0.0},
         "coverage_ok": {"type": "bool", "default": false}
       }
+    },
+    "openable_links_count": {
+      "data_type": "int",
+      "source_location": "Segment.openable_links_count",
+      "binding_report_path": "arguments[].openable_links_count",
+      "generation_stage": "assemble_correction",
+      "default_value": 0,
+      "required_for_metrics": [],
+      "missing_data_handling": "validation_error",
+      "description": "論點區塊中真實可開啟連結（http/https）的總數，含引用來源與延伸閱讀",
+      "minimum_value": 0
+    },
+    "openable_links_status": {
+      "data_type": "string",
+      "source_location": "Segment.openable_links_status",
+      "binding_report_path": "arguments[].openable_links_status",
+      "generation_stage": "assemble_correction",
+      "default_value": "none",
+      "required_for_metrics": [],
+      "valid_values": ["none", "insufficient", "sufficient"],
+      "missing_data_handling": "validation_error",
+      "description": "可開啟連結充足性：sufficient（>=2 條或 pure pending）、insufficient（<2 條）"
+    },
+    "openable_links_incomplete_reason": {
+      "data_type": "string",
+      "source_location": "Segment.openable_links_incomplete_reason",
+      "binding_report_path": "arguments[].openable_links_incomplete_reason",
+      "generation_stage": "assemble_correction",
+      "default_value": "",
+      "required_for_metrics": [],
+      "missing_data_handling": "validation_error",
+      "description": "可開啟連結不足時的原因說明；sufficient 時必須為空"
     }
   },
   "metric_definitions": {

@@ -28,6 +28,7 @@ from note_filler.angle_coverage import (
     validate_argument_angle,
 )
 from note_filler.correction import (
+    MIN_OPENABLE_LINKS,
     build_related_knowledge,
     related_knowledge_explains_value,
     related_knowledge_matches_views,
@@ -106,6 +107,10 @@ REQUIRED_ARGUMENT_KEYS = frozenset(
         "extended_readings",
         "extended_readings_status",
         "pending_evidence_reason",
+        # 可開啟連結：論點區塊至少需 2 條真實可開啟 URL
+        "openable_links_count",
+        "openable_links_status",
+        "openable_links_incomplete_reason",
     }
 ) | REQUIRED_ARGUMENT_ANGLE_KEYS
 REQUIRED_CHECK_KEYS = frozenset(
@@ -133,6 +138,8 @@ REQUIRED_CHECK_KEYS = frozenset(
         "angle_functional_gap_present",
         "angle_user_value_present",
         "angle_question_present",
+        # 可開啟連結：論點區塊至少需 MIN_OPENABLE_LINKS 條真實可開啟 URL
+        "at_least_two_openable_links",
     }
 )
 REQUIRED_SUMMARY_KEYS = frozenset(
@@ -394,6 +401,15 @@ def _evaluate_argument(seg, *, argument_index: int, segment_index: int) -> dict[
 
     no_empty_fragments = _no_empty_fragments(seg)
 
+    # 可開啟連結數量（pure pending 時 status=sufficient 覆寫）
+    openable_links_count = getattr(seg, "openable_links_count", 0) or 0
+    openable_links_status = getattr(seg, "openable_links_status", "none") or "none"
+    openable_links_incomplete_reason = getattr(seg, "openable_links_incomplete_reason", "") or ""
+    at_least_two_openable = (
+        openable_links_count >= MIN_OPENABLE_LINKS
+        or openable_links_status == "sufficient"
+    )
+
     checks = {
         "at_least_one_source": at_least_one,
         "source_traceable": source_traceable,
@@ -413,6 +429,8 @@ def _evaluate_argument(seg, *, argument_index: int, segment_index: int) -> dict[
         "angle_functional_gap_present": angle_functional_gap_present,
         "angle_user_value_present": angle_user_value_present,
         "angle_question_present": angle_question_present,
+        # 可開啟連結
+        "at_least_two_openable_links": at_least_two_openable,
         # 跨論點量測完成後覆寫。
         "meets_angle_coverage_threshold": True,
     }
@@ -479,6 +497,9 @@ def _evaluate_argument(seg, *, argument_index: int, segment_index: int) -> dict[
         "extended_readings": list(getattr(seg, "extended_readings", None) or []),
         "extended_readings_status": getattr(seg, "extended_readings_status", "none"),
         "pending_evidence_reason": getattr(seg, "pending_evidence_reason", ""),
+        "openable_links_count": openable_links_count,
+        "openable_links_status": openable_links_status,
+        "openable_links_incomplete_reason": openable_links_incomplete_reason,
     }
 
 
@@ -1219,6 +1240,37 @@ def parse_binding_report(data: Any) -> dict[str, Any]:
                     raise ValueError(
                         f"arguments[{i}] angle_facet_complete 為 True 但 {sub_key} 未標 True"
                     )
+
+        # 可開啟連結欄位驗證（在既有驗證之後，避免遮蔽前置錯誤）
+        openable_count = arg.get("openable_links_count")
+        if not isinstance(openable_count, int) or openable_count < 0:
+            raise ValueError(f"arguments[{i}].openable_links_count 必須為非負整數")
+        openable_status = arg.get("openable_links_status")
+        if openable_status not in ("none", "insufficient", "sufficient"):
+            raise ValueError(
+                f"arguments[{i}].openable_links_status 非法: {openable_status!r}"
+            )
+        if not isinstance(arg.get("openable_links_incomplete_reason"), str):
+            raise ValueError(
+                f"arguments[{i}].openable_links_incomplete_reason 必須為 str"
+            )
+        # 可開啟連結與 checks 一致性
+        expected_at_least_two = (
+            openable_count >= MIN_OPENABLE_LINKS
+            or openable_status == "sufficient"
+        )
+        if checks.get("at_least_two_openable_links") is not expected_at_least_two:
+            raise ValueError(
+                f"arguments[{i}].checks.at_least_two_openable_links 與 openable_links_count 不一致"
+            )
+        if openable_status == "sufficient" and arg["openable_links_incomplete_reason"].strip():
+            raise ValueError(
+                f"arguments[{i}] openable_links_status 為 sufficient 但 incomplete_reason 非空"
+            )
+        if openable_status == "insufficient" and not arg["openable_links_incomplete_reason"].strip():
+            raise ValueError(
+                f"arguments[{i}] openable_links_status 為 insufficient 但 incomplete_reason 為空"
+            )
 
     _validate_traceability_fields(data, arguments)
 

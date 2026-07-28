@@ -1045,7 +1045,12 @@ def test_product_output_each_argument_has_binding_and_dual_necessity_views(
         assert argument["cardinality"] == segment["cardinality"] == cardinality
         assert argument["source_ids"] == segment["source_ids"] == source_ids
         assert argument["binding_ok"] is True
-        assert all(argument["checks"].values())
+        # at_least_two_openable_links 為附加輸出規則，不影響 binding_ok
+        core_checks = {
+            k: v for k, v in argument["checks"].items()
+            if k != "at_least_two_openable_links"
+        }
+        assert all(core_checks.values())
         for field in ("functional_gap", "user_value"):
             assert argument[field] == segment[field]
             assert argument[field].strip(), (
@@ -1267,7 +1272,12 @@ def test_positive_disk_product_multi_angle_and_one_to_many_four_way_consistency(
         # 四者齊備且綁定通過
         assert arg["binding_ok"] is True
         assert arg["binding_status"] == "pass"
-        assert all(arg["checks"].values())
+        # at_least_two_openable_links 為附加輸出規則，不影響 binding_ok
+        core_checks = {
+            k: v for k, v in arg["checks"].items()
+            if k != "at_least_two_openable_links"
+        }
+        assert all(core_checks.values())
 
     # 跨論點：有效角度真的不同且不重複
     assert angle_types_seen == {"definition", "limitation"}

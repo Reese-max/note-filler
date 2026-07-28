@@ -5,6 +5,7 @@ import logging
 import re
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Literal
+from urllib.parse import urlparse
 
 from note_filler.angle_coverage import (
     attach_relations,
@@ -23,8 +24,25 @@ if TYPE_CHECKING:                      # 僅型別提示,執行期零硬耦合(�
 
 logger = logging.getLogger(__name__)
 
+# 論點區塊最低可開啟連結數
+MIN_OPENABLE_LINKS = 2
+
 # gap 在 written 字典中找不到時的可追蹤佔位文;以【待補證】開頭以觸發 pending_evidence
 MISSING_WRITTEN_TEXT = "【待補證】寫作結果缺失：gap 問題不在 written 字典中"
+
+
+def is_openable_url(url: str | None) -> bool:
+    """判定 URL 是否為真實可開啟連結（http/https 協議、非空白、可解析）。"""
+    if not isinstance(url, str):
+        return False
+    s = url.strip()
+    if not s:
+        return False
+    try:
+        parsed = urlparse(s)
+    except Exception:
+        return False
+    return parsed.scheme in ("http", "https") and bool(parsed.netloc)
 
 # 關聯知識必須明示決策品質支撐與使用者理解補強（機器可驗收關鍵詞）
 RELATED_KNOWLEDGE_DECISION_MARKER = "支撐決策品質"
@@ -162,6 +180,10 @@ class Segment:
     extended_readings: list[dict] = field(default_factory=list)
     extended_readings_status: str = "none"  # "none" | "available" | "pending_evidence"
     pending_evidence_reason: str = ""  # 為何此論點缺乏足夠來源
+    # 可開啟連結：論點區塊至少需 2 條真實可開啟 URL
+    openable_links_count: int = 0
+    openable_links_status: str = "none"  # "none" | "insufficient" | "sufficient"
+    openable_links_incomplete_reason: str = ""  # 為何可開啟連結不足
 
 
 @dataclass
@@ -356,6 +378,44 @@ def assemble_correction(doc, gaps, retrieved, written, validations) -> Correctio
             else:
                 pending_evidence_reason = "引用來源不足或未通過驗證"
 
+        # 可開啟連結：優先取實際引用來源的 URL，再補延伸閱讀
+        cited_urls = [
+            by_id_full[sid].url
+            for sid in used_ids
+            if sid in by_id_full and is_openable_url(by_id_full[sid].url)
+        ]
+        extended_urls = [
+            by_id_full[sid].url
+            for sid in omitted_ids
+            if sid in by_id_full and is_openable_url(by_id_full[sid].url)
+        ]
+        all_openable_urls = cited_urls + extended_urls
+        openable_links_count = len(all_openable_urls)
+        # 無任何候選來源時（pure pending），不強制要求可開啟連結
+        has_any_candidates = bool(used_ids or omitted_ids)
+        if not has_any_candidates:
+            openable_links_status = "sufficient"
+            openable_links_incomplete_reason = ""
+        elif openable_links_count >= MIN_OPENABLE_LINKS:
+            openable_links_status = "sufficient"
+            openable_links_incomplete_reason = ""
+        elif openable_links_count > 0:
+            openable_links_status = "insufficient"
+            if cited_urls:
+                openable_links_incomplete_reason = (
+                    f"僅有 {openable_links_count} 條可開啟連結"
+                    f"（引用來源 {len(cited_urls)} 條、延伸閱讀 {len(extended_urls)} 條），"
+                    f"不足 {MIN_OPENABLE_LINKS} 條"
+                )
+            else:
+                openable_links_incomplete_reason = (
+                    f"引用來源無可開啟連結，延伸閱讀僅 {openable_links_count} 條，"
+                    f"不足 {MIN_OPENABLE_LINKS} 條"
+                )
+        else:
+            openable_links_status = "insufficient"
+            openable_links_incomplete_reason = "無可開啟連結（引用來源與延伸閱讀均無有效 URL）"
+
         segments.append(
             Segment(
                 type="supplement",
@@ -393,6 +453,9 @@ def assemble_correction(doc, gaps, retrieved, written, validations) -> Correctio
                 extended_readings=extended_readings,
                 extended_readings_status=extended_readings_status,
                 pending_evidence_reason=pending_evidence_reason,
+                openable_links_count=openable_links_count,
+                openable_links_status=openable_links_status,
+                openable_links_incomplete_reason=openable_links_incomplete_reason,
             )
         )
 
