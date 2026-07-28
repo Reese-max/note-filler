@@ -240,11 +240,13 @@ def _source_comparison_rows(sources: list[Source]) -> list[dict]:
     ]
 
 
-def _discrepancy_notes(sources: list[Source]) -> list[str]:
+def _discrepancy_notes(
+    sources: list[Source], conflict_note: str | None = None
+) -> list[str]:
     """來源差異分析：層級／日期／相關性差異。"""
     if not sources:
         return ["【待補來源】尚無可用來源"]
-    notes = []
+    notes = [f"來源衝突：{conflict_note}"] if conflict_note else []
     levels = sorted({s.level for s in sources if s.level in "ABCD"})
     if len(levels) > 1:
         notes.append(f"來源層級不一致（{'/'.join(levels)}）")
@@ -257,10 +259,22 @@ def _discrepancy_notes(sources: list[Source]) -> list[str]:
     return notes or ["來源一致，無顯著差異"]
 
 
-def _usage_conditions(sources: list[Source]) -> list[str]:
+def _usage_conditions(
+    sources: list[Source],
+    *,
+    pending_evidence: bool = False,
+    unresolved_conflict: bool = False,
+) -> list[str]:
     """適用條件：依層級與距離建議各來源用途。"""
     if not sources:
         return ["【待補來源】缺乏可用來源，待補充後再評估"]
+    if unresolved_conflict:
+        return [
+            f"{source.title}：【待補來源】來源互相衝突，現有資料無法判定適用條件"
+            for source in sources
+        ]
+    if pending_evidence:
+        return ["【待補來源】現有來源不足以支持此論點，待補合格來源後再評估"]
     sorted_srcs = sorted(
         sources,
         key=lambda s: ("ABCD".index(s.level) if s.level in "ABCD" else 99, s.distance),
@@ -274,10 +288,21 @@ def _usage_conditions(sources: list[Source]) -> list[str]:
     ]
 
 
-def _integrated_conclusion(sources: list[Source], functional_gap: str, user_value: str) -> str:
+def _integrated_conclusion(
+    sources: list[Source],
+    functional_gap: str,
+    user_value: str,
+    *,
+    pending_evidence: bool = False,
+    unresolved_conflict: bool = False,
+) -> str:
     """可讀結論：說明何種情境採用哪個來源、何時判定為待補來源。"""
     if not sources:
         return "【待補來源】目前無可用來源，此論點需補齊相關資料後再行評估。"
+    if unresolved_conflict:
+        return "【待補來源】現有來源互相衝突且適用條件未明；保留各來源，不合併為單一結論。"
+    if pending_evidence:
+        return "【待補來源】現有來源不足以支持此論點，需補齊合格來源後再行評估。"
     best = max(
         sources,
         key=lambda s: ({"A": 4, "B": 3, "C": 2, "D": 1}.get(s.level, 0), -s.distance),
@@ -290,6 +315,29 @@ def _integrated_conclusion(sources: list[Source], functional_gap: str, user_valu
         parts.append(f"對應功能缺口：{functional_gap}")
     parts.append("無可用來源時判定為【待補來源】")
     return "。".join(parts) + "。"
+
+
+def _three_part_annotation(seg) -> dict:
+    """建立三種匯出格式共用的保守來源附註。"""
+    sources = list(seg.sources)
+    conflict_note = getattr(seg, "conflict_note", None)
+    pending_evidence = seg.confidence == "pending_evidence"
+    return {
+        "source_comparison": _source_comparison_rows(sources),
+        "discrepancy_notes": _discrepancy_notes(sources, conflict_note),
+        "usage_conditions": _usage_conditions(
+            sources,
+            pending_evidence=pending_evidence,
+            unresolved_conflict=bool(conflict_note),
+        ),
+        "conclusion": _integrated_conclusion(
+            sources,
+            getattr(seg, "functional_gap", ""),
+            getattr(seg, "user_value", ""),
+            pending_evidence=pending_evidence,
+            unresolved_conflict=bool(conflict_note),
+        ),
+    }
 
 
 def to_json(doc: CorrectionDoc) -> dict:
@@ -407,16 +455,9 @@ def to_json(doc: CorrectionDoc) -> dict:
                 "angle_labels": list(getattr(seg, "angle_labels", None) or []),
                 "angle_key": getattr(seg, "angle_key", "") or "",
                 "angle_coverage": _seg_angle_coverage(seg, i),
-                "three_part_annotation": {
-                    "source_comparison": _source_comparison_rows(list(seg.sources)),
-                    "discrepancy_notes": _discrepancy_notes(list(seg.sources)),
-                    "usage_conditions": _usage_conditions(list(seg.sources)),
-                    "conclusion": _integrated_conclusion(
-                        list(seg.sources),
-                        getattr(seg, "functional_gap", ""),
-                        getattr(seg, "user_value", ""),
-                    ),
-                } if seg.type == "supplement" else None,
+                "three_part_annotation": _three_part_annotation(seg)
+                if seg.type == "supplement"
+                else None,
             }
             for i, seg in enumerate(doc.segments)
         ],
@@ -518,15 +559,14 @@ def to_markdown(doc: CorrectionDoc) -> str:
 
         # 三段式附註：來源差異／適用條件／可讀結論
         srcs = list(seg.sources)
+        annotation = _three_part_annotation(seg)
         src_diff = " vs ".join(f"{s.id}（Level {s.level}）" for s in srcs) if srcs else "【待補來源】"
         body.append(f"> **來源差異**：{src_diff}")
-        for note in _discrepancy_notes(srcs):
+        for note in annotation["discrepancy_notes"]:
             body.append(f"> **差異分析**：{note}")
-        for cond in _usage_conditions(srcs):
+        for cond in annotation["usage_conditions"]:
             body.append(f"> **適用條件**：{cond}")
-        body.append(
-            f"> **結論**：{_integrated_conclusion(srcs, getattr(seg, 'functional_gap', ''), getattr(seg, 'user_value', ''))}"
-        )
+        body.append(f"> **結論**：{annotation['conclusion']}")
 
     body.extend(original_traces)
 
@@ -668,15 +708,14 @@ def to_docx(doc: CorrectionDoc, path: str) -> None:
 
         # 三段式附註：來源差異／適用條件／可讀結論
         srcs = list(seg.sources)
+        annotation = _three_part_annotation(seg)
         src_diff = " vs ".join(f"{s.id}（Level {s.level}）" for s in srcs) if srcs else "【待補來源】"
         out.add_paragraph(f"來源差異：{src_diff}")
-        for note in _discrepancy_notes(srcs):
+        for note in annotation["discrepancy_notes"]:
             out.add_paragraph(f"差異分析：{note}")
-        for cond in _usage_conditions(srcs):
+        for cond in annotation["usage_conditions"]:
             out.add_paragraph(f"適用條件：{cond}")
-        out.add_paragraph(
-            f"結論：{_integrated_conclusion(srcs, getattr(seg, 'functional_gap', ''), getattr(seg, 'user_value', ''))}"
-        )
+        out.add_paragraph(f"結論：{annotation['conclusion']}")
 
     for trace in original_traces:
         out.add_paragraph(f"追溯：{trace}")
