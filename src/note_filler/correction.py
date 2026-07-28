@@ -390,6 +390,7 @@ def assemble_correction(doc, gaps, retrieved, written, validations) -> Correctio
         prioritized_candidates.sort(key=source_priority_key)
         
         # 延伸閱讀只包含未被引用的來源，並依優先級排序
+        # 欄位順序依格式規格 v1 定義：source_id, title, url, level, distance
         extended_readings_unsorted = [
             {
                 "source_id": sid,

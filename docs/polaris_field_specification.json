@@ -132,6 +132,44 @@
       "required_for_metrics": [],
       "missing_data_handling": "validation_error",
       "description": "來源連結不足時的原因與 argument_id.source_ids／argument_id.extended_readings 缺口；sufficient 時必須為空"
+    },
+    "extended_readings": {
+      "data_type": "list[dict]",
+      "source_location": "Segment.extended_readings",
+      "binding_report_path": "arguments[].extended_readings",
+      "generation_stage": "assemble_correction",
+      "default_value": "[]",
+      "required_for_metrics": [],
+      "missing_data_handling": "validation_error",
+      "description": "檢索到但未被引用的來源，按優先級排序（Level A>B>C>D，同層級按 distance 遞增）",
+      "sub_fields": {
+        "source_id": {"type": "string", "required": true},
+        "title": {"type": "string", "required": true},
+        "url": {"type": "string", "required": false},
+        "level": {"type": "string", "valid_values": ["A", "B", "C", "D"]},
+        "distance": {"type": "float", "range": "[0.0, 1.0]"}
+      }
+    },
+    "extended_readings_status": {
+      "data_type": "string",
+      "source_location": "Segment.extended_readings_status",
+      "binding_report_path": "arguments[].extended_readings_status",
+      "generation_stage": "assemble_correction",
+      "default_value": "none",
+      "required_for_metrics": [],
+      "valid_values": ["none", "available", "pending_evidence"],
+      "missing_data_handling": "validation_error",
+      "description": "延伸閱讀狀態：available（有延伸閱讀）、pending_evidence（待補證狀態）、none（無延伸閱讀）"
+    },
+    "pending_evidence_reason": {
+      "data_type": "string",
+      "source_location": "Segment.pending_evidence_reason",
+      "binding_report_path": "arguments[].pending_evidence_reason",
+      "generation_stage": "assemble_correction",
+      "default_value": "",
+      "required_for_metrics": [],
+      "missing_data_handling": "validation_error",
+      "description": "待補證原因：說明為何此論點缺乏足夠來源（含優先級與 URL 數量）"
     }
   },
   "metric_definitions": {

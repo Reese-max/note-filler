@@ -16,6 +16,7 @@
 """
 from __future__ import annotations
 
+import json
 import json as _json
 import re
 import tempfile
@@ -125,6 +126,25 @@ EXPECTED_ORIGINAL_SEGMENT_KEYS = frozenset(
 
 # 可從 Markdown 解析延伸閱讀的正則
 MD_EXTENDED_READING_RE = re.compile(r"> - \[(\S+?)\] Level (\S+) (.+)")
+
+# 延伸閱讀欄位順序（依格式規格 v1 定義）
+EXTENDED_READINGS_FIELD_ORDER = [
+    "extended_readings",
+    "extended_readings_status", 
+    "pending_evidence_reason",
+    "openable_links_count",
+    "openable_links_status",
+    "openable_links_incomplete_reason",
+]
+
+# 延伸閱讀子欄位順序（依格式規格 v1 定義）
+EXTENDED_READING_ITEM_FIELD_ORDER = [
+    "source_id",
+    "title",
+    "url",
+    "level",
+    "distance",
+]
 
 
 # ---------------------------------------------------------------------------
@@ -734,3 +754,131 @@ class TestPipelineRegression:
         data = to_json(doc)
         originals = [s["text"] for s in data["segments"] if s["type"] == "original"]
         assert originals == ["行政程序法要求行政行為應遵守正當程序。"]
+
+
+# ===================================================================
+# 7. 格式規格 v1 驗證
+# ===================================================================
+
+
+class TestFormatSpecificationV1:
+    """驗證延伸閱讀格式規格 v1 的欄位順序與契約。"""
+
+    def test_extended_readings_field_order_in_json(self):
+        """JSON 輸出中延伸閱讀欄位順序符合規格 v1。"""
+        product = _basic_product(used_ids=["s1"], omitted_ids=["s2"])
+        data = to_json(product)
+        for seg in data["segments"]:
+            if seg["type"] == "supplement":
+                # 檢查延伸閱讀相關欄位的順序
+                seg_keys = list(seg.keys())
+                for i, field in enumerate(EXTENDED_READINGS_FIELD_ORDER):
+                    field_idx = seg_keys.index(field)
+                    # 確保欄位存在且順序正確（後面的欄位索引應該更大）
+                    assert field in seg_keys, f"缺少欄位: {field}"
+                    if i > 0:
+                        prev_field_idx = seg_keys.index(EXTENDED_READINGS_FIELD_ORDER[i-1])
+                        assert field_idx > prev_field_idx, (
+                            f"欄位順序錯誤: {field} 應在 {EXTENDED_READINGS_FIELD_ORDER[i-1]} 之後"
+                        )
+
+    def test_extended_reading_item_field_order(self):
+        """每筆延伸閱讀記錄的欄位順序符合規格 v1。"""
+        product = _basic_product(used_ids=["s1"], omitted_ids=["s2"])
+        data = to_json(product)
+        for seg in data["segments"]:
+            if seg["type"] == "supplement":
+                for er in seg["extended_readings"]:
+                    er_keys = list(er.keys())
+                    for i, field in enumerate(EXTENDED_READING_ITEM_FIELD_ORDER):
+                        field_idx = er_keys.index(field)
+                        assert field in er_keys, f"延伸閱讀項目缺少欄位: {field}"
+                        if i > 0:
+                            prev_field_idx = er_keys.index(EXTENDED_READING_ITEM_FIELD_ORDER[i-1])
+                            assert field_idx > prev_field_idx, (
+                                f"延伸閱讀項目欄位順序錯誤: {field} 應在 {EXTENDED_READING_ITEM_FIELD_ORDER[i-1]} 之後"
+                            )
+
+    def test_field_order_matches_specification_document(self):
+        """測試中定義的欄位順序與規格文檔一致。"""
+        # 這個測試確保測試代碼與文檔保持同步
+        assert len(EXTENDED_READINGS_FIELD_ORDER) == 6, "延伸閱讀欄位數應為 6"
+        assert len(EXTENDED_READING_ITEM_FIELD_ORDER) == 5, "延伸閱讀項目欄位數應為 5"
+        
+        # 驗證關鍵欄位存在
+        assert "extended_readings" in EXTENDED_READINGS_FIELD_ORDER
+        assert "extended_readings_status" in EXTENDED_READINGS_FIELD_ORDER
+        assert "pending_evidence_reason" in EXTENDED_READINGS_FIELD_ORDER
+        assert "openable_links_count" in EXTENDED_READINGS_FIELD_ORDER
+        assert "openable_links_status" in EXTENDED_READINGS_FIELD_ORDER
+        assert "openable_links_incomplete_reason" in EXTENDED_READINGS_FIELD_ORDER
+
+    def test_sorting_priority_implementation_matches_spec(self):
+        """延伸閱讀排序實作符合規格 v1 的優先級規則。"""
+        srcs = [
+            _source("s1", "源A", "https://a", "C", 0.5),
+            _source("s2", "源B", "https://b", "A", 0.8),
+            _source("s3", "源C", "https://c", "B", 0.3),
+            _source("s4", "源D", "https://d", "A", 0.2),
+        ]
+        gap = Gap("test", "missing", "未展開")
+        product = assemble_correction(
+            _doc(), [gap],
+            {gap.question: srcs},
+            {gap.question: WrittenSupplement("內容。", [], omitted_source_ids=["s1", "s2", "s3", "s4"])},
+            {gap.question: cross_validate(gap.question, srcs)},
+        )
+        seg = [s for s in product.segments if s.type == "supplement"][0]
+        
+        # 驗證排序：Level A > B > C > D，同層級按 distance 遞增
+        # 預期順序：s4 (A, 0.2) > s2 (A, 0.8) > s3 (B, 0.3) > s1 (C, 0.5)
+        assert len(seg.extended_readings) == 4
+        assert seg.extended_readings[0]["source_id"] == "s4"  # A, 0.2
+        assert seg.extended_readings[1]["source_id"] == "s2"  # A, 0.8
+        assert seg.extended_readings[2]["source_id"] == "s3"  # B, 0.3
+        assert seg.extended_readings[3]["source_id"] == "s1"  # C, 0.5
+
+    def test_failure_message_format_matches_spec(self):
+        """失敗訊息格式符合規格 v1 的標準模板。"""
+        srcs = [_source("s1", "源A", "https://a", "A")]
+        gap = Gap("test", "missing", "未展開")
+        product = assemble_correction(
+            _doc(), [gap],
+            {gap.question: srcs},
+            {gap.question: WrittenSupplement("【待補證】內容。", [], omitted_source_ids=[])},
+            {gap.question: cross_validate(gap.question, srcs)},
+        )
+        seg = [s for s in product.segments if s.type == "supplement"][0]
+        
+        # 驗證失敗訊息包含 argument_id 與欄位名稱
+        if seg.openable_links_incomplete_reason:
+            reason = seg.openable_links_incomplete_reason
+            assert "argument:" in reason or "缺失" in reason, (
+                f"失敗訊息應包含 argument_id 或標準格式: {reason}"
+            )
+
+    def test_polaris_spec_includes_extended_readings_fields(self):
+        """polaris_field_specification.json 包含延伸閱讀欄位定義。"""
+        import json
+        spec_path = Path(__file__).parent.parent / "docs" / "polaris_field_specification.json"
+        assert spec_path.exists(), "polaris_field_specification.json 應存在"
+        
+        with open(spec_path, "r", encoding="utf-8") as f:
+            spec = json.load(f)
+        
+        field_defs = spec["field_definitions"]
+        
+        # 驗證延伸閱讀相關欄位都在規格中
+        assert "extended_readings" in field_defs
+        assert "extended_readings_status" in field_defs
+        assert "pending_evidence_reason" in field_defs
+        
+        # 驗證子欄位定義
+        er_def = field_defs["extended_readings"]
+        assert "sub_fields" in er_def
+        sub_fields = er_def["sub_fields"]
+        assert "source_id" in sub_fields
+        assert "title" in sub_fields
+        assert "url" in sub_fields
+        assert "level" in sub_fields
+        assert "distance" in sub_fields

@@ -487,6 +487,7 @@ def to_json(doc: CorrectionDoc) -> dict:
                 "three_part_annotation": _three_part_annotation(seg)
                 if seg.type == "supplement"
                 else None,
+                # 延伸閱讀欄位順序：依格式規格 v1 定義
                 "extended_readings": list(getattr(seg, "extended_readings", None) or []),
                 "extended_readings_status": getattr(seg, "extended_readings_status", "none"),
                 "pending_evidence_reason": getattr(seg, "pending_evidence_reason", ""),
