@@ -1018,3 +1018,217 @@ class TestMetricsAlert:
         alerts = json.loads(alerts_path.read_text(encoding="utf-8"))
         assert len(alerts) > 0
         assert alerts[0]["alert_type"] == "threshold_breach"
+
+
+class TestRegressionManuscriptUnchangedAndIdempotentRecords:
+    """回歸：量測管線不修改成品原稿；同 note_id 重跑歷史紀錄僅一筆。"""
+
+    def _setup_manuscript_and_manifest(self, tmp_path: Path) -> Path:
+        """建立測試用的成品原稿、binding_report 與 delivery_manifest。"""
+        manuscript = "# 測試原稿\n\n## 行政程序法\n行政程序法為規範行政機關行為之基本法。\n\n【補充段】行政程序法第 6 條禁止差別待遇。\n"
+        manuscript_path = tmp_path / "行政法筆記.訂正稿.md"
+        manuscript_path.write_text(manuscript, encoding="utf-8")
+
+        binding_report = {
+            "schema": "note_filler.binding_report.v1",
+            "arguments": [
+                {
+                    "argument_id": "argument:0",
+                    "source_ids": ["source:行政程序法第6條"],
+                    "binding_status": "pass",
+                    "functional_gap": "需要解釋行政程序法第6條的平等原則內涵，幫助讀者理解差別待遇禁止的具體法律效果",
+                    "user_value": "幫助讀者辨識行政機關違反平等原則的行為，強化權利救濟意識",
+                    "checks": {
+                        "at_least_one_source": True,
+                        "source_traceable": True,
+                        "no_omitted_traces": True,
+                        "no_extra_traces": True,
+                        "has_functional_gap": True,
+                        "has_user_value": True,
+                        "has_related_knowledge": True,
+                        "related_knowledge_consistent": True,
+                    },
+                    "angle_coverage": {
+                        "covered_facets": [
+                            "necessity:functional_gap",
+                            "necessity:user_value",
+                        ],
+                        "effective_angle_count": 1,
+                    },
+                }
+            ],
+            "angle_coverage_summary": {
+                "unique_angle_types": ["definition", "requirement"],
+                "effective_angle_count": 2,
+                "duplicate_ratio": 0.0,
+            },
+        }
+        binding_report_path = tmp_path / "binding_report.json"
+        binding_report_path.write_text(
+            json.dumps(binding_report, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+
+        manifest_data = {
+            "output_path": str(manuscript_path),
+            "input_path": str(tmp_path / "行政法筆記.txt"),
+            "status": "delivered",
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "content_hash": "abc123",
+            "format": "md",
+            "supplements": 1,
+            "verified": 1,
+            "delivery_status": {
+                "primary_note_ready": True,
+                "user_channel_sent": True,
+                "local_fallback_written": True,
+            },
+        }
+        manifest_path = tmp_path / "delivery_manifest.json"
+        manifest_path.write_text(
+            json.dumps(manifest_data, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+        return manifest_path
+
+    def test_manuscript_unchanged_after_rerun_and_idempotent_records(self, tmp_path):
+        """量測管線前後原稿逐字不變 + 同 note_id 重跑歷史紀錄恆為一筆。"""
+        manifest_path = self._setup_manuscript_and_manifest(tmp_path)
+        manuscript_path = Path(json.loads(
+            manifest_path.read_text(encoding="utf-8")
+        )["output_path"])
+
+        before_text = manuscript_path.read_text(encoding="utf-8")
+        before_bytes = manuscript_path.read_bytes()
+        expected_note_id = derive_note_id(str(tmp_path / "行政法筆記.txt"))
+
+        config = MetricsCollectionConfig(output_dir=tmp_path / "metrics_output")
+        record, alerts = rerun_note(manifest_path, config)
+
+        assert record is not None, "rerun_note 應成功產出 metrics record"
+        assert record.note_id == expected_note_id
+        assert before_text == manuscript_path.read_text(encoding="utf-8"), \
+            "成品文字內容在量測後不應改變"
+        assert before_bytes == manuscript_path.read_bytes(), \
+            "成品二進位逐字比對應一致，量測僅讀不寫"
+
+        updated = json.loads(manifest_path.read_text(encoding="utf-8"))
+        assert "polaris_metrics" in updated, "rerun_note 應寫入 metrics"
+        assert updated["polaris_metrics"]["schema"] == "note_filler.polaris_metrics.v1"
+
+        scan_config = MetricsCollectionConfig(
+            scan_dirs=[tmp_path],
+            output_dir=tmp_path / "scan_output",
+            file_pattern="delivery_manifest*.json",
+        )
+        all_records = scan_and_collect_metrics(scan_config)
+        note_records = [r for r in all_records if r.note_id == expected_note_id]
+        assert len(note_records) == 1, \
+            f"同 note_id ({expected_note_id}) 首次掃描應僅一筆，實際 {len(note_records)}"
+
+        record2, alerts2 = rerun_note(manifest_path, config)
+        assert record2 is not None
+        assert record2.note_id == expected_note_id
+
+        assert before_bytes == manuscript_path.read_bytes(), \
+            "第二次 rerun 後原稿仍應不變"
+
+        all_records2 = scan_and_collect_metrics(scan_config)
+        note_records2 = [r for r in all_records2 if r.note_id == expected_note_id]
+        assert len(note_records2) == 1, \
+            f"重跑後同 note_id ({expected_note_id}) 仍應僅一筆，實際 {len(note_records2)}"
+
+    def test_manuscript_unchanged_with_multiple_supplements(self, tmp_path):
+        """多補充段情境仍不修改成品原稿。"""
+        manuscript = "# 民法筆記\n\n## 原文\n契約自由原則。\n\n【補充段一】民法第 153 條。\n\n【補充段二】民法第 247-1 條。\n"
+        manuscript_path = tmp_path / "民法筆記.訂正稿.md"
+        manuscript_path.write_text(manuscript, encoding="utf-8")
+
+        binding_report = {
+            "schema": "note_filler.binding_report.v1",
+            "arguments": [
+                {
+                    "argument_id": "argument:0",
+                    "source_ids": ["source:民法153"],
+                    "binding_status": "pass",
+                    "functional_gap": "需要說明契約成立要件",
+                    "user_value": "幫助讀者確認契約有效成立",
+                    "checks": {
+                        "at_least_one_source": True, "source_traceable": True,
+                        "no_omitted_traces": True, "no_extra_traces": True,
+                        "has_functional_gap": True, "has_user_value": True,
+                        "has_related_knowledge": True, "related_knowledge_consistent": True,
+                    },
+                    "angle_coverage": {
+                        "covered_facets": ["necessity:functional_gap"],
+                        "effective_angle_count": 1,
+                    },
+                },
+                {
+                    "argument_id": "argument:1",
+                    "source_ids": ["source:民法247-1"],
+                    "binding_status": "pass",
+                    "functional_gap": "需要解釋定型化契約條款的效力",
+                    "user_value": "幫助讀者辨識無效的定型化契約條款",
+                    "checks": {
+                        "at_least_one_source": True, "source_traceable": True,
+                        "no_omitted_traces": True, "no_extra_traces": True,
+                        "has_functional_gap": True, "has_user_value": True,
+                        "has_related_knowledge": True, "related_knowledge_consistent": True,
+                    },
+                    "angle_coverage": {
+                        "covered_facets": ["necessity:user_value"],
+                        "effective_angle_count": 1,
+                    },
+                },
+            ],
+            "angle_coverage_summary": {
+                "unique_angle_types": ["definition", "effect"],
+                "effective_angle_count": 2,
+                "duplicate_ratio": 0.0,
+            },
+        }
+        binding_report_path = tmp_path / "binding_report.json"
+        binding_report_path.write_text(
+            json.dumps(binding_report, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+
+        manifest_data = {
+            "output_path": str(manuscript_path),
+            "input_path": str(tmp_path / "民法筆記.txt"),
+            "status": "delivered",
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "content_hash": "def456",
+            "format": "md",
+            "supplements": 2,
+            "verified": 2,
+            "delivery_status": {
+                "primary_note_ready": True,
+                "user_channel_sent": True,
+                "local_fallback_written": True,
+            },
+        }
+        manifest_path = tmp_path / "delivery_manifest.json"
+        manifest_path.write_text(
+            json.dumps(manifest_data, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+
+        before_bytes = manuscript_path.read_bytes()
+        config = MetricsCollectionConfig(output_dir=tmp_path / "metrics_output2")
+        record, alerts = rerun_note(manifest_path, config)
+
+        assert record is not None
+        assert before_bytes == manuscript_path.read_bytes(), \
+            "多補充段情境原稿仍應不變"
+
+        scan_config = MetricsCollectionConfig(
+            scan_dirs=[tmp_path],
+            output_dir=tmp_path / "scan_output2",
+            file_pattern="delivery_manifest*.json",
+        )
+        all_records = scan_and_collect_metrics(scan_config)
+        note_id = derive_note_id(str(tmp_path / "民法筆記.txt"))
+        note_records = [r for r in all_records if r.note_id == note_id]
+        assert len(note_records) == 1
