@@ -65,9 +65,9 @@
       {"test_id": "tests/test_e2e_acceptance.py::test_e2e_structural_invariants", "source": "tests/test_e2e_acceptance.py:174", "anchor": "_assert_immutable_original", "claim": "離線完整 pipeline 驗證原稿不可變、無來源閘、法條查核與輸出契約"},
       {"test_id": "tests/test_e2e_acceptance.py::test_e2e_offline_supplement_quality_boundary", "source": "tests/test_e2e_acceptance.py:263", "anchor": "_assert_supplement_quality(doc)", "claim": "離線驗證 Level A 路由、非原始記錄倒出與註腳品質邊界"},
       {"test_id": "tests/test_e2e_acceptance.py::test_e2e_minimal_quality_gates_offline_regression", "source": "tests/test_e2e_acceptance.py:282", "anchor": "_assert_immutable_original(doc, note_text)", "claim": "最小離線前置鎖定四項品質閘：原稿不可變、pending_evidence、只掛引用、法條離線查核"},
-      {"test_id": "tests/test_pipeline.py::test_run_pipeline_invariant", "source": "tests/test_pipeline.py:85", "anchor": "if not seg.sources", "claim": "pipeline C6：無來源補充必為 pending_evidence，雙來源補充為 verified"},
-      {"test_id": "tests/test_pipeline.py::test_run_pipeline_malformed_gap_output_falls_back_to_pending", "source": "tests/test_pipeline.py:145", "anchor": "assert supplements[0].text.startswith", "claim": "畸形 gap 輸出保守降級為待補證且不掛來源"},
-      {"test_id": "tests/test_pipeline.py::test_run_pipeline_law_domain_runs_citation_check", "source": "tests/test_pipeline.py:122", "anchor": "assert len(calls)", "claim": "law 領域每個補充段都觸發法規引用查核"},
+      {"test_id": "tests/test_pipeline.py::test_run_pipeline_invariant", "source": "tests/test_pipeline.py:152", "anchor": "if not seg.sources", "claim": "pipeline C6：無來源補充必為 pending_evidence，雙來源補充為 verified"},
+      {"test_id": "tests/test_pipeline.py::test_run_pipeline_malformed_gap_output_falls_back_to_pending", "source": "tests/test_pipeline.py:212", "anchor": "assert supplements[0].text.startswith", "claim": "畸形 gap 輸出保守降級為待補證且不掛來源"},
+      {"test_id": "tests/test_pipeline.py::test_run_pipeline_law_domain_runs_citation_check", "source": "tests/test_pipeline.py:189", "anchor": "assert len(calls)", "claim": "law 領域每個補充段都觸發法規引用查核"},
       {"test_id": "tests/test_correction.py::test_retrieved_five_but_only_two_cited", "source": "tests/test_correction.py:84", "anchor": "assert [s.id for s in sup.sources]", "claim": "只掛實際引用來源，不把未引用的 retrieved source 帶入正文"},
       {"test_id": "tests/test_excluded_failing_controls.py::test_control_02_e2e_offline_quality_gates", "source": "tests/test_excluded_failing_controls.py:155", "anchor": "assert seg.confidence == \"pending_evidence\"", "claim": "failing-first 對照：離線四硬閘（原稿/pending/引用/verified）"}
     ],
@@ -173,8 +173,8 @@
     "exclusion_reason": "預設 -m 'not integration' 在 collection 階段排除；只要真實 grok proxy 才能執行，Twinkle 與 law 雖以 fake 隔離仍保留 integration 邊界",
     "exclusion_evidence": [
       {"source": "pyproject.toml:32", "anchor": "-m 'not integration'", "claim": "預設集合排除 integration marker"},
-      {"source": "tests/test_pipeline.py:190", "anchor": "@pytest.mark.integration", "claim": "目標測試標記為 integration"},
-      {"source": "tests/test_pipeline.py:191", "anchor": "@pytest.mark.skipif", "claim": "grok proxy 不可達時 runtime skip"}
+      {"source": "tests/test_pipeline.py:257", "anchor": "@pytest.mark.integration", "claim": "目標測試標記為 integration"},
+      {"source": "tests/test_pipeline.py:258", "anchor": "@pytest.mark.skipif", "claim": "grok proxy 不可達時 runtime skip"}
     ],
     "covered_function": "note_filler.pipeline.run_pipeline — 完整 pipeline 在真 Grok 輸出下不炸 + C6 不變式",
     "substitute_tests": [
@@ -186,10 +186,10 @@
       "tests/test_excluded_failing_controls.py::test_control_05_pipeline_c6_pending_when_no_sources"
     ],
     "substitute_evidence": [
-      {"test_id": "tests/test_pipeline.py::test_run_pipeline_invariant", "source": "tests/test_pipeline.py:85", "anchor": "if not seg.sources", "claim": "FakeLLM/FakeTwinkle 驗證 pipeline 的 C6 與 verified 路徑"},
-      {"test_id": "tests/test_pipeline.py::test_run_pipeline_malformed_gap_output_falls_back_to_pending", "source": "tests/test_pipeline.py:145", "anchor": "assert supplements[0].text.startswith", "claim": "畸形模型輸出會保守降級為 pending_evidence"},
-      {"test_id": "tests/test_pipeline.py::test_run_pipeline_law_domain_runs_citation_check", "source": "tests/test_pipeline.py:122", "anchor": "assert len(calls)", "claim": "law pipeline 會逐段執行 citation check"},
-      {"test_id": "tests/test_pipeline.py::test_original_text_immutable_in_output", "source": "tests/test_pipeline.py:178", "anchor": "assert original_texts == expected_texts", "claim": "直接比對輸出原文段與原始筆記，防止「輸出資料已變但筆記內容未同步」的假綠情境"},
+      {"test_id": "tests/test_pipeline.py::test_run_pipeline_invariant", "source": "tests/test_pipeline.py:152", "anchor": "if not seg.sources", "claim": "FakeLLM/FakeTwinkle 驗證 pipeline 的 C6 與 verified 路徑"},
+      {"test_id": "tests/test_pipeline.py::test_run_pipeline_malformed_gap_output_falls_back_to_pending", "source": "tests/test_pipeline.py:212", "anchor": "assert supplements[0].text.startswith", "claim": "畸形模型輸出會保守降級為 pending_evidence"},
+      {"test_id": "tests/test_pipeline.py::test_run_pipeline_law_domain_runs_citation_check", "source": "tests/test_pipeline.py:189", "anchor": "assert len(calls)", "claim": "law pipeline 會逐段執行 citation check"},
+      {"test_id": "tests/test_pipeline.py::test_original_text_immutable_in_output", "source": "tests/test_pipeline.py:245", "anchor": "assert original_texts == expected_texts", "claim": "直接比對輸出原文段與原始筆記，防止「輸出資料已變但筆記內容未同步」的假綠情境"},
       {"test_id": "tests/test_correction.py::test_retrieved_five_but_only_two_cited", "source": "tests/test_correction.py:84", "anchor": "assert [s.id for s in sup.sources]", "claim": "組裝層只保留 writer 實際引用的來源"},
       {"test_id": "tests/test_excluded_failing_controls.py::test_control_05_pipeline_c6_pending_when_no_sources", "source": "tests/test_excluded_failing_controls.py:284", "anchor": "assert seg.confidence == \"pending_evidence\"", "claim": "failing-first 對照：empty twinkle 路徑 C6 pending_evidence"}
     ],

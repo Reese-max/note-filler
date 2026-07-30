@@ -89,17 +89,39 @@ def record_pipeline_metrics(source_path: str, correction) -> dict[str, Any]:
     from .binding_report import build_binding_report
     from .metrics import calculate_polaris_metrics
 
-    binding_report = build_binding_report(correction)
-    polaris_metrics = calculate_polaris_metrics(binding_report).to_dict()
+    try:
+        binding_report = build_binding_report(correction)
+    except ValueError as exc:
+        logger.warning(
+            "metrics_unavailable note_id=%s reason=%s",
+            derive_note_id(source_path),
+            exc,
+        )
+        binding_report = {"metrics_unavailable": str(exc)}
+
+    arguments = binding_report.get("arguments")
+    metrics_available = isinstance(arguments, list) and bool(arguments)
+    polaris_metrics = (
+        calculate_polaris_metrics(binding_report).to_dict()
+        if metrics_available
+        else None
+    )
     history_path = Path(source_path).parent / PIPELINE_METRICS_HISTORY_NAME
     record = {
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "note_id": derive_note_id(source_path),
         "product_hash": _pipeline_product_hash(correction, binding_report),
-        "traceability": polaris_metrics["traceability_score"]["score"],
-        "angles_per_topic": polaris_metrics["angle_diversity_index"][
-            "effective_angle_count"
-        ],
+        "status": "calculated" if metrics_available else "metrics_unavailable",
+        "traceability": (
+            polaris_metrics["traceability_score"]["score"]
+            if polaris_metrics is not None
+            else None
+        ),
+        "angles_per_topic": (
+            polaris_metrics["angle_diversity_index"]["effective_angle_count"]
+            if polaris_metrics is not None
+            else None
+        ),
     }
 
     try:

@@ -222,7 +222,7 @@ def run_pipeline(path, llm, twinkle, law):
     # 硬性產出閘：空白或僅稽核摘要不得表面成功
     require_non_empty_note_product(correction, source=path)
     require_traceable_note_product(correction, source=path)
-    record_pipeline_metrics(path, correction)
+    correction.metrics_record = record_pipeline_metrics(path, correction)
     return correction
 
 
