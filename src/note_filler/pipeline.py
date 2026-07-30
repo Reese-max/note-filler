@@ -16,6 +16,7 @@ from .write import (                                            # Q3
 from .verify import cross_validate            # T10
 from .knowledge.law_citation_check import check_law_citations   # T8
 from .correction import assemble_correction       # T12
+from .metrics_pipeline import record_pipeline_metrics
 
 logger = logging.getLogger(__name__)
 
@@ -221,6 +222,7 @@ def run_pipeline(path, llm, twinkle, law):
     # 硬性產出閘：空白或僅稽核摘要不得表面成功
     require_non_empty_note_product(correction, source=path)
     require_traceable_note_product(correction, source=path)
+    record_pipeline_metrics(path, correction)
     return correction
 
 

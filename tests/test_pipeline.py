@@ -1,9 +1,13 @@
 import json
+import logging
 import socket
+from pathlib import Path
+
 import pytest
 from docx import Document as DocxDocument
 
 from note_filler.llm import FakeLLM
+from note_filler.metrics_pipeline import PIPELINE_METRICS_HISTORY_NAME, derive_note_id
 from note_filler.retrieve.models import Source          # Source 定義處(T6/型別鎖定)
 from note_filler.pipeline import run_pipeline
 
@@ -51,6 +55,69 @@ def _src(sid, title, url, level):
         content=f"{title} 官方結構化記錄全文……",
         fetched_date="2026-07-15", doc_date="2026-01-01", distance=0.6,
     )
+
+
+def _metrics_llm():
+    return FakeLLM([
+        "admin",
+        "正當程序的要件為何?",
+        json.dumps([
+            {"question": "正當程序的要件為何?", "status": "missing", "reason": "筆記未展開"}
+        ], ensure_ascii=False),
+        '{"keyword": "正當程序", "law_name": null}',
+        "【待補證】此問題缺乏可用來源，尚待補充。",
+    ])
+
+
+def test_run_pipeline_records_metrics_history_idempotently(note_path):
+    """核心管線首次落盤；同一未變更成品重跑不覆寫時間戳或原稿。"""
+    input_path = Path(note_path)
+    original_bytes = input_path.read_bytes()
+
+    run_pipeline(note_path, _metrics_llm(), FakeTwinkle([[]]), FakeLaw())
+    history_path = input_path.parent / PIPELINE_METRICS_HISTORY_NAME
+    first_bytes = history_path.read_bytes()
+    records = [json.loads(line) for line in first_bytes.decode("utf-8").splitlines()]
+
+    assert len(records) == 1
+    assert records[0]["note_id"] == derive_note_id(note_path)
+    assert records[0]["timestamp"]
+    assert isinstance(records[0]["traceability"], float)
+    assert isinstance(records[0]["angles_per_topic"], int)
+
+    run_pipeline(note_path, _metrics_llm(), FakeTwinkle([[]]), FakeLaw())
+
+    assert history_path.read_bytes() == first_bytes
+    assert input_path.read_bytes() == original_bytes
+
+
+def test_run_pipeline_preserves_corrupt_metrics_history_and_raises(note_path, caplog):
+    """損壞 JSONL 不得被靜默略過或覆寫，正式管線必須明確失敗。"""
+    history_path = Path(note_path).parent / PIPELINE_METRICS_HISTORY_NAME
+    corrupted = b'{"note_id":"old"}\n{broken json}\n'
+    history_path.write_bytes(corrupted)
+
+    with caplog.at_level(logging.WARNING, logger="note_filler.metrics_pipeline"):
+        with pytest.raises(ValueError, match="損壞 JSONL"):
+            run_pipeline(note_path, _metrics_llm(), FakeTwinkle([[]]), FakeLaw())
+
+    assert "metrics_history_corrupt_line" in caplog.text
+    assert history_path.read_bytes() == corrupted
+
+
+def test_run_pipeline_logs_and_raises_metrics_history_write_failure(note_path, monkeypatch, caplog):
+    """量測落盤失敗不得被吞沒或讓核心管線表面成功。"""
+    import note_filler.metrics_pipeline as metrics_pipeline
+
+    def fail_to_open_history(_):
+        raise OSError("disk full")
+
+    monkeypatch.setattr(metrics_pipeline, "_locked_history", fail_to_open_history)
+    with caplog.at_level(logging.ERROR, logger="note_filler.metrics_pipeline"):
+        with pytest.raises(OSError, match="disk full"):
+            run_pipeline(note_path, _metrics_llm(), FakeTwinkle([[]]), FakeLaw())
+
+    assert "metrics_history_write_failed" in caplog.text
 
 
 def test_run_pipeline_invariant(note_path):

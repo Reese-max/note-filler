@@ -12,12 +12,16 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
+import os
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
 logger = logging.getLogger(__name__)
+
+PIPELINE_METRICS_HISTORY_NAME = "metrics_history.jsonl"
 
 
 def derive_note_id(source_path: str) -> str:
@@ -27,6 +31,121 @@ def derive_note_id(source_path: str) -> str:
     """
     normalized = source_path.replace("\\", "/").strip().lower()
     return hashlib.sha256(normalized.encode("utf-8")).hexdigest()[:12]
+
+
+@contextmanager
+def _locked_history(history_path: Path):
+    """鎖住單一 JSONL 歷史檔，讓查重與追加成為同一交易。"""
+    history_path.parent.mkdir(parents=True, exist_ok=True)
+    with history_path.open("a+", encoding="utf-8", newline="") as history:
+        history.seek(0)
+        if os.name == "nt":
+            import msvcrt
+
+            msvcrt.locking(history.fileno(), msvcrt.LK_LOCK, 1)
+            try:
+                yield history
+            finally:
+                history.seek(0)
+                msvcrt.locking(history.fileno(), msvcrt.LK_UNLCK, 1)
+        else:
+            import fcntl
+
+            fcntl.flock(history.fileno(), fcntl.LOCK_EX)
+            try:
+                yield history
+            finally:
+                fcntl.flock(history.fileno(), fcntl.LOCK_UN)
+
+
+def _pipeline_product_hash(correction, binding_report: dict[str, Any]) -> str:
+    """以成品內容與既有綁定報告建立穩定識別，不改寫成品。"""
+    product = {
+        "segments": [
+            {
+                "type": getattr(segment, "type", None),
+                "text": getattr(segment, "text", None),
+                "confidence": getattr(segment, "confidence", None),
+                "source_id": getattr(segment, "source_id", None),
+                "source_ids": list(getattr(segment, "source_ids", None) or []),
+                "traceability": list(getattr(segment, "traceability", None) or []),
+                "citation_spans": list(getattr(segment, "citation_spans", None) or []),
+            }
+            for segment in getattr(correction, "segments", ())
+        ],
+        "binding_report": binding_report,
+    }
+    payload = json.dumps(
+        product,
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+    )
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+
+def record_pipeline_metrics(source_path: str, correction) -> dict[str, Any]:
+    """以既有量測模組記錄正式管線成品；同一成品只追加一次。"""
+    from .binding_report import build_binding_report
+    from .metrics import calculate_polaris_metrics
+
+    binding_report = build_binding_report(correction)
+    polaris_metrics = calculate_polaris_metrics(binding_report).to_dict()
+    history_path = Path(source_path).parent / PIPELINE_METRICS_HISTORY_NAME
+    record = {
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "note_id": derive_note_id(source_path),
+        "product_hash": _pipeline_product_hash(correction, binding_report),
+        "traceability": polaris_metrics["traceability_score"]["score"],
+        "angles_per_topic": polaris_metrics["angle_diversity_index"][
+            "effective_angle_count"
+        ],
+    }
+
+    try:
+        with _locked_history(history_path) as history:
+            history.seek(0)
+            history_text = history.read()
+            for line_number, line in enumerate(history_text.splitlines(), 1):
+                try:
+                    existing = json.loads(line)
+                except json.JSONDecodeError as exc:
+                    logger.warning(
+                        "metrics_history_corrupt_line line=%d path=%s error=%s",
+                        line_number,
+                        history_path,
+                        exc,
+                    )
+                    raise ValueError(
+                        f"指標歷史含損壞 JSONL 第 {line_number} 行: {history_path}"
+                    ) from exc
+                if not isinstance(existing, dict):
+                    logger.warning(
+                        "metrics_history_corrupt_line line=%d path=%s non-object",
+                        line_number,
+                        history_path,
+                    )
+                    raise ValueError(
+                        f"指標歷史含非物件 JSONL 第 {line_number} 行: {history_path}"
+                    )
+                if (
+                    existing.get("note_id") == record["note_id"]
+                    and existing.get("product_hash") == record["product_hash"]
+                ):
+                    return existing
+
+            history.seek(0, 2)
+            if history_text and not history_text.endswith(("\n", "\r")):
+                history.write("\n")
+            history.write(json.dumps(record, ensure_ascii=False, sort_keys=True) + "\n")
+    except OSError:
+        logger.exception(
+            "metrics_history_write_failed note_id=%s path=%s",
+            record["note_id"],
+            history_path,
+        )
+        raise
+    return record
 
 
 @dataclass
