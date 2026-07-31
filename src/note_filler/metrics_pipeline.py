@@ -22,6 +22,7 @@ from typing import Any
 logger = logging.getLogger(__name__)
 
 PIPELINE_METRICS_HISTORY_NAME = "metrics_history.jsonl"
+OUTPUT_MARKDOWN_BASELINE_NAME = "output_markdown_baseline.jsonl"
 
 
 def derive_note_id(source_path: str) -> str:
@@ -168,6 +169,161 @@ def record_pipeline_metrics(source_path: str, correction) -> dict[str, Any]:
         )
         raise
     return record
+
+
+@dataclass
+class OutputMarkdownBaselineScan:
+    """唯讀成品掃描結果。"""
+
+    scanned_count: int
+    created_count: int
+    records: list[dict[str, Any]]
+
+
+def _load_output_metrics(
+    markdown_path: Path,
+    content_hash: str,
+) -> tuple[str, float | None, int | None]:
+    """只用已驗證的旁車資料重算成品指標，絕不從 Markdown 臆測來源。"""
+    from .binding_report import BINDING_REPORT_NAME, parse_binding_report
+    from .metrics import calculate_polaris_metrics
+
+    manifest_path = markdown_path.parent / "delivery_manifest.json"
+    if not manifest_path.exists():
+        return "metrics_unavailable", None, None
+
+    try:
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError) as exc:
+        logger.warning(
+            "output_metrics_unavailable path=%s reason=%s",
+            markdown_path,
+            exc,
+        )
+        return "metrics_unavailable", None, None
+
+    if not isinstance(manifest, dict):
+        return "metrics_unavailable", None, None
+    manifest_hash = manifest.get("content_hash")
+    if manifest_hash and manifest_hash != content_hash[:16]:
+        logger.warning("output_metrics_unavailable path=%s reason=content_hash_mismatch", markdown_path)
+        return "metrics_unavailable", None, None
+
+    binding_report_path = markdown_path.parent / BINDING_REPORT_NAME
+    if not binding_report_path.exists():
+        return "metrics_unavailable", None, None
+
+    try:
+        binding_report = parse_binding_report(
+            json.loads(binding_report_path.read_text(encoding="utf-8"))
+        )
+        if not binding_report["arguments"]:
+            return "metrics_unavailable", None, None
+        delivery_status = manifest.get("delivery_status")
+        metrics = calculate_polaris_metrics(
+            binding_report,
+            delivery_status if isinstance(delivery_status, dict) else None,
+        ).to_dict()
+        traceability = metrics["traceability_score"]["score"]
+        angles_per_topic = metrics["angle_diversity_index"]["effective_angle_count"]
+    except (json.JSONDecodeError, OSError, ValueError, KeyError, TypeError) as exc:
+        logger.warning(
+            "output_metrics_unavailable path=%s reason=%s",
+            markdown_path,
+            exc,
+        )
+        return "metrics_unavailable", None, None
+
+    if (
+        not isinstance(traceability, (int, float))
+        or isinstance(traceability, bool)
+        or type(angles_per_topic) is not int
+    ):
+        return "metrics_unavailable", None, None
+    return "calculated", float(traceability), angles_per_topic
+
+
+def scan_output_markdown_baselines(
+    output_root: Path,
+    history_path: Path,
+    *,
+    batch_size: int | None = None,
+) -> OutputMarkdownBaselineScan:
+    """掃描成品 Markdown，追加路徑與內容都唯一的唯讀基線紀錄。"""
+    if batch_size is not None and batch_size <= 0:
+        raise ValueError("batch_size 必須為正整數")
+    if not output_root.is_dir():
+        raise FileNotFoundError(f"成品目錄不存在: {output_root}")
+
+    markdown_paths = sorted(
+        path for path in output_root.rglob("*")
+        if path.is_file() and path.suffix.lower() == ".md"
+    )
+
+    try:
+        with _locked_history(history_path) as history:
+            history.seek(0)
+            history_text = history.read()
+            existing_keys = set()
+            for line_number, line in enumerate(history_text.splitlines(), 1):
+                try:
+                    existing = json.loads(line)
+                except json.JSONDecodeError as exc:
+                    logger.warning(
+                        "output_metrics_baseline_corrupt_line line=%d path=%s error=%s",
+                        line_number,
+                        history_path,
+                        exc,
+                    )
+                    raise ValueError(
+                        f"成品基線含損壞 JSONL 第 {line_number} 行: {history_path}"
+                    ) from exc
+                if not isinstance(existing, dict):
+                    raise ValueError(
+                        f"成品基線含非物件 JSONL 第 {line_number} 行: {history_path}"
+                    )
+                existing_keys.add((existing.get("artifact_path"), existing.get("content_hash")))
+
+            candidates = []
+            for markdown_path in markdown_paths:
+                artifact_path = markdown_path.relative_to(output_root).as_posix()
+                content_hash = hashlib.sha256(markdown_path.read_bytes()).hexdigest()
+                if (artifact_path, content_hash) in existing_keys:
+                    continue
+                if batch_size is not None and len(candidates) >= batch_size:
+                    break
+                status, traceability, angles_per_topic = _load_output_metrics(
+                    markdown_path,
+                    content_hash,
+                )
+                candidates.append({
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "note_id": derive_note_id(artifact_path),
+                    "artifact_path": artifact_path,
+                    "content_hash": content_hash,
+                    "status": status,
+                    "traceability": traceability,
+                    "angles_per_topic": angles_per_topic,
+                })
+
+            if candidates:
+                history.seek(0, 2)
+                if history_text and not history_text.endswith(("\n", "\r")):
+                    history.write("\n")
+                for record in candidates:
+                    history.write(json.dumps(record, ensure_ascii=False, sort_keys=True) + "\n")
+    except OSError:
+        logger.exception(
+            "output_metrics_baseline_write_failed path=%s",
+            history_path,
+        )
+        raise
+
+    return OutputMarkdownBaselineScan(
+        scanned_count=len(candidates),
+        created_count=len(candidates),
+        records=candidates,
+    )
 
 
 @dataclass

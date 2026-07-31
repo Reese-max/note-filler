@@ -41,8 +41,8 @@ def main(argv: list[str] | None = None) -> int:
     )
     ap.add_argument(
         "command",
-        choices=["collect", "query", "latest", "rerun", "alerts"],
-        help="指令: collect=蒐集指標, query=查詢歷史, latest=查詢最新, rerun=重跑單筆, alerts=查詢告警"
+        choices=["collect", "query", "latest", "rerun", "alerts", "baseline"],
+        help="指令: collect=蒐集指標, query=查詢歷史, latest=查詢最新, rerun=重跑單筆, alerts=查詢告警, baseline=唯讀掃描成品基線"
     )
     ap.add_argument(
         "--scan-dirs",
@@ -79,6 +79,17 @@ def main(argv: list[str] | None = None) -> int:
         help="rerun 指令：指定 delivery_manifest.json 路徑"
     )
     ap.add_argument(
+        "--artifacts-dir",
+        default="output",
+        help="baseline 指令：成品 Markdown 根目錄（預設 output）"
+    )
+    ap.add_argument(
+        "--batch-size",
+        type=int,
+        default=None,
+        help="baseline 指令：本次最多掃描筆數"
+    )
+    ap.add_argument(
         "--verbose",
         action="store_true",
         help="詳細輸出"
@@ -98,6 +109,8 @@ def main(argv: list[str] | None = None) -> int:
             query_latest_summary,
             rerun_note,
             load_alerts,
+            OUTPUT_MARKDOWN_BASELINE_NAME,
+            scan_output_markdown_baselines,
         )
     except ImportError as e:
         logger.error(f"無法導入 metrics_pipeline: {e}")
@@ -138,6 +151,20 @@ def main(argv: list[str] | None = None) -> int:
                 )
         _print_improvement_priorities(summary.improvement_priorities)
         
+        return 0
+
+    elif args.command == "baseline":
+        if args.batch_size is not None and args.batch_size <= 0:
+            ap.error("--batch-size 必須為正整數")
+        result = scan_output_markdown_baselines(
+            Path(args.artifacts_dir),
+            config.output_dir / OUTPUT_MARKDOWN_BASELINE_NAME,
+            batch_size=args.batch_size,
+        )
+        print(
+            f"成品基線掃描完成: 掃描 {result.scanned_count} 筆，"
+            f"新增 {result.created_count} 筆"
+        )
         return 0
     
     elif args.command == "query":

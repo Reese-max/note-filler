@@ -5,6 +5,8 @@
 from __future__ import annotations
 
 import json
+import hashlib
+import logging
 import time
 from pathlib import Path
 from datetime import datetime, timezone
@@ -29,7 +31,13 @@ from note_filler.metrics_pipeline import (
     rerun_note,
     save_alerts,
     load_alerts,
+    OUTPUT_MARKDOWN_BASELINE_NAME,
+    scan_output_markdown_baselines,
 )
+from note_filler.binding_report import build_binding_report
+from note_filler.correction import CorrectionDoc, Segment, build_related_knowledge
+from note_filler.parse import Document, Paragraph
+from note_filler.retrieve.models import Source
 
 
 def _create_test_manifest(
@@ -1232,3 +1240,174 @@ class TestRegressionManuscriptUnchangedAndIdempotentRecords:
         note_id = derive_note_id(str(tmp_path / "民法筆記.txt"))
         note_records = [r for r in all_records if r.note_id == note_id]
         assert len(note_records) == 1
+
+
+def _output_baseline_binding_report() -> dict:
+    """建立可由正式 metrics 介面重算的最小成品旁車報告。"""
+    text = "行政程序法第六條禁止差別待遇。[^1]"
+    marker = "[^1]"
+    source = Source(
+        id="law:6",
+        title="行政程序法第6條",
+        url="https://example.test/law6",
+        level="A",
+        content="行政機關應公正無私。",
+        fetched_date="2026-07-31",
+        doc_date=None,
+        distance=0.0,
+    )
+    functional_gap = "需要說明平等原則的適用要件"
+    user_value = "幫助讀者理解平等原則的適用要件"
+    segment = Segment(
+        type="supplement",
+        text=text,
+        anchor_idx=0,
+        sources=[source],
+        confidence="verified",
+        traceability=[{"kind": "source", "id": source.id}],
+        citation_spans=[{
+            "source_id": source.id,
+            "span_start": text.index(marker),
+            "span_end": text.index(marker) + len(marker),
+            "marker_text": marker,
+        }],
+        source_id=f"sources:{source.id}",
+        source_ids=[source.id],
+        functional_gap=functional_gap,
+        user_value=user_value,
+        summary=text,
+        related_knowledge=build_related_knowledge(
+            knowledge_body=text,
+            functional_gap=functional_gap,
+            user_value=user_value,
+        ),
+        argument_id="argument:0",
+        angle_type="definition",
+        angle_labels=["definition", "functional_gap", "user_value"],
+    )
+    return build_binding_report(CorrectionDoc(
+        Document("source.txt", (Paragraph(0, "原稿內容"),), "原稿內容"),
+        [segment],
+    ))
+
+
+def _write_output_baseline_fixture(root: Path, relative_path: str, content: str) -> Path:
+    """建立成品與已驗證旁車資料；掃描器只會讀取這些資料。"""
+    artifact_path = root / relative_path
+    artifact_path.parent.mkdir(parents=True)
+    artifact_path.write_text(content, encoding="utf-8", newline="\n")
+    (artifact_path.parent / "binding_report.json").write_text(
+        json.dumps(_output_baseline_binding_report(), ensure_ascii=False),
+        encoding="utf-8",
+    )
+    (artifact_path.parent / "delivery_manifest.json").write_text(
+        json.dumps({
+            "content_hash": hashlib.sha256(artifact_path.read_bytes()).hexdigest()[:16],
+            "delivery_status": {
+                "primary_note_ready": True,
+                "user_channel_sent": True,
+                "local_fallback_written": True,
+            },
+        }, ensure_ascii=False),
+        encoding="utf-8",
+    )
+    return artifact_path
+
+
+def test_output_markdown_baseline_keeps_same_content_at_distinct_paths(tmp_path):
+    """同內容但不同成品路徑各落一筆；重跑不改成品、原稿或時間戳。"""
+    output_root = tmp_path / "output"
+    original_path = tmp_path / "source.txt"
+    original_path.write_text("原稿內容", encoding="utf-8")
+    content = "# 訂正稿\n\n行政程序法第六條禁止差別待遇。[^1]\n"
+    first = _write_output_baseline_fixture(output_root, "first/note.md", content)
+    second = _write_output_baseline_fixture(output_root, "second/note.md", content)
+    baseline_path = tmp_path / "metrics_output" / OUTPUT_MARKDOWN_BASELINE_NAME
+    first_bytes = first.read_bytes()
+    second_bytes = second.read_bytes()
+    original_bytes = original_path.read_bytes()
+
+    first_scan = scan_output_markdown_baselines(output_root, baseline_path)
+    baseline_bytes = baseline_path.read_bytes()
+
+    assert first_scan.scanned_count == first_scan.created_count == 2
+    assert {record["artifact_path"] for record in first_scan.records} == {
+        "first/note.md", "second/note.md",
+    }
+    assert len({record["note_id"] for record in first_scan.records}) == 2
+    assert {record["content_hash"] for record in first_scan.records} == {
+        hashlib.sha256(first_bytes).hexdigest(),
+    }
+    for record in first_scan.records:
+        assert set(record) == {
+            "timestamp", "note_id", "artifact_path", "content_hash", "status",
+            "traceability", "angles_per_topic",
+        }
+        assert datetime.fromisoformat(record["timestamp"])
+        assert record["status"] == "calculated"
+        assert record["traceability"] == 1.0
+        assert record["angles_per_topic"] == 1
+
+    second_scan = scan_output_markdown_baselines(output_root, baseline_path)
+
+    assert second_scan.scanned_count == 0
+    assert second_scan.created_count == 0
+    assert baseline_path.read_bytes() == baseline_bytes
+    assert first.read_bytes() == first_bytes
+    assert second.read_bytes() == second_bytes
+    assert original_path.read_bytes() == original_bytes
+
+
+def test_output_markdown_baseline_batch_resumes_from_unrecorded_artifact(tmp_path):
+    """批次掃描會跳過既有基線，下一批接續尚未落盤的成品。"""
+    output_root = tmp_path / "output"
+    _write_output_baseline_fixture(output_root, "first/note.md", "第一篇[^1]")
+    _write_output_baseline_fixture(output_root, "second/note.md", "第二篇[^1]")
+    baseline_path = tmp_path / "metrics_output" / OUTPUT_MARKDOWN_BASELINE_NAME
+
+    first = scan_output_markdown_baselines(output_root, baseline_path, batch_size=1)
+    second = scan_output_markdown_baselines(output_root, baseline_path, batch_size=1)
+
+    assert first.created_count == second.created_count == 1
+    assert first.records[0]["artifact_path"] != second.records[0]["artifact_path"]
+    assert len(baseline_path.read_text(encoding="utf-8").splitlines()) == 2
+
+
+def test_output_markdown_baseline_marks_missing_sidecar_metrics_unavailable(tmp_path):
+    """缺少正式量測依據不得從 Markdown 猜測數值。"""
+    output_root = tmp_path / "output"
+    artifact_path = output_root / "legacy.md"
+    artifact_path.parent.mkdir()
+    artifact_path.write_text("【待補證】沒有來源的成品", encoding="utf-8")
+
+    scan = scan_output_markdown_baselines(
+        output_root,
+        tmp_path / "metrics_output" / OUTPUT_MARKDOWN_BASELINE_NAME,
+    )
+
+    assert scan.created_count == 1
+    assert scan.records[0]["status"] == "metrics_unavailable"
+    assert scan.records[0]["traceability"] is None
+    assert scan.records[0]["angles_per_topic"] is None
+
+
+def test_output_markdown_baseline_raises_on_write_failure(tmp_path, monkeypatch, caplog):
+    """基線無法落盤時必須明確失敗，不能回報掃描成功。"""
+    import note_filler.metrics_pipeline as metrics_pipeline
+
+    output_root = tmp_path / "output"
+    output_root.mkdir()
+    (output_root / "note.md").write_text("成品", encoding="utf-8")
+
+    def fail_to_open_history(_):
+        raise OSError("disk full")
+
+    monkeypatch.setattr(metrics_pipeline, "_locked_history", fail_to_open_history)
+    with caplog.at_level(logging.ERROR, logger="note_filler.metrics_pipeline"):
+        with pytest.raises(OSError, match="disk full"):
+            scan_output_markdown_baselines(
+                output_root,
+                tmp_path / "metrics_output" / OUTPUT_MARKDOWN_BASELINE_NAME,
+            )
+
+    assert "output_metrics_baseline_write_failed" in caplog.text
