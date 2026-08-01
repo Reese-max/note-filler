@@ -85,3 +85,12 @@
 [^28]: [Level A] 《訴願法》第20條 | URL: https://law.moj.gov.tw/LawClass/LawAll.aspx?pcode=A0030020 | Date: 2026-07-24 | Hash: 7a600b19 | Evidence: 無訴願能力人應由其法定代理人代為訴願行為。  地方自治團體、法人、非法人之團體應由其代表人或管理人為訴願行為。  關於訴願之法定代理，依民法規定。
 [^29]: [Level A] 《訴願法》第18條 | URL: https://law.moj.gov.tw/LawClass/LawAll.aspx?pcode=A0030020 | Date: 2026-07-24 | Hash: 74ffb11a | Evidence: 自然人、法人、非法人之團體或其他受行政處分之相對人及利害關係人得提起訴願。
 [^30]: [Level A] 《訴願法》第21條 | URL: https://law.moj.gov.tw/LawClass/LawAll.aspx?pcode=A0030020 | Date: 2026-07-24 | Hash: 188f39db | Evidence: 二人以上得對於同一原因事實之行政處分，共同提起訴願。  前項訴願之提起，以同一機關管轄者為限。
+
+> 【補充】**實質判斷角度：**第92條將「決定或其他公權力措施」共同放在行政處分的法定定義中；判讀時應先檢驗是否為行政機關行使公權力、就具體公法事件作成單方行為並對外發生法律效果，而非由文件名稱或是否仍有後續程序決定。僅直接發生事實上效果的行為，並不等同於行政處分。[^31][^32][^33]
+
+> 【補充】**程序保障角度：**單方性不等於排除程序保障。行政機關作成限制或剝奪人民權利的處分前，原則上應給予相對人陳述意見機會；大量同類處分或情況急迫等，須落在第103條的列舉例外，始得不給予機會。書面處分與一般處分的生效時點，則分別以送達與公告為準。[^34]
+
+[^31]: [Level A] 《行政程序法》第92條 | URL: https://law.moj.gov.tw/LawClass/LawAll.aspx?pcode=A0030055 | Date: 2026-08-01 | Evidence: 行政處分須為行政機關就公法上具體事件所為、對外直接發生法律效果之單方行政行為。
+[^32]: [Level A] 司法院釋字第423號解釋 | URL: https://cons.judicial.gov.tw/docdata.aspx?fid=100&id=310604&rn=1144 | Date: 2026-08-01 | Evidence: 行政處分不因其用語、形式、是否有後續行為或記載不得聲明不服而有異。
+[^33]: [Level A] 司法院裁判書用語辭典：事實行為 | URL: https://terms.judicial.gov.tw/TermContent.aspx?SYS=A&TRMTERM=%E4%BA%8B%E5%AF%A6%E8%A1%8C%E7%82%BA | Date: 2026-08-01 | Evidence: 行政事實行為直接發生事實上效果，與行政處分對外發生法律效果不同。
+[^34]: [Level A] 《行政程序法》第100條、第102條、第103條、第110條 | URL: https://law.moj.gov.tw/LawClass/LawAll.aspx?pcode=A0030055 | Date: 2026-08-01 | Evidence: 規定送達、陳述意見、列舉例外及一般處分公告後的生效時點。
