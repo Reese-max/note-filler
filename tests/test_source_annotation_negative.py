@@ -5,6 +5,7 @@ from urllib.parse import urlparse
 
 from docx import Document as DocxDocument
 
+from note_filler.binding_report import build_binding_report, parse_binding_report
 from note_filler.correction import assemble_correction
 from note_filler.export import to_docx, to_json, to_markdown
 from note_filler.gap import Gap
@@ -66,6 +67,42 @@ def _exports(product, tmp_path, name: str):
     return supplement, markdown, paragraphs
 
 
+def _assert_conflict_is_automatically_marked_pending(
+    product, validation, expected_source_ids, tmp_path, name: str
+):
+    """驗證衝突訊號由流程傳遞，不以測試手動覆寫 confidence 偽造。"""
+    assert validation.conflict is True
+    segment = product.segments[-1]
+    assert segment.conflict_note == validation.conflict_note
+    assert segment.source_ids == expected_source_ids
+
+    supplement, markdown, paragraphs = _exports(product, tmp_path, name)
+    assert supplement["conflict_note"] == validation.conflict_note
+    annotation = supplement["three_part_annotation"]
+    assert [row["id"] for row in annotation["source_comparison"]] == expected_source_ids
+    assert all("【待補來源】" in item for item in annotation["usage_conditions"])
+    assert annotation["conclusion"].startswith("【待補來源】")
+    assert "不合併為單一結論" in annotation["conclusion"]
+    assert "【待補來源】" in markdown
+    assert any("結論：【待補來源】" in line for line in paragraphs)
+
+    report = parse_binding_report(build_binding_report(product))
+    argument = report["arguments"][0]
+    conflict_fields = (
+        "source_conflicts",
+        "source_preference_reason",
+        "applicable_conditions",
+        "readable_conclusion",
+    )
+    assert all(field in argument for field in conflict_fields)
+    assert argument["source_conflicts"][0]["source_ids"] == expected_source_ids
+    assert argument["source_preference_reason"]["status"] == "not_selected"
+    assert argument["applicable_conditions"] == {"status": "not_assessed", "items": []}
+    assert argument["readable_conclusion"] == (
+        "來源表述不一致；尚未選定優先來源，需人工判讀適用條件。"
+    )
+
+
 def test_claim_without_qualified_source_outputs_pending_without_fabricated_url(tmp_path):
     candidate = _source(
         "commentary:1",
@@ -88,33 +125,60 @@ def test_claim_without_qualified_source_outputs_pending_without_fabricated_url(t
     assert not any("http://" in line or "https://" in line for line in paragraphs)
 
 
-def test_conflicting_sources_without_applicability_stay_separate_and_pending(tmp_path):
-    allow = _source("official:allow", "來源甲", "申請人得提出申請。", "A")
-    deny = _source("official:deny", "來源乙", "申請人不得提出申請。", "A")
+def test_claim_with_unattributable_source_difference_is_automatically_marked_pending(
+    tmp_path,
+):
+    active = _source(
+        "catalog:current",
+        "資料庫甲的現行摘錄",
+        "資料庫甲將同名審查基準標示為有效，但未附版本、發布日或適用機關。",
+        "A",
+    )
+    repealed = _source(
+        "catalog:archived",
+        "資料庫乙的歷史摘錄",
+        "資料庫乙將同名審查基準標示為廢止，但未附版本、廢止日或適用機關。",
+        "A",
+    )
     product, validation = _product(
-        [allow, deny], "現有資料對申請資格的結論互有衝突。[^1][^2]"
+        [active, repealed], "本案審查基準是否仍可適用？[^1][^2]"
     )
 
-    assert validation.conflict is True
-    supplement, markdown, paragraphs = _exports(product, tmp_path, "unresolved")
-    annotation = supplement["three_part_annotation"]
+    _assert_conflict_is_automatically_marked_pending(
+        product,
+        validation,
+        [active.id, repealed.id],
+        tmp_path,
+        "unattributable-source-difference",
+    )
 
-    assert [row["id"] for row in annotation["source_comparison"]] == [
-        "official:allow",
-        "official:deny",
-    ]
-    assert [row["url"] for row in annotation["source_comparison"]] == [None, None]
-    assert len(annotation["usage_conditions"]) == 2
-    assert all("【待補來源】" in item for item in annotation["usage_conditions"])
-    assert annotation["conclusion"].startswith("【待補來源】")
-    assert "不合併為單一結論" in annotation["conclusion"]
-    assert "建議以" not in annotation["conclusion"]
-    assert "交叉驗證" not in annotation["conclusion"]
-    assert "得提出申請" not in annotation["conclusion"]
-    assert "不得提出申請" not in annotation["conclusion"]
-    assert markdown.count("【待補來源】") >= 3
-    assert any("結論：【待補來源】" in line for line in paragraphs)
-    assert "http://" not in markdown and "https://" not in markdown
+
+def test_sources_with_unknown_applicability_are_automatically_marked_pending(
+    tmp_path,
+):
+    ordinary = _source(
+        "procedure:ordinary",
+        "一般程序摘錄",
+        "來源甲認定一般程序的核定結果合法，但未記載程序類型、主體或適用期間。",
+        "A",
+    )
+    special = _source(
+        "procedure:special",
+        "特別程序摘錄",
+        "來源乙認定特別程序的核定結果違法，但未記載程序類型、主體或適用期間。",
+        "A",
+    )
+    product, validation = _product(
+        [ordinary, special], "本案應採何種程序並如何評估核定結果？[^1][^2]"
+    )
+
+    _assert_conflict_is_automatically_marked_pending(
+        product,
+        validation,
+        [ordinary.id, special.id],
+        tmp_path,
+        "unknown-applicability",
+    )
 
 
 def _is_http_url(value: object) -> bool:
@@ -133,29 +197,39 @@ def test_each_argument_block_has_parseable_source_links_and_conflict_summary():
         "A",
         "https://law.moj.gov.tw/LawClass/LawSingle.aspx?pcode=A0030055&flno=1",
     )
-    conflict_allow = _source("law:allow", "來源甲", "申請人得提出申請。", "A")
-    conflict_deny = _source("law:deny", "來源乙", "申請人不得提出申請。", "A")
-    questions = ["程序依據為何？", "尚缺何項資料？", "申請資格是否成立？"]
+    conflict_active = _source(
+        "law:current",
+        "資料庫甲的現行摘錄",
+        "資料庫甲將同名審查基準標示為有效，但未附版本、發布日或適用機關。",
+        "A",
+    )
+    conflict_repealed = _source(
+        "law:archived",
+        "資料庫乙的歷史摘錄",
+        "資料庫乙將同名審查基準標示為廢止，但未附版本、廢止日或適用機關。",
+        "A",
+    )
+    questions = ["程序依據為何？", "尚缺何項資料？", "審查基準是否仍可適用？"]
     gaps = [
         Gap(questions[0], "missing", "原稿未說明程序依據"),
         Gap(questions[1], "missing", "原稿未列出待補資料"),
         Gap(questions[2], "missing", "原稿未說明申請資格"),
     ]
-    conflict = cross_validate(questions[2], [conflict_allow, conflict_deny])
+    conflict = cross_validate(questions[2], [conflict_active, conflict_repealed])
     product = assemble_correction(
         Document("input/note.txt", (Paragraph(0, _ORIGINAL),), _ORIGINAL),
         gaps,
         {
             questions[0]: [verified],
             questions[1]: [],
-            questions[2]: [conflict_allow, conflict_deny],
+            questions[2]: [conflict_active, conflict_repealed],
         },
         {
             questions[0]: WrittenSupplement("程序應依法進行。[^1]", [verified.id]),
             questions[1]: WrittenSupplement("【待補證】尚無可用來源。", []),
             questions[2]: WrittenSupplement(
-                "現有資料對申請資格互有衝突。[^1][^2]",
-                [conflict_allow.id, conflict_deny.id],
+                "現有資料對審查基準效力互有差異。[^1][^2]",
+                [conflict_active.id, conflict_repealed.id],
             ),
         },
         {
