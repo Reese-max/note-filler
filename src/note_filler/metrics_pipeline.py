@@ -23,6 +23,7 @@ logger = logging.getLogger(__name__)
 
 PIPELINE_METRICS_HISTORY_NAME = "metrics_history.jsonl"
 OUTPUT_MARKDOWN_BASELINE_NAME = "output_markdown_baseline.jsonl"
+QUALITY_DEBT_LEADERBOARD_NAME = "quality_debt_leaderboard.json"
 
 
 def derive_note_id(source_path: str) -> str:
@@ -324,6 +325,69 @@ def scan_output_markdown_baselines(
         created_count=len(candidates),
         records=candidates,
     )
+
+
+def generate_quality_debt_leaderboard(
+    baseline_path: Path,
+    leaderboard_path: Path,
+) -> dict[str, Any]:
+    """從完整成品基線產生可解析且穩定排序的品質欠債排行榜。"""
+    baseline_path = Path(baseline_path)
+    records: list[dict[str, Any]] = []
+    for line_number, line in enumerate(
+        baseline_path.read_text(encoding="utf-8").splitlines(),
+        1,
+    ):
+        try:
+            record = json.loads(line)
+        except json.JSONDecodeError as exc:
+            raise ValueError(
+                f"成品基線含損壞 JSONL 第 {line_number} 行: {baseline_path}"
+            ) from exc
+        if not isinstance(record, dict):
+            raise ValueError(f"成品基線第 {line_number} 行必須為 JSON 物件")
+        for key in ("note_id", "artifact_path", "content_hash", "status"):
+            if not isinstance(record.get(key), str) or not record[key]:
+                raise ValueError(f"成品基線第 {line_number} 行缺少 {key}")
+        if record["status"] not in ("calculated", "metrics_unavailable"):
+            raise ValueError(f"成品基線第 {line_number} 行 status 非法")
+
+        traceability = record.get("traceability")
+        if traceability is not None and (
+            not isinstance(traceability, (int, float))
+            or isinstance(traceability, bool)
+        ):
+            raise ValueError(f"成品基線第 {line_number} 行 traceability 型別錯誤")
+        angles = record.get("angles_per_topic")
+        if angles is not None and type(angles) is not int:
+            raise ValueError(f"成品基線第 {line_number} 行 angles_per_topic 型別錯誤")
+        records.append(dict(record))
+
+    records.sort(key=lambda item: (
+        item["traceability"] is None,
+        item["traceability"] if item["traceability"] is not None else float("inf"),
+        item["angles_per_topic"] is None,
+        item["angles_per_topic"] if item["angles_per_topic"] is not None else float("inf"),
+        item["artifact_path"],
+        item["content_hash"],
+    ))
+    for rank, record in enumerate(records, 1):
+        record["rank"] = rank
+
+    leaderboard = {
+        "schema": "note_filler.quality_debt_leaderboard.v1",
+        "source_baseline": baseline_path.name,
+        "record_count": len(records),
+        "records": records,
+    }
+    leaderboard_path = Path(leaderboard_path)
+    leaderboard_path.parent.mkdir(parents=True, exist_ok=True)
+    leaderboard_path.write_text(
+        json.dumps(leaderboard, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+        newline="\n",
+    )
+    return leaderboard
 
 
 @dataclass

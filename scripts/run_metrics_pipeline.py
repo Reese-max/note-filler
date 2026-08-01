@@ -41,8 +41,8 @@ def main(argv: list[str] | None = None) -> int:
     )
     ap.add_argument(
         "command",
-        choices=["collect", "query", "latest", "rerun", "alerts", "baseline"],
-        help="指令: collect=蒐集指標, query=查詢歷史, latest=查詢最新, rerun=重跑單筆, alerts=查詢告警, baseline=唯讀掃描成品基線"
+        choices=["collect", "query", "latest", "rerun", "alerts", "baseline", "leaderboard"],
+        help="指令: collect=蒐集指標, query=查詢歷史, latest=查詢最新, rerun=重跑單筆, alerts=查詢告警, baseline=唯讀掃描成品基線, leaderboard=產生品質欠債排行榜"
     )
     ap.add_argument(
         "--scan-dirs",
@@ -110,7 +110,9 @@ def main(argv: list[str] | None = None) -> int:
             rerun_note,
             load_alerts,
             OUTPUT_MARKDOWN_BASELINE_NAME,
+            QUALITY_DEBT_LEADERBOARD_NAME,
             scan_output_markdown_baselines,
+            generate_quality_debt_leaderboard,
         )
     except ImportError as e:
         logger.error(f"無法導入 metrics_pipeline: {e}")
@@ -165,6 +167,14 @@ def main(argv: list[str] | None = None) -> int:
             f"成品基線掃描完成: 掃描 {result.scanned_count} 筆，"
             f"新增 {result.created_count} 筆"
         )
+        return 0
+
+    elif args.command == "leaderboard":
+        result = generate_quality_debt_leaderboard(
+            config.output_dir / OUTPUT_MARKDOWN_BASELINE_NAME,
+            config.output_dir / QUALITY_DEBT_LEADERBOARD_NAME,
+        )
+        print(f"品質欠債排行榜完成: {result['record_count']} 筆")
         return 0
     
     elif args.command == "query":
