@@ -82,3 +82,8 @@
 [^27]: [Level A] 司法院釋字第423號解釋 | URL: https://cons.judicial.gov.tw/docdata.aspx?fid=100&id=310604&rn=1144 | Date: 2026-08-01 | Evidence: 行政處分不因其用語、形式、是否有後續行為或記載不得聲明不服而有異。
 [^28]: [Level A] 司法院裁判書用語辭典：事實行為 | URL: https://terms.judicial.gov.tw/TermContent.aspx?SYS=A&TRMTERM=%E4%BA%8B%E5%AF%A6%E8%A1%8C%E7%82%BA | Date: 2026-08-01 | Evidence: 行政事實行為直接發生事實上效果，與行政處分對外發生法律效果不同。
 [^29]: [Level A] 《行政程序法》第100條、第102條、第103條、第110條 | URL: https://law.moj.gov.tw/LawClass/LawAll.aspx?pcode=A0030055 | Date: 2026-08-01 | Evidence: 規定送達、陳述意見、例外情形及一般處分公告後的生效時點。
+
+> 【補充】**救濟與司法審查角度（補證）：**人民認為行政處分違法或不當且損害其權利或利益時，得提起訴願；撤銷訴訟則以違法行政處分，及訴願不服或法定期間內未獲決定等情形為要件。[^30][^31]
+
+[^30]: [Level A] 《訴願法》第1條 | URL: https://law.moj.gov.tw/LawClass/LawSingle.aspx?pcode=A0030020&flno=1 | Date: 2026-08-02 | Evidence: 規定人民認為行政處分違法或不當致損害權利或利益者，得提起訴願。
+[^31]: [Level A] 《行政訴訟法》第4條 | URL: https://law.moj.gov.tw/LawClass/LawSingle.aspx?pcode=A0030154&flno=4 | Date: 2026-08-02 | Evidence: 規定不服訴願決定或訴願機關逾期未為決定時，得提起撤銷訴訟。

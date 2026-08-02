@@ -3,8 +3,8 @@
   "input_path": "tests\\fixtures\\real_note.txt",
   "status": "delivered",
   "timestamp": "2026-07-24T03:08:09.059648+00:00",
-  "content_hash": "be7dede59bf5bb90",
+  "content_hash": "cc09dde9a05d268b",
   "format": "md",
-  "supplements": 8,
-  "verified": 3
+  "supplements": 11,
+  "verified": 6
 }

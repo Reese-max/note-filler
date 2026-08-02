@@ -71,3 +71,8 @@
 [^8]: [Level A] 《行政程序法》第100條 | URL: https://law.moj.gov.tw/LawClass/LawAll.aspx?pcode=A0030055 | Date: 2026-07-24 | Hash: c8673fbe | Evidence: 書面之行政處分，應送達相對人及已知之利害關係人；書面以外之行政處分，應以其他適當方法通知或使其知悉。  一般處分之送達，得以公告或刊登政府公報或新聞紙代替之。
 [^9]: [Level A] 《行政程序法》第110條 | URL: https://law.moj.gov.tw/LawClass/LawAll.aspx?pcode=A0030055 | Date: 2026-07-24 | Hash: 29a95a51 | Evidence: 書面之行政處分自送達相對人及已知之利害關係人起；書面以外之行政處分自以其他適當方法通知或使其知悉時起，依送達、通知或使知悉之內容對其發生效力。  一般處分自公告日或刊登政府公報、新聞紙最後登載日起發生
 [^10]: [Level A] 《行政訴訟法》第1條 | URL: https://law.moj.gov.tw/LawClass/LawAll.aspx?pcode=A0030154 | Date: 2026-07-24 | Hash: 57d09c8c | Evidence: 行政訴訟以保障人民權益，確保國家行政權之合法行使，增進司法功能為宗旨。
+
+> 【補充】**聽取意見例外角度（補證）：**作成限制或剝奪人民自由或權利的處分前，原則上應給予相對人陳述意見機會；大量作成同種類處分、情況急迫等法定情形，行政機關始得不給予該機會。[^16][^17]
+
+[^16]: [Level A] 《行政程序法》第102條 | URL: https://law.moj.gov.tw/LawClass/LawSingle.aspx?pcode=A0030055&flno=102 | Date: 2026-08-02 | Evidence: 規定作成限制或剝奪人民自由或權利的行政處分前，應給予相對人陳述意見機會。
+[^17]: [Level A] 《行政程序法》第103條 | URL: https://law.moj.gov.tw/LawClass/LawSingle.aspx?pcode=A0030055&flno=103 | Date: 2026-08-02 | Evidence: 列舉大量作成同種類處分、情況急迫等得不給予陳述意見機會的法定例外。

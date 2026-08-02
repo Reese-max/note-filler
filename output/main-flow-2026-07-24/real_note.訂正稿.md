@@ -46,3 +46,8 @@
 [^5]: [Level A] 《行政訴訟法》第4條 | URL: https://law.moj.gov.tw/LawClass/LawAll.aspx?pcode=A0030154 | Date: 2026-07-24 | Hash: 3ba6db2c | Evidence: 人民因中央或地方機關之違法行政處分，認為損害其權利或法律上之利益，經依訴願法提起訴願而不服其決定，或提起訴願逾三個月不為決定，或延長訴願決定期間逾二個月不為決定者，得向行政法院提起撤銷訴訟。  逾越權
 [^6]: [Level A] 《行政訴訟法》第106條 | URL: https://law.moj.gov.tw/LawClass/LawAll.aspx?pcode=A0030154 | Date: 2026-07-24 | Hash: 0e7c6f38 | Evidence: 第四條及第五條訴訟之提起，除本法別有規定外，應於訴願決定書送達後二個月之不變期間內為之。但訴願人以外之利害關係人知悉在後者，自知悉時起算。  第四條及第五條之訴訟，自訴願決定書送達後，已逾三年者，不得
 [^7]: [Level A] 《行政訴訟法》第110條 | URL: https://law.moj.gov.tw/LawClass/LawAll.aspx?pcode=A0030154 | Date: 2026-07-24 | Hash: 5f84461c | Evidence: 訴訟繫屬中，為訴訟標的之法律關係雖移轉於第三人，於訴訟無影響。但第三人如經兩造同意，得代當事人承當訴訟。  前項情形，僅他造不同意者，移轉之當事人或第三人得聲請行政法院以裁定許第三人承當訴訟。  前項
+
+> 【補充】**程序與效力角度（補證）：**作成限制或剝奪人民自由或權利的處分前，原則上應給予相對人陳述意見機會；書面處分則自送達相對人及已知利害關係人起發生效力。此一角度分別說明作成前的程序保障與處分發生效力的時點。[^12][^13]
+
+[^12]: [Level A] 《行政程序法》第102條 | URL: https://law.moj.gov.tw/LawClass/LawSingle.aspx?pcode=A0030055&flno=102 | Date: 2026-08-02 | Evidence: 規定作成限制或剝奪人民自由或權利的行政處分前，應給予相對人陳述意見機會。
+[^13]: [Level A] 《行政程序法》第110條 | URL: https://law.moj.gov.tw/LawClass/LawSingle.aspx?pcode=A0030055&flno=110 | Date: 2026-08-02 | Evidence: 規定書面行政處分自送達相對人及已知利害關係人起發生效力。

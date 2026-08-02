@@ -94,3 +94,8 @@
 [^32]: [Level A] 司法院釋字第423號解釋 | URL: https://cons.judicial.gov.tw/docdata.aspx?fid=100&id=310604&rn=1144 | Date: 2026-08-01 | Evidence: 行政處分不因其用語、形式、是否有後續行為或記載不得聲明不服而有異。
 [^33]: [Level A] 司法院裁判書用語辭典：事實行為 | URL: https://terms.judicial.gov.tw/TermContent.aspx?SYS=A&TRMTERM=%E4%BA%8B%E5%AF%A6%E8%A1%8C%E7%82%BA | Date: 2026-08-01 | Evidence: 行政事實行為直接發生事實上效果，與行政處分對外發生法律效果不同。
 [^34]: [Level A] 《行政程序法》第100條、第102條、第103條、第110條 | URL: https://law.moj.gov.tw/LawClass/LawAll.aspx?pcode=A0030055 | Date: 2026-08-01 | Evidence: 規定送達、陳述意見、列舉例外及一般處分公告後的生效時點。
+
+> 【補充】**效力瑕疵角度（補證）：**行政處分有重大明顯瑕疵者無效；至於違反程序或方式規定的處分，法律另明定得於訴願程序終結前補正的類型。這是處分效力瑕疵的判斷，與是否具備第92條行政處分定義應分別檢視。[^35][^36]
+
+[^35]: [Level A] 《行政程序法》第111條 | URL: https://law.moj.gov.tw/LawClass/LawSingle.aspx?pcode=A0030055&flno=111 | Date: 2026-08-02 | Evidence: 明定行政處分有重大明顯瑕疵者無效，並列舉無效情形。
+[^36]: [Level A] 《行政程序法》第114條 | URL: https://law.moj.gov.tw/LawClass/LawSingle.aspx?pcode=A0030055&flno=114 | Date: 2026-08-02 | Evidence: 明定違反程序或方式規定的行政處分，得於訴願程序終結前補正的情形。
