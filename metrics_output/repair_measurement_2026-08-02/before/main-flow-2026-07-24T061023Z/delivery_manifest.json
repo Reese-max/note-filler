@@ -1,7 +1,7 @@
 {
   "output_path": "metrics_output/repair_measurement_2026-08-02/before/main-flow-2026-07-24T061023Z/real_note.訂正稿.md",
   "input_path": "tests/fixtures/real_note.txt",
-  "content_hash": "d76ad4daca51cde1",
+  "content_hash": "46fb081032cf46f0",
   "delivery_status": {
     "primary_note_ready": true,
     "user_channel_sent": true,

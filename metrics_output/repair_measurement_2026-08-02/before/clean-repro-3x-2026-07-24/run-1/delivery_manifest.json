@@ -1,7 +1,7 @@
 {
   "output_path": "metrics_output/repair_measurement_2026-08-02/before/clean-repro-3x-2026-07-24/run-1/real_note.訂正稿.md",
   "input_path": "tests/fixtures/real_note.txt",
-  "content_hash": "054f576baf5356d8",
+  "content_hash": "66531c5652180460",
   "delivery_status": {
     "primary_note_ready": true,
     "user_channel_sent": true,

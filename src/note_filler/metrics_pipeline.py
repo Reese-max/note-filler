@@ -462,7 +462,13 @@ def generate_quality_debt_leaderboard(
                 raise ValueError(f"成品基線第 {line_number} 行單角度主題計數不一致")
         records.append(dict(record))
 
-    records.sort(key=lambda item: (
+    ranked_records = [
+        record for record in records if record["status"] == "calculated"
+    ]
+    metrics_unavailable_records = [
+        record for record in records if record["status"] == "metrics_unavailable"
+    ]
+    ranked_records.sort(key=lambda item: (
         item["traceability"] is None,
         item["traceability"] if item["traceability"] is not None else float("inf"),
         item["angles_per_topic"] is None,
@@ -470,15 +476,32 @@ def generate_quality_debt_leaderboard(
         item["artifact_path"],
         item["content_hash"],
     ))
-    for rank, record in enumerate(records, 1):
+    for rank, record in enumerate(ranked_records, 1):
         record["rank"] = rank
+    metrics_unavailable_records.sort(key=lambda item: (
+        item["artifact_path"],
+        item["content_hash"],
+    ))
 
     leaderboard = {
-        "schema": "note_filler.quality_debt_leaderboard.v2",
+        "schema": "note_filler.quality_debt_leaderboard.v3",
         "source_baseline": baseline_path.name,
         "record_count": len(records),
+        "ranked_record_count": len(ranked_records),
+        "metrics_unavailable_record_count": len(metrics_unavailable_records),
+        "metrics_unavailable_records": [
+            {
+                "note_id": record["note_id"],
+                "artifact_path": record["artifact_path"],
+                "reason": (
+                    record["quality_debt_reason"]
+                    or "baseline_metrics_unavailable"
+                ),
+            }
+            for record in metrics_unavailable_records
+        ],
         "unknown_record_count": sum(
-            record["quality_debt_status"] == "unknown" for record in records
+            record["quality_debt_status"] == "unknown" for record in ranked_records
         ),
         "unknown_records": [
             {
@@ -486,10 +509,10 @@ def generate_quality_debt_leaderboard(
                 "artifact_path": record["artifact_path"],
                 "reason": record["quality_debt_reason"],
             }
-            for record in records
+            for record in ranked_records
             if record["quality_debt_status"] == "unknown"
         ],
-        "records": records,
+        "records": ranked_records,
     }
     leaderboard_path = Path(leaderboard_path)
     leaderboard_path.parent.mkdir(parents=True, exist_ok=True)

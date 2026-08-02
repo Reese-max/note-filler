@@ -134,3 +134,65 @@ def test_incomplete_argument_block_returns_fixed_metrics_unavailable_schema():
         }],
         "arguments": [],
     }
+
+
+def test_same_topic_deduplicates_repeated_angle_tags():
+    result = measure_markdown_quality("\n\n".join([
+        _block(
+            "argument:0", "定義論點。", topic="行政處分",
+            angle_tags=["definition"], qualified_source_ids=["law:1"],
+        ),
+        _block(
+            "argument:1", "同主題的重複定義論點。", topic="行政處分",
+            angle_tags=["definition", "requirement"], qualified_source_ids=["law:2"],
+        ),
+        _block(
+            "argument:2", "同主題的要件論點。", topic="行政處分",
+            angle_tags=["requirement"], qualified_source_ids=["law:3"],
+        ),
+    ]))
+
+    assert result["topic_count"] == 1
+    assert result["angles_per_topic"] == 2
+    assert result["single_angle_topic_count"] == 0
+
+
+def test_unqualified_source_gaps_remain_one_detail_per_argument():
+    result = measure_markdown_quality("\n\n".join([
+        _block(
+            "argument:0", "第一個待補來源論點。", topic="程序",
+            angle_tags=["definition"], qualified_source_ids=[],
+        ),
+        _block(
+            "argument:1", "第二個待補來源論點。", topic="程序",
+            angle_tags=["requirement"], qualified_source_ids=[],
+        ),
+    ]))
+
+    assert result["unqualified_source_argument_count"] == 2
+    assert [detail["argument_id"] for detail in result["gap_details"]
+            if detail["kind"] == "unqualified_source_argument"] == [
+                "argument:0", "argument:1",
+            ]
+
+
+def test_single_angle_topic_is_counted_after_grouping_all_its_arguments():
+    result = measure_markdown_quality("\n\n".join([
+        _block(
+            "argument:0", "第一個效果論點。", topic="救濟",
+            angle_tags=["effect"], qualified_source_ids=["law:1"],
+        ),
+        _block(
+            "argument:1", "第二個效果論點。", topic="救濟",
+            angle_tags=["effect"], qualified_source_ids=["law:2"],
+        ),
+    ]))
+
+    assert result["single_angle_topic_count"] == 1
+    assert [detail for detail in result["gap_details"]
+            if detail["kind"] == "single_angle_topic"] == [{
+                "kind": "single_angle_topic",
+                "topic": "救濟",
+                "argument_ids": ["argument:0", "argument:1"],
+                "angle_tags": ["effect"],
+            }]

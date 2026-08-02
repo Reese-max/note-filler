@@ -1497,7 +1497,9 @@ def test_quality_debt_leaderboard_uses_full_structured_baseline_without_recounti
 
     leaderboard = generate_quality_debt_leaderboard(baseline_path, leaderboard_path)
 
-    assert leaderboard["schema"] == "note_filler.quality_debt_leaderboard.v2"
+    assert leaderboard["schema"] == "note_filler.quality_debt_leaderboard.v3"
+    assert leaderboard["record_count"] == leaderboard["ranked_record_count"] == 1
+    assert leaderboard["metrics_unavailable_record_count"] == 0
     assert leaderboard["unknown_record_count"] == 0
     assert leaderboard["records"][0]["unqualified_source_argument_count"] == 2
     assert leaderboard["records"][0]["single_angle_topic_count"] == 1
@@ -1506,7 +1508,7 @@ def test_quality_debt_leaderboard_uses_full_structured_baseline_without_recounti
 
 
 def test_quality_debt_leaderboard_keeps_legacy_topic_assignment_unknown(tmp_path):
-    """舊格式缺少明確 topic 時，不得用共同字元或章節文字猜測。"""
+    """metrics_unavailable 是獨立分類，舊格式也不得用文字猜測主題。"""
     baseline_path = tmp_path / "baseline.jsonl"
     baseline_path.write_text(json.dumps({
         "timestamp": "2026-08-02T00:00:00+00:00",
@@ -1523,12 +1525,50 @@ def test_quality_debt_leaderboard_keeps_legacy_topic_assignment_unknown(tmp_path
         tmp_path / "quality_debt_leaderboard.json",
     )
 
-    record = leaderboard["records"][0]
-    assert record["quality_debt_status"] == "unknown"
-    assert record["unqualified_source_argument_count"] is None
-    assert record["single_angle_topic_count"] is None
-    assert leaderboard["unknown_records"] == [{
+    assert leaderboard["record_count"] == 1
+    assert leaderboard["ranked_record_count"] == 0
+    assert leaderboard["records"] == []
+    assert leaderboard["metrics_unavailable_record_count"] == 1
+    assert leaderboard["metrics_unavailable_records"] == [{
         "note_id": "legacy-note",
         "artifact_path": "舊格式.md",
         "reason": "legacy_baseline_missing_structured_quality_metadata",
+    }]
+
+
+def test_quality_debt_leaderboard_separates_scanner_metrics_unavailable(tmp_path):
+    """掃描器的合法不可量測筆記不阻斷可量測筆記排行。"""
+    output_root = tmp_path / "output"
+    output_root.mkdir()
+    (output_root / "ranked.md").write_text(
+        _structured_quality_block(
+            "argument:0", "有來源的可量測論點。",
+            topic="程序", angle_tags=["definition"],
+            qualified_source_ids=["law:1"],
+        ),
+        encoding="utf-8",
+        newline="\n",
+    )
+    (output_root / "unavailable.md").write_text(
+        "【待補證】缺少結構化量測資料。",
+        encoding="utf-8",
+        newline="\n",
+    )
+    baseline_path = tmp_path / "metrics" / OUTPUT_MARKDOWN_BASELINE_NAME
+
+    scan_output_markdown_baselines(output_root, baseline_path)
+    leaderboard = generate_quality_debt_leaderboard(
+        baseline_path,
+        tmp_path / "metrics" / "quality_debt_leaderboard.json",
+    )
+
+    assert leaderboard["record_count"] == 2
+    assert leaderboard["ranked_record_count"] == 1
+    assert leaderboard["records"][0]["artifact_path"] == "ranked.md"
+    assert leaderboard["records"][0]["rank"] == 1
+    assert leaderboard["metrics_unavailable_record_count"] == 1
+    assert leaderboard["metrics_unavailable_records"] == [{
+        "note_id": derive_note_id("unavailable.md"),
+        "artifact_path": "unavailable.md",
+        "reason": "incomplete_argument_block",
     }]

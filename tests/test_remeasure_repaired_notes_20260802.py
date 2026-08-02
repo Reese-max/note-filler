@@ -22,12 +22,14 @@ def test_fixed_snapshots_remeasure_without_version_history():
     environment = dict(os.environ)
     environment["PYTHONPATH"] = str(ROOT / "src")
     completed = subprocess.run(
-        [sys.executable, str(SCRIPT)],
+        [sys.executable, "-X", "utf8", str(SCRIPT)],
         cwd=ROOT,
         env=environment,
         check=True,
         capture_output=True,
         text=True,
+        encoding="utf-8",
+        errors="replace",
     )
     assert "MEASUREMENT_COMPLETE notes=5" in completed.stdout
     assert "HEAD^" not in SCRIPT.read_text(encoding="utf-8")
