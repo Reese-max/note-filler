@@ -183,11 +183,12 @@ def test_source_conflict_summary_uses_independently_locked_field_order():
         parse_binding_report(drifted)
 
 
-def test_single_actual_source_with_conflict_note_stays_parseable():
+def test_single_actual_source_ignores_unreferenced_conflict_candidate():
     product = _product(single_actual_source=True)
     supplement = next(seg for seg in product.segments if seg.type == "supplement")
 
-    assert supplement.conflict_note
+    assert supplement.confidence == "verified"
+    assert supplement.conflict_note is None
     assert [source.id for source in supplement.sources] == ["law:allow"]
     argument = _parsed_report(single_actual_source=True)["arguments"][0]
     assert argument["source_ids"] == ["law:allow"]
@@ -195,8 +196,8 @@ def test_single_actual_source_with_conflict_note_stays_parseable():
     assert argument["source_preference_reason"] == {
         "status": "not_applicable",
         "preferred_source_id": None,
-        "reason_code": "insufficient_conflict_sources",
-        "detail": "實際引用來源不足兩個，未建立來源衝突摘要。",
+        "reason_code": "no_conflict",
+        "detail": "未偵測到來源衝突。",
     }
 
 

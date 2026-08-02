@@ -367,7 +367,7 @@ def test_write_and_assemble_anomalies_keep_identifiers_and_quality_gate(caplog):
     assert "missing-source-COR-02" in caplog.text
 
 
-def test_validation_conflict_reaches_all_exports(tmp_path):
+def test_unattributed_validation_conflict_does_not_reach_exports(tmp_path):
     gap = Gap("case-VER-03", "missing", "reason-VER-03")
     source = _source()
     validation = Validation(
@@ -385,14 +385,17 @@ def test_validation_conflict_reaches_all_exports(tmp_path):
         {gap.question: validation},
     )
 
-    assert correction.segments[-1].conflict_note == "conflict-VER-03"
-    assert to_json(correction)["segments"][-1]["conflict_note"] == "conflict-VER-03"
-    assert "conflict-VER-03" in to_markdown(correction)
+    assert correction.segments[-1].confidence == "verified"
+    assert correction.segments[-1].conflict_note is None
+    assert to_json(correction)["segments"][-1]["conflict_note"] is None
+    assert "conflict-VER-03" not in to_markdown(correction)
     dest = tmp_path / "conflict.docx"
     to_docx(correction, str(dest))
     from docx import Document as DocxDocument
 
-    assert "conflict-VER-03" in "\n".join(p.text for p in DocxDocument(dest).paragraphs)
+    assert "conflict-VER-03" not in "\n".join(
+        p.text for p in DocxDocument(dest).paragraphs
+    )
 
 
 def test_law_citation_skips_and_penalty_mismatch_are_traceable(monkeypatch, caplog):

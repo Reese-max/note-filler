@@ -14,6 +14,7 @@ from note_filler.angle_coverage import (
     coverage_from_segment,
 )
 from note_filler.audit import audit_event
+from note_filler.verify import cross_validate
 
 if TYPE_CHECKING:                      # 僅型別提示,執行期零硬耦合(結構化 attr 讀取)
     from note_filler.parse import Document
@@ -321,12 +322,10 @@ def assemble_correction(doc, gaps, retrieved, written, validations) -> Correctio
         else:
             confidence = "pending_evidence"
 
-        # 從 validations 取 conflict_note,確保衝突資訊不被丟棄
+        # 衝突必須可由本論點實際引用來源重現；檢索候選的衝突不可誤降級。
         conflict_note = None
         v = validations.get(q)
-        if v is not None and getattr(v, "conflict", False):
-            conflict_note = getattr(v, "conflict_note", None)
-        elif v is None:
+        if v is None:
             audit_event(
                 logger,
                 "validation_not_forwarded",
@@ -334,6 +333,10 @@ def assemble_correction(doc, gaps, retrieved, written, validations) -> Correctio
                 reason="question absent from validations mapping",
                 outcome="pending_evidence" if confidence == "pending_evidence" else confidence,
             )
+        cited_validation = cross_validate(q, used_sources)
+        if cited_validation.conflict:
+            confidence = "pending_evidence"
+            conflict_note = cited_validation.conflict_note
 
         if used_ids:
             source_id = f"sources:{','.join(used_ids)}"
@@ -483,7 +486,9 @@ def assemble_correction(doc, gaps, retrieved, written, validations) -> Correctio
         # pending_evidence_reason：說明為何此論點缺乏足夠來源（含優先級與URL數量）
         pending_evidence_reason = ""
         if confidence == "pending_evidence":
-            if not used_ids and not extended_readings:
+            if conflict_note:
+                pending_evidence_reason = "引用來源衝突且無法判定適用條件"
+            elif not used_ids and not extended_readings:
                 pending_evidence_reason = "檢索無可用來源"
             elif not used_ids and extended_readings:
                 pending_evidence_reason = "有候選來源但未被引用"

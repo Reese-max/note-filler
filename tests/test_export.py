@@ -800,7 +800,7 @@ def test_conflicting_arguments_final_product_has_annotations_links_and_immutable
     assert len(validations) == len(supplements) == 2
     assert all(validation.conflict for validation in validations.values())
     assert all("得/不得" in segment.conflict_note for segment in supplements)
-    assert all(segment.confidence == "verified" for segment in supplements)
+    assert all(segment.confidence == "pending_evidence" for segment in supplements)
 
     law_db = Path(__file__).resolve().parents[1] / "data" / "law_index.db"
     assert law_db.is_file()
@@ -863,6 +863,7 @@ def test_each_conflicting_argument_has_complete_positive_acceptance(
     annotation = argument["three_part_annotation"]
     assert validations[list(validations)[argument_index]].conflict
     assert argument["source_ids"] == expected_source_ids
+    assert argument["confidence"] == "pending_evidence"
     assert annotation["discrepancy_notes"] == [
         f"來源衝突：{argument['conflict_note']}"
     ]

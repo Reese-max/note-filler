@@ -73,8 +73,10 @@ def _assert_conflict_is_automatically_marked_pending(
     """驗證衝突訊號由流程傳遞，不以測試手動覆寫 confidence 偽造。"""
     assert validation.conflict is True
     segment = product.segments[-1]
+    assert segment.confidence == "pending_evidence"
     assert segment.conflict_note == validation.conflict_note
     assert segment.source_ids == expected_source_ids
+    assert segment.pending_evidence_reason == "引用來源衝突且無法判定適用條件"
 
     supplement, markdown, paragraphs = _exports(product, tmp_path, name)
     assert supplement["conflict_note"] == validation.conflict_note
@@ -101,6 +103,71 @@ def _assert_conflict_is_automatically_marked_pending(
     assert argument["readable_conclusion"] == (
         "來源表述不一致；尚未選定優先來源，需人工判讀適用條件。"
     )
+
+
+def test_unreferenced_conflict_candidates_do_not_degrade_referenced_argument(tmp_path):
+    question = "此申請是否符合要件？"
+    cited_primary = _source(
+        "official:primary",
+        "申請文件審核紀錄",
+        "本案申請表件及身分資料均已備齊。",
+        "A",
+        "https://example.test/primary",
+    )
+    cited_secondary = _source(
+        "official:secondary",
+        "申請程序受理紀錄",
+        "主管機關已受理本案申請文件。",
+        "A",
+        "https://example.test/secondary",
+    )
+    unreferenced_allow = _source(
+        "catalog:allow",
+        "候選來源甲",
+        "申請人得提出申請。",
+        "A",
+    )
+    unreferenced_deny = _source(
+        "catalog:deny",
+        "候選來源乙",
+        "申請人不得提出申請。",
+        "A",
+    )
+    candidates = [
+        cited_primary,
+        cited_secondary,
+        unreferenced_allow,
+        unreferenced_deny,
+    ]
+    validation = cross_validate(question, candidates)
+    assert validation.conflict is True
+
+    product = assemble_correction(
+        Document("input/note.txt", (Paragraph(0, _ORIGINAL),), _ORIGINAL),
+        [Gap(question, "missing", "原稿未說明申請要件")],
+        {question: candidates},
+        {
+            question: WrittenSupplement(
+                "本案已備齊申請要件。[^1][^2]",
+                [cited_primary.id, cited_secondary.id],
+            )
+        },
+        {question: validation},
+    )
+
+    segment = product.segments[-1]
+    assert segment.source_ids == [cited_primary.id, cited_secondary.id]
+    assert segment.confidence == "verified"
+    assert segment.conflict_note is None
+
+    supplement, markdown, _ = _exports(product, tmp_path, "unreferenced-conflict")
+    assert supplement["three_part_annotation"]["conclusion"].startswith("建議以")
+    assert "【待補來源】" not in markdown
+    assert "衝突告警" not in markdown
+
+    argument = parse_binding_report(build_binding_report(product))["arguments"][0]
+    assert argument["source_conflicts"] == []
+    assert argument["source_preference_reason"]["reason_code"] == "no_conflict"
 
 
 def test_claim_without_qualified_source_outputs_pending_without_fabricated_url(tmp_path):
