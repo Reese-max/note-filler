@@ -1,0 +1,110 @@
+{
+  "schema": "note_filler.repair_measurement_comparison.v2",
+  "measurement_engine": "scan_output_markdown_baselines",
+  "snapshot_mode": "fixed_before_after_paths_only",
+  "measured_at_utc": "2026-08-02T07:26:10.146023+00:00",
+  "note_count": 5,
+  "all_conditions_met": true,
+  "notes": [
+    {
+      "note_id": "d64ed55d383c",
+      "source_product_path": "output/clean-repro-3x-2026-07-24/run-1/real_note.訂正稿.md",
+      "before_artifact_path": "metrics_output/repair_measurement_2026-08-02/before/clean-repro-3x-2026-07-24/run-1/real_note.訂正稿.md",
+      "after_artifact_path": "metrics_output/repair_measurement_2026-08-02/after/clean-repro-3x-2026-07-24/run-1/real_note.訂正稿.md",
+      "original_content_path": "tests/fixtures/real_note.txt",
+      "original_content_hash": "750cb33f3c989100aac67ff60a32296eed9b3f840014c253c84d3508ad17fb1f",
+      "before_content_hash": "054f576baf5356d8ed9be49dd09ddaee24589c0eae9ad5aac4653e1d9cd88cca",
+      "after_content_hash": "d9001a7e996e4797ee0e6b56937d364094879bc50453c2a6e849148a7d13e281",
+      "before_measurement_time": "2026-08-02T07:26:10.089822+00:00",
+      "after_measurement_time": "2026-08-02T07:26:10.120599+00:00",
+      "traceability_before": 0.5555555555555556,
+      "traceability_after": 0.6,
+      "angles_per_topic_before": 7.0,
+      "angles_per_topic_after": 8.0,
+      "gates": {
+        "traceability_after_gt_before": true,
+        "angles_per_topic_after_gte_before": true
+      }
+    },
+    {
+      "note_id": "d17646ed3b9b",
+      "source_product_path": "output/clean-repro-3x-2026-07-24/run-2/real_note.訂正稿.md",
+      "before_artifact_path": "metrics_output/repair_measurement_2026-08-02/before/clean-repro-3x-2026-07-24/run-2/real_note.訂正稿.md",
+      "after_artifact_path": "metrics_output/repair_measurement_2026-08-02/after/clean-repro-3x-2026-07-24/run-2/real_note.訂正稿.md",
+      "original_content_path": "tests/fixtures/real_note.txt",
+      "original_content_hash": "750cb33f3c989100aac67ff60a32296eed9b3f840014c253c84d3508ad17fb1f",
+      "before_content_hash": "0f650c971ce2012723f1b5259205f63203cd676c1660a86eac787051030f7475",
+      "after_content_hash": "7c4d99358996a4013098d8b2e6418060511603e42189453ee6d78eb9dfa51850",
+      "before_measurement_time": "2026-08-02T07:26:10.098433+00:00",
+      "after_measurement_time": "2026-08-02T07:26:10.127502+00:00",
+      "traceability_before": 0.5,
+      "traceability_after": 0.5454545454545454,
+      "angles_per_topic_before": 10.0,
+      "angles_per_topic_after": 11.0,
+      "gates": {
+        "traceability_after_gt_before": true,
+        "angles_per_topic_after_gte_before": true
+      }
+    },
+    {
+      "note_id": "0a3252a8e080",
+      "source_product_path": "output/clean-repro-3x-2026-07-24/run-3/real_note.訂正稿.md",
+      "before_artifact_path": "metrics_output/repair_measurement_2026-08-02/before/clean-repro-3x-2026-07-24/run-3/real_note.訂正稿.md",
+      "after_artifact_path": "metrics_output/repair_measurement_2026-08-02/after/clean-repro-3x-2026-07-24/run-3/real_note.訂正稿.md",
+      "original_content_path": "tests/fixtures/real_note.txt",
+      "original_content_hash": "750cb33f3c989100aac67ff60a32296eed9b3f840014c253c84d3508ad17fb1f",
+      "before_content_hash": "5723f894973d948d0a10379191e0ad260f2e9298721fde89ec33f657e517daf6",
+      "after_content_hash": "65077fdf97f6aeae8daa388a9e4fbf62fa6ce9f2cba94ee6e6b63760091d9825",
+      "before_measurement_time": "2026-08-02T07:26:10.103437+00:00",
+      "after_measurement_time": "2026-08-02T07:26:10.132198+00:00",
+      "traceability_before": 0.5,
+      "traceability_after": 0.5454545454545454,
+      "angles_per_topic_before": 10.0,
+      "angles_per_topic_after": 11.0,
+      "gates": {
+        "traceability_after_gt_before": true,
+        "angles_per_topic_after_gte_before": true
+      }
+    },
+    {
+      "note_id": "c020cb1bf84a",
+      "source_product_path": "output/main-flow-2026-07-24/real_note.訂正稿.md",
+      "before_artifact_path": "metrics_output/repair_measurement_2026-08-02/before/main-flow-2026-07-24/real_note.訂正稿.md",
+      "after_artifact_path": "metrics_output/repair_measurement_2026-08-02/after/main-flow-2026-07-24/real_note.訂正稿.md",
+      "original_content_path": "tests/fixtures/real_note.txt",
+      "original_content_hash": "750cb33f3c989100aac67ff60a32296eed9b3f840014c253c84d3508ad17fb1f",
+      "before_content_hash": "79290431ac1904d79d5c4ca43252a1c9a9991c4f2e7c0f15850c70b006b35aa5",
+      "after_content_hash": "73725067bf871fc4bc418d54bdacf872556aaa530c311a33bfc569eec712b7a9",
+      "before_measurement_time": "2026-08-02T07:26:10.108024+00:00",
+      "after_measurement_time": "2026-08-02T07:26:10.137388+00:00",
+      "traceability_before": 0.5,
+      "traceability_after": 0.5454545454545454,
+      "angles_per_topic_before": 10.0,
+      "angles_per_topic_after": 11.0,
+      "gates": {
+        "traceability_after_gt_before": true,
+        "angles_per_topic_after_gte_before": true
+      }
+    },
+    {
+      "note_id": "16e7d200b7a6",
+      "source_product_path": "output/main-flow-2026-07-24T061023Z/real_note.訂正稿.md",
+      "before_artifact_path": "metrics_output/repair_measurement_2026-08-02/before/main-flow-2026-07-24T061023Z/real_note.訂正稿.md",
+      "after_artifact_path": "metrics_output/repair_measurement_2026-08-02/after/main-flow-2026-07-24T061023Z/real_note.訂正稿.md",
+      "original_content_path": "tests/fixtures/real_note.txt",
+      "original_content_hash": "750cb33f3c989100aac67ff60a32296eed9b3f840014c253c84d3508ad17fb1f",
+      "before_content_hash": "d76ad4daca51cde1dbb32987de57338f0550374dcf7ad1f5877198d1808697a8",
+      "after_content_hash": "9c683addfd6f7762ad25ee3f28aadd52e118635ba88b9fd6b21ee11a4957bd23",
+      "before_measurement_time": "2026-08-02T07:26:10.112010+00:00",
+      "after_measurement_time": "2026-08-02T07:26:10.142432+00:00",
+      "traceability_before": 0.6,
+      "traceability_after": 0.6363636363636364,
+      "angles_per_topic_before": 10.0,
+      "angles_per_topic_after": 11.0,
+      "gates": {
+        "traceability_after_gt_before": true,
+        "angles_per_topic_after_gte_before": true
+      }
+    }
+  ]
+}
