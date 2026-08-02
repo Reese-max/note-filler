@@ -69,12 +69,23 @@ def test_repeated_multiline_claims_keep_their_own_metadata_by_block_order():
         "topic_count",
         "traceability",
         "angles_per_topic",
+        "unqualified_source_argument_count",
+        "single_angle_topic_count",
+        "gap_details",
         "arguments",
     ]
     assert result["schema"] == SCHEMA
     assert result["status"] == "calculated"
     assert result["traceability"] == 1.0
     assert result["angles_per_topic"] == 1.5
+    assert result["unqualified_source_argument_count"] == 0
+    assert result["single_angle_topic_count"] == 1
+    assert result["gap_details"] == [{
+        "kind": "single_angle_topic",
+        "topic": "程序乙",
+        "argument_ids": ["argument:1"],
+        "angle_tags": ["exception"],
+    }]
     assert result["arguments"] == [
         {
             "argument_id": "argument:0",
@@ -115,5 +126,11 @@ def test_incomplete_argument_block_returns_fixed_metrics_unavailable_schema():
         "topic_count": 0,
         "traceability": None,
         "angles_per_topic": None,
+        "unqualified_source_argument_count": None,
+        "single_angle_topic_count": None,
+        "gap_details": [{
+            "kind": "topic_assignment_unknown",
+            "reason": "incomplete_argument_block",
+        }],
         "arguments": [],
     }

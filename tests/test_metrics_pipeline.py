@@ -32,6 +32,7 @@ from note_filler.metrics_pipeline import (
     save_alerts,
     load_alerts,
     OUTPUT_MARKDOWN_BASELINE_NAME,
+    generate_quality_debt_leaderboard,
     scan_output_markdown_baselines,
 )
 from note_filler.binding_report import build_binding_report
@@ -1341,12 +1342,17 @@ def test_output_markdown_baseline_keeps_same_content_at_distinct_paths(tmp_path)
     for record in first_scan.records:
         assert set(record) == {
             "timestamp", "note_id", "artifact_path", "content_hash", "status",
-            "traceability", "angles_per_topic",
+            "traceability", "angles_per_topic", "quality_debt_status",
+            "quality_debt_reason", "unqualified_source_argument_count",
+            "single_angle_topic_count", "gap_details",
         }
         assert datetime.fromisoformat(record["timestamp"])
         assert record["status"] == "calculated"
         assert record["traceability"] == 1.0
         assert record["angles_per_topic"] == 1
+        assert record["quality_debt_status"] == "unknown"
+        assert record["unqualified_source_argument_count"] is None
+        assert record["single_angle_topic_count"] is None
 
     second_scan = scan_output_markdown_baselines(output_root, baseline_path)
 
@@ -1411,3 +1417,118 @@ def test_output_markdown_baseline_raises_on_write_failure(tmp_path, monkeypatch,
             )
 
     assert "output_metrics_baseline_write_failed" in caplog.text
+
+
+def _structured_quality_block(
+    argument_id: str,
+    claim: str,
+    *,
+    topic: str,
+    angle_tags: list[str],
+    qualified_source_ids: list[str],
+) -> str:
+    metadata = json.dumps({
+        "argument_id": argument_id,
+        "topic": topic,
+        "angle_tags": angle_tags,
+        "qualified_source_ids": qualified_source_ids,
+    }, ensure_ascii=False, separators=(",", ":"), sort_keys=True)
+    return (
+        f"> 【補充】{claim}\n"
+        f"> **角度覆蓋**：quality_metadata={metadata}"
+    )
+
+
+def test_quality_debt_leaderboard_uses_full_structured_baseline_without_recounting(tmp_path):
+    """所有論點先固化入基線；排行榜只轉抄，主題不靠文字猜測。"""
+    output_root = tmp_path / "output"
+    artifact = output_root / "note.md"
+    artifact.parent.mkdir()
+    artifact.write_text("\n\n".join([
+        _structured_quality_block(
+            "argument:0", "處分定義的來源論點。",
+            topic="anchor:0", angle_tags=["definition"],
+            qualified_source_ids=["law:0"],
+        ),
+        _structured_quality_block(
+            "argument:1", "處分定義的待補來源論點。",
+            topic="anchor:0", angle_tags=["requirement"],
+            qualified_source_ids=[],
+        ),
+        _structured_quality_block(
+            "argument:2", "處分救濟的來源論點。",
+            topic="anchor:1", angle_tags=["effect"],
+            qualified_source_ids=["law:1"],
+        ),
+        _structured_quality_block(
+            "argument:3", "處分救濟的待補來源論點。",
+            topic="anchor:1", angle_tags=["effect"],
+            qualified_source_ids=[],
+        ),
+    ]), encoding="utf-8", newline="\n")
+    baseline_path = tmp_path / "metrics" / OUTPUT_MARKDOWN_BASELINE_NAME
+    leaderboard_path = tmp_path / "metrics" / "quality_debt_leaderboard.json"
+
+    scan_output_markdown_baselines(output_root, baseline_path)
+    baseline = json.loads(baseline_path.read_text(encoding="utf-8"))
+    assert baseline["traceability"] == 0.5
+    assert baseline["unqualified_source_argument_count"] == 2
+    assert baseline["single_angle_topic_count"] == 1
+    assert baseline["gap_details"] == [
+        {
+            "kind": "unqualified_source_argument",
+            "argument_id": "argument:1",
+            "topic": "anchor:0",
+            "claim": "處分定義的待補來源論點。",
+        },
+        {
+            "kind": "unqualified_source_argument",
+            "argument_id": "argument:3",
+            "topic": "anchor:1",
+            "claim": "處分救濟的待補來源論點。",
+        },
+        {
+            "kind": "single_angle_topic",
+            "topic": "anchor:1",
+            "argument_ids": ["argument:2", "argument:3"],
+            "angle_tags": ["effect"],
+        },
+    ]
+
+    leaderboard = generate_quality_debt_leaderboard(baseline_path, leaderboard_path)
+
+    assert leaderboard["schema"] == "note_filler.quality_debt_leaderboard.v2"
+    assert leaderboard["unknown_record_count"] == 0
+    assert leaderboard["records"][0]["unqualified_source_argument_count"] == 2
+    assert leaderboard["records"][0]["single_angle_topic_count"] == 1
+    assert leaderboard["records"][0]["gap_details"] == baseline["gap_details"]
+    assert json.loads(leaderboard_path.read_text(encoding="utf-8")) == leaderboard
+
+
+def test_quality_debt_leaderboard_keeps_legacy_topic_assignment_unknown(tmp_path):
+    """舊格式缺少明確 topic 時，不得用共同字元或章節文字猜測。"""
+    baseline_path = tmp_path / "baseline.jsonl"
+    baseline_path.write_text(json.dumps({
+        "timestamp": "2026-08-02T00:00:00+00:00",
+        "note_id": "legacy-note",
+        "artifact_path": "舊格式.md",
+        "content_hash": "a" * 64,
+        "status": "metrics_unavailable",
+        "traceability": None,
+        "angles_per_topic": None,
+    }, ensure_ascii=False) + "\n", encoding="utf-8", newline="\n")
+
+    leaderboard = generate_quality_debt_leaderboard(
+        baseline_path,
+        tmp_path / "quality_debt_leaderboard.json",
+    )
+
+    record = leaderboard["records"][0]
+    assert record["quality_debt_status"] == "unknown"
+    assert record["unqualified_source_argument_count"] is None
+    assert record["single_angle_topic_count"] is None
+    assert leaderboard["unknown_records"] == [{
+        "note_id": "legacy-note",
+        "artifact_path": "舊格式.md",
+        "reason": "legacy_baseline_missing_structured_quality_metadata",
+    }]

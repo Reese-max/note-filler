@@ -18,7 +18,7 @@ from pathlib import Path
 from typing import Any
 
 
-SCHEMA = "note_filler.markdown_quality_metrics.v1"
+SCHEMA = "note_filler.markdown_quality_metrics.v2"
 
 _SUPPLEMENT_START = re.compile(
     r"^\s*(?:>\s*)?【補充】(?:⚠待補證\s*)?(?P<claim>.*)$"
@@ -53,22 +53,60 @@ def _result(
 ) -> dict[str, Any]:
     arguments = arguments or []
     if status != "calculated":
+        unavailable_reason = reason or "incomplete_argument_block"
         return {
             "schema": SCHEMA,
             "status": "metrics_unavailable",
-            "reason": reason or "incomplete_argument_block",
+            "reason": unavailable_reason,
             "argument_count": 0,
             "qualified_argument_count": 0,
             "topic_count": 0,
             "traceability": None,
             "angles_per_topic": None,
+            "unqualified_source_argument_count": None,
+            "single_angle_topic_count": None,
+            "gap_details": [{
+                "kind": "topic_assignment_unknown",
+                "reason": unavailable_reason,
+            }],
             "arguments": [],
         }
 
     qualified_argument_count = sum(bool(item["qualified_source_ids"]) for item in arguments)
-    topic_angles: dict[str, set[str]] = {}
+    topic_arguments: dict[str, list[dict[str, Any]]] = {}
+    topic_angles: dict[str, list[str]] = {}
     for item in arguments:
-        topic_angles.setdefault(item["topic"], set()).update(item["angle_tags"])
+        topic = item["topic"]
+        topic_arguments.setdefault(topic, []).append(item)
+        angles = topic_angles.setdefault(topic, [])
+        for angle in item["angle_tags"]:
+            if angle not in angles:
+                angles.append(angle)
+
+    gap_details = [
+        {
+            "kind": "unqualified_source_argument",
+            "argument_id": item["argument_id"],
+            "topic": item["topic"],
+            "claim": item["claim"],
+        }
+        for item in arguments
+        if not item["qualified_source_ids"]
+    ]
+    single_angle_topics = [
+        (topic, topic_arguments[topic], angles)
+        for topic, angles in topic_angles.items()
+        if len(angles) == 1
+    ]
+    gap_details.extend(
+        {
+            "kind": "single_angle_topic",
+            "topic": topic,
+            "argument_ids": [item["argument_id"] for item in topic_items],
+            "angle_tags": angles,
+        }
+        for topic, topic_items, angles in single_angle_topics
+    )
     argument_count = len(arguments)
     return {
         "schema": SCHEMA,
@@ -79,6 +117,9 @@ def _result(
         "topic_count": len(topic_angles),
         "traceability": qualified_argument_count / argument_count,
         "angles_per_topic": sum(map(len, topic_angles.values())) / len(topic_angles),
+        "unqualified_source_argument_count": argument_count - qualified_argument_count,
+        "single_angle_topic_count": len(single_angle_topics),
+        "gap_details": gap_details,
         "arguments": arguments,
     }
 

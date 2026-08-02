@@ -173,7 +173,7 @@ def _sha256(paths: list[Path]) -> dict[str, str]:
 
 def _assert_leaderboard(path: Path, expected_count: int) -> dict:
     payload = json.loads(path.read_text(encoding="utf-8"))
-    assert payload["schema"] == "note_filler.quality_debt_leaderboard.v1"
+    assert payload["schema"] == "note_filler.quality_debt_leaderboard.v2"
     assert payload["record_count"] == expected_count
     records = payload["records"]
     assert len(records) == expected_count

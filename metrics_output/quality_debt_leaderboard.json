@@ -1,0 +1,210 @@
+{
+  "record_count": 8,
+  "records": [
+    {
+      "angles_per_topic": null,
+      "artifact_path": "clean-repro-3x-2026-07-24/run-1/real_note.訂正稿.md",
+      "content_hash": "a295739f742bf2db1bc69e0e9fb88acbc6ee14138d753a93eb5cdc39b0fb445d",
+      "gap_details": [
+        {
+          "kind": "topic_assignment_unknown",
+          "reason": "legacy_baseline_missing_structured_quality_metadata"
+        }
+      ],
+      "note_id": "d64ed55d383c",
+      "quality_debt_reason": "legacy_baseline_missing_structured_quality_metadata",
+      "quality_debt_status": "unknown",
+      "rank": 1,
+      "single_angle_topic_count": null,
+      "status": "metrics_unavailable",
+      "timestamp": "2026-07-31T05:17:33.944653+00:00",
+      "traceability": null,
+      "unqualified_source_argument_count": null
+    },
+    {
+      "angles_per_topic": null,
+      "artifact_path": "clean-repro-3x-2026-07-24/run-2/real_note.訂正稿.md",
+      "content_hash": "92397286c25513a3fadeba29a647e40284b1e2fd3ef8990ccfe4bca21166ad1a",
+      "gap_details": [
+        {
+          "kind": "topic_assignment_unknown",
+          "reason": "legacy_baseline_missing_structured_quality_metadata"
+        }
+      ],
+      "note_id": "d17646ed3b9b",
+      "quality_debt_reason": "legacy_baseline_missing_structured_quality_metadata",
+      "quality_debt_status": "unknown",
+      "rank": 2,
+      "single_angle_topic_count": null,
+      "status": "metrics_unavailable",
+      "timestamp": "2026-07-31T05:17:33.945659+00:00",
+      "traceability": null,
+      "unqualified_source_argument_count": null
+    },
+    {
+      "angles_per_topic": null,
+      "artifact_path": "clean-repro-3x-2026-07-24/run-3/real_note.訂正稿.md",
+      "content_hash": "294cd90e6fcc100ef8fd9dedfb52f775ea3fd9bfaeb286552c9f04793403fc2e",
+      "gap_details": [
+        {
+          "kind": "topic_assignment_unknown",
+          "reason": "legacy_baseline_missing_structured_quality_metadata"
+        }
+      ],
+      "note_id": "0a3252a8e080",
+      "quality_debt_reason": "legacy_baseline_missing_structured_quality_metadata",
+      "quality_debt_status": "unknown",
+      "rank": 3,
+      "single_angle_topic_count": null,
+      "status": "metrics_unavailable",
+      "timestamp": "2026-07-31T05:17:33.946659+00:00",
+      "traceability": null,
+      "unqualified_source_argument_count": null
+    },
+    {
+      "angles_per_topic": null,
+      "artifact_path": "main-flow-2026-07-24/real_note.訂正稿.md",
+      "content_hash": "d392bc16ac370742cdb468f9c861378b950d79eb757c2616c2c51b089afbdfb7",
+      "gap_details": [
+        {
+          "kind": "topic_assignment_unknown",
+          "reason": "legacy_baseline_missing_structured_quality_metadata"
+        }
+      ],
+      "note_id": "c020cb1bf84a",
+      "quality_debt_reason": "legacy_baseline_missing_structured_quality_metadata",
+      "quality_debt_status": "unknown",
+      "rank": 4,
+      "single_angle_topic_count": null,
+      "status": "metrics_unavailable",
+      "timestamp": "2026-07-31T05:17:33.947667+00:00",
+      "traceability": null,
+      "unqualified_source_argument_count": null
+    },
+    {
+      "angles_per_topic": null,
+      "artifact_path": "main-flow-2026-07-24T061023Z/real_note.訂正稿.md",
+      "content_hash": "7514c026f297baae02044fc7b703a2da1d9d4ecf2516bd5c15559181536ac247",
+      "gap_details": [
+        {
+          "kind": "topic_assignment_unknown",
+          "reason": "legacy_baseline_missing_structured_quality_metadata"
+        }
+      ],
+      "note_id": "16e7d200b7a6",
+      "quality_debt_reason": "legacy_baseline_missing_structured_quality_metadata",
+      "quality_debt_status": "unknown",
+      "rank": 5,
+      "single_angle_topic_count": null,
+      "status": "metrics_unavailable",
+      "timestamp": "2026-07-31T05:17:33.948666+00:00",
+      "traceability": null,
+      "unqualified_source_argument_count": null
+    },
+    {
+      "angles_per_topic": null,
+      "artifact_path": "reproducibility-run-1/real_note.訂正稿.md",
+      "content_hash": "5f860d9a00ca3a734b3f48e49824c1a10fc0961b1e3aee8e9330e33d5f4a9887",
+      "gap_details": [
+        {
+          "kind": "topic_assignment_unknown",
+          "reason": "legacy_baseline_missing_structured_quality_metadata"
+        }
+      ],
+      "note_id": "fc7ab0fc0d9f",
+      "quality_debt_reason": "legacy_baseline_missing_structured_quality_metadata",
+      "quality_debt_status": "unknown",
+      "rank": 6,
+      "single_angle_topic_count": null,
+      "status": "metrics_unavailable",
+      "timestamp": "2026-07-31T05:17:33.949666+00:00",
+      "traceability": null,
+      "unqualified_source_argument_count": null
+    },
+    {
+      "angles_per_topic": null,
+      "artifact_path": "reproducibility-run-2/real_note.訂正稿.md",
+      "content_hash": "63183c19d1d66dec9c9268f08f80523669038f60932562ee2a18072e20901c51",
+      "gap_details": [
+        {
+          "kind": "topic_assignment_unknown",
+          "reason": "legacy_baseline_missing_structured_quality_metadata"
+        }
+      ],
+      "note_id": "24e2ed0f7f88",
+      "quality_debt_reason": "legacy_baseline_missing_structured_quality_metadata",
+      "quality_debt_status": "unknown",
+      "rank": 7,
+      "single_angle_topic_count": null,
+      "status": "metrics_unavailable",
+      "timestamp": "2026-07-31T05:17:33.949666+00:00",
+      "traceability": null,
+      "unqualified_source_argument_count": null
+    },
+    {
+      "angles_per_topic": null,
+      "artifact_path": "reproducibility-run-3/real_note.訂正稿.md",
+      "content_hash": "4ba4c7b9f0a423dd8f190fb8221837e7c0954ebc82c25d33b2e6dc76efb9cdd0",
+      "gap_details": [
+        {
+          "kind": "topic_assignment_unknown",
+          "reason": "legacy_baseline_missing_structured_quality_metadata"
+        }
+      ],
+      "note_id": "a1db9719cc15",
+      "quality_debt_reason": "legacy_baseline_missing_structured_quality_metadata",
+      "quality_debt_status": "unknown",
+      "rank": 8,
+      "single_angle_topic_count": null,
+      "status": "metrics_unavailable",
+      "timestamp": "2026-07-31T05:17:33.951177+00:00",
+      "traceability": null,
+      "unqualified_source_argument_count": null
+    }
+  ],
+  "schema": "note_filler.quality_debt_leaderboard.v2",
+  "source_baseline": "output_markdown_baseline.jsonl",
+  "unknown_record_count": 8,
+  "unknown_records": [
+    {
+      "artifact_path": "clean-repro-3x-2026-07-24/run-1/real_note.訂正稿.md",
+      "note_id": "d64ed55d383c",
+      "reason": "legacy_baseline_missing_structured_quality_metadata"
+    },
+    {
+      "artifact_path": "clean-repro-3x-2026-07-24/run-2/real_note.訂正稿.md",
+      "note_id": "d17646ed3b9b",
+      "reason": "legacy_baseline_missing_structured_quality_metadata"
+    },
+    {
+      "artifact_path": "clean-repro-3x-2026-07-24/run-3/real_note.訂正稿.md",
+      "note_id": "0a3252a8e080",
+      "reason": "legacy_baseline_missing_structured_quality_metadata"
+    },
+    {
+      "artifact_path": "main-flow-2026-07-24/real_note.訂正稿.md",
+      "note_id": "c020cb1bf84a",
+      "reason": "legacy_baseline_missing_structured_quality_metadata"
+    },
+    {
+      "artifact_path": "main-flow-2026-07-24T061023Z/real_note.訂正稿.md",
+      "note_id": "16e7d200b7a6",
+      "reason": "legacy_baseline_missing_structured_quality_metadata"
+    },
+    {
+      "artifact_path": "reproducibility-run-1/real_note.訂正稿.md",
+      "note_id": "fc7ab0fc0d9f",
+      "reason": "legacy_baseline_missing_structured_quality_metadata"
+    },
+    {
+      "artifact_path": "reproducibility-run-2/real_note.訂正稿.md",
+      "note_id": "24e2ed0f7f88",
+      "reason": "legacy_baseline_missing_structured_quality_metadata"
+    },
+    {
+      "artifact_path": "reproducibility-run-3/real_note.訂正稿.md",
+      "note_id": "a1db9719cc15",
+      "reason": "legacy_baseline_missing_structured_quality_metadata"
+    }
+  ]
+}

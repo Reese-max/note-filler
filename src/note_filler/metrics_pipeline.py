@@ -181,17 +181,53 @@ class OutputMarkdownBaselineScan:
     records: list[dict[str, Any]]
 
 
+def _load_quality_debt_metrics(
+    markdown_path: Path,
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    """讀取既有結構化 Markdown 量測；舊格式絕不猜測主題。"""
+    from .markdown_quality_metrics import measure_markdown_quality_file
+
+    quality = measure_markdown_quality_file(markdown_path)
+    if quality["status"] != "calculated":
+        return {
+            "quality_debt_status": "unknown",
+            "quality_debt_reason": quality["reason"],
+            "unqualified_source_argument_count": None,
+            "single_angle_topic_count": None,
+            "gap_details": quality["gap_details"],
+        }, quality
+
+    return {
+        "quality_debt_status": "calculated",
+        "quality_debt_reason": None,
+        "unqualified_source_argument_count": quality[
+            "unqualified_source_argument_count"
+        ],
+        "single_angle_topic_count": quality["single_angle_topic_count"],
+        "gap_details": quality["gap_details"],
+    }, quality
+
+
 def _load_output_metrics(
     markdown_path: Path,
     content_hash: str,
-) -> tuple[str, float | None, int | None]:
-    """只用已驗證的旁車資料重算成品指標，絕不從 Markdown 臆測來源。"""
+) -> tuple[str, float | None, float | None, dict[str, Any]]:
+    """讀取既有結構化量測，舊旁車格式保留相容但主題標為 unknown。"""
     from .binding_report import BINDING_REPORT_NAME, parse_binding_report
     from .metrics import calculate_polaris_metrics
 
+    quality_debt, quality = _load_quality_debt_metrics(markdown_path)
+    if quality_debt["quality_debt_status"] == "calculated":
+        return (
+            "calculated",
+            float(quality["traceability"]),
+            float(quality["angles_per_topic"]),
+            quality_debt,
+        )
+
     manifest_path = markdown_path.parent / "delivery_manifest.json"
     if not manifest_path.exists():
-        return "metrics_unavailable", None, None
+        return "metrics_unavailable", None, None, quality_debt
 
     try:
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
@@ -201,25 +237,25 @@ def _load_output_metrics(
             markdown_path,
             exc,
         )
-        return "metrics_unavailable", None, None
+        return "metrics_unavailable", None, None, quality_debt
 
     if not isinstance(manifest, dict):
-        return "metrics_unavailable", None, None
+        return "metrics_unavailable", None, None, quality_debt
     manifest_hash = manifest.get("content_hash")
     if manifest_hash and manifest_hash != content_hash[:16]:
         logger.warning("output_metrics_unavailable path=%s reason=content_hash_mismatch", markdown_path)
-        return "metrics_unavailable", None, None
+        return "metrics_unavailable", None, None, quality_debt
 
     binding_report_path = markdown_path.parent / BINDING_REPORT_NAME
     if not binding_report_path.exists():
-        return "metrics_unavailable", None, None
+        return "metrics_unavailable", None, None, quality_debt
 
     try:
         binding_report = parse_binding_report(
             json.loads(binding_report_path.read_text(encoding="utf-8"))
         )
         if not binding_report["arguments"]:
-            return "metrics_unavailable", None, None
+            return "metrics_unavailable", None, None, quality_debt
         delivery_status = manifest.get("delivery_status")
         metrics = calculate_polaris_metrics(
             binding_report,
@@ -233,15 +269,16 @@ def _load_output_metrics(
             markdown_path,
             exc,
         )
-        return "metrics_unavailable", None, None
+        return "metrics_unavailable", None, None, quality_debt
 
     if (
         not isinstance(traceability, (int, float))
         or isinstance(traceability, bool)
-        or type(angles_per_topic) is not int
+        or not isinstance(angles_per_topic, (int, float))
+        or isinstance(angles_per_topic, bool)
     ):
-        return "metrics_unavailable", None, None
-    return "calculated", float(traceability), angles_per_topic
+        return "metrics_unavailable", None, None, quality_debt
+    return "calculated", float(traceability), float(angles_per_topic), quality_debt
 
 
 def scan_output_markdown_baselines(
@@ -293,7 +330,7 @@ def scan_output_markdown_baselines(
                     continue
                 if batch_size is not None and len(candidates) >= batch_size:
                     break
-                status, traceability, angles_per_topic = _load_output_metrics(
+                status, traceability, angles_per_topic, quality_debt = _load_output_metrics(
                     markdown_path,
                     content_hash,
                 )
@@ -305,6 +342,7 @@ def scan_output_markdown_baselines(
                     "status": status,
                     "traceability": traceability,
                     "angles_per_topic": angles_per_topic,
+                    **quality_debt,
                 })
 
             if candidates:
@@ -331,7 +369,7 @@ def generate_quality_debt_leaderboard(
     baseline_path: Path,
     leaderboard_path: Path,
 ) -> dict[str, Any]:
-    """從完整成品基線產生可解析且穩定排序的品質欠債排行榜。"""
+    """從完整成品基線產生排行榜；不重建既有量測或推測主題。"""
     baseline_path = Path(baseline_path)
     records: list[dict[str, Any]] = []
     for line_number, line in enumerate(
@@ -359,8 +397,69 @@ def generate_quality_debt_leaderboard(
         ):
             raise ValueError(f"成品基線第 {line_number} 行 traceability 型別錯誤")
         angles = record.get("angles_per_topic")
-        if angles is not None and type(angles) is not int:
+        if angles is not None and (
+            not isinstance(angles, (int, float)) or isinstance(angles, bool)
+        ):
             raise ValueError(f"成品基線第 {line_number} 行 angles_per_topic 型別錯誤")
+
+        quality_debt_keys = {
+            "quality_debt_status",
+            "quality_debt_reason",
+            "unqualified_source_argument_count",
+            "single_angle_topic_count",
+            "gap_details",
+        }
+        if not quality_debt_keys & record.keys():
+            # 舊基線沒有可靠 topic 欄位，僅能如實列為 unknown。
+            record.update({
+                "quality_debt_status": "unknown",
+                "quality_debt_reason": "legacy_baseline_missing_structured_quality_metadata",
+                "unqualified_source_argument_count": None,
+                "single_angle_topic_count": None,
+                "gap_details": [{
+                    "kind": "topic_assignment_unknown",
+                    "reason": "legacy_baseline_missing_structured_quality_metadata",
+                }],
+            })
+        elif quality_debt_keys - record.keys():
+            raise ValueError(f"成品基線第 {line_number} 行品質欠債欄位不完整")
+
+        debt_status = record["quality_debt_status"]
+        debt_reason = record["quality_debt_reason"]
+        unqualified_count = record["unqualified_source_argument_count"]
+        single_angle_count = record["single_angle_topic_count"]
+        gap_details = record["gap_details"]
+        if debt_status not in ("calculated", "unknown"):
+            raise ValueError(f"成品基線第 {line_number} 行 quality_debt_status 非法")
+        if not isinstance(gap_details, list) or not all(
+            isinstance(detail, dict) for detail in gap_details
+        ):
+            raise ValueError(f"成品基線第 {line_number} 行 gap_details 型別錯誤")
+        if debt_status == "unknown":
+            if not isinstance(debt_reason, str) or not debt_reason:
+                raise ValueError(f"成品基線第 {line_number} 行 unknown 缺少原因")
+            if unqualified_count is not None or single_angle_count is not None:
+                raise ValueError(f"成品基線第 {line_number} 行 unknown 不可猜測欠債計數")
+        else:
+            if debt_reason is not None:
+                raise ValueError(f"成品基線第 {line_number} 行 calculated 不可含 unknown 原因")
+            if (
+                type(unqualified_count) is not int
+                or unqualified_count < 0
+                or type(single_angle_count) is not int
+                or single_angle_count < 0
+            ):
+                raise ValueError(f"成品基線第 {line_number} 行品質欠債計數錯誤")
+            if unqualified_count != sum(
+                detail.get("kind") == "unqualified_source_argument"
+                for detail in gap_details
+            ):
+                raise ValueError(f"成品基線第 {line_number} 行無合格來源論點計數不一致")
+            if single_angle_count != sum(
+                detail.get("kind") == "single_angle_topic"
+                for detail in gap_details
+            ):
+                raise ValueError(f"成品基線第 {line_number} 行單角度主題計數不一致")
         records.append(dict(record))
 
     records.sort(key=lambda item: (
@@ -375,9 +474,21 @@ def generate_quality_debt_leaderboard(
         record["rank"] = rank
 
     leaderboard = {
-        "schema": "note_filler.quality_debt_leaderboard.v1",
+        "schema": "note_filler.quality_debt_leaderboard.v2",
         "source_baseline": baseline_path.name,
         "record_count": len(records),
+        "unknown_record_count": sum(
+            record["quality_debt_status"] == "unknown" for record in records
+        ),
+        "unknown_records": [
+            {
+                "note_id": record["note_id"],
+                "artifact_path": record["artifact_path"],
+                "reason": record["quality_debt_reason"],
+            }
+            for record in records
+            if record["quality_debt_status"] == "unknown"
+        ],
         "records": records,
     }
     leaderboard_path = Path(leaderboard_path)
