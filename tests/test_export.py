@@ -16,6 +16,7 @@ from note_filler.knowledge.law_citation_check import check_law_citations
 from note_filler.knowledge.law_lookup import LawLookup
 from note_filler.retrieve.models import Source
 from note_filler.export import to_docx, to_json, to_markdown, _calculate_polaris_for_doc
+from note_filler.markdown_quality_metrics import measure_markdown_quality
 from note_filler.verify import cross_validate
 from note_filler.write import WrittenSupplement
 
@@ -311,6 +312,18 @@ def test_to_markdown_contains_angle_coverage_line():
     assert len(summary_lines) == 1
     assert "有效角度 2/最低 2" in summary_lines[0]
     assert "通過 ✓" in summary_lines[0]
+
+
+def test_to_markdown_is_readable_by_independent_quality_measurement():
+    """成品只靠本身 Markdown 即可提供品質量測欄位。"""
+    result = measure_markdown_quality(to_markdown(_sample_doc()))
+
+    assert result["status"] == "calculated"
+    assert result["traceability"] == 0.5
+    assert result["angles_per_topic"] == 2.0
+    assert [item["argument_id"] for item in result["arguments"]] == [
+        "argument:0", "argument:1",
+    ]
 
 
 def test_human_readable_exports_show_argument_aligned_visible_summaries(tmp_path):

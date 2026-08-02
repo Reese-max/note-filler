@@ -93,7 +93,30 @@ def _trace_text(seg) -> str:
     return "、".join(items)
 
 
-def _argument_coverage_text(argument: dict) -> str:
+def _quality_metadata(argument: dict, seg) -> str:
+    """輸出 Markdown-only 品質量測所需的單行、結構化欄位。"""
+    coverage = argument["angle_coverage"]
+    anchor_idx = getattr(seg, "anchor_idx", None)
+    argument_id = argument["argument_id"]
+    topic = f"anchor:{anchor_idx}" if type(anchor_idx) is int else f"unanchored:{argument_id}"
+    source_ids = list(argument.get("source_ids") or [])
+    qualified_source_ids = (
+        source_ids if getattr(seg, "confidence", None) == "verified" else []
+    )
+    return json.dumps(
+        {
+            "argument_id": argument_id,
+            "topic": topic,
+            "angle_tags": [coverage["angle_type"]],
+            "qualified_source_ids": qualified_source_ids,
+        },
+        ensure_ascii=False,
+        separators=(",", ":"),
+        sort_keys=True,
+    )
+
+
+def _argument_coverage_text(argument: dict, *, quality_metadata: str | None = None) -> str:
     """逐筆聚合論點、來源、必要性雙視角與角度清單。
     
     格式與機器可讀報告對齊，顯示四個核心欄位：
@@ -108,12 +131,13 @@ def _argument_coverage_text(argument: dict) -> str:
     functional_gap = argument.get("functional_gap", "")
     user_value = argument.get("user_value", "")
     
-    return (
+    text = (
         f"functional_gap={functional_gap or '（未提供）'}"
         f"；user_value={user_value or '（未提供）'}"
         f"；angle_tags={'、'.join(angle_tags) if angle_tags else '（無）'}"
         f"；source_ids={','.join(source_ids) if source_ids else 'pending（無來源）'}"
     )
+    return f"{text}；quality_metadata={quality_metadata}" if quality_metadata else text
 
 
 def _visible_summary_text(argument: dict) -> str:
@@ -586,7 +610,10 @@ def to_markdown(doc: CorrectionDoc) -> str:
 
         if argument:
             body.append(f"> **摘要可見**：{_visible_summary_text(argument)}")
-            body.append(f"> **角度覆蓋**：{_argument_coverage_text(argument)}")
+            body.append(
+                "> **角度覆蓋**："
+                f"{_argument_coverage_text(argument, quality_metadata=_quality_metadata(argument, seg))}"
+            )
             body.append(f"> **論點追溯**：{_argument_trace_text(argument)}")
 
         argument_id = getattr(seg, "argument_id", "")
