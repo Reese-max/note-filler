@@ -94,6 +94,14 @@ def _is_non_empty_file(path: Path) -> bool:
         return False
 
 
+def _content_hash_file(path: Path) -> str:
+    """回傳檔案內容的全長 sha256；不存在或不可讀時回傳空字串。"""
+    try:
+        return hashlib.sha256(Path(path).read_bytes()).hexdigest()
+    except OSError:
+        return ""
+
+
 def _check_no_leaked_errors(content: str) -> None:
     """檢查內容是否外洩底層錯誤訊息，若有則拒絕送達。
     
@@ -162,6 +170,16 @@ def write_delivery_receipt(
         content_hash = hashlib.sha256(content.encode("utf-8")).hexdigest()[:16]
 
     status_data = delivery_status or {}
+    final_delivery_status = _delivery_status(
+        primary_note_ready=bool(
+            status_data.get("primary_note_ready", status == "delivered")
+        ),
+        user_channel_sent=bool(status_data.get("user_channel_sent", False)),
+        local_fallback_written=bool(
+            status_data.get("local_fallback_written", _is_non_empty_file(output_path))
+        ),
+        segment_delivery_details=status_data.get("segment_delivery_details"),
+    )
     receipt = {
         "output_path": str(output_path),
         "input_path": str(input_path),
@@ -171,15 +189,19 @@ def write_delivery_receipt(
         "format": fmt,
         "supplements": supplements,
         "verified": verified,
-        "delivery_status": _delivery_status(
-            primary_note_ready=bool(
-                status_data.get("primary_note_ready", status == "delivered")
-            ),
-            user_channel_sent=bool(status_data.get("user_channel_sent", False)),
-            local_fallback_written=bool(
-                status_data.get("local_fallback_written", _is_non_empty_file(output_path))
-            ),
-            segment_delivery_details=status_data.get("segment_delivery_details"),
+        "delivery_status": final_delivery_status,
+        # 已持久化 artifact 的內容雜湊：生成成品、來源、傳輸確認
+        "output_content_hash": _content_hash_file(output_path),
+        "input_content_hash": _content_hash_file(input_path),
+        "transmission_confirmation_hash": (
+            hashlib.sha256(
+                json.dumps(
+                    final_delivery_status,
+                    ensure_ascii=False,
+                    sort_keys=True,
+                    separators=(",", ":"),
+                ).encode("utf-8")
+            ).hexdigest()
         ),
     }
     if error is not None:
