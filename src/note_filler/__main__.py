@@ -26,12 +26,14 @@ from .llm import GrokClient
 from .metrics import calculate_polaris_metrics
 from .pipeline import require_non_empty_note_product, run_pipeline
 from .retrieve.twinkle import TwinkleClient
+from .task_state import TaskStage, TaskStateManager, build_task_key
 
 logger = logging.getLogger(__name__)
 
 _SUFFIXES = {".txt", ".docx"}
 
 MANIFEST_NAME = "delivery_manifest.json"
+TASK_STATE_DIR = Path(os.environ.get("NOTE_FILLER_TASK_STATE", ".task_state"))
 
 
 def _delivery_status(
@@ -250,13 +252,40 @@ def _iter_inputs(paths: list[str]) -> list[Path]:
     return out
 
 
-def process_file(path: Path, llm, twinkle, law, out_dir: Path | None, fmt: str) -> dict:
+def process_file(
+    path: Path,
+    llm,
+    twinkle,
+    law,
+    out_dir: Path | None,
+    fmt: str,
+    *,
+    state_dir: Path | None = None,
+) -> dict:
     """跑單檔 pipeline、寫出輸出檔、寫 delivery receipt,回統計 dict。
 
     交付回執(manifest)寫在輸出檔同目錄,作為可查詢的送達紀錄;
     使用者可讀取 manifest 確認交付狀態,而非只依賴本機檔案存在。
     """
-    doc = run_pipeline(str(path), llm, twinkle, law)
+    task_key = build_task_key(str(path))
+    task_mgr = TaskStateManager(state_dir or TASK_STATE_DIR)
+
+    # 記錄 generation 階段開始
+    task_mgr.start_task(task_key, stage=TaskStage.GENERATION, source_locator=str(path))
+
+    try:
+        doc = run_pipeline(str(path), llm, twinkle, law)
+    except Exception as exc:
+        # 生成例外：持久化失敗，不得吞沒後標成功
+        task_mgr.fail(
+            task_key,
+            stage=TaskStage.GENERATION,
+            error_type=type(exc).__name__,
+            error_message=str(exc),
+            recoverable=False,
+        )
+        raise
+
     # 防禦層：即使 pipeline 被 stub，交付前仍硬性要求非空實際筆記
     require_non_empty_note_product(doc, source=path)
     supp = [s for s in doc.segments if s.type == "supplement"]
@@ -269,11 +298,28 @@ def process_file(path: Path, llm, twinkle, law, out_dir: Path | None, fmt: str) 
     # stdout 的使用者送達內容；DOCX 另以 Markdown 提供可直接閱讀的完整筆記。
     body = json.dumps(to_json(doc), ensure_ascii=False, indent=2) if fmt == "json" else to_markdown(doc)
     if not body.strip():
+        task_mgr.fail(
+            task_key,
+            stage=TaskStage.TRANSMISSION,
+            error_type="RuntimeError",
+            error_message="訂正稿內容為空",
+            recoverable=False,
+        )
         raise RuntimeError(f"訂正稿內容為空,拒絕視為送達成功:{path}")
     
     # 防禦層：檢查內容是否外洩底層錯誤訊息（JSON 與 Markdown 都需檢查）
-    _check_no_leaked_errors(body)
-    
+    try:
+        _check_no_leaked_errors(body)
+    except RuntimeError as exc:
+        task_mgr.fail(
+            task_key,
+            stage=TaskStage.TRANSMISSION,
+            error_type="RuntimeError",
+            error_message=str(exc),
+            recoverable=False,
+        )
+        raise
+
     seg_details = _build_segment_delivery_details(doc)
     delivery_status = _delivery_status(
         primary_note_ready=True,
@@ -281,14 +327,41 @@ def process_file(path: Path, llm, twinkle, law, out_dir: Path | None, fmt: str) 
     )
 
     if fmt == "docx":
-        to_docx(doc, str(dest))
+        try:
+            to_docx(doc, str(dest))
+        except Exception as exc:
+            task_mgr.fail(
+                task_key,
+                stage=TaskStage.TRANSMISSION,
+                error_type=type(exc).__name__,
+                error_message=f"DOCX write failed: {exc}",
+                recoverable=False,
+            )
+            raise
         # 送達後再驗：空檔不得當成功（digest 已生成但未真正送達）
         if not dest.is_file() or dest.stat().st_size == 0:
+            task_mgr.fail(
+                task_key,
+                stage=TaskStage.TRANSMISSION,
+                error_type="RuntimeError",
+                error_message=f"DOCX output empty: {dest}",
+                recoverable=False,
+            )
             raise RuntimeError(f"訂正稿寫出失敗或為空,拒絕視為送達成功:{dest}")
         # DOCX 也需檢查 Markdown 內容是否外洩錯誤
         _check_no_leaked_errors(body)
     else:
-        dest.write_text(body, encoding="utf-8", newline="\n")
+        try:
+            dest.write_text(body, encoding="utf-8", newline="\n")
+        except Exception as exc:
+            task_mgr.fail(
+                task_key,
+                stage=TaskStage.TRANSMISSION,
+                error_type=type(exc).__name__,
+                error_message=f"file write failed: {exc}",
+                recoverable=False,
+            )
+            raise
     delivery_status["local_fallback_written"] = True
 
     # 先寫並驗收綁定報告；角度門檻失敗不得留下 delivered 回執。
@@ -312,6 +385,14 @@ def process_file(path: Path, llm, twinkle, law, out_dir: Path | None, fmt: str) 
         delivery_status=delivery_status,
         polaris_metrics=polaris_metrics,
     )
+
+    # 標記任務成功
+    task_mgr.succeed(
+        task_key,
+        artifact_path=str(dest),
+        content=body if fmt != "docx" else "",
+    )
+
     return {
         "input": str(path),
         "output": str(dest),
