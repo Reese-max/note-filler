@@ -1,0 +1,1546 @@
+{
+  "schema": "note_filler.binding_report.v2",
+  "source_path": "tests/fixtures/real_note.txt",
+  "argument_count": 10,
+  "summary": {
+    "one_to_one": 1,
+    "one_to_many": 4,
+    "none": 5,
+    "pass": 5,
+    "fail": 0,
+    "pending_evidence": 5,
+    "all_sourced_arguments_ok": true,
+    "all_arguments_ok": true
+  },
+  "arguments": [
+    {
+      "argument_index": 0,
+      "argument_id": "argument:0",
+      "segment_index": 0,
+      "argument_text": "【待補證】\n來源[1]僅提供行政程序法第92條之法條原文，定義行政處分係行政機關就「公法上具體事件」所為之決定或其他公權力措施，而未說明「具體事件」之具體性判斷基準；來源[2]至[4]則均為其他條文之修正草案，與本問題完全無關，故無從作答。",
+      "summary": "【待補證】\n來源[1]僅提供行政程序法第92條之法條原文，定義行政處分係行政機關就「公法上具體事件」所為之決定或其他公權力措施，而未說明「具體事件」之具體性判斷基準；來源[2]至[4]則均為其他條文之修正草案，與本問題完全無關，故無從作答。",
+      "confidence": "pending_evidence",
+      "cardinality": "none",
+      "source_count": 0,
+      "source_ids": [],
+      "trace_source_ids": [],
+      "source_fragments": [],
+      "citation_spans": [],
+      "source_id_field": "pending:gap:0",
+      "checks": {
+        "at_least_one_source": false,
+        "source_traceable": true,
+        "no_duplicate_sources": true,
+        "no_omitted_traces": true,
+        "no_extra_traces": true,
+        "source_id_field_aligned": true,
+        "no_empty_fragments": true,
+        "has_functional_gap": true,
+        "has_user_value": true,
+        "has_related_knowledge": true,
+        "related_knowledge_consistent": true,
+        "summary_matches_product": true,
+        "has_angle_coverage": true,
+        "angle_facet_complete": true,
+        "angle_functional_gap_present": true,
+        "angle_user_value_present": true,
+        "angle_question_present": true,
+        "at_least_two_openable_links": false,
+        "meets_angle_coverage_threshold": true
+      },
+      "binding_status": "pending_evidence",
+      "binding_ok": true,
+      "functional_gap": "需要補充行政處分的要件、程序或救濟依據",
+      "user_value": "幫助讀者理解行政處分的要件、程序或救濟依據",
+      "related_knowledge": "【待補證】\n來源[1]僅提供行政程序法第92條之法條原文，定義行政處分係行政機關就「公法上具體事件」所為之決定或其他公權力措施，而未說明「具體事件」之具體性判斷基準；來源[2]至[4]則均為其他條文之修正草案，與本問題完全無關，故無從作答。（如何支撐決策品質：對應功能缺口「需要補充行政處分的要件、程序或救濟依據」提供可追溯依據，降低僅憑印象取捨的風險；如何補強使用者理解：幫助讀者理解行政處分的要件、程序或救濟依據）",
+      "angle_coverage": {
+        "angle_type": "procedure",
+        "angle_labels": [
+          "procedure",
+          "functional_gap",
+          "user_value"
+        ],
+        "covered_facets": [
+          "angle:procedure",
+          "necessity:functional_gap",
+          "necessity:user_value",
+          "question"
+        ],
+        "angle_key": "procedure:待補證 來源 1 僅提供行政程序法第92條之法條原文 定義行政處分係行政機關就 公法上具體事件 所為之決定或其他公權力措施 而未說明 具體事件 之具體性判斷基準 來源 2 至 4 則均為其他條文之修正草案 與本問題完全無關 故無從作答",
+        "relation": {
+          "kind": "unique",
+          "related_argument_indices": [],
+          "duplicate_of": [],
+          "synonym_of": []
+        },
+        "effective_angle_count": 1,
+        "duplicate_exclusion": {
+          "excluded": false,
+          "reason": null,
+          "kept_argument_index": 0
+        }
+      },
+      "extended_readings": [],
+      "extended_readings_status": "none",
+      "pending_evidence_reason": "",
+      "openable_links_count": 0,
+      "openable_links_status": "none",
+      "openable_links_incomplete_reason": "",
+      "angle_tags": [
+        "procedure",
+        "functional_gap",
+        "user_value"
+      ],
+      "valid_angle_count": 1,
+      "deduped_angle_count": 1,
+      "duplicate_angles": [],
+      "angle_field_issues": [],
+      "source_conflicts": [],
+      "source_preference_reason": {
+        "status": "not_applicable",
+        "preferred_source_id": null,
+        "reason_code": "no_source",
+        "detail": "無引用來源，不適用衝突判定。"
+      },
+      "applicable_conditions": {
+        "status": "not_assessed",
+        "items": []
+      },
+      "readable_conclusion": "無引用來源，待補證。"
+    },
+    {
+      "argument_index": 1,
+      "argument_id": "argument:1",
+      "segment_index": 1,
+      "argument_text": "【待補證】\n來源僅提供《行政程序法》第92條行政處分之定義（含「對外直接發生法律效果」之用語）及其他程序規定，均未說明「直接」要件之判斷時點與標準，無從作答。",
+      "summary": "【待補證】\n來源僅提供《行政程序法》第92條行政處分之定義（含「對外直接發生法律效果」之用語）及其他程序規定，均未說明「直接」要件之判斷時點與標準，無從作答。",
+      "confidence": "pending_evidence",
+      "cardinality": "none",
+      "source_count": 0,
+      "source_ids": [],
+      "trace_source_ids": [],
+      "source_fragments": [],
+      "citation_spans": [],
+      "source_id_field": "pending:gap:1",
+      "checks": {
+        "at_least_one_source": false,
+        "source_traceable": true,
+        "no_duplicate_sources": true,
+        "no_omitted_traces": true,
+        "no_extra_traces": true,
+        "source_id_field_aligned": true,
+        "no_empty_fragments": true,
+        "has_functional_gap": true,
+        "has_user_value": true,
+        "has_related_knowledge": true,
+        "related_knowledge_consistent": true,
+        "summary_matches_product": true,
+        "has_angle_coverage": true,
+        "angle_facet_complete": true,
+        "angle_functional_gap_present": true,
+        "angle_user_value_present": true,
+        "angle_question_present": true,
+        "at_least_two_openable_links": false,
+        "meets_angle_coverage_threshold": true
+      },
+      "binding_status": "pending_evidence",
+      "binding_ok": true,
+      "functional_gap": "需要補充行政處分的要件、程序或救濟依據",
+      "user_value": "幫助讀者理解行政處分的要件、程序或救濟依據",
+      "related_knowledge": "【待補證】\n來源僅提供《行政程序法》第92條行政處分之定義（含「對外直接發生法律效果」之用語）及其他程序規定，均未說明「直接」要件之判斷時點與標準，無從作答。（如何支撐決策品質：對應功能缺口「需要補充行政處分的要件、程序或救濟依據」提供可追溯依據，降低僅憑印象取捨的風險；如何補強使用者理解：幫助讀者理解行政處分的要件、程序或救濟依據）",
+      "angle_coverage": {
+        "angle_type": "procedure",
+        "angle_labels": [
+          "procedure",
+          "functional_gap",
+          "user_value"
+        ],
+        "covered_facets": [
+          "angle:procedure",
+          "necessity:functional_gap",
+          "necessity:user_value",
+          "question"
+        ],
+        "angle_key": "procedure:待補證 來源僅提供 行政程序法 第92條行政處分之定義 含 對外直接發生法律效果 之用語 及其他程序規定 均未說明 直接 要件之判斷時點與標準 無從作答",
+        "relation": {
+          "kind": "unique",
+          "related_argument_indices": [],
+          "duplicate_of": [],
+          "synonym_of": []
+        },
+        "effective_angle_count": 1,
+        "duplicate_exclusion": {
+          "excluded": false,
+          "reason": null,
+          "kept_argument_index": 1
+        }
+      },
+      "extended_readings": [],
+      "extended_readings_status": "none",
+      "pending_evidence_reason": "",
+      "openable_links_count": 0,
+      "openable_links_status": "none",
+      "openable_links_incomplete_reason": "",
+      "angle_tags": [
+        "procedure",
+        "functional_gap",
+        "user_value"
+      ],
+      "valid_angle_count": 1,
+      "deduped_angle_count": 1,
+      "duplicate_angles": [],
+      "angle_field_issues": [],
+      "source_conflicts": [],
+      "source_preference_reason": {
+        "status": "not_applicable",
+        "preferred_source_id": null,
+        "reason_code": "no_source",
+        "detail": "無引用來源，不適用衝突判定。"
+      },
+      "applicable_conditions": {
+        "status": "not_assessed",
+        "items": []
+      },
+      "readable_conclusion": "無引用來源，待補證。"
+    },
+    {
+      "argument_index": 2,
+      "argument_id": "argument:2",
+      "segment_index": 2,
+      "argument_text": "根據《行政程序法》第92條第1項規定，行政處分係指行政機關就公法上具體事件所為之決定或其他公權力措施而對外直接發生法律效果之單方行政行為，兩者均屬此定義範圍內之單方行政行為，故在法律性質上均為對外直接發生法律效果之公法行為，且適用範圍均限於公法上具體事件而非抽象或私法事項。[^11] 其餘來源雖涉及行政程序各階段之規定，惟均未就「決定」與「其他公權力措施」兩者之性質或範圍作任何區分。[^1]",
+      "summary": "根據《行政程序法》第92條第1項規定，行政處分係指行政機關就公法上具體事件所為之決定或其他公權力措施而對外直接發生法律效果之單方行政行為，兩者均屬此定義範圍內之單方行政行為，故在法律性質上均為對外直接發生法律效果之公法行為，且適用範圍均限於公法上具體事件而非抽象或私法事項。[^11] 其餘來源雖涉及行政程序各階段之規定，惟均未就「決定」與「其他公權力措施」兩者之性質或範圍作任何區分。[^1]",
+      "confidence": "verified",
+      "cardinality": "one_to_many",
+      "source_count": 2,
+      "source_ids": [
+        "footnote:11",
+        "footnote:1"
+      ],
+      "trace_source_ids": [
+        "footnote:11",
+        "footnote:1"
+      ],
+      "source_fragments": [
+        {
+          "source_id": "footnote:11",
+          "text": "規定訴願的違法或不當與權益受損要件、期間起算，以及地方自治事務的合法性審查。"
+        },
+        {
+          "source_id": "footnote:1",
+          "text": "本法所稱行政處分，係指行政機關就公法上具體事件所為之決定或其他公權力措施而對外直接發生法律效果之單方行政行為。  前項決定或措施之相對人雖非特定，而依一般性特徵可得確定其範圍者，為一般處分，適用本法有"
+        }
+      ],
+      "citation_spans": [
+        {
+          "source_id": "footnote:11",
+          "span_start": 137,
+          "span_end": 142,
+          "marker_text": "[^11]"
+        },
+        {
+          "source_id": "footnote:1",
+          "span_start": 193,
+          "span_end": 197,
+          "marker_text": "[^1]"
+        }
+      ],
+      "source_id_field": "sources:footnote:11,footnote:1",
+      "checks": {
+        "at_least_one_source": true,
+        "source_traceable": true,
+        "no_duplicate_sources": true,
+        "no_omitted_traces": true,
+        "no_extra_traces": true,
+        "source_id_field_aligned": true,
+        "no_empty_fragments": true,
+        "has_functional_gap": true,
+        "has_user_value": true,
+        "has_related_knowledge": true,
+        "related_knowledge_consistent": true,
+        "summary_matches_product": true,
+        "has_angle_coverage": true,
+        "angle_facet_complete": true,
+        "angle_functional_gap_present": true,
+        "angle_user_value_present": true,
+        "angle_question_present": true,
+        "at_least_two_openable_links": false,
+        "meets_angle_coverage_threshold": true
+      },
+      "binding_status": "pass",
+      "binding_ok": true,
+      "functional_gap": "需要補充行政處分的要件、程序或救濟依據",
+      "user_value": "幫助讀者理解行政處分的要件、程序或救濟依據",
+      "related_knowledge": "根據《行政程序法》第92條第1項規定，行政處分係指行政機關就公法上具體事件所為之決定或其他公權力措施而對外直接發生法律效果之單方行政行為，兩者均屬此定義範圍內之單方行政行為，故在法律性質上均為對外直接發生法律效果之公法行為，且適用範圍均限於公法上具體事件而非抽象或私法事項。[^11] 其餘來源雖涉及行政程序各階段之規定，惟均未就「決定」與「其他公權力措施」兩者之性質或範圍作任何區分。[^1]（如何支撐決策品質：對應功能缺口「需要補充行政處分的要件、程序或救濟依據」提供可追溯依據，降低僅憑印象取捨的風險；如何補強使用者理解：幫助讀者理解行政處分的要件、程序或救濟依據）",
+      "angle_coverage": {
+        "angle_type": "procedure",
+        "angle_labels": [
+          "procedure",
+          "functional_gap",
+          "user_value"
+        ],
+        "covered_facets": [
+          "angle:procedure",
+          "necessity:functional_gap",
+          "necessity:user_value",
+          "question"
+        ],
+        "angle_key": "procedure:根據 行政程序法 第92條第1項規定 行政處分係指行政機關就公法上具體事件所為之決定或其他公權力措施而對外直接發生法律效果之單方行政行為 兩者均屬此定義範圍內之單方行政行為 故在法律性質上均為對外直接發生法律效果之公法行為 且適用範圍均限於公法上具體事件而非抽象或私法事項 11 其餘來源雖涉及行政程序各階段之規定 惟均未就 決定 與 其他公權力措施 兩者之性質或範圍作任何區分 1",
+        "relation": {
+          "kind": "unique",
+          "related_argument_indices": [],
+          "duplicate_of": [],
+          "synonym_of": []
+        },
+        "effective_angle_count": 1,
+        "duplicate_exclusion": {
+          "excluded": false,
+          "reason": null,
+          "kept_argument_index": 2
+        }
+      },
+      "extended_readings": [],
+      "extended_readings_status": "none",
+      "pending_evidence_reason": "",
+      "openable_links_count": 0,
+      "openable_links_status": "none",
+      "openable_links_incomplete_reason": "",
+      "angle_tags": [
+        "procedure",
+        "functional_gap",
+        "user_value"
+      ],
+      "valid_angle_count": 1,
+      "deduped_angle_count": 1,
+      "duplicate_angles": [],
+      "angle_field_issues": [],
+      "source_conflicts": [],
+      "source_preference_reason": {
+        "status": "not_applicable",
+        "preferred_source_id": null,
+        "reason_code": "no_conflict",
+        "detail": "未偵測到來源衝突。"
+      },
+      "applicable_conditions": {
+        "status": "not_assessed",
+        "items": []
+      },
+      "readable_conclusion": "未偵測到來源衝突。"
+    },
+    {
+      "argument_index": 3,
+      "argument_id": "argument:3",
+      "segment_index": 3,
+      "argument_text": "【待補證】來源[1]僅定義一般處分為「相對人雖非特定，而依一般性特徵可得確定其範圍者」，但未說明該特徵之判斷方法或界限；來源[2]至[4]僅規範一般處分在理由記載、送達及效力發生上之適用，亦無相關判斷資訊。",
+      "summary": "【待補證】來源[1]僅定義一般處分為「相對人雖非特定，而依一般性特徵可得確定其範圍者」，但未說明該特徵之判斷方法或界限；來源[2]至[4]僅規範一般處分在理由記載、送達及效力發生上之適用，亦無相關判斷資訊。",
+      "confidence": "pending_evidence",
+      "cardinality": "none",
+      "source_count": 0,
+      "source_ids": [],
+      "trace_source_ids": [],
+      "source_fragments": [],
+      "citation_spans": [],
+      "source_id_field": "pending:gap:3",
+      "checks": {
+        "at_least_one_source": false,
+        "source_traceable": true,
+        "no_duplicate_sources": true,
+        "no_omitted_traces": true,
+        "no_extra_traces": true,
+        "source_id_field_aligned": true,
+        "no_empty_fragments": true,
+        "has_functional_gap": true,
+        "has_user_value": true,
+        "has_related_knowledge": true,
+        "related_knowledge_consistent": true,
+        "summary_matches_product": true,
+        "has_angle_coverage": true,
+        "angle_facet_complete": true,
+        "angle_functional_gap_present": true,
+        "angle_user_value_present": true,
+        "angle_question_present": true,
+        "at_least_two_openable_links": false,
+        "meets_angle_coverage_threshold": true
+      },
+      "binding_status": "pending_evidence",
+      "binding_ok": true,
+      "functional_gap": "需要補充行政處分的要件、程序或救濟依據",
+      "user_value": "幫助讀者理解行政處分的要件、程序或救濟依據",
+      "related_knowledge": "【待補證】來源[1]僅定義一般處分為「相對人雖非特定，而依一般性特徵可得確定其範圍者」，但未說明該特徵之判斷方法或界限；來源[2]至[4]僅規範一般處分在理由記載、送達及效力發生上之適用，亦無相關判斷資訊。（如何支撐決策品質：對應功能缺口「需要補充行政處分的要件、程序或救濟依據」提供可追溯依據，降低僅憑印象取捨的風險；如何補強使用者理解：幫助讀者理解行政處分的要件、程序或救濟依據）",
+      "angle_coverage": {
+        "angle_type": "other",
+        "angle_labels": [
+          "other",
+          "classification",
+          "functional_gap",
+          "user_value"
+        ],
+        "covered_facets": [
+          "angle:other",
+          "necessity:functional_gap",
+          "necessity:user_value",
+          "question"
+        ],
+        "angle_key": "other:待補證 來源 1 僅定義一般處分為 相對人雖非特定 而依一般性特徵可得確定其範圍者 但未說明該特徵之判斷方法或界限 來源 2 至 4 僅規範一般處分在理由記載 送達及效力發生上之適用 亦無相關判斷資訊",
+        "relation": {
+          "kind": "unique",
+          "related_argument_indices": [],
+          "duplicate_of": [],
+          "synonym_of": []
+        },
+        "effective_angle_count": 1,
+        "duplicate_exclusion": {
+          "excluded": false,
+          "reason": null,
+          "kept_argument_index": 3
+        }
+      },
+      "extended_readings": [],
+      "extended_readings_status": "none",
+      "pending_evidence_reason": "",
+      "openable_links_count": 0,
+      "openable_links_status": "none",
+      "openable_links_incomplete_reason": "",
+      "angle_tags": [
+        "other",
+        "classification",
+        "functional_gap",
+        "user_value"
+      ],
+      "valid_angle_count": 1,
+      "deduped_angle_count": 1,
+      "duplicate_angles": [],
+      "angle_field_issues": [],
+      "source_conflicts": [],
+      "source_preference_reason": {
+        "status": "not_applicable",
+        "preferred_source_id": null,
+        "reason_code": "no_source",
+        "detail": "無引用來源，不適用衝突判定。"
+      },
+      "applicable_conditions": {
+        "status": "not_assessed",
+        "items": []
+      },
+      "readable_conclusion": "無引用來源，待補證。"
+    },
+    {
+      "argument_index": 4,
+      "argument_id": "argument:4",
+      "segment_index": 4,
+      "argument_text": "一般處分與個別處分在法律效果發生方式上存在實質差異，依《行政程序法》第110條第1項，書面之行政處分自送達相對人及已知之利害關係人起發生效力，而同條第2項規定一般處分自公告日或刊登政府公報、新聞紙最後登載日起發生效力[^4]。此一差異亦反映在送達方式上，《行政程序法》第100條第2項明定一般處分得以公告或刊登政府公報或新聞紙代替送達相對人及已知之利害關係人[^3]，而第92條第2項則界定一般處分為相對人雖非特定但依一般性特徵可得確定其範圍者[^1]。[^2][^3][^4]",
+      "summary": "一般處分與個別處分在法律效果發生方式上存在實質差異，依《行政程序法》第110條第1項，書面之行政處分自送達相對人及已知之利害關係人起發生效力，而同條第2項規定一般處分自公告日或刊登政府公報、新聞紙最後登載日起發生效力[^4]。此一差異亦反映在送達方式上，《行政程序法》第100條第2項明定一般處分得以公告或刊登政府公報或新聞紙代替送達相對人及已知之利害關係人[^3]，而第92條第2項則界定一般處分為相對人雖非特定但依一般性特徵可得確定其範圍者[^1]。[^2][^3][^4]",
+      "confidence": "verified",
+      "cardinality": "one_to_many",
+      "source_count": 4,
+      "source_ids": [
+        "footnote:4",
+        "footnote:3",
+        "footnote:1",
+        "footnote:2"
+      ],
+      "trace_source_ids": [
+        "footnote:4",
+        "footnote:3",
+        "footnote:1",
+        "footnote:2"
+      ],
+      "source_fragments": [
+        {
+          "source_id": "footnote:4",
+          "text": "本法所稱行政處分，係指行政機關就公法上具體事件所為之決定或其他公權力措施而對外直接發生法律效果之單方行政行為。  前項決定或措施之相對人雖非特定，而依一般性特徵可得確定其範圍者，為一般處分，適用本法有"
+        },
+        {
+          "source_id": "footnote:3",
+          "text": "書面之行政處分，應送達相對人及已知之利害關係人；書面以外之行政處分，應以其他適當方法通知或使其知悉。  一般處分之送達，得以公告或刊登政府公報或新聞紙代替之。"
+        },
+        {
+          "source_id": "footnote:1",
+          "text": "本法所稱行政處分，係指行政機關就公法上具體事件所為之決定或其他公權力措施而對外直接發生法律效果之單方行政行為。  前項決定或措施之相對人雖非特定，而依一般性特徵可得確定其範圍者，為一般處分，適用本法有"
+        },
+        {
+          "source_id": "footnote:2",
+          "text": "書面之行政處分自送達相對人及已知之利害關係人起；書面以外之行政處分自以其他適當方法通知或使其知悉時起，依送達、通知或使知悉之內容對其發生效力。  一般處分自公告日或刊登政府公報、新聞紙最後登載日起發生"
+        }
+      ],
+      "citation_spans": [
+        {
+          "source_id": "footnote:4",
+          "span_start": 108,
+          "span_end": 112,
+          "marker_text": "[^4]"
+        },
+        {
+          "source_id": "footnote:3",
+          "span_start": 179,
+          "span_end": 183,
+          "marker_text": "[^3]"
+        },
+        {
+          "source_id": "footnote:1",
+          "span_start": 222,
+          "span_end": 226,
+          "marker_text": "[^1]"
+        },
+        {
+          "source_id": "footnote:2",
+          "span_start": 227,
+          "span_end": 231,
+          "marker_text": "[^2]"
+        }
+      ],
+      "source_id_field": "sources:footnote:4,footnote:3,footnote:1,footnote:2",
+      "checks": {
+        "at_least_one_source": true,
+        "source_traceable": true,
+        "no_duplicate_sources": true,
+        "no_omitted_traces": true,
+        "no_extra_traces": true,
+        "source_id_field_aligned": true,
+        "no_empty_fragments": true,
+        "has_functional_gap": true,
+        "has_user_value": true,
+        "has_related_knowledge": true,
+        "related_knowledge_consistent": true,
+        "summary_matches_product": true,
+        "has_angle_coverage": true,
+        "angle_facet_complete": true,
+        "angle_functional_gap_present": true,
+        "angle_user_value_present": true,
+        "angle_question_present": true,
+        "at_least_two_openable_links": false,
+        "meets_angle_coverage_threshold": true
+      },
+      "binding_status": "pass",
+      "binding_ok": true,
+      "functional_gap": "需要補充行政處分的要件、程序或救濟依據",
+      "user_value": "幫助讀者理解行政處分的要件、程序或救濟依據",
+      "related_knowledge": "一般處分與個別處分在法律效果發生方式上存在實質差異，依《行政程序法》第110條第1項，書面之行政處分自送達相對人及已知之利害關係人起發生效力，而同條第2項規定一般處分自公告日或刊登政府公報、新聞紙最後登載日起發生效力[^4]。此一差異亦反映在送達方式上，《行政程序法》第100條第2項明定一般處分得以公告或刊登政府公報或新聞紙代替送達相對人及已知之利害關係人[^3]，而第92條第2項則界定一般處分為相對人雖非特定但依一般性特徵可得確定其範圍者[^1]。[^2][^3][^4]（如何支撐決策品質：對應功能缺口「需要補充行政處分的要件、程序或救濟依據」提供可追溯依據，降低僅憑印象取捨的風險；如何補強使用者理解：幫助讀者理解行政處分的要件、程序或救濟依據）",
+      "angle_coverage": {
+        "angle_type": "other",
+        "angle_labels": [
+          "other",
+          "classification",
+          "functional_gap",
+          "user_value"
+        ],
+        "covered_facets": [
+          "angle:other",
+          "necessity:functional_gap",
+          "necessity:user_value",
+          "question"
+        ],
+        "angle_key": "other:一般處分與個別處分在法律效果發生方式上存在實質差異 依 行政程序法 第110條第1項 書面之行政處分自送達相對人及已知之利害關係人起發生效力 而同條第2項規定一般處分自公告日或刊登政府公報 新聞紙最後登載日起發生效力 4 此一差異亦反映在送達方式上 行政程序法 第100條第2項明定一般處分得以公告或刊登政府公報或新聞紙代替送達相對人及已知之利害關係人 3 而第92條第2項則界定一般處分為相對人雖非特定但依一般性特徵可得確定其範圍者 1 2 3 4",
+        "relation": {
+          "kind": "unique",
+          "related_argument_indices": [],
+          "duplicate_of": [],
+          "synonym_of": []
+        },
+        "effective_angle_count": 1,
+        "duplicate_exclusion": {
+          "excluded": false,
+          "reason": null,
+          "kept_argument_index": 4
+        }
+      },
+      "extended_readings": [],
+      "extended_readings_status": "none",
+      "pending_evidence_reason": "",
+      "openable_links_count": 0,
+      "openable_links_status": "none",
+      "openable_links_incomplete_reason": "",
+      "angle_tags": [
+        "other",
+        "classification",
+        "functional_gap",
+        "user_value"
+      ],
+      "valid_angle_count": 1,
+      "deduped_angle_count": 1,
+      "duplicate_angles": [],
+      "angle_field_issues": [],
+      "source_conflicts": [],
+      "source_preference_reason": {
+        "status": "not_applicable",
+        "preferred_source_id": null,
+        "reason_code": "no_conflict",
+        "detail": "未偵測到來源衝突。"
+      },
+      "applicable_conditions": {
+        "status": "not_assessed",
+        "items": []
+      },
+      "readable_conclusion": "未偵測到來源衝突。"
+    },
+    {
+      "argument_index": 5,
+      "argument_id": "argument:5",
+      "segment_index": 5,
+      "argument_text": "【待補證】來源僅提供訴願法第1條等條文，說明人民得對行政處分提起訴願之前提為「認為違法或不當，致損害其權利或利益」，以及第2條關於機關不作為、第12條關於處分達到或公告期滿起算期間等規定，均未提及「行政處分已發生法律效果」是否為提起訴願之前提，故無從作答。",
+      "summary": "【待補證】來源僅提供訴願法第1條等條文，說明人民得對行政處分提起訴願之前提為「認為違法或不當，致損害其權利或利益」，以及第2條關於機關不作為、第12條關於處分達到或公告期滿起算期間等規定，均未提及「行政處分已發生法律效果」是否為提起訴願之前提，故無從作答。",
+      "confidence": "pending_evidence",
+      "cardinality": "none",
+      "source_count": 0,
+      "source_ids": [],
+      "trace_source_ids": [],
+      "source_fragments": [],
+      "citation_spans": [],
+      "source_id_field": "pending:gap:5",
+      "checks": {
+        "at_least_one_source": false,
+        "source_traceable": true,
+        "no_duplicate_sources": true,
+        "no_omitted_traces": true,
+        "no_extra_traces": true,
+        "source_id_field_aligned": true,
+        "no_empty_fragments": true,
+        "has_functional_gap": true,
+        "has_user_value": true,
+        "has_related_knowledge": true,
+        "related_knowledge_consistent": true,
+        "summary_matches_product": true,
+        "has_angle_coverage": true,
+        "angle_facet_complete": true,
+        "angle_functional_gap_present": true,
+        "angle_user_value_present": true,
+        "angle_question_present": true,
+        "at_least_two_openable_links": false,
+        "meets_angle_coverage_threshold": true
+      },
+      "binding_status": "pending_evidence",
+      "binding_ok": true,
+      "functional_gap": "需要補充行政處分的要件、程序或救濟依據",
+      "user_value": "幫助讀者理解行政處分的要件、程序或救濟依據",
+      "related_knowledge": "【待補證】來源僅提供訴願法第1條等條文，說明人民得對行政處分提起訴願之前提為「認為違法或不當，致損害其權利或利益」，以及第2條關於機關不作為、第12條關於處分達到或公告期滿起算期間等規定，均未提及「行政處分已發生法律效果」是否為提起訴願之前提，故無從作答。（如何支撐決策品質：對應功能缺口「需要補充行政處分的要件、程序或救濟依據」提供可追溯依據，降低僅憑印象取捨的風險；如何補強使用者理解：幫助讀者理解行政處分的要件、程序或救濟依據）",
+      "angle_coverage": {
+        "angle_type": "other",
+        "angle_labels": [
+          "other",
+          "remedy",
+          "functional_gap",
+          "user_value"
+        ],
+        "covered_facets": [
+          "angle:other",
+          "necessity:functional_gap",
+          "necessity:user_value",
+          "question"
+        ],
+        "angle_key": "other:待補證 來源僅提供訴願法第1條等條文 說明人民得對行政處分提起訴願之前提為 認為違法或不當 致損害其權利或利益 以及第2條關於機關不作為 第12條關於處分達到或公告期滿起算期間等規定 均未提及 行政處分已發生法律效果 是否為提起訴願之前提 故無從作答",
+        "relation": {
+          "kind": "unique",
+          "related_argument_indices": [],
+          "duplicate_of": [],
+          "synonym_of": []
+        },
+        "effective_angle_count": 1,
+        "duplicate_exclusion": {
+          "excluded": false,
+          "reason": null,
+          "kept_argument_index": 5
+        }
+      },
+      "extended_readings": [],
+      "extended_readings_status": "none",
+      "pending_evidence_reason": "",
+      "openable_links_count": 0,
+      "openable_links_status": "none",
+      "openable_links_incomplete_reason": "",
+      "angle_tags": [
+        "other",
+        "remedy",
+        "functional_gap",
+        "user_value"
+      ],
+      "valid_angle_count": 1,
+      "deduped_angle_count": 1,
+      "duplicate_angles": [],
+      "angle_field_issues": [],
+      "source_conflicts": [],
+      "source_preference_reason": {
+        "status": "not_applicable",
+        "preferred_source_id": null,
+        "reason_code": "no_source",
+        "detail": "無引用來源，不適用衝突判定。"
+      },
+      "applicable_conditions": {
+        "status": "not_assessed",
+        "items": []
+      },
+      "readable_conclusion": "無引用來源，待補證。"
+    },
+    {
+      "argument_index": 6,
+      "argument_id": "argument:6",
+      "segment_index": 6,
+      "argument_text": "【待補證】本問題所詢「違法或不當」行政處分之「不當」判斷標準與違法之區別，來源[1]至[23]均未提供任何相關條文或說明，無從作答。",
+      "summary": "【待補證】本問題所詢「違法或不當」行政處分之「不當」判斷標準與違法之區別，來源[1]至[23]均未提供任何相關條文或說明，無從作答。",
+      "confidence": "pending_evidence",
+      "cardinality": "none",
+      "source_count": 0,
+      "source_ids": [],
+      "trace_source_ids": [],
+      "source_fragments": [],
+      "citation_spans": [],
+      "source_id_field": "pending:gap:6",
+      "checks": {
+        "at_least_one_source": false,
+        "source_traceable": true,
+        "no_duplicate_sources": true,
+        "no_omitted_traces": true,
+        "no_extra_traces": true,
+        "source_id_field_aligned": true,
+        "no_empty_fragments": true,
+        "has_functional_gap": true,
+        "has_user_value": true,
+        "has_related_knowledge": true,
+        "related_knowledge_consistent": true,
+        "summary_matches_product": true,
+        "has_angle_coverage": true,
+        "angle_facet_complete": true,
+        "angle_functional_gap_present": true,
+        "angle_user_value_present": true,
+        "angle_question_present": true,
+        "at_least_two_openable_links": false,
+        "meets_angle_coverage_threshold": true
+      },
+      "binding_status": "pending_evidence",
+      "binding_ok": true,
+      "functional_gap": "需要補充行政處分的要件、程序或救濟依據",
+      "user_value": "幫助讀者理解行政處分的要件、程序或救濟依據",
+      "related_knowledge": "【待補證】本問題所詢「違法或不當」行政處分之「不當」判斷標準與違法之區別，來源[1]至[23]均未提供任何相關條文或說明，無從作答。（如何支撐決策品質：對應功能缺口「需要補充行政處分的要件、程序或救濟依據」提供可追溯依據，降低僅憑印象取捨的風險；如何補強使用者理解：幫助讀者理解行政處分的要件、程序或救濟依據）",
+      "angle_coverage": {
+        "angle_type": "other",
+        "angle_labels": [
+          "other",
+          "evidence_gap",
+          "functional_gap",
+          "user_value"
+        ],
+        "covered_facets": [
+          "angle:other",
+          "necessity:functional_gap",
+          "necessity:user_value",
+          "question"
+        ],
+        "angle_key": "other:待補證 本問題所詢 違法或不當 行政處分之 不當 判斷標準與違法之區別 來源 1 至 23 均未提供任何相關條文或說明 無從作答",
+        "relation": {
+          "kind": "unique",
+          "related_argument_indices": [],
+          "duplicate_of": [],
+          "synonym_of": []
+        },
+        "effective_angle_count": 1,
+        "duplicate_exclusion": {
+          "excluded": false,
+          "reason": null,
+          "kept_argument_index": 6
+        }
+      },
+      "extended_readings": [],
+      "extended_readings_status": "none",
+      "pending_evidence_reason": "",
+      "openable_links_count": 0,
+      "openable_links_status": "none",
+      "openable_links_incomplete_reason": "",
+      "angle_tags": [
+        "other",
+        "evidence_gap",
+        "functional_gap",
+        "user_value"
+      ],
+      "valid_angle_count": 1,
+      "deduped_angle_count": 1,
+      "duplicate_angles": [],
+      "angle_field_issues": [],
+      "source_conflicts": [],
+      "source_preference_reason": {
+        "status": "not_applicable",
+        "preferred_source_id": null,
+        "reason_code": "no_source",
+        "detail": "無引用來源，不適用衝突判定。"
+      },
+      "applicable_conditions": {
+        "status": "not_assessed",
+        "items": []
+      },
+      "readable_conclusion": "無引用來源，待補證。"
+    },
+    {
+      "argument_index": 7,
+      "argument_id": "argument:7",
+      "segment_index": 7,
+      "argument_text": "**實質判斷角度：**行政處分的核心是行政機關行使公權力，就具體公法事件作成、並對外發生法律上效果的單方行為。即使以通知書等不同名稱或形式作成，只要已直接影響人民權利義務關係並對外發生效力，仍應依其實質判斷；僅直接發生事實上效果的行政事實行為則不同。[^8][^9][^10]",
+      "summary": "**實質判斷角度：**行政處分的核心是行政機關行使公權力，就具體公法事件作成、並對外發生法律上效果的單方行為。即使以通知書等不同名稱或形式作成，只要已直接影響人民權利義務關係並對外發生效力，仍應依其實質判斷；僅直接發生事實上效果的行政事實行為則不同。[^8][^9][^10]",
+      "confidence": "verified",
+      "cardinality": "one_to_many",
+      "source_count": 3,
+      "source_ids": [
+        "footnote:8",
+        "footnote:9",
+        "footnote:10"
+      ],
+      "trace_source_ids": [
+        "footnote:8",
+        "footnote:9",
+        "footnote:10"
+      ],
+      "source_fragments": [
+        {
+          "source_id": "footnote:8",
+          "text": "行政處分須為行政機關就公法上具體事件所為、對外直接發生法律效果之單方行政行為。"
+        },
+        {
+          "source_id": "footnote:9",
+          "text": "通知書如直接影響人民權利義務關係且已對外發生效力，仍屬行政處分。"
+        },
+        {
+          "source_id": "footnote:10",
+          "text": "行政事實行為直接發生事實上效果，與行政處分對外發生法律效果不同。"
+        }
+      ],
+      "citation_spans": [
+        {
+          "source_id": "footnote:8",
+          "span_start": 125,
+          "span_end": 129,
+          "marker_text": "[^8]"
+        },
+        {
+          "source_id": "footnote:9",
+          "span_start": 129,
+          "span_end": 133,
+          "marker_text": "[^9]"
+        },
+        {
+          "source_id": "footnote:10",
+          "span_start": 133,
+          "span_end": 138,
+          "marker_text": "[^10]"
+        }
+      ],
+      "source_id_field": "sources:footnote:8,footnote:9,footnote:10",
+      "checks": {
+        "at_least_one_source": true,
+        "source_traceable": true,
+        "no_duplicate_sources": true,
+        "no_omitted_traces": true,
+        "no_extra_traces": true,
+        "source_id_field_aligned": true,
+        "no_empty_fragments": true,
+        "has_functional_gap": true,
+        "has_user_value": true,
+        "has_related_knowledge": true,
+        "related_knowledge_consistent": true,
+        "summary_matches_product": true,
+        "has_angle_coverage": true,
+        "angle_facet_complete": true,
+        "angle_functional_gap_present": true,
+        "angle_user_value_present": true,
+        "angle_question_present": true,
+        "at_least_two_openable_links": false,
+        "meets_angle_coverage_threshold": true
+      },
+      "binding_status": "pass",
+      "binding_ok": true,
+      "functional_gap": "需要補充行政處分的要件、程序或救濟依據",
+      "user_value": "幫助讀者理解行政處分的要件、程序或救濟依據",
+      "related_knowledge": "**實質判斷角度：**行政處分的核心是行政機關行使公權力，就具體公法事件作成、並對外發生法律上效果的單方行為。即使以通知書等不同名稱或形式作成，只要已直接影響人民權利義務關係並對外發生效力，仍應依其實質判斷；僅直接發生事實上效果的行政事實行為則不同。[^8][^9][^10]（如何支撐決策品質：對應功能缺口「需要補充行政處分的要件、程序或救濟依據」提供可追溯依據，降低僅憑印象取捨的風險；如何補強使用者理解：幫助讀者理解行政處分的要件、程序或救濟依據）",
+      "angle_coverage": {
+        "angle_type": "procedure",
+        "angle_labels": [
+          "procedure",
+          "functional_gap",
+          "user_value"
+        ],
+        "covered_facets": [
+          "angle:procedure",
+          "necessity:functional_gap",
+          "necessity:user_value",
+          "question"
+        ],
+        "angle_key": "procedure:實質判斷角度 行政處分的核心是行政機關行使公權力 就具體公法事件作成 並對外發生法律上效果的單方行為 即使以通知書等不同名稱或形式作成 只要已直接影響人民權利義務關係並對外發生效力 仍應依其實質判斷 僅直接發生事實上效果的行政事實行為則不同 8 9 10",
+        "relation": {
+          "kind": "unique",
+          "related_argument_indices": [],
+          "duplicate_of": [],
+          "synonym_of": []
+        },
+        "effective_angle_count": 1,
+        "duplicate_exclusion": {
+          "excluded": false,
+          "reason": null,
+          "kept_argument_index": 7
+        }
+      },
+      "extended_readings": [],
+      "extended_readings_status": "none",
+      "pending_evidence_reason": "",
+      "openable_links_count": 0,
+      "openable_links_status": "none",
+      "openable_links_incomplete_reason": "",
+      "angle_tags": [
+        "procedure",
+        "functional_gap",
+        "user_value"
+      ],
+      "valid_angle_count": 1,
+      "deduped_angle_count": 1,
+      "duplicate_angles": [],
+      "angle_field_issues": [],
+      "source_conflicts": [],
+      "source_preference_reason": {
+        "status": "not_applicable",
+        "preferred_source_id": null,
+        "reason_code": "no_conflict",
+        "detail": "未偵測到來源衝突。"
+      },
+      "applicable_conditions": {
+        "status": "not_assessed",
+        "items": []
+      },
+      "readable_conclusion": "未偵測到來源衝突。"
+    },
+    {
+      "argument_index": 8,
+      "argument_id": "argument:8",
+      "segment_index": 8,
+      "argument_text": "**救濟與審查角度：**訴願的法定門檻是人民認為行政處分違法或不當，且致損害其權利或利益；提起期間自行政處分達到或公告期滿的次日起算。地方自治團體的地方自治事務，受理訴願的上級機關僅就原行政處分的合法性進行審查。因此，行政處分的定性、生效時點與訴願審查範圍應分別檢驗。[^11]",
+      "summary": "**救濟與審查角度：**訴願的法定門檻是人民認為行政處分違法或不當，且致損害其權利或利益；提起期間自行政處分達到或公告期滿的次日起算。地方自治團體的地方自治事務，受理訴願的上級機關僅就原行政處分的合法性進行審查。因此，行政處分的定性、生效時點與訴願審查範圍應分別檢驗。[^11]",
+      "confidence": "verified",
+      "cardinality": "one_to_one",
+      "source_count": 1,
+      "source_ids": [
+        "footnote:11"
+      ],
+      "trace_source_ids": [
+        "footnote:11"
+      ],
+      "source_fragments": [
+        {
+          "source_id": "footnote:11",
+          "text": "規定訴願的違法或不當與權益受損要件、期間起算，以及地方自治事務的合法性審查。"
+        }
+      ],
+      "citation_spans": [
+        {
+          "source_id": "footnote:11",
+          "span_start": 134,
+          "span_end": 139,
+          "marker_text": "[^11]"
+        }
+      ],
+      "source_id_field": "sources:footnote:11",
+      "checks": {
+        "at_least_one_source": true,
+        "source_traceable": true,
+        "no_duplicate_sources": true,
+        "no_omitted_traces": true,
+        "no_extra_traces": true,
+        "source_id_field_aligned": true,
+        "no_empty_fragments": true,
+        "has_functional_gap": true,
+        "has_user_value": true,
+        "has_related_knowledge": true,
+        "related_knowledge_consistent": true,
+        "summary_matches_product": true,
+        "has_angle_coverage": true,
+        "angle_facet_complete": true,
+        "angle_functional_gap_present": true,
+        "angle_user_value_present": true,
+        "angle_question_present": true,
+        "at_least_two_openable_links": false,
+        "meets_angle_coverage_threshold": true
+      },
+      "binding_status": "pass",
+      "binding_ok": true,
+      "functional_gap": "需要補充行政處分的要件、程序或救濟依據",
+      "user_value": "幫助讀者理解行政處分的要件、程序或救濟依據",
+      "related_knowledge": "**救濟與審查角度：**訴願的法定門檻是人民認為行政處分違法或不當，且致損害其權利或利益；提起期間自行政處分達到或公告期滿的次日起算。地方自治團體的地方自治事務，受理訴願的上級機關僅就原行政處分的合法性進行審查。因此，行政處分的定性、生效時點與訴願審查範圍應分別檢驗。[^11]（如何支撐決策品質：對應功能缺口「需要補充行政處分的要件、程序或救濟依據」提供可追溯依據，降低僅憑印象取捨的風險；如何補強使用者理解：幫助讀者理解行政處分的要件、程序或救濟依據）",
+      "angle_coverage": {
+        "angle_type": "other",
+        "angle_labels": [
+          "other",
+          "remedy",
+          "functional_gap",
+          "user_value"
+        ],
+        "covered_facets": [
+          "angle:other",
+          "necessity:functional_gap",
+          "necessity:user_value",
+          "question"
+        ],
+        "angle_key": "other:救濟與審查角度 訴願的法定門檻是人民認為行政處分違法或不當 且致損害其權利或利益 提起期間自行政處分達到或公告期滿的次日起算 地方自治團體的地方自治事務 受理訴願的上級機關僅就原行政處分的合法性進行審查 因此 行政處分的定性 生效時點與訴願審查範圍應分別檢驗 11",
+        "relation": {
+          "kind": "unique",
+          "related_argument_indices": [],
+          "duplicate_of": [],
+          "synonym_of": []
+        },
+        "effective_angle_count": 1,
+        "duplicate_exclusion": {
+          "excluded": false,
+          "reason": null,
+          "kept_argument_index": 8
+        }
+      },
+      "extended_readings": [],
+      "extended_readings_status": "none",
+      "pending_evidence_reason": "",
+      "openable_links_count": 0,
+      "openable_links_status": "none",
+      "openable_links_incomplete_reason": "",
+      "angle_tags": [
+        "other",
+        "remedy",
+        "functional_gap",
+        "user_value"
+      ],
+      "valid_angle_count": 1,
+      "deduped_angle_count": 1,
+      "duplicate_angles": [],
+      "angle_field_issues": [],
+      "source_conflicts": [],
+      "source_preference_reason": {
+        "status": "not_applicable",
+        "preferred_source_id": null,
+        "reason_code": "no_conflict",
+        "detail": "未偵測到來源衝突。"
+      },
+      "applicable_conditions": {
+        "status": "not_assessed",
+        "items": []
+      },
+      "readable_conclusion": "未偵測到來源衝突。"
+    },
+    {
+      "argument_index": 9,
+      "argument_id": "argument:9",
+      "segment_index": 9,
+      "argument_text": "人民因中央或地方機關之違法行政處分，認為損害其權利或法律上之利益者，須經依訴願法提起訴願而不服其決定，或提起訴願逾三個月不為決定，或延長訴願決定期間逾二個月不為決定者，始得向行政法院提起撤銷訴訟[^1]。訴願人以外之利害關係人，認為訴願決定損害其權利或法律上之利益者，亦同[^1]。此類訴訟之提起，除法律別有規定外，應於訴願決定書送達後二個月之不變期間內為之[^3]。訴願決定後，為訴訟標的之法律關係移轉於第三人者，得由受移轉人提起撤銷訴訟[^4]。[^5][^6][^7]",
+      "summary": "人民因中央或地方機關之違法行政處分，認為損害其權利或法律上之利益者，須經依訴願法提起訴願而不服其決定，或提起訴願逾三個月不為決定，或延長訴願決定期間逾二個月不為決定者，始得向行政法院提起撤銷訴訟[^1]。訴願人以外之利害關係人，認為訴願決定損害其權利或法律上之利益者，亦同[^1]。此類訴訟之提起，除法律別有規定外，應於訴願決定書送達後二個月之不變期間內為之[^3]。訴願決定後，為訴訟標的之法律關係移轉於第三人者，得由受移轉人提起撤銷訴訟[^4]。[^5][^6][^7]",
+      "confidence": "verified",
+      "cardinality": "one_to_many",
+      "source_count": 6,
+      "source_ids": [
+        "footnote:1",
+        "footnote:3",
+        "footnote:4",
+        "footnote:5",
+        "footnote:6",
+        "footnote:7"
+      ],
+      "trace_source_ids": [
+        "footnote:1",
+        "footnote:3",
+        "footnote:4",
+        "footnote:5",
+        "footnote:6",
+        "footnote:7"
+      ],
+      "source_fragments": [
+        {
+          "source_id": "footnote:1",
+          "text": "本法所稱行政處分，係指行政機關就公法上具體事件所為之決定或其他公權力措施而對外直接發生法律效果之單方行政行為。  前項決定或措施之相對人雖非特定，而依一般性特徵可得確定其範圍者，為一般處分，適用本法有"
+        },
+        {
+          "source_id": "footnote:3",
+          "text": "書面之行政處分，應送達相對人及已知之利害關係人；書面以外之行政處分，應以其他適當方法通知或使其知悉。  一般處分之送達，得以公告或刊登政府公報或新聞紙代替之。"
+        },
+        {
+          "source_id": "footnote:4",
+          "text": "本法所稱行政處分，係指行政機關就公法上具體事件所為之決定或其他公權力措施而對外直接發生法律效果之單方行政行為。  前項決定或措施之相對人雖非特定，而依一般性特徵可得確定其範圍者，為一般處分，適用本法有"
+        },
+        {
+          "source_id": "footnote:5",
+          "text": "人民因中央或地方機關之違法行政處分，認為損害其權利或法律上之利益，經依訴願法提起訴願而不服其決定，或提起訴願逾三個月不為決定，或延長訴願決定期間逾二個月不為決定者，得向行政法院提起撤銷訴訟。  逾越權"
+        },
+        {
+          "source_id": "footnote:6",
+          "text": "第四條及第五條訴訟之提起，除本法別有規定外，應於訴願決定書送達後二個月之不變期間內為之。但訴願人以外之利害關係人知悉在後者，自知悉時起算。  第四條及第五條之訴訟，自訴願決定書送達後，已逾三年者，不得"
+        },
+        {
+          "source_id": "footnote:7",
+          "text": "訴訟繫屬中，為訴訟標的之法律關係雖移轉於第三人，於訴訟無影響。但第三人如經兩造同意，得代當事人承當訴訟。  前項情形，僅他造不同意者，移轉之當事人或第三人得聲請行政法院以裁定許第三人承當訴訟。  前項"
+        }
+      ],
+      "citation_spans": [
+        {
+          "source_id": "footnote:1",
+          "span_start": 97,
+          "span_end": 101,
+          "marker_text": "[^1]"
+        },
+        {
+          "source_id": "footnote:3",
+          "span_start": 179,
+          "span_end": 183,
+          "marker_text": "[^3]"
+        },
+        {
+          "source_id": "footnote:4",
+          "span_start": 220,
+          "span_end": 224,
+          "marker_text": "[^4]"
+        },
+        {
+          "source_id": "footnote:5",
+          "span_start": 225,
+          "span_end": 229,
+          "marker_text": "[^5]"
+        },
+        {
+          "source_id": "footnote:6",
+          "span_start": 229,
+          "span_end": 233,
+          "marker_text": "[^6]"
+        },
+        {
+          "source_id": "footnote:7",
+          "span_start": 233,
+          "span_end": 237,
+          "marker_text": "[^7]"
+        }
+      ],
+      "source_id_field": "sources:footnote:1,footnote:3,footnote:4,footnote:5,footnote:6,footnote:7",
+      "checks": {
+        "at_least_one_source": true,
+        "source_traceable": true,
+        "no_duplicate_sources": true,
+        "no_omitted_traces": true,
+        "no_extra_traces": true,
+        "source_id_field_aligned": true,
+        "no_empty_fragments": true,
+        "has_functional_gap": true,
+        "has_user_value": true,
+        "has_related_knowledge": true,
+        "related_knowledge_consistent": true,
+        "summary_matches_product": true,
+        "has_angle_coverage": true,
+        "angle_facet_complete": true,
+        "angle_functional_gap_present": true,
+        "angle_user_value_present": true,
+        "angle_question_present": true,
+        "at_least_two_openable_links": false,
+        "meets_angle_coverage_threshold": true
+      },
+      "binding_status": "pass",
+      "binding_ok": true,
+      "functional_gap": "需要補充行政處分的要件、程序或救濟依據",
+      "user_value": "幫助讀者理解行政處分的要件、程序或救濟依據",
+      "related_knowledge": "人民因中央或地方機關之違法行政處分，認為損害其權利或法律上之利益者，須經依訴願法提起訴願而不服其決定，或提起訴願逾三個月不為決定，或延長訴願決定期間逾二個月不為決定者，始得向行政法院提起撤銷訴訟[^1]。訴願人以外之利害關係人，認為訴願決定損害其權利或法律上之利益者，亦同[^1]。此類訴訟之提起，除法律別有規定外，應於訴願決定書送達後二個月之不變期間內為之[^3]。訴願決定後，為訴訟標的之法律關係移轉於第三人者，得由受移轉人提起撤銷訴訟[^4]。[^5][^6][^7]（如何支撐決策品質：對應功能缺口「需要補充行政處分的要件、程序或救濟依據」提供可追溯依據，降低僅憑印象取捨的風險；如何補強使用者理解：幫助讀者理解行政處分的要件、程序或救濟依據）",
+      "angle_coverage": {
+        "angle_type": "other",
+        "angle_labels": [
+          "other",
+          "remedy",
+          "functional_gap",
+          "user_value"
+        ],
+        "covered_facets": [
+          "angle:other",
+          "necessity:functional_gap",
+          "necessity:user_value",
+          "question"
+        ],
+        "angle_key": "other:人民因中央或地方機關之違法行政處分 認為損害其權利或法律上之利益者 須經依訴願法提起訴願而不服其決定 或提起訴願逾三個月不為決定 或延長訴願決定期間逾二個月不為決定者 始得向行政法院提起撤銷訴訟 1 訴願人以外之利害關係人 認為訴願決定損害其權利或法律上之利益者 亦同 1 此類訴訟之提起 除法律別有規定外 應於訴願決定書送達後二個月之不變期間內為之 3 訴願決定後 為訴訟標的之法律關係移轉於第三人者 得由受移轉人提起撤銷訴訟 4 5 6 7",
+        "relation": {
+          "kind": "unique",
+          "related_argument_indices": [],
+          "duplicate_of": [],
+          "synonym_of": []
+        },
+        "effective_angle_count": 1,
+        "duplicate_exclusion": {
+          "excluded": false,
+          "reason": null,
+          "kept_argument_index": 9
+        }
+      },
+      "extended_readings": [],
+      "extended_readings_status": "none",
+      "pending_evidence_reason": "",
+      "openable_links_count": 0,
+      "openable_links_status": "none",
+      "openable_links_incomplete_reason": "",
+      "angle_tags": [
+        "other",
+        "remedy",
+        "functional_gap",
+        "user_value"
+      ],
+      "valid_angle_count": 1,
+      "deduped_angle_count": 1,
+      "duplicate_angles": [],
+      "angle_field_issues": [],
+      "source_conflicts": [],
+      "source_preference_reason": {
+        "status": "not_applicable",
+        "preferred_source_id": null,
+        "reason_code": "no_conflict",
+        "detail": "未偵測到來源衝突。"
+      },
+      "applicable_conditions": {
+        "status": "not_assessed",
+        "items": []
+      },
+      "readable_conclusion": "未偵測到來源衝突。"
+    }
+  ],
+  "source_usage": {
+    "footnote:1": [
+      2,
+      4,
+      9
+    ],
+    "footnote:10": [
+      7
+    ],
+    "footnote:11": [
+      2,
+      8
+    ],
+    "footnote:2": [
+      4
+    ],
+    "footnote:3": [
+      4,
+      9
+    ],
+    "footnote:4": [
+      4,
+      9
+    ],
+    "footnote:5": [
+      9
+    ],
+    "footnote:6": [
+      9
+    ],
+    "footnote:7": [
+      9
+    ],
+    "footnote:8": [
+      7
+    ],
+    "footnote:9": [
+      7
+    ]
+  },
+  "angle_coverage_summary": {
+    "unique_angle_types": [
+      "procedure",
+      "other"
+    ],
+    "covered_facets_union": [
+      "angle:procedure",
+      "necessity:functional_gap",
+      "necessity:user_value",
+      "question",
+      "angle:other"
+    ],
+    "duplicate_pairs": [],
+    "synonym_pairs": [],
+    "argument_count_with_angles": 10,
+    "effective_angle_count": 10,
+    "excluded_angle_count": 0,
+    "duplicate_ratio": 0.0,
+    "required_effective_angle_count": 2,
+    "max_duplicate_ratio": 0.5,
+    "has_sufficient_angles": true,
+    "has_acceptable_duplicate_ratio": true,
+    "coverage_ok": true
+  },
+  "traceability_markers": [
+    {
+      "argument_id": "argument:0",
+      "kind": "processing_record",
+      "id": "pending:gap:0",
+      "binding_status": "pending_evidence"
+    },
+    {
+      "argument_id": "argument:1",
+      "kind": "processing_record",
+      "id": "pending:gap:1",
+      "binding_status": "pending_evidence"
+    },
+    {
+      "argument_id": "argument:2",
+      "kind": "source",
+      "id": "footnote:11",
+      "binding_status": "pass"
+    },
+    {
+      "argument_id": "argument:2",
+      "kind": "source",
+      "id": "footnote:1",
+      "binding_status": "pass"
+    },
+    {
+      "argument_id": "argument:3",
+      "kind": "processing_record",
+      "id": "pending:gap:3",
+      "binding_status": "pending_evidence"
+    },
+    {
+      "argument_id": "argument:4",
+      "kind": "source",
+      "id": "footnote:4",
+      "binding_status": "pass"
+    },
+    {
+      "argument_id": "argument:4",
+      "kind": "source",
+      "id": "footnote:3",
+      "binding_status": "pass"
+    },
+    {
+      "argument_id": "argument:4",
+      "kind": "source",
+      "id": "footnote:1",
+      "binding_status": "pass"
+    },
+    {
+      "argument_id": "argument:4",
+      "kind": "source",
+      "id": "footnote:2",
+      "binding_status": "pass"
+    },
+    {
+      "argument_id": "argument:5",
+      "kind": "processing_record",
+      "id": "pending:gap:5",
+      "binding_status": "pending_evidence"
+    },
+    {
+      "argument_id": "argument:6",
+      "kind": "processing_record",
+      "id": "pending:gap:6",
+      "binding_status": "pending_evidence"
+    },
+    {
+      "argument_id": "argument:7",
+      "kind": "source",
+      "id": "footnote:8",
+      "binding_status": "pass"
+    },
+    {
+      "argument_id": "argument:7",
+      "kind": "source",
+      "id": "footnote:9",
+      "binding_status": "pass"
+    },
+    {
+      "argument_id": "argument:7",
+      "kind": "source",
+      "id": "footnote:10",
+      "binding_status": "pass"
+    },
+    {
+      "argument_id": "argument:8",
+      "kind": "source",
+      "id": "footnote:11",
+      "binding_status": "pass"
+    },
+    {
+      "argument_id": "argument:9",
+      "kind": "source",
+      "id": "footnote:1",
+      "binding_status": "pass"
+    },
+    {
+      "argument_id": "argument:9",
+      "kind": "source",
+      "id": "footnote:3",
+      "binding_status": "pass"
+    },
+    {
+      "argument_id": "argument:9",
+      "kind": "source",
+      "id": "footnote:4",
+      "binding_status": "pass"
+    },
+    {
+      "argument_id": "argument:9",
+      "kind": "source",
+      "id": "footnote:5",
+      "binding_status": "pass"
+    },
+    {
+      "argument_id": "argument:9",
+      "kind": "source",
+      "id": "footnote:6",
+      "binding_status": "pass"
+    },
+    {
+      "argument_id": "argument:9",
+      "kind": "source",
+      "id": "footnote:7",
+      "binding_status": "pass"
+    }
+  ],
+  "claim_source_map": {
+    "argument:0": [],
+    "argument:1": [],
+    "argument:2": [
+      "footnote:11",
+      "footnote:1"
+    ],
+    "argument:3": [],
+    "argument:4": [
+      "footnote:4",
+      "footnote:3",
+      "footnote:1",
+      "footnote:2"
+    ],
+    "argument:5": [],
+    "argument:6": [],
+    "argument:7": [
+      "footnote:8",
+      "footnote:9",
+      "footnote:10"
+    ],
+    "argument:8": [
+      "footnote:11"
+    ],
+    "argument:9": [
+      "footnote:1",
+      "footnote:3",
+      "footnote:4",
+      "footnote:5",
+      "footnote:6",
+      "footnote:7"
+    ]
+  },
+  "citation_span_map": [
+    {
+      "segment_index": 2,
+      "argument_id": "argument:2",
+      "source_id": "footnote:11",
+      "span_start": 137,
+      "span_end": 142,
+      "marker_text": "[^11]"
+    },
+    {
+      "segment_index": 2,
+      "argument_id": "argument:2",
+      "source_id": "footnote:1",
+      "span_start": 193,
+      "span_end": 197,
+      "marker_text": "[^1]"
+    },
+    {
+      "segment_index": 4,
+      "argument_id": "argument:4",
+      "source_id": "footnote:4",
+      "span_start": 108,
+      "span_end": 112,
+      "marker_text": "[^4]"
+    },
+    {
+      "segment_index": 4,
+      "argument_id": "argument:4",
+      "source_id": "footnote:3",
+      "span_start": 179,
+      "span_end": 183,
+      "marker_text": "[^3]"
+    },
+    {
+      "segment_index": 4,
+      "argument_id": "argument:4",
+      "source_id": "footnote:1",
+      "span_start": 222,
+      "span_end": 226,
+      "marker_text": "[^1]"
+    },
+    {
+      "segment_index": 4,
+      "argument_id": "argument:4",
+      "source_id": "footnote:2",
+      "span_start": 227,
+      "span_end": 231,
+      "marker_text": "[^2]"
+    },
+    {
+      "segment_index": 7,
+      "argument_id": "argument:7",
+      "source_id": "footnote:8",
+      "span_start": 125,
+      "span_end": 129,
+      "marker_text": "[^8]"
+    },
+    {
+      "segment_index": 7,
+      "argument_id": "argument:7",
+      "source_id": "footnote:9",
+      "span_start": 129,
+      "span_end": 133,
+      "marker_text": "[^9]"
+    },
+    {
+      "segment_index": 7,
+      "argument_id": "argument:7",
+      "source_id": "footnote:10",
+      "span_start": 133,
+      "span_end": 138,
+      "marker_text": "[^10]"
+    },
+    {
+      "segment_index": 8,
+      "argument_id": "argument:8",
+      "source_id": "footnote:11",
+      "span_start": 134,
+      "span_end": 139,
+      "marker_text": "[^11]"
+    },
+    {
+      "segment_index": 9,
+      "argument_id": "argument:9",
+      "source_id": "footnote:1",
+      "span_start": 97,
+      "span_end": 101,
+      "marker_text": "[^1]"
+    },
+    {
+      "segment_index": 9,
+      "argument_id": "argument:9",
+      "source_id": "footnote:3",
+      "span_start": 179,
+      "span_end": 183,
+      "marker_text": "[^3]"
+    },
+    {
+      "segment_index": 9,
+      "argument_id": "argument:9",
+      "source_id": "footnote:4",
+      "span_start": 220,
+      "span_end": 224,
+      "marker_text": "[^4]"
+    },
+    {
+      "segment_index": 9,
+      "argument_id": "argument:9",
+      "source_id": "footnote:5",
+      "span_start": 225,
+      "span_end": 229,
+      "marker_text": "[^5]"
+    },
+    {
+      "segment_index": 9,
+      "argument_id": "argument:9",
+      "source_id": "footnote:6",
+      "span_start": 229,
+      "span_end": 233,
+      "marker_text": "[^6]"
+    },
+    {
+      "segment_index": 9,
+      "argument_id": "argument:9",
+      "source_id": "footnote:7",
+      "span_start": 233,
+      "span_end": 237,
+      "marker_text": "[^7]"
+    }
+  ]
+}
