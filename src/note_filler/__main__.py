@@ -19,7 +19,6 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from .audit import audit_event
-from .state_io import write_manifest_atomic
 from .binding_report import build_binding_report, write_binding_report
 from .export import to_docx, to_json, to_markdown
 from .knowledge.law_lookup import LawLookup
@@ -212,9 +211,10 @@ def write_delivery_receipt(
     if polaris_metrics is not None:
         receipt["polaris_metrics"] = polaris_metrics
 
-    write_manifest_atomic(
-        manifest_path,
-        receipt,
+    manifest_path.write_text(
+        json.dumps(receipt, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+        newline="\n",
     )
     return manifest_path
 

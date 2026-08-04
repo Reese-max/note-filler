@@ -1303,14 +1303,7 @@ def _write_output_baseline_fixture(root: Path, relative_path: str, content: str)
     )
     (artifact_path.parent / "delivery_manifest.json").write_text(
         json.dumps({
-            "output_path": str(artifact_path),
-            "input_path": str(artifact_path),
-            "status": "delivered",
-            "timestamp": "2026-01-01T00:00:00+00:00",
             "content_hash": hashlib.sha256(artifact_path.read_bytes()).hexdigest()[:16],
-            "format": "md",
-            "supplements": 1,
-            "verified": 1,
             "delivery_status": {
                 "primary_note_ready": True,
                 "user_channel_sent": True,

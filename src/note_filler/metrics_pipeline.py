@@ -19,8 +19,6 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from .state_io import ManifestCorruptionError, read_manifest_safe, write_manifest_atomic
-
 logger = logging.getLogger(__name__)
 
 PIPELINE_METRICS_HISTORY_NAME = "metrics_history.jsonl"
@@ -232,13 +230,12 @@ def _load_output_metrics(
         return "metrics_unavailable", None, None, quality_debt
 
     try:
-        manifest = read_manifest_safe(manifest_path)
-    except ManifestCorruptionError as exc:
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError) as exc:
         logger.warning(
-            "output_metrics_unavailable path=%s reason=%s code=%s",
+            "output_metrics_unavailable path=%s reason=%s",
             markdown_path,
-            exc.reason,
-            exc.error_code,
+            exc,
         )
         return "metrics_unavailable", None, None, quality_debt
 
@@ -688,16 +685,7 @@ def collect_metrics_from_manifest(
             logger.warning(f"Manifest 不存在: {manifest_path}")
             return None
         
-        try:
-            manifest_data = read_manifest_safe(manifest_path)
-        except ManifestCorruptionError as exc:
-            logger.warning(
-                "Manifest 損毀: %s, 原因: %s, 錯誤碼: %s",
-                manifest_path,
-                exc.reason,
-                exc.error_code,
-            )
-            return None
+        manifest_data = json.loads(manifest_path.read_text(encoding="utf-8"))
         
         # 檢查是否包含 polaris_metrics
         polaris_metrics = manifest_data.get("polaris_metrics")
@@ -1161,8 +1149,8 @@ def rerun_note(
         return None, alerts
 
     try:
-        manifest_data = read_manifest_safe(manifest_path)
-    except ManifestCorruptionError as exc:
+        manifest_data = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError) as exc:
         _emit_alert(
             alerts,
             alert_type="rerun_failure",
@@ -1170,7 +1158,7 @@ def rerun_note(
             metric_name="pipeline",
             note_id=derive_note_id(str(manifest_path)),
             source_path=str(manifest_path),
-            error_message=f"Manifest 讀取失敗[{exc.error_code}]: {exc.reason}",
+            error_message=f"Manifest 讀取失敗: {exc}",
         )
         return None, alerts
 
@@ -1230,7 +1218,11 @@ def rerun_note(
     # 更新 manifest 中的 polaris_metrics
     manifest_data["polaris_metrics"] = polaris_metrics
     manifest_data["metrics_rerun_at"] = datetime.now(timezone.utc).isoformat()
-    write_manifest_atomic(manifest_path, manifest_data)
+    manifest_path.write_text(
+        json.dumps(manifest_data, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+        newline="\n",
+    )
 
     collection_time = datetime.now(timezone.utc).isoformat()
     record = MetricsRecord(
