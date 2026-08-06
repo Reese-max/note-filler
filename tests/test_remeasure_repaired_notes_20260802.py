@@ -4,6 +4,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -18,9 +19,19 @@ def _sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def test_fixed_snapshots_remeasure_without_version_history():
+def test_fixed_snapshots_remeasure_without_version_history(tmp_path):
+    generated_names = (
+        "README.md",
+        "before_baseline.jsonl",
+        "after_baseline.jsonl",
+        "comparison.json",
+    )
+    tracked_hashes = {name: _sha256(PACKAGE / name) for name in generated_names}
+    measurement_package = tmp_path / PACKAGE.name
+    shutil.copytree(PACKAGE, measurement_package)
     environment = dict(os.environ)
     environment["PYTHONPATH"] = str(ROOT / "src")
+    environment["NOTE_FILLER_REMEASURE_PACKAGE"] = str(measurement_package)
     completed = subprocess.run(
         [sys.executable, "-X", "utf8", str(SCRIPT)],
         cwd=ROOT,
@@ -35,7 +46,8 @@ def test_fixed_snapshots_remeasure_without_version_history():
     assert "HEAD^" not in SCRIPT.read_text(encoding="utf-8")
     assert "subprocess" not in SCRIPT.read_text(encoding="utf-8")
 
-    comparison = json.loads((PACKAGE / "comparison.json").read_text(encoding="utf-8"))
+    assert {name: _sha256(PACKAGE / name) for name in generated_names} == tracked_hashes
+    comparison = json.loads((measurement_package / "comparison.json").read_text(encoding="utf-8"))
     assert comparison["snapshot_mode"] == "fixed_before_after_paths_only"
     assert comparison["note_count"] == len(comparison["notes"]) == 5
     assert comparison["all_conditions_met"] is True

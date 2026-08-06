@@ -3,13 +3,17 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 from datetime import datetime, timezone
 from pathlib import Path
 
 from note_filler.metrics_pipeline import derive_note_id, scan_output_markdown_baselines
 
 
-PACKAGE = Path("metrics_output/repair_measurement_2026-08-02")
+PACKAGE = Path(os.environ.get(
+    "NOTE_FILLER_REMEASURE_PACKAGE",
+    "metrics_output/repair_measurement_2026-08-02",
+))
 ORIGINAL = Path("tests/fixtures/real_note.txt")
 NOTES = (
     ("output/clean-repro-3x-2026-07-24/run-1/real_note.訂正稿.md", "clean-repro-3x-2026-07-24/run-1/real_note.訂正稿.md"),
