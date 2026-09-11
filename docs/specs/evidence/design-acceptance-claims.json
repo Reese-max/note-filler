@@ -74,7 +74,7 @@
             "class=\"supplement\"",
             "class=\"pending\"",
             "details class=\"sources\"",
-            "href=\"/export\""
+            "href=\"/export?id={{ result_id }}\""
           ]
         }
       ],
