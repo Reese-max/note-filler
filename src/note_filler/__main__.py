@@ -261,6 +261,7 @@ def process_file(
     fmt: str,
     *,
     state_dir: Path | None = None,
+    dry_run: bool = False,
 ) -> dict:
     """跑單檔 pipeline、寫出輸出檔、寫 delivery receipt,回統計 dict。
 
@@ -291,12 +292,26 @@ def process_file(
     supp = [s for s in doc.segments if s.type == "supplement"]
     ver = sum(1 for s in supp if s.confidence == "verified")
 
+    # dry-run：pipeline 已完整執行（含 LLM/檢索），但不寫訂正稿、
+    # binding report、delivery receipt——使用者可先審閱內容再決定接受。
+    body = json.dumps(to_json(doc), ensure_ascii=False, indent=2) if fmt == "json" else to_markdown(doc)
+    if dry_run:
+        task_mgr.succeed(task_key, content=f"[dry-run] {len(body)} chars")
+        return {
+            "input": str(path),
+            "output": None,
+            "dry_run": True,
+            "content": body,
+            "supplements": len(supp),
+            "verified": ver,
+            "delivery_status": _delivery_status(primary_note_ready=True),
+        }
+
     dest_dir = out_dir if out_dir is not None else path.parent
     dest_dir.mkdir(parents=True, exist_ok=True)
     dest = dest_dir / f"{path.stem}.訂正稿.{fmt}"
 
     # stdout 的使用者送達內容；DOCX 另以 Markdown 提供可直接閱讀的完整筆記。
-    body = json.dumps(to_json(doc), ensure_ascii=False, indent=2) if fmt == "json" else to_markdown(doc)
     if not body.strip():
         task_mgr.fail(
             task_key,
@@ -410,6 +425,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--db", default="data/law_index.db", help="法條索引 DB 路徑(預設 data/law_index.db)")
     ap.add_argument("--format", choices=["md", "json", "docx"], default="md", help="輸出格式(預設 md)")
     ap.add_argument("--token", default=os.environ.get("TWINKLE_HUB_TOKEN", ""), help="twinkle-hub token(預設讀環境變數)")
+    ap.add_argument("--dry-run", action="store_true", help="只跑 pipeline 並印出補齊內容,不寫訂正稿/回執(唯讀路徑)")
     args = ap.parse_args(argv)
 
     files = _iter_inputs(args.inputs)
@@ -430,16 +446,19 @@ def main(argv: list[str] | None = None) -> int:
     for f in files:
         r = None
         try:
-            r = process_file(f, llm, twinkle, law, out_dir, args.format)
+            r = process_file(f, llm, twinkle, law, out_dir, args.format, dry_run=args.dry_run)
             delivery_status = r.setdefault(
                 "delivery_status",
                 _delivery_status(
                     primary_note_ready=bool(str(r.get("content", "")).strip()),
-                    local_fallback_written=_is_non_empty_file(Path(r["output"])),
+                    local_fallback_written=_is_non_empty_file(Path(r["output"])) if r.get("output") else False,
                 ),
             )
             print(r["content"], flush=True)
             delivery_status["user_channel_sent"] = True
+            if r.get("dry_run"):
+                ok += 1
+                continue
             manifest_path = Path(r["output"]).parent / MANIFEST_NAME
             if manifest_path.exists():
                 # 重新計算 polaris_metrics（因為 user_channel_sent 狀態已更新）

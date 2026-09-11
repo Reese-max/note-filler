@@ -71,30 +71,32 @@ To run the integration tests you need a local Grok provider listening on
 ## End-to-end example (read-only / dry-run path)
 
 ```bash
-# 1. Put your draft in data/draft.docx (or .md)
-# 2. Run the pipeline in dry-run mode — it produces suggestions but writes
-#    nothing into your draft.
-python -m note_filler.pipeline run --input data/draft.docx --dry-run --out output/run-2026-09-06
-# 3. Inspect the output:
-#    output/run-2026-09-06/suggestions.json   ← every suggested insertion, with source_url
-#    output/run-2026-09-06/citations.md      ← human-readable bibliography
-#    output/run-2026-09-06/diff.md           ← what *would* change, marked as insertions
-# 4. The original at data/draft.docx is untouched. To accept suggestions, run
-#    without --dry-run and confirm each one interactively.
+# 1. Put your draft in data/draft.txt (or .docx)
+# 2. Run the pipeline in dry-run mode — LLM/retrieval execute and the
+#    corrected draft is printed, but NOTHING is written: no 訂正稿 file,
+#    no binding report, no delivery receipt.
+python -m note_filler data/draft.txt --dry-run --format md
+# 3. The original at data/draft.txt is untouched. When you're satisfied,
+#    run without --dry-run to write the real artifacts:
+python -m note_filler data/draft.txt -o output/ --format md
+#    → output/draft.訂正稿.md          補齊後的訂正稿
+#    → output/binding_report.json     每個補充段的來源綁定（at_least_one_source 等檢查）
+#    → output/delivery_manifest.json  交付回執（送達狀態 + polaris 品質指標）
 ```
 
-The four-state model embedded in every output:
+## Segment model (what to look for in the output)
 
-| State | Description |
-|-------|-------------|
-| `original` | Was in your draft at start of run. Untouched. |
-| `researched` | Suggested by the model, awaiting your review. Marked in the diff. |
-| `source-backed` | Suggested **and** has a real `source_url`+`fetched_at`. Eligible for acceptance. |
-| `pending` | Suggested without a source. **Cannot** be accepted silently — must be re-fetched or dropped. |
-| `final` | Accepted by you. Marked with acceptance timestamp. |
+Every output document is a list of segments:
 
-Anything not in `original` is in one of the other four. The diff makes that
-visible.
+| Field | Values | Meaning |
+|-------|--------|---------|
+| `type` | `original` / `supplement` | `original` = text from your draft (untouched); `supplement` = AI-researched insertion |
+| `confidence` | `verified` / `pending_evidence` | `verified` = has a bound source; `pending_evidence` = suggested but ungrounded — treat as draft, review before relying on it |
+| `source_usage` (in `binding_report.json`) | per-segment | which `source_id`s back each supplement, plus `source_conflicts` when sources disagree |
+
+The rule of thumb: `original` is yours; `supplement`+`verified` is
+source-backed; `supplement`+`pending_evidence` is flagged degraded and must
+not be treated as canonical without re-checking.
 
 ## Provider boundaries
 

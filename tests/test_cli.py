@@ -387,3 +387,19 @@ def test_main_missing_token_and_db_both_warn(tmp_path, monkeypatch, capsys):
     assert code == 0
     assert "TWINKLE_HUB_TOKEN" in captured.err
     assert "法條 DB 不存在" in captured.err
+
+
+def test_process_file_dry_run_writes_nothing(tmp_path, monkeypatch):
+    """dry-run：pipeline 跑完但訂正稿/binding_report/manifest 都不落地。"""
+    note = tmp_path / "note.txt"
+    note.write_text("一、標題\n內容", encoding="utf-8")
+    monkeypatch.setattr(cli, "run_pipeline", lambda *a, **k: _Doc())
+    monkeypatch.setattr(cli, "to_markdown", lambda doc: "# 訂正稿\n內容")
+
+    r = cli.process_file(note, None, None, None, out_dir=None, fmt="md", dry_run=True)
+
+    assert r["dry_run"] is True and r["output"] is None
+    assert r["supplements"] == 2 and r["verified"] == 1
+    assert not (tmp_path / "note.訂正稿.md").exists()
+    assert not (tmp_path / "binding_report.json").exists()
+    assert not (tmp_path / "delivery_manifest.json").exists()
