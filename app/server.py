@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import logging
 import os
+import secrets
 import tempfile
+import time
 import traceback
 from pathlib import Path
 
@@ -26,7 +28,47 @@ DB_PATH = os.environ.get(
 )
 
 app = FastAPI(title="筆記補齊")
-app.state.last_doc = None
+# Issue #4 — 匯出以不可猜測的 result capability 綁定,不再是 process-global
+# last_doc。結果放進有 TTL/容量上限的 dict;重啟或過期一律 404,絕不落回
+# 「最新一份文件」。
+app.state.results: dict[str, dict] = {}
+
+RESULT_TTL_SECONDS = float(os.environ.get("NOTE_FILLER_RESULT_TTL_SECONDS", "3600"))
+RESULT_MAX_ENTRIES = int(os.environ.get("NOTE_FILLER_RESULT_MAX_ENTRIES", "64"))
+
+
+def _evict_expired_results() -> None:
+    now = time.time()
+    expired = [
+        rid
+        for rid, entry in app.state.results.items()
+        if now - entry["created_at"] > RESULT_TTL_SECONDS
+    ]
+    for rid in expired:
+        app.state.results.pop(rid, None)
+
+
+def _store_result(doc) -> str:
+    _evict_expired_results()
+    result_id = secrets.token_urlsafe(16)
+    app.state.results[result_id] = {"doc": doc, "created_at": time.time()}
+    while len(app.state.results) > RESULT_MAX_ENTRIES:
+        oldest = min(
+            app.state.results,
+            key=lambda rid: app.state.results[rid]["created_at"],
+        )
+        app.state.results.pop(oldest, None)
+    return result_id
+
+
+def _lookup_result(result_id: str):
+    entry = app.state.results.get(result_id)
+    if entry is None:
+        return None
+    if time.time() - entry["created_at"] > RESULT_TTL_SECONDS:
+        app.state.results.pop(result_id, None)
+        return None
+    return entry["doc"]
 
 
 def _build_clients() -> tuple[GrokClient, TwinkleClient, LawLookup]:
@@ -47,16 +89,15 @@ async def run(request: Request, file: UploadFile = File(...)) -> HTMLResponse:
     suffix = Path(file.filename or "note.txt").suffix or ".txt"
     data = await file.read()
     tmp_path = None
-    app.state.last_doc = None  # 本次失敗時不得讓 /export 轉送上一份成功結果
     try:
         with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
             tmp.write(data)
             tmp_path = tmp.name
         llm, twinkle, law = _build_clients()
         doc = run_pipeline(tmp_path, llm, twinkle, law)
-        app.state.last_doc = doc  # 供 /export 使用
+        result_id = _store_result(doc)
         return TEMPLATES.TemplateResponse(
-            request, "result.html", {"doc": doc}
+            request, "result.html", {"doc": doc, "result_id": result_id}
         )
     except Exception as exc:
         tb = traceback.format_exc()
@@ -94,10 +135,17 @@ async def run(request: Request, file: UploadFile = File(...)) -> HTMLResponse:
 
 @app.get("/export")
 def export() -> PlainTextResponse:
-    doc = app.state.last_doc
+    return PlainTextResponse(
+        "尚無可匯出的訂正稿,請先上傳筆記。", status_code=404
+    )
+
+
+@app.get("/export/{result_id}")
+def export_result(result_id: str) -> PlainTextResponse:
+    doc = _lookup_result(result_id)
     if doc is None:
         return PlainTextResponse(
-            "尚無可匯出的訂正稿,請先上傳筆記。", status_code=404
+            "結果不存在或已過期,請重新上傳筆記。", status_code=404
         )
     md = to_markdown(doc)
     headers = {"Content-Disposition": 'attachment; filename="correction.md"'}

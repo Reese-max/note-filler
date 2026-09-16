@@ -1,71 +1,36 @@
 # 設計驗收套件（Design Acceptance Package）
 
-> 產生時間：`2026-07-19T15:34:02+08:00`
+> 產生時間：`2026-09-16T15:31:36+08:00`
 >
 > schema：`note-filler.design-acceptance/v1`
 >
 > **每一項主張必須同時具備：規格檔、實作錨點檔、測試錨點；禁止只靠敘述或彙總數字驗收。**
->
-> **追溯更新：2026-07-27 新增需求編號與驗收項目編號追溯對照。**
 
 ## Git / 落盤狀態（刷新前）
 
-- HEAD：`16361a56a0b0f965bbab9ae976a65e950a955499`
+- HEAD：`9b579adb0391f9a96f620f2d58d4a7f0e420c4df`
 - working_tree_clean_before_refresh：`False`
-- status_porcelain_before_refresh：`M docs/specs/evidence/design-acceptance-claims.json
- M scripts/refresh_design_acceptance.py
- M tests/test_design_acceptance.py`
-
-## 追溯對照表
-
-> 完整追溯索引見 `docs/specs/design-traceability-index.md`
-
-### 需求編號索引
-
-| 需求編號 | 需求標題 |
-|----------|----------|
-| R-01 | 目標與一句話定義 |
-| R-02 | 範圍 - MVP |
-| R-03 | 復用策略 |
-| R-04 | 系統架構 |
-| R-05 | 自建模組 - Gap 偵測 |
-| R-06 | 自建模組 - 訂正稿資料結構 |
-| R-07 | 品質閘 |
-| R-08 | LLM 接法 |
-| R-09 | UI MVP |
-| R-10 | 開發方式 |
-| R-11 | MVP 不做清單 |
-| R-12 | 驗收標準 |
-
-### 驗收項目編號索引
-
-| 驗收編號 | 測試項目 |
-|----------|----------|
-| A-01 | test_index_returns_upload_form |
-| A-02 | test_run_renders_two_columns |
-| A-03 | test_export_returns_markdown_attachment |
-| A-04 | test_export_without_run_returns_404 |
-| A-05 | test_run_pipeline_invariant |
-| A-06 | test_e2e_minimal_quality_gates_offline_regression |
-| A-07 | test_e2e_structural_invariants |
-| A-08 | test_retrieved_five_but_only_two_cited |
-
-### 設計 → 需求 → 驗收追溯對照
-
-| 設計編號 | 設計標題 | 需求編號 | 驗收編號 |
-|----------|----------|----------|----------|
-| D-01 | 介面規格 | R-01, R-02, R-08, R-09 | A-01, A-02, A-03, A-04 |
-| D-02 | 狀態轉移 | R-06, R-07 | A-04, A-05, A-06 |
-| D-03 | 使用者流程 | R-01, R-04, R-05, R-06 | A-02, A-03, A-05, A-07 |
-| D-04 | 元件責任 | R-03, R-04, R-10 | A-01, A-05, A-06, A-08 |
-| D-05 | 畫面佐證 | R-02, R-09 | A-01, A-02, A-03, A-04 |
+- status_porcelain_before_refresh：`M app/server.py
+ M app/templates/result.html
+ M docs/specs/evidence/design-acceptance-claims.json
+ M docs/specs/note-filler-interface-contract.md
+ M docs/specs/note-filler-state-machine.md
+ M tests/test_extended_readings.py
+ M tests/test_extended_readings_regression.py
+ M tests/test_note_product_gate.py
+ M tests/test_openable_links.py
+ M tests/test_output_consistency.py
+ M tests/test_server.py
+ M tests/test_source_binding_acceptance.py
+?? README.md
+?? tests/fixtures/metrics_history.jsonl`
 
 ## 主張 ↔ 產物對照
 
 | ID | 標題 | 規格檔 | 實作檔數 | 測試數 | OK |
 |----|------|--------|----------|--------|----|
-| D-01 | 介面規格（路由／表單／匯出契約） | `docs/specs/note-filler-interface-contract.md` | 3 | 4 | YES |
-| D-02 | UI／資料狀態轉移（last_doc／confidence） | `docs/specs/note-filler-state-machine.md` | 3 | 4 | YES |
+| D-01 | 介面規格（路由／表單／匯出契約） | `docs/specs/note-filler-interface-contract.md` | 3 | 5 | YES |
+| D-02 | UI／資料狀態轉移（results capability／confidence） | `docs/specs/note-filler-state-machine.md` | 3 | 6 | YES |
 | D-03 | 使用者與系統流程（上傳→pipeline→結果→匯出） | `docs/specs/note-filler-user-flow.md` | 3 | 4 | YES |
 | D-04 | 元件責任清單（入口／管線／匯出） | `docs/specs/note-filler-component-responsibilities.md` | 8 | 4 | YES |
 | D-05 | 可重現畫面佐證與索引 | `docs/specs/evidence/ui/index.md` | 4 | 4 | YES |
@@ -97,16 +62,18 @@
 
 測試單獨結果：
 
-- **PASSED** `tests/test_server.py::test_index_returns_upload_form` — `tests/test_server.py::test_index_returns_upload_form[asyncio] PASSED     [100%]`
-  - invocation: `D:\Users\Administrator\Desktop\筆記補齊\.venv\Scripts\python.exe -X utf8 -m pytest tests/test_server.py::test_index_returns_upload_form -vv --tb=line --color=no`
-- **PASSED** `tests/test_server.py::test_run_renders_two_columns` — `tests/test_server.py::test_run_renders_two_columns[asyncio] PASSED       [100%]`
-  - invocation: `D:\Users\Administrator\Desktop\筆記補齊\.venv\Scripts\python.exe -X utf8 -m pytest tests/test_server.py::test_run_renders_two_columns -vv --tb=line --color=no`
-- **PASSED** `tests/test_server.py::test_export_returns_markdown_attachment` — `tests/test_server.py::test_export_returns_markdown_attachment[asyncio] PASSED [100%]`
-  - invocation: `D:\Users\Administrator\Desktop\筆記補齊\.venv\Scripts\python.exe -X utf8 -m pytest tests/test_server.py::test_export_returns_markdown_attachment -vv --tb=line --color=no`
-- **PASSED** `tests/test_server.py::test_export_without_run_returns_404` — `tests/test_server.py::test_export_without_run_returns_404[asyncio] PASSED [100%]`
-  - invocation: `D:\Users\Administrator\Desktop\筆記補齊\.venv\Scripts\python.exe -X utf8 -m pytest tests/test_server.py::test_export_without_run_returns_404 -vv --tb=line --color=no`
+- **PASSED** `tests/test_server.py::test_index_returns_upload_form` — `tests/test_server.py::test_index_returns_upload_form[asyncio] PASSED     [ 50%]`
+  - invocation: `C:\Users\Administrator\AppData\Local\Microsoft\WindowsApps\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\python.exe -X utf8 -m pytest tests/test_server.py::test_index_returns_upload_form -vv --tb=line --color=no`
+- **PASSED** `tests/test_server.py::test_run_renders_two_columns` — `tests/test_server.py::test_run_renders_two_columns[asyncio] PASSED       [ 50%]`
+  - invocation: `C:\Users\Administrator\AppData\Local\Microsoft\WindowsApps\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\python.exe -X utf8 -m pytest tests/test_server.py::test_run_renders_two_columns -vv --tb=line --color=no`
+- **PASSED** `tests/test_server.py::test_export_returns_markdown_attachment` — `tests/test_server.py::test_export_returns_markdown_attachment[asyncio] PASSED [ 50%]`
+  - invocation: `C:\Users\Administrator\AppData\Local\Microsoft\WindowsApps\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\python.exe -X utf8 -m pytest tests/test_server.py::test_export_returns_markdown_attachment -vv --tb=line --color=no`
+- **PASSED** `tests/test_server.py::test_export_without_run_returns_404` — `tests/test_server.py::test_export_without_run_returns_404[asyncio] PASSED [ 50%]`
+  - invocation: `C:\Users\Administrator\AppData\Local\Microsoft\WindowsApps\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\python.exe -X utf8 -m pytest tests/test_server.py::test_export_without_run_returns_404 -vv --tb=line --color=no`
+- **PASSED** `tests/test_server.py::test_export_b_cannot_receive_a_result` — `tests/test_server.py::test_export_b_cannot_receive_a_result[asyncio] PASSED [ 50%]`
+  - invocation: `C:\Users\Administrator\AppData\Local\Microsoft\WindowsApps\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\python.exe -X utf8 -m pytest tests/test_server.py::test_export_b_cannot_receive_a_result -vv --tb=line --color=no`
 
-### D-02 — UI／資料狀態轉移（last_doc／confidence）
+### D-02 — UI／資料狀態轉移（results capability／confidence）
 
 - claim_ok: **True**
 - spec_file: `docs/specs/note-filler-state-machine.md` (exists=True)
@@ -121,14 +88,18 @@
 
 測試單獨結果：
 
-- **PASSED** `tests/test_server.py::test_export_without_run_returns_404` — `tests/test_server.py::test_export_without_run_returns_404[asyncio] PASSED [100%]`
-  - invocation: `D:\Users\Administrator\Desktop\筆記補齊\.venv\Scripts\python.exe -X utf8 -m pytest tests/test_server.py::test_export_without_run_returns_404 -vv --tb=line --color=no`
-- **PASSED** `tests/test_server.py::test_export_returns_markdown_attachment` — `tests/test_server.py::test_export_returns_markdown_attachment[asyncio] PASSED [100%]`
-  - invocation: `D:\Users\Administrator\Desktop\筆記補齊\.venv\Scripts\python.exe -X utf8 -m pytest tests/test_server.py::test_export_returns_markdown_attachment -vv --tb=line --color=no`
+- **PASSED** `tests/test_server.py::test_export_without_run_returns_404` — `tests/test_server.py::test_export_without_run_returns_404[asyncio] PASSED [ 50%]`
+  - invocation: `C:\Users\Administrator\AppData\Local\Microsoft\WindowsApps\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\python.exe -X utf8 -m pytest tests/test_server.py::test_export_without_run_returns_404 -vv --tb=line --color=no`
+- **PASSED** `tests/test_server.py::test_export_returns_markdown_attachment` — `tests/test_server.py::test_export_returns_markdown_attachment[asyncio] PASSED [ 50%]`
+  - invocation: `C:\Users\Administrator\AppData\Local\Microsoft\WindowsApps\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\python.exe -X utf8 -m pytest tests/test_server.py::test_export_returns_markdown_attachment -vv --tb=line --color=no`
+- **PASSED** `tests/test_server.py::test_export_two_clients_each_receive_own_result` — `tests/test_server.py::test_export_two_clients_each_receive_own_result[asyncio] PASSED [ 50%]`
+  - invocation: `C:\Users\Administrator\AppData\Local\Microsoft\WindowsApps\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\python.exe -X utf8 -m pytest tests/test_server.py::test_export_two_clients_each_receive_own_result -vv --tb=line --color=no`
+- **PASSED** `tests/test_server.py::test_export_expired_result_returns_404` — `tests/test_server.py::test_export_expired_result_returns_404[asyncio] PASSED [ 50%]`
+  - invocation: `C:\Users\Administrator\AppData\Local\Microsoft\WindowsApps\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\python.exe -X utf8 -m pytest tests/test_server.py::test_export_expired_result_returns_404 -vv --tb=line --color=no`
 - **PASSED** `tests/test_pipeline.py::test_run_pipeline_invariant` — `tests/test_pipeline.py::test_run_pipeline_invariant PASSED               [100%]`
-  - invocation: `D:\Users\Administrator\Desktop\筆記補齊\.venv\Scripts\python.exe -X utf8 -m pytest tests/test_pipeline.py::test_run_pipeline_invariant -vv --tb=line --color=no`
+  - invocation: `C:\Users\Administrator\AppData\Local\Microsoft\WindowsApps\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\python.exe -X utf8 -m pytest tests/test_pipeline.py::test_run_pipeline_invariant -vv --tb=line --color=no`
 - **PASSED** `tests/test_e2e_acceptance.py::test_e2e_minimal_quality_gates_offline_regression` — `tests/test_e2e_acceptance.py::test_e2e_minimal_quality_gates_offline_regression PASSED [100%]`
-  - invocation: `D:\Users\Administrator\Desktop\筆記補齊\.venv\Scripts\python.exe -X utf8 -m pytest tests/test_e2e_acceptance.py::test_e2e_minimal_quality_gates_offline_regression -vv --tb=line --color=no`
+  - invocation: `C:\Users\Administrator\AppData\Local\Microsoft\WindowsApps\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\python.exe -X utf8 -m pytest tests/test_e2e_acceptance.py::test_e2e_minimal_quality_gates_offline_regression -vv --tb=line --color=no`
 
 ### D-03 — 使用者與系統流程（上傳→pipeline→結果→匯出）
 
@@ -145,14 +116,14 @@
 
 測試單獨結果：
 
-- **PASSED** `tests/test_server.py::test_run_renders_two_columns` — `tests/test_server.py::test_run_renders_two_columns[asyncio] PASSED       [100%]`
-  - invocation: `D:\Users\Administrator\Desktop\筆記補齊\.venv\Scripts\python.exe -X utf8 -m pytest tests/test_server.py::test_run_renders_two_columns -vv --tb=line --color=no`
-- **PASSED** `tests/test_server.py::test_export_returns_markdown_attachment` — `tests/test_server.py::test_export_returns_markdown_attachment[asyncio] PASSED [100%]`
-  - invocation: `D:\Users\Administrator\Desktop\筆記補齊\.venv\Scripts\python.exe -X utf8 -m pytest tests/test_server.py::test_export_returns_markdown_attachment -vv --tb=line --color=no`
+- **PASSED** `tests/test_server.py::test_run_renders_two_columns` — `tests/test_server.py::test_run_renders_two_columns[asyncio] PASSED       [ 50%]`
+  - invocation: `C:\Users\Administrator\AppData\Local\Microsoft\WindowsApps\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\python.exe -X utf8 -m pytest tests/test_server.py::test_run_renders_two_columns -vv --tb=line --color=no`
+- **PASSED** `tests/test_server.py::test_export_returns_markdown_attachment` — `tests/test_server.py::test_export_returns_markdown_attachment[asyncio] PASSED [ 50%]`
+  - invocation: `C:\Users\Administrator\AppData\Local\Microsoft\WindowsApps\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\python.exe -X utf8 -m pytest tests/test_server.py::test_export_returns_markdown_attachment -vv --tb=line --color=no`
 - **PASSED** `tests/test_pipeline.py::test_run_pipeline_invariant` — `tests/test_pipeline.py::test_run_pipeline_invariant PASSED               [100%]`
-  - invocation: `D:\Users\Administrator\Desktop\筆記補齊\.venv\Scripts\python.exe -X utf8 -m pytest tests/test_pipeline.py::test_run_pipeline_invariant -vv --tb=line --color=no`
+  - invocation: `C:\Users\Administrator\AppData\Local\Microsoft\WindowsApps\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\python.exe -X utf8 -m pytest tests/test_pipeline.py::test_run_pipeline_invariant -vv --tb=line --color=no`
 - **PASSED** `tests/test_e2e_acceptance.py::test_e2e_structural_invariants` — `tests/test_e2e_acceptance.py::test_e2e_structural_invariants PASSED      [100%]`
-  - invocation: `D:\Users\Administrator\Desktop\筆記補齊\.venv\Scripts\python.exe -X utf8 -m pytest tests/test_e2e_acceptance.py::test_e2e_structural_invariants -vv --tb=line --color=no`
+  - invocation: `C:\Users\Administrator\AppData\Local\Microsoft\WindowsApps\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\python.exe -X utf8 -m pytest tests/test_e2e_acceptance.py::test_e2e_structural_invariants -vv --tb=line --color=no`
 
 ### D-04 — 元件責任清單（入口／管線／匯出）
 
@@ -174,14 +145,14 @@
 
 測試單獨結果：
 
-- **PASSED** `tests/test_server.py::test_index_returns_upload_form` — `tests/test_server.py::test_index_returns_upload_form[asyncio] PASSED     [100%]`
-  - invocation: `D:\Users\Administrator\Desktop\筆記補齊\.venv\Scripts\python.exe -X utf8 -m pytest tests/test_server.py::test_index_returns_upload_form -vv --tb=line --color=no`
+- **PASSED** `tests/test_server.py::test_index_returns_upload_form` — `tests/test_server.py::test_index_returns_upload_form[asyncio] PASSED     [ 50%]`
+  - invocation: `C:\Users\Administrator\AppData\Local\Microsoft\WindowsApps\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\python.exe -X utf8 -m pytest tests/test_server.py::test_index_returns_upload_form -vv --tb=line --color=no`
 - **PASSED** `tests/test_pipeline.py::test_run_pipeline_invariant` — `tests/test_pipeline.py::test_run_pipeline_invariant PASSED               [100%]`
-  - invocation: `D:\Users\Administrator\Desktop\筆記補齊\.venv\Scripts\python.exe -X utf8 -m pytest tests/test_pipeline.py::test_run_pipeline_invariant -vv --tb=line --color=no`
+  - invocation: `C:\Users\Administrator\AppData\Local\Microsoft\WindowsApps\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\python.exe -X utf8 -m pytest tests/test_pipeline.py::test_run_pipeline_invariant -vv --tb=line --color=no`
 - **PASSED** `tests/test_e2e_acceptance.py::test_e2e_minimal_quality_gates_offline_regression` — `tests/test_e2e_acceptance.py::test_e2e_minimal_quality_gates_offline_regression PASSED [100%]`
-  - invocation: `D:\Users\Administrator\Desktop\筆記補齊\.venv\Scripts\python.exe -X utf8 -m pytest tests/test_e2e_acceptance.py::test_e2e_minimal_quality_gates_offline_regression -vv --tb=line --color=no`
+  - invocation: `C:\Users\Administrator\AppData\Local\Microsoft\WindowsApps\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\python.exe -X utf8 -m pytest tests/test_e2e_acceptance.py::test_e2e_minimal_quality_gates_offline_regression -vv --tb=line --color=no`
 - **PASSED** `tests/test_correction.py::test_retrieved_five_but_only_two_cited` — `tests/test_correction.py::test_retrieved_five_but_only_two_cited PASSED  [100%]`
-  - invocation: `D:\Users\Administrator\Desktop\筆記補齊\.venv\Scripts\python.exe -X utf8 -m pytest tests/test_correction.py::test_retrieved_five_but_only_two_cited -vv --tb=line --color=no`
+  - invocation: `C:\Users\Administrator\AppData\Local\Microsoft\WindowsApps\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\python.exe -X utf8 -m pytest tests/test_correction.py::test_retrieved_five_but_only_two_cited -vv --tb=line --color=no`
 
 ### D-05 — 可重現畫面佐證與索引
 
@@ -199,14 +170,14 @@
 
 測試單獨結果：
 
-- **PASSED** `tests/test_server.py::test_index_returns_upload_form` — `tests/test_server.py::test_index_returns_upload_form[asyncio] PASSED     [100%]`
-  - invocation: `D:\Users\Administrator\Desktop\筆記補齊\.venv\Scripts\python.exe -X utf8 -m pytest tests/test_server.py::test_index_returns_upload_form -vv --tb=line --color=no`
-- **PASSED** `tests/test_server.py::test_run_renders_two_columns` — `tests/test_server.py::test_run_renders_two_columns[asyncio] PASSED       [100%]`
-  - invocation: `D:\Users\Administrator\Desktop\筆記補齊\.venv\Scripts\python.exe -X utf8 -m pytest tests/test_server.py::test_run_renders_two_columns -vv --tb=line --color=no`
-- **PASSED** `tests/test_server.py::test_export_returns_markdown_attachment` — `tests/test_server.py::test_export_returns_markdown_attachment[asyncio] PASSED [100%]`
-  - invocation: `D:\Users\Administrator\Desktop\筆記補齊\.venv\Scripts\python.exe -X utf8 -m pytest tests/test_server.py::test_export_returns_markdown_attachment -vv --tb=line --color=no`
-- **PASSED** `tests/test_server.py::test_export_without_run_returns_404` — `tests/test_server.py::test_export_without_run_returns_404[asyncio] PASSED [100%]`
-  - invocation: `D:\Users\Administrator\Desktop\筆記補齊\.venv\Scripts\python.exe -X utf8 -m pytest tests/test_server.py::test_export_without_run_returns_404 -vv --tb=line --color=no`
+- **PASSED** `tests/test_server.py::test_index_returns_upload_form` — `tests/test_server.py::test_index_returns_upload_form[asyncio] PASSED     [ 50%]`
+  - invocation: `C:\Users\Administrator\AppData\Local\Microsoft\WindowsApps\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\python.exe -X utf8 -m pytest tests/test_server.py::test_index_returns_upload_form -vv --tb=line --color=no`
+- **PASSED** `tests/test_server.py::test_run_renders_two_columns` — `tests/test_server.py::test_run_renders_two_columns[asyncio] PASSED       [ 50%]`
+  - invocation: `C:\Users\Administrator\AppData\Local\Microsoft\WindowsApps\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\python.exe -X utf8 -m pytest tests/test_server.py::test_run_renders_two_columns -vv --tb=line --color=no`
+- **PASSED** `tests/test_server.py::test_export_returns_markdown_attachment` — `tests/test_server.py::test_export_returns_markdown_attachment[asyncio] PASSED [ 50%]`
+  - invocation: `C:\Users\Administrator\AppData\Local\Microsoft\WindowsApps\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\python.exe -X utf8 -m pytest tests/test_server.py::test_export_returns_markdown_attachment -vv --tb=line --color=no`
+- **PASSED** `tests/test_server.py::test_export_without_run_returns_404` — `tests/test_server.py::test_export_without_run_returns_404[asyncio] PASSED [ 50%]`
+  - invocation: `C:\Users\Administrator\AppData\Local\Microsoft\WindowsApps\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\python.exe -X utf8 -m pytest tests/test_server.py::test_export_without_run_returns_404 -vv --tb=line --color=no`
 - screenshot_status: `absent` — 目前無 .png/.jpg 畫面截圖；以文件索引 + 模板 + 測試錨點作為最小可核實證據
 
 ## failures

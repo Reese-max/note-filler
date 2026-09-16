@@ -1,3 +1,5 @@
+import re
+
 import pytest
 
 import app.server as server
@@ -155,16 +157,29 @@ async def test_run_renders_two_columns(async_client, monkeypatch):
     assert "另有學說補充" not in summary_block
 
 
-@pytest.mark.anyio
-async def test_export_returns_markdown_attachment(async_client, monkeypatch):
-    doc = _fixed_doc()
+def _result_id_from(body: str) -> str:
+    match = re.search(r'/export/([A-Za-z0-9_\-]+)', body)
+    assert match, "result page should link the opaque result export"
+    return match.group(1)
+
+
+async def _run_note(async_client, monkeypatch, doc) -> str:
     monkeypatch.setattr(server, "_build_clients", lambda: (None, None, None))
     monkeypatch.setattr(
         server, "run_pipeline", lambda path, llm, twinkle, law: doc
     )
-    # 先跑一次 /run 讓 last_doc 有值
-    await async_client.post("/run", files={"file": ("note.txt", b"x", "text/plain")})
-    r = await async_client.get("/export")
+    r = await async_client.post(
+        "/run", files={"file": ("note.txt", b"x", "text/plain")}
+    )
+    assert r.status_code == 200
+    return _result_id_from(r.text)
+
+
+@pytest.mark.anyio
+async def test_export_returns_markdown_attachment(async_client, monkeypatch):
+    doc = _fixed_doc()
+    result_id = await _run_note(async_client, monkeypatch, doc)
+    r = await async_client.get(f"/export/{result_id}")
     assert r.status_code == 200
     assert r.headers["content-type"].startswith("text/markdown")
     assert "attachment" in r.headers["content-disposition"]
@@ -175,6 +190,102 @@ async def test_export_returns_markdown_attachment(async_client, monkeypatch):
 
 @pytest.mark.anyio
 async def test_export_without_run_returns_404(async_client):
-    server.app.state.last_doc = None  # 重置狀態
+    server.app.state.results.clear()
     r = await async_client.get("/export")
     assert r.status_code == 404
+    r = await async_client.get("/export/no-such-result")
+    assert r.status_code == 404
+
+
+@pytest.mark.anyio
+async def test_export_b_cannot_receive_a_result(async_client, monkeypatch):
+    """Issue #4 — A 跑完後,B 不得用全域 endpoint 拿到 A 的文件。"""
+    doc_a = _fixed_doc()
+    server.app.state.results.clear()
+    result_a = await _run_note(async_client, monkeypatch, doc_a)
+    # B 未跑任何 run;對裸 /export 與猜測的 ID 都只能是 404。
+    r = await async_client.get("/export")
+    assert r.status_code == 404
+    r = await async_client.get("/export/" + "x" * 22)
+    assert r.status_code == 404
+    # 而 A 自己的 capability 仍可用。
+    r = await async_client.get(f"/export/{result_a}")
+    assert r.status_code == 200
+    assert "行政處分" in r.text
+
+
+@pytest.mark.anyio
+async def test_export_two_clients_each_receive_own_result(
+    async_client, monkeypatch
+):
+    """A/B 各自 run;各自的 export capability 只回自己的文件。"""
+    server.app.state.results.clear()
+    doc_a = _fixed_doc()
+    doc_b = _fixed_doc()
+    doc_b.segments[1].text = "B 的訂正稿內容。[^1]"
+    result_a = await _run_note(async_client, monkeypatch, doc_a)
+    result_b = await _run_note(async_client, monkeypatch, doc_b)
+    assert result_a != result_b
+
+    ra = await async_client.get(f"/export/{result_a}")
+    rb = await async_client.get(f"/export/{result_b}")
+    assert ra.status_code == 200 and rb.status_code == 200
+    assert "B 的訂正稿內容" not in ra.text
+    assert "B 的訂正稿內容" in rb.text
+
+
+@pytest.mark.anyio
+async def test_export_interleaved_runs_no_last_writer_mixup(
+    async_client, monkeypatch
+):
+    """並發交錯:A run → B run → A export 仍拿到 A 的文件,非 last-writer-wins。"""
+    server.app.state.results.clear()
+    doc_a = _fixed_doc()
+    doc_b = _fixed_doc()
+    doc_b.segments[1].text = "B 的訂正稿內容。[^1]"
+    result_a = await _run_note(async_client, monkeypatch, doc_a)
+    result_b = await _run_note(async_client, monkeypatch, doc_b)
+
+    ra = await async_client.get(f"/export/{result_a}")
+    rb = await async_client.get(f"/export/{result_b}")
+    assert "B 的訂正稿內容" not in ra.text
+    assert "B 的訂正稿內容" in rb.text
+
+
+@pytest.mark.anyio
+async def test_export_expired_result_returns_404(async_client, monkeypatch):
+    """TTL 過期後,result capability 回確定性 404,不落回最新文件。"""
+    server.app.state.results.clear()
+    doc_a = _fixed_doc()
+    result_a = await _run_note(async_client, monkeypatch, doc_a)
+    assert (await async_client.get(f"/export/{result_a}")).status_code == 200
+    # 直接把 created_at 推到 TTL 之前,模擬過期。
+    server.app.state.results[result_a]["created_at"] -= (
+        server.RESULT_TTL_SECONDS + 1
+    )
+    r = await async_client.get(f"/export/{result_a}")
+    assert r.status_code == 404
+    # 過期條目真的被移除,後續查詢仍 404。
+    assert result_a not in server.app.state.results
+
+
+@pytest.mark.anyio
+async def test_failed_run_creates_no_export_capability(
+    async_client, monkeypatch
+):
+    """失敗的 run 不產生新 capability;舊 capability 不因此外洩。"""
+    server.app.state.results.clear()
+    doc_a = _fixed_doc()
+    result_a = await _run_note(async_client, monkeypatch, doc_a)
+
+    def boom(path, llm, twinkle, law):
+        raise RuntimeError("pipeline exploded")
+
+    monkeypatch.setattr(server, "run_pipeline", boom)
+    r = await async_client.post(
+        "/run", files={"file": ("note.txt", b"y", "text/plain")}
+    )
+    assert r.status_code == 500
+    assert "/export/" not in r.text
+    # 失敗 run 沒有新增任何結果。
+    assert list(server.app.state.results) == [result_a]
