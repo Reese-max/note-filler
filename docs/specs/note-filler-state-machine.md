@@ -35,12 +35,10 @@ stateDiagram-v2
     S2 --> S3 : GET /export/{result_id} (capability 有效)
     S2 --> S0 : 重載頁面回首頁
     S0 --> S4 : GET /export 或 /export/{未知id}(未上傳)
-    S1 --> S4 : POST /run 異常未處理（框架預設 500）*
+    S1 --> S4 : POST /run 異常 → result.html 錯誤頁 500，不產生 capability
     S4 --> S0 : 使用者回首頁
     S3 --> S0 : 重新上傳 /run
 ```
-
-> 註：`S1` 到 `S4` 的失敗邊為框架預設異常路徑，當前未有明確錯誤頁（可視為未填的設計缺口）。
 
 ### 主要實作錨點
 

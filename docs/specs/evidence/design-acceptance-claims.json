@@ -224,7 +224,9 @@
           "path": "app/server.py",
           "must_contain": [
             "FastAPI",
-            "last_doc"
+            "app.state.results",
+            "_store_result",
+            "secrets.token_urlsafe"
           ]
         },
         {

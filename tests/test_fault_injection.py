@@ -880,7 +880,7 @@ class TestEndToEndFaultInjection:
             p.unlink(missing_ok=True)
 
     @pytest.mark.anyio
-    async def test_web_pipeline_failure_clears_last_doc(self, async_client, monkeypatch, caplog):
+    async def test_web_pipeline_failure_no_export_capability(self, async_client, monkeypatch, caplog):
         """失敗的 /run 不產生新 result capability，也不得轉送既有結果。"""
         server.app.state.results.clear()
         monkeypatch.setattr(server, "_build_clients", lambda: (None, None, None))

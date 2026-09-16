@@ -16,7 +16,7 @@
 
 | 元件 | 責任 | 應用檔 |
 |---|---|---|
-| `server.app` | FastAPI 應用初始化、路由註冊、狀態容器 `last_doc` 維持 | `app/server.py` |
+| `server.app` | FastAPI 應用初始化、路由註冊、結果狀態容器 `app.state.results`（result capability→doc，TTL/上限逐出） | `app/server.py` |
 | `index.html` | 上傳表單（唯一入口） | `app/templates/index.html` |
 | `result.html` | 雙欄展示結果、補充高亮、來源展開、下載入口 | `app/templates/result.html` |
 

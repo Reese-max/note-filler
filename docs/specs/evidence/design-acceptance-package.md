@@ -1,6 +1,6 @@
 # 設計驗收套件（Design Acceptance Package）
 
-> 產生時間：`2026-09-16T15:31:36+08:00`
+> 產生時間：`2026-09-16T15:52:26+08:00`
 >
 > schema：`note-filler.design-acceptance/v1`
 >
@@ -8,22 +8,24 @@
 
 ## Git / 落盤狀態（刷新前）
 
-- HEAD：`9b579adb0391f9a96f620f2d58d4a7f0e420c4df`
+- HEAD：`b58d1324bac1276170d53342aafbc4158b285163`
 - working_tree_clean_before_refresh：`False`
-- status_porcelain_before_refresh：`M app/server.py
- M app/templates/result.html
+- status_porcelain_before_refresh：`M README.md
+ M app/server.py
+ M docs/specs/design-traceability-index.md
  M docs/specs/evidence/design-acceptance-claims.json
+ M docs/specs/evidence/ui/index.md
+ M docs/specs/note-filler-component-responsibilities.md
  M docs/specs/note-filler-interface-contract.md
  M docs/specs/note-filler-state-machine.md
- M tests/test_extended_readings.py
- M tests/test_extended_readings_regression.py
- M tests/test_note_product_gate.py
- M tests/test_openable_links.py
- M tests/test_output_consistency.py
- M tests/test_server.py
- M tests/test_source_binding_acceptance.py
-?? README.md
-?? tests/fixtures/metrics_history.jsonl`
+ M docs/specs/note-filler-user-flow.md
+ M src/note_filler/pipeline.py
+ M src/note_filler/retrieve/web.py
+ M tests/0a8e5521d41101e3-restored-notes-output.py
+ M tests/test_exception_skip_traceability.py
+ M tests/test_fault_injection.py
+?? tests/fixtures/metrics_history.jsonl
+?? tests/metrics_history.jsonl`
 
 ## 主張 ↔ 產物對照
 

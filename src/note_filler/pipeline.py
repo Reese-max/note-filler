@@ -231,7 +231,7 @@ def _verify_law_citations(correction, law):
     保守把該段降為 pending_evidence(C6:只降級、保留不刪,絕不升級)。
     penalty_mismatch 同樣降級,因為罰則金額與法規庫不符時不可聲稱 verified。
     """
-    for seg in correction.segments:
+    for i, seg in enumerate(correction.segments):
         if seg.type != "supplement":
             continue
         findings = check_law_citations(text=seg.text, lookup=law)  # C2:第一參數用 text 名
@@ -240,15 +240,15 @@ def _verify_law_citations(correction, law):
             audit_event(
                 logger,
                 "law_citation_not_forwarded_as_verified",
-                seg.text[:80],
+                f"segment#{i}",
                 findings=missing,
                 outcome="pending_evidence",
             )
             seg.confidence = "pending_evidence"
         if any(f.get("kind") == "penalty_mismatch" for f in findings):
             logger.warning(
-                "penalty_mismatch in segment for '%s': %s",
-                seg.text[:80],
+                "penalty_mismatch in segment %d: %s",
+                i,
                 [f["detail"] for f in findings if f.get("kind") == "penalty_mismatch"],
             )
             seg.confidence = "pending_evidence"

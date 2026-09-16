@@ -37,8 +37,8 @@ acceptance_mode = per-claim-evidence
 
 ## 3. 本輪實測
 
-- generated_at: `2026-09-16T15:31:36+08:00`
-- HEAD（刷新前）: `9b579adb0391f9a96f620f2d58d4a7f0e420c4df`
+- generated_at: `2026-09-16T15:52:26+08:00`
+- HEAD（刷新前）: `b58d1324bac1276170d53342aafbc4158b285163`
 - working_tree_clean_before_refresh: `False`
 - acceptance_pass: **True**
 - unique offline test anchors: 11

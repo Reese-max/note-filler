@@ -295,7 +295,7 @@ def test_web_exception_and_skip_matrix_preserves_later_good_source(caplog):
         "query-fault",
         "https://fetch-fault",
         "fetch-fault-reason",
-        "bad-grade-json",
+        "grade JSON parse failed",  # raw LLM 輸出不進日誌,只記失敗事件
         "https://grade-fault",
         "grade-fault-reason",
     ):
@@ -441,7 +441,8 @@ def test_law_citation_skips_and_penalty_mismatch_are_traceable(monkeypatch, capl
         _verify_law_citations(correction, Lookup())
 
     assert correction.segments[-1].confidence == "pending_evidence"
-    for evidence in ("本法", "no preceding", "外星保護法", "not found", "case-CITE-04", "fault-CITE-04"):
+    # 段落內容不進日誌;關聯識別用 segment index + finding detail。
+    for evidence in ("本法", "no preceding", "外星保護法", "not found", "segment#1", "fault-CITE-04"):
         assert evidence in caplog.text
 
 

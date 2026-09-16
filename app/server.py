@@ -11,6 +11,7 @@ from pathlib import Path
 from fastapi import FastAPI, File, Request, UploadFile
 from fastapi.responses import HTMLResponse, PlainTextResponse
 from fastapi.templating import Jinja2Templates
+from starlette.concurrency import run_in_threadpool
 
 from note_filler.export import to_markdown
 from note_filler.audit import audit_event
@@ -38,7 +39,7 @@ RESULT_MAX_ENTRIES = int(os.environ.get("NOTE_FILLER_RESULT_MAX_ENTRIES", "64"))
 
 
 def _evict_expired_results() -> None:
-    now = time.time()
+    now = time.monotonic()
     expired = [
         rid
         for rid, entry in app.state.results.items()
@@ -51,7 +52,7 @@ def _evict_expired_results() -> None:
 def _store_result(doc) -> str:
     _evict_expired_results()
     result_id = secrets.token_urlsafe(16)
-    app.state.results[result_id] = {"doc": doc, "created_at": time.time()}
+    app.state.results[result_id] = {"doc": doc, "created_at": time.monotonic()}
     while len(app.state.results) > RESULT_MAX_ENTRIES:
         oldest = min(
             app.state.results,
@@ -65,7 +66,7 @@ def _lookup_result(result_id: str):
     entry = app.state.results.get(result_id)
     if entry is None:
         return None
-    if time.time() - entry["created_at"] > RESULT_TTL_SECONDS:
+    if time.monotonic() - entry["created_at"] > RESULT_TTL_SECONDS:
         app.state.results.pop(result_id, None)
         return None
     return entry["doc"]
@@ -94,7 +95,7 @@ async def run(request: Request, file: UploadFile = File(...)) -> HTMLResponse:
             tmp.write(data)
             tmp_path = tmp.name
         llm, twinkle, law = _build_clients()
-        doc = run_pipeline(tmp_path, llm, twinkle, law)
+        doc = await run_in_threadpool(run_pipeline, tmp_path, llm, twinkle, law)
         result_id = _store_result(doc)
         return TEMPLATES.TemplateResponse(
             request, "result.html", {"doc": doc, "result_id": result_id}
@@ -141,14 +142,18 @@ def export() -> PlainTextResponse:
 
 
 @app.get("/export/{result_id}")
-def export_result(result_id: str) -> PlainTextResponse:
+async def export_result(result_id: str) -> PlainTextResponse:
     doc = _lookup_result(result_id)
     if doc is None:
         return PlainTextResponse(
             "結果不存在或已過期,請重新上傳筆記。", status_code=404
         )
     md = to_markdown(doc)
-    headers = {"Content-Disposition": 'attachment; filename="correction.md"'}
+    headers = {
+        "Content-Disposition": 'attachment; filename="correction.md"',
+        "Cache-Control": "no-store",
+        "X-Content-Type-Options": "nosniff",
+    }
     return PlainTextResponse(
         md, media_type="text/markdown; charset=utf-8", headers=headers
     )

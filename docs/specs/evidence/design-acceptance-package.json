@@ -1,12 +1,12 @@
 {
   "schema": "note-filler.design-acceptance/v1",
-  "generated_at": "2026-09-16T15:31:36+08:00",
+  "generated_at": "2026-09-16T15:52:26+08:00",
   "rule": "每一項主張必須同時具備：規格檔、實作錨點檔、測試錨點；禁止只靠敘述或彙總數字驗收。",
   "source_claims": "docs/specs/evidence/design-acceptance-claims.json",
   "git": {
-    "head": "9b579adb0391f9a96f620f2d58d4a7f0e420c4df",
+    "head": "b58d1324bac1276170d53342aafbc4158b285163",
     "working_tree_clean_before_refresh": false,
-    "status_porcelain_before_refresh": "M app/server.py\n M app/templates/result.html\n M docs/specs/evidence/design-acceptance-claims.json\n M docs/specs/note-filler-interface-contract.md\n M docs/specs/note-filler-state-machine.md\n M tests/test_extended_readings.py\n M tests/test_extended_readings_regression.py\n M tests/test_note_product_gate.py\n M tests/test_openable_links.py\n M tests/test_output_consistency.py\n M tests/test_server.py\n M tests/test_source_binding_acceptance.py\n?? README.md\n?? tests/fixtures/metrics_history.jsonl"
+    "status_porcelain_before_refresh": "M README.md\n M app/server.py\n M docs/specs/design-traceability-index.md\n M docs/specs/evidence/design-acceptance-claims.json\n M docs/specs/evidence/ui/index.md\n M docs/specs/note-filler-component-responsibilities.md\n M docs/specs/note-filler-interface-contract.md\n M docs/specs/note-filler-state-machine.md\n M docs/specs/note-filler-user-flow.md\n M src/note_filler/pipeline.py\n M src/note_filler/retrieve/web.py\n M tests/0a8e5521d41101e3-restored-notes-output.py\n M tests/test_exception_skip_traceability.py\n M tests/test_fault_injection.py\n?? tests/fixtures/metrics_history.jsonl\n?? tests/metrics_history.jsonl"
   },
   "quality_gates_immutable": [
     "原稿逐字不可變",

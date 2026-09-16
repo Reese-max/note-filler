@@ -54,7 +54,7 @@
 | `TwinkleClient` | 網頁檢索補充 | `TWINKLE_HUB_TOKEN` 環境變數；缺省時降級為空結果，法條 Level A 仍可用 |
 | `LawLookup` | 法條查證 | 本地 `data/law_index.db`（`NOTE_FILLER_DB` 可覆寫）——**離線可用** |
 
-上傳內容與結果本文**不進一般日誌**；稽核事件只記識別碼與錯誤摘要。
+上傳內容與結果本文**不進一般日誌**：web 層只記檔名＋例外摘要＋traceback；pipeline 稽核事件以 `segment#N`、`argument_id`、來源 ID 等非內容識別碼關聯（法條查核的 finding detail 為法條名，非筆記本文）。已知殘留：`gap.question`（LLM 由筆記衍生的問題字串）仍作為部分 audit 事件的 `data_id` 關聯鍵——為衍生內容非原文，未來若要嚴格零內容可再替換為雜湊。
 
 ## 快速開始
 
