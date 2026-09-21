@@ -318,7 +318,7 @@ class TestPersistenceFailure:
         monkeypatch.setattr(cli, "LawLookup", lambda db: None)
         call_count = 0
 
-        def fake_process(path, llm, tw, law, out_dir, fmt):
+        def fake_process(path, llm, tw, law, out_dir, fmt, **_kwargs):
             raise RuntimeError("pipeline-fault")
 
         monkeypatch.setattr(cli, "process_file", fake_process)
@@ -802,7 +802,7 @@ class TestEndToEndFaultInjection:
 
         call_count = 0
 
-        def fake_process(path, llm, tw, law, out_dir, fmt):
+        def fake_process(path, llm, tw, law, out_dir, fmt, **_kwargs):
             nonlocal call_count
             call_count += 1
             if "fail" in str(path):
