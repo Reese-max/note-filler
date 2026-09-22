@@ -162,9 +162,10 @@ async def test_export_returns_markdown_attachment(async_client, monkeypatch):
     monkeypatch.setattr(
         server, "run_pipeline", lambda path, llm, twinkle, law: doc
     )
-    # 先跑一次 /run 讓 last_doc 有值
+    # 先跑一次 /run 取得 result capability,再以該 id 匯出
     await async_client.post("/run", files={"file": ("note.txt", b"x", "text/plain")})
-    r = await async_client.get("/export")
+    result_id = next(reversed(server.app.state.results))
+    r = await async_client.get("/export", params={"id": result_id})
     assert r.status_code == 200
     assert r.headers["content-type"].startswith("text/markdown")
     assert "attachment" in r.headers["content-disposition"]
@@ -176,5 +177,6 @@ async def test_export_returns_markdown_attachment(async_client, monkeypatch):
 @pytest.mark.anyio
 async def test_export_without_run_returns_404(async_client):
     server.app.state.last_doc = None  # 重置狀態
+    server.app.state.results.clear()
     r = await async_client.get("/export")
     assert r.status_code == 404
