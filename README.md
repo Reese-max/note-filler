@@ -23,7 +23,7 @@
 | `data/law_index.db` | **權威參考**——本地法條索引（Level A 來源） |
 | `output/<run>/` | **生成物**——每次 run 的訂正稿、稽核摘要、metric 記錄；可重新產生 |
 | `metrics_output/` | **生成物**——聚合 KPI/品質報表 |
-| `app.state.results`（記憶體） | **暫存**——`/run` 產生的結果以不透明 `result_id` capability 綁定，TTL 預設 3600s（`NOTE_FILLER_RESULT_TTL_SECONDS`），上限 64 筆（`NOTE_FILLER_RESULT_MAX_ENTRIES`）；重啟即清空，過期一律 404 |
+| `app.state.results`（記憶體） | **暫存**——`/run` 產生的結果以不透明 `result_id` capability 綁定，TTL 預設 3600s（`NOTE_FILLER_RESULT_TTL_SECONDS`），上限 64 筆（`NOTE_FILLER_RESULT_MAX_ENTRIES`）；兩個設定都必須為正值，TTL 也必須為有限數；重啟即清空，過期一律 404 |
 
 ## 追溯欄位：怎麼看一段補充的證據
 
@@ -44,7 +44,7 @@
 
 ## 匯出隔離（Issue #4）
 
-`GET /export/{result_id}` 使用 `secrets.token_urlsafe(16)` 產生的不透明 capability。**不支援共享部署**——這是單機 loopback 工具；capability 保證的是「同程序多個瀏覽器分頁互不串檔」，不是登入驗證。若未來要部署為共享服務，需另行加入呼叫者認證。
+`GET /export/{result_id}` 使用 `secrets.token_urlsafe(16)` 產生的不透明 capability。**不支援共享部署**——這是單機 loopback、單一 Worker 程序的工具；capability 保證的是「同程序多個瀏覽器分頁互不串檔」，不是登入驗證。若未來要部署為共享服務，需另行加入呼叫者認證、結果擁有者授權與跨 Worker 的結果儲存。
 
 ## Provider 邊界（無 secrets 落盤）
 
@@ -54,7 +54,7 @@
 | `TwinkleClient` | 網頁檢索補充 | `TWINKLE_HUB_TOKEN` 環境變數；缺省時降級為空結果，法條 Level A 仍可用 |
 | `LawLookup` | 法條查證 | 本地 `data/law_index.db`（`NOTE_FILLER_DB` 可覆寫）——**離線可用** |
 
-上傳內容與結果本文**不進一般日誌**：web 層只記檔名＋例外摘要＋traceback；pipeline 稽核事件以 `segment#N`、`argument_id`、來源 ID 等非內容識別碼關聯（法條查核的 finding detail 為法條名，非筆記本文）。已知殘留：`gap.question`（LLM 由筆記衍生的問題字串）仍作為部分 audit 事件的 `data_id` 關聯鍵——為衍生內容非原文，未來若要嚴格零內容可再替換為雜湊。
+web `/run` 失敗紀錄只記固定事件識別碼與例外型別，不記上傳本文、結果、例外訊息或 traceback；錯誤頁也不回顯例外訊息。網頁請求執行 pipeline 或格式化匯出時，普通日誌紀錄（含稽核事件與 exception traceback）會以固定診斷標記遮蔽，以免把原稿或產出的訂正內容寫進日誌；CLI 執行不受這個網頁專用遮蔽影響。網頁回應和下載仍包含使用者的內容，請保護應用程式與其下載連結。
 
 ## 快速開始
 
@@ -63,7 +63,7 @@
 pip install -e ".[dev]"
 
 # 網頁介面
-uvicorn app.server:app --port 8000
+uvicorn app.server:app --host 127.0.0.1 --port 8000
 # 開啟 http://127.0.0.1:8000 → 上傳 .txt/.docx → 雙欄檢視 → 下載 Markdown
 
 # CLI

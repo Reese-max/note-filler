@@ -16,10 +16,10 @@
 
 ## 部署模型（Issue #4）
 
-- **支援範圍**：單機 loopback 的單人工具；不在多使用者共享 endpoint 的授權模型內。
+- **支援範圍**：單機 loopback、單一 Worker 程序的單人工具；不在多使用者共享 endpoint 的授權模型內。
 - **隔離機制**：匯出以 `secrets.token_urlsafe(16)` 產生的不透明 result capability 綁定結果，不再是 process-global 最新文件；即使同程序被多個瀏覽器/分頁共用，未持有 capability 的一方也拿不到他人結果。
 - **非認證聲明**：result ID 是能力令牌而非登入驗證；若未來部署為共享/遠端服務，仍需另行加入呼叫者認證與結果擁有者授權。
-- **狀態生命週期**：結果只存於記憶體（`app.state.results`），TTL = `NOTE_FILLER_RESULT_TTL_SECONDS`（預設 3600s），容量上限 = `NOTE_FILLER_RESULT_MAX_ENTRIES`（預設 64，超出**全域**逐出最舊——共享情境下他人可間接逐出你的結果，這是單機範圍內可接受的行為）；重啟或過期一律 404，永遠不落回「最新一份文件」。
+- **狀態生命週期**：結果只存於記憶體（`app.state.results`），TTL = `NOTE_FILLER_RESULT_TTL_SECONDS`（預設 3600s，必須為有限正數），容量上限 = `NOTE_FILLER_RESULT_MAX_ENTRIES`（預設 64，必須為正整數；超出**全域**逐出最舊——共享情境下他人可間接逐出你的結果，這是單機範圍內可接受的行為）；重啟或過期一律 404，永遠不落回「最新一份文件」。
 - **並發模型**：`app.state.results` 的所有讀寫都在事件迴圈執行緒（`/export/{result_id}` 為 `async def`）；`run_pipeline` 在 threadpool 執行不阻塞迴圈，且不觸碰結果容器。
 - **匯出標頭**：`Cache-Control: no-store`＋`X-Content-Type-Options: nosniff`——client/proxy 快取不得超過伺服器端 TTL 生命週期。
 
@@ -116,4 +116,3 @@
 | 上傳 + 跑 pipeline + 雙欄回傳 | `note-filler-user-flow.md`（流程） | `app/server.py`, `app/templates/index.html`, `app/templates/result.html` |
 | 匯出 200 / 404 | `note-filler-interface-contract.md`（路由） | `app/server.py`, `tests/test_server.py` |
 | 補充段落高亮與來源展開 | `note-filler-component-responsibilities.md`（UI 元件） | `app/templates/result.html` |
-
