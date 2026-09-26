@@ -429,6 +429,53 @@ async def test_export_formatting_does_not_log_result_text(
 
 
 @pytest.mark.anyio
+async def test_export_formatting_failure_keeps_note_out_of_error_log(
+    async_client, monkeypatch, caplog
+):
+    sentinel = "PRIVATE_EXPORT_EXCEPTION_SENTINEL"
+    result_id = await _run_note(async_client, monkeypatch, _fixed_doc())
+
+    def fail_export(doc):
+        raise RuntimeError(sentinel)
+
+    monkeypatch.setattr(server, "to_markdown", fail_export)
+    with caplog.at_level(logging.ERROR, logger=server.logger.name):
+        response = await async_client.get(f"/export/{result_id}")
+    assert response.status_code == 500
+    assert sentinel not in response.text
+    assert sentinel not in caplog.text
+    assert result_id in server.app.state.results
+    monkeypatch.setattr(server, "to_markdown", lambda doc: "retry works")
+    assert (await async_client.get(f"/export/{result_id}")).text == "retry works"
+
+
+@pytest.mark.anyio
+async def test_result_render_failure_removes_new_capability(
+    async_client, monkeypatch
+):
+    server.app.state.results.clear()
+    monkeypatch.setattr(server, "_build_clients", lambda: (None, None, None))
+    monkeypatch.setattr(server, "run_pipeline", lambda *args: _fixed_doc())
+    render = server.TEMPLATES.TemplateResponse
+    calls = 0
+
+    def fail_first_render(*args, **kwargs):
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            raise RuntimeError("render failed")
+        return render(*args, **kwargs)
+
+    monkeypatch.setattr(server.TEMPLATES, "TemplateResponse", fail_first_render)
+    response = await async_client.post(
+        "/run", files={"file": ("note.txt", b"x", "text/plain")}
+    )
+    assert response.status_code == 500
+    assert "/export/" not in response.text
+    assert server.app.state.results == {}
+
+
+@pytest.mark.anyio
 async def test_failed_run_creates_no_export_capability(
     async_client, monkeypatch
 ):

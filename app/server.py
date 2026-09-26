@@ -141,6 +141,7 @@ async def run(request: Request, file: UploadFile = File(...)) -> HTMLResponse:
     suffix = Path(file.filename or "note.txt").suffix or ".txt"
     data = await file.read()
     tmp_path = None
+    result_id = None
     try:
         with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
             tmp.write(data)
@@ -156,6 +157,8 @@ async def run(request: Request, file: UploadFile = File(...)) -> HTMLResponse:
             request, "result.html", {"doc": doc, "result_id": result_id}
         )
     except Exception as exc:
+        if result_id is not None:
+            app.state.results.pop(result_id, None)
         audit_event(
             logger,
             "web_pipeline_failed",
@@ -199,11 +202,25 @@ async def export_result(result_id: str) -> PlainTextResponse:
         return PlainTextResponse(
             "結果不存在或已過期,請重新上傳筆記。", status_code=404
         )
-    log_token = _redact_web_pipeline_logs.set(True)
     try:
-        md = to_markdown(doc)
-    finally:
-        _redact_web_pipeline_logs.reset(log_token)
+        log_token = _redact_web_pipeline_logs.set(True)
+        try:
+            md = to_markdown(doc)
+        finally:
+            _redact_web_pipeline_logs.reset(log_token)
+    except Exception as exc:
+        audit_event(
+            logger,
+            "web_export_failed",
+            "web_export",
+            level=logging.ERROR,
+            error_type=type(exc).__name__,
+        )
+        return PlainTextResponse(
+            "匯出失敗,請稍後重試。",
+            status_code=500,
+            headers={"Cache-Control": "no-store", "X-Content-Type-Options": "nosniff"},
+        )
     headers = {
         "Content-Disposition": 'attachment; filename="correction.md"',
         "Cache-Control": "no-store",
