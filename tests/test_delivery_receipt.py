@@ -11,11 +11,19 @@ L035/L036:不可只靠 exit code 或檔案存在判定成功;
 from __future__ import annotations
 
 import json
+import hashlib
 from pathlib import Path
 
 import pytest
 
 from note_filler import __main__ as cli
+from note_filler.metrics_pipeline import (
+    MetricsCollectionConfig,
+    rerun_note,
+    scan_and_collect_metrics,
+)
+from note_filler.recovery import verify_delivery_artifacts
+from note_filler.sidecars import binding_report_path, delivery_manifest_path
 
 
 class _FakeDoc:
@@ -365,3 +373,93 @@ def test_check_no_leaked_errors_case_insensitive(tmp_path, monkeypatch):
 
     with pytest.raises(RuntimeError, match="traceback"):
         cli.process_file(note, None, None, None, out_dir=None, fmt="md")
+
+
+def test_batch_outputs_keep_independent_receipts_and_reports(tmp_path, monkeypatch):
+    """A second note cannot replace the first note's authoritative evidence."""
+    inputs = tmp_path / "inputs"
+    inputs.mkdir()
+    (inputs / "first").mkdir()
+    (inputs / "second").mkdir()
+    first = inputs / "first" / "note.txt"
+    second = inputs / "second" / "note.txt"
+    first.write_text("first source", encoding="utf-8")
+    second.write_text("second source", encoding="utf-8")
+    out = tmp_path / "out"
+    monkeypatch.setattr(cli, "run_pipeline", lambda *a, **k: _FakeDoc())
+    monkeypatch.setattr(cli, "to_markdown", lambda doc: "# 訂正稿\n完整內容。")
+    state_dir = tmp_path / "state"
+
+    first_result = cli.process_file(first, None, None, None, out, "md", state_dir=state_dir)
+    first_output = Path(first_result["output"])
+    first_manifest = delivery_manifest_path(first_output)
+    first_report = binding_report_path(first_output)
+    manifest_before = first_manifest.read_bytes()
+    report_before = first_report.read_bytes()
+
+    second_result = cli.process_file(second, None, None, None, out, "md", state_dir=state_dir)
+    second_output = Path(second_result["output"])
+    second_manifest = delivery_manifest_path(second_output)
+    second_report = binding_report_path(second_output)
+    assert first_output != second_output
+    assert first_manifest != second_manifest and first_report != second_report
+    assert first_manifest.read_bytes() == manifest_before
+    assert first_report.read_bytes() == report_before
+
+    for source, output, receipt, report in (
+        (first, first_output, first_manifest, first_report),
+        (second, second_output, second_manifest, second_report),
+    ):
+        data = json.loads(receipt.read_text(encoding="utf-8"))
+        assert data["status"] == "delivered"
+        assert data["input_path"] == str(source)
+        assert data["output_path"] == str(output)
+        assert data["output_content_hash"] == hashlib.sha256(output.read_bytes()).hexdigest()
+        assert data["binding_report_path"] == str(report)
+        assert data["binding_report_content_hash"] == hashlib.sha256(report.read_bytes()).hexdigest()
+        assert all(probe.code is None for probe in verify_delivery_artifacts(data, receipt))
+
+    records = scan_and_collect_metrics(MetricsCollectionConfig(scan_dirs=[out]))
+    assert {Path(r.manifest_path) for r in records} == {first_manifest, second_manifest}
+    rerun_record, alerts = rerun_note(first_manifest, MetricsCollectionConfig(scan_dirs=[out]))
+    assert rerun_record is not None
+    assert all(alert.alert_type != "rerun_failure" for alert in alerts)
+    assert rerun_record.source_path == str(first)
+
+    first_report.write_text("{}", encoding="utf-8")
+    stale = json.loads(first_manifest.read_text(encoding="utf-8"))
+    assert any(
+        probe.kind == "binding_report" and probe.code == "artifact_integrity_mismatch"
+        for probe in verify_delivery_artifacts(stale, first_manifest)
+    )
+    rerun_record, alerts = rerun_note(first_manifest, MetricsCollectionConfig(scan_dirs=[out]))
+    assert rerun_record is None
+    assert any(alert.alert_type == "rerun_failure" for alert in alerts)
+
+
+def test_failed_second_note_does_not_replace_first_note_receipt(tmp_path, monkeypatch):
+    first = tmp_path / "first.txt"
+    second = tmp_path / "second.txt"
+    first.write_text("first source", encoding="utf-8")
+    second.write_text("second source", encoding="utf-8")
+    out = tmp_path / "out"
+    monkeypatch.setattr(cli, "GrokClient", lambda: None)
+    monkeypatch.setattr(cli, "TwinkleClient", lambda **kwargs: None)
+    monkeypatch.setattr(cli, "LawLookup", lambda path: None)
+    monkeypatch.setattr(cli, "to_markdown", lambda doc: "# 訂正稿\n完整內容。")
+    monkeypatch.setattr(cli, "TASK_STATE_DIR", tmp_path / "state")
+
+    def pipeline(path, *args):
+        if Path(path) == second:
+            raise RuntimeError("synthetic B failure")
+        return _FakeDoc()
+
+    monkeypatch.setattr(cli, "run_pipeline", pipeline)
+    assert cli.main([str(first), "--outdir", str(out), "--db", str(tmp_path / "missing.db")]) == 0
+    first_receipt = delivery_manifest_path(out / "first.訂正稿.md")
+    first_bytes = first_receipt.read_bytes()
+    assert cli.main([str(second), "--outdir", str(out), "--db", str(tmp_path / "missing.db")]) == 1
+    assert first_receipt.read_bytes() == first_bytes
+    failed = json.loads(delivery_manifest_path(out / "second.訂正稿.md").read_text(encoding="utf-8"))
+    assert failed["status"] == "failed"
+    assert failed["input_path"] == str(second)

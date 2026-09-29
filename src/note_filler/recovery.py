@@ -21,12 +21,13 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from .sidecars import DELIVERY_MANIFEST_NAME, resolve_delivery_manifest_path
+
 logger = logging.getLogger(__name__)
 
 ARTIFACT_MISSING = "artifact_missing"
 ARTIFACT_INTEGRITY_MISMATCH = "artifact_integrity_mismatch"
 
-DELIVERY_MANIFEST_NAME = "delivery_manifest.json"
 RECOVERY_HISTORY_NAME = "recovery_history.jsonl"
 
 
@@ -136,8 +137,11 @@ def _transmission_probe(
     anchor = manifest_path
     if anchor is None:
         output_path = manifest.get("output_path")
-        parent = Path(output_path).parent if isinstance(output_path, str) and output_path else Path.cwd()
-        anchor = parent / DELIVERY_MANIFEST_NAME
+        anchor = (
+            resolve_delivery_manifest_path(Path(output_path))
+            if isinstance(output_path, str) and output_path
+            else Path.cwd() / DELIVERY_MANIFEST_NAME
+        )
     exists = anchor.is_file()
     if not exists:
         return ArtifactProbe(
@@ -185,6 +189,11 @@ def verify_delivery_artifacts(
         probes.append(
             probe_artifact("source", input_path, manifest.get("input_content_hash"))
         )
+
+    report_path = manifest.get("binding_report_path")
+    report_hash = manifest.get("binding_report_content_hash")
+    if isinstance(report_path, str) and report_path and report_hash:
+        probes.append(probe_artifact("binding_report", report_path, report_hash))
 
     if manifest.get("delivery_status") is not None:
         probes.append(_transmission_probe(manifest, manifest_path))

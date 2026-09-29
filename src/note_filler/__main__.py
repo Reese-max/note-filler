@@ -26,13 +26,18 @@ from .llm import GrokClient
 from .metrics import calculate_polaris_metrics
 from .pipeline import require_non_empty_note_product, run_pipeline
 from .retrieve.twinkle import TwinkleClient
+from .sidecars import (
+    DELIVERY_MANIFEST_NAME,
+    binding_report_path,
+    delivery_manifest_path,
+)
 from .task_state import TaskStage, TaskStateManager, build_task_key
 
 logger = logging.getLogger(__name__)
 
 _SUFFIXES = {".txt", ".docx"}
 
-MANIFEST_NAME = "delivery_manifest.json"
+MANIFEST_NAME = DELIVERY_MANIFEST_NAME
 TASK_STATE_DIR = Path(os.environ.get("NOTE_FILLER_TASK_STATE", ".task_state"))
 
 
@@ -139,7 +144,7 @@ def write_delivery_receipt(
     delivery_status: dict[str, bool] | None = None,
     polaris_metrics: dict[str, Any] | None = None,
 ) -> Path:
-    """寫出 delivery_manifest.json,作為可查詢的交付回執。
+    """寫出成品專屬回執，並更新舊路徑作為最新一筆的相容副本。
 
     回傳 manifest 路徑。manifest 記錄:
       - output_path: 輸出檔路徑
@@ -154,8 +159,8 @@ def write_delivery_receipt(
       - polaris_metrics: 北極星筆記品質指標（可選）
     使用者可透過讀取此 manifest 確認交付已完成,而非只依賴本機檔案存在。
     """
-    manifest_dir = output_path.parent
-    manifest_path = manifest_dir / MANIFEST_NAME
+    manifest_path = delivery_manifest_path(output_path)
+    legacy_path = output_path.parent / MANIFEST_NAME
 
     if manifest_path.exists():
         audit_event(
@@ -164,7 +169,7 @@ def write_delivery_receipt(
             input_path,
             level=logging.INFO,
             manifest_path=manifest_path,
-            reason="output directory keeps the latest delivery receipt",
+            reason="receipt for the same output note is being refreshed",
         )
 
     content_hash = ""
@@ -195,6 +200,13 @@ def write_delivery_receipt(
         # 已持久化 artifact 的內容雜湊：生成成品、來源、傳輸確認
         "output_content_hash": _content_hash_file(output_path),
         "input_content_hash": _content_hash_file(input_path),
+        "binding_report_path": (
+            str(binding_report_path(output_path)) if status == "delivered" else ""
+        ),
+        "binding_report_content_hash": (
+            _content_hash_file(binding_report_path(output_path))
+            if status == "delivered" else ""
+        ),
         "transmission_confirmation_hash": (
             hashlib.sha256(
                 json.dumps(
@@ -212,6 +224,11 @@ def write_delivery_receipt(
         receipt["polaris_metrics"] = polaris_metrics
 
     manifest_path.write_text(
+        json.dumps(receipt, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+        newline="\n",
+    )
+    legacy_path.write_text(
         json.dumps(receipt, ensure_ascii=False, indent=2),
         encoding="utf-8",
         newline="\n",
@@ -250,6 +267,32 @@ def _iter_inputs(paths: list[str]) -> list[Path]:
                     reason="same resolved path already queued",
                 )
     return out
+
+
+def _output_for_input(path: Path, dest_dir: Path, fmt: str) -> Path:
+    """Keep a prior note's output when two source folders share a filename."""
+    base = dest_dir / f"{path.stem}.訂正稿.{fmt}"
+
+    def owned_by_this_input(candidate: Path) -> bool:
+        receipt_path = delivery_manifest_path(candidate)
+        if not receipt_path.is_file():
+            receipt_path = candidate.parent / MANIFEST_NAME
+        try:
+            receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
+            return (
+                Path(receipt["input_path"]).resolve() == path.resolve()
+                and Path(receipt["output_path"]).name == candidate.name
+            )
+        except (OSError, ValueError, KeyError, TypeError):
+            return False
+
+    if not base.exists() or owned_by_this_input(base):
+        return base
+    source_id = hashlib.sha256(str(path.resolve()).encode("utf-8")).hexdigest()[:12]
+    alternate = dest_dir / f"{path.stem}.{source_id}.訂正稿.{fmt}"
+    if alternate.exists() and not owned_by_this_input(alternate):
+        raise RuntimeError(f"輸出檔名衝突，拒絕覆寫既有訂正稿: {alternate}")
+    return alternate
 
 
 def process_file(
@@ -293,7 +336,7 @@ def process_file(
 
     dest_dir = out_dir if out_dir is not None else path.parent
     dest_dir.mkdir(parents=True, exist_ok=True)
-    dest = dest_dir / f"{path.stem}.訂正稿.{fmt}"
+    dest = _output_for_input(path, dest_dir, fmt)
 
     # stdout 的使用者送達內容；DOCX 另以 Markdown 提供可直接閱讀的完整筆記。
     body = json.dumps(to_json(doc), ensure_ascii=False, indent=2) if fmt == "json" else to_markdown(doc)
@@ -440,16 +483,16 @@ def main(argv: list[str] | None = None) -> int:
             )
             print(r["content"], flush=True)
             delivery_status["user_channel_sent"] = True
-            manifest_path = Path(r["output"]).parent / MANIFEST_NAME
+            manifest_path = delivery_manifest_path(Path(r["output"]))
             if manifest_path.exists():
                 # 重新計算 polaris_metrics（因為 user_channel_sent 狀態已更新）
                 polaris_metrics = None
                 try:
                     # 嘗試從已存在的 binding_report 重新計算
-                    binding_report_path = Path(r["output"]).parent / "binding_report.json"
-                    if binding_report_path.exists():
+                    report_path = binding_report_path(Path(r["output"]))
+                    if report_path.exists():
                         import json
-                        binding_report = json.loads(binding_report_path.read_text(encoding="utf-8"))
+                        binding_report = json.loads(report_path.read_text(encoding="utf-8"))
                         polaris_metrics = calculate_polaris_metrics(
                             binding_report=binding_report,
                             delivery_status=delivery_status,
@@ -485,7 +528,11 @@ def main(argv: list[str] | None = None) -> int:
             print(f"❌ {f}:{type(e).__name__}: {e}", file=sys.stderr)
             # 寫 delivery_manifest 失敗回執,讓下游可查詢交付狀態
             dest_dir = out_dir if out_dir is not None else f.parent
-            dest = dest_dir / f"{f.stem}.訂正稿.{args.format}"
+            try:
+                dest = _output_for_input(f, dest_dir, args.format)
+            except RuntimeError as collision:
+                print(f"❌ {f}:失敗回執無法安全定位:{collision}", file=sys.stderr)
+                continue
             if r is not None and isinstance(r.get("delivery_status"), dict):
                 delivery_status = r["delivery_status"]
             else:
@@ -514,7 +561,7 @@ def main(argv: list[str] | None = None) -> int:
                     "delivery_receipt_persist_failed",
                     f,
                     level=logging.ERROR,
-                    manifest_path=dest.parent / MANIFEST_NAME,
+                    manifest_path=delivery_manifest_path(dest),
                     error_type=type(receipt_error).__name__,
                     error=str(receipt_error),
                 )

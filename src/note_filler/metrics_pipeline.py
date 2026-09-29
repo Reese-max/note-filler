@@ -19,6 +19,13 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from .sidecars import (
+    DELIVERY_MANIFEST_NAME,
+    delivery_manifest_path,
+    resolve_binding_report_path,
+    resolve_delivery_manifest_path,
+)
+
 logger = logging.getLogger(__name__)
 
 PIPELINE_METRICS_HISTORY_NAME = "metrics_history.jsonl"
@@ -213,7 +220,7 @@ def _load_output_metrics(
     content_hash: str,
 ) -> tuple[str, float | None, float | None, dict[str, Any]]:
     """讀取既有結構化量測，舊旁車格式保留相容但主題標為 unknown。"""
-    from .binding_report import BINDING_REPORT_NAME, parse_binding_report
+    from .binding_report import parse_binding_report
     from .metrics import calculate_polaris_metrics
 
     quality_debt, quality = _load_quality_debt_metrics(markdown_path)
@@ -225,7 +232,7 @@ def _load_output_metrics(
             quality_debt,
         )
 
-    manifest_path = markdown_path.parent / "delivery_manifest.json"
+    manifest_path = resolve_delivery_manifest_path(markdown_path)
     if not manifest_path.exists():
         return "metrics_unavailable", None, None, quality_debt
 
@@ -241,18 +248,34 @@ def _load_output_metrics(
 
     if not isinstance(manifest, dict):
         return "metrics_unavailable", None, None, quality_debt
+    recorded_output = manifest.get("output_path")
+    if recorded_output and (
+        Path(recorded_output).name != markdown_path.name
+        or (Path(recorded_output).is_absolute() and Path(recorded_output).resolve() != markdown_path.resolve())
+    ):
+        logger.warning("output_metrics_unavailable path=%s reason=wrong_note_receipt", markdown_path)
+        return "metrics_unavailable", None, None, quality_debt
     manifest_hash = manifest.get("content_hash")
     if manifest_hash and manifest_hash != content_hash[:16]:
         logger.warning("output_metrics_unavailable path=%s reason=content_hash_mismatch", markdown_path)
         return "metrics_unavailable", None, None, quality_debt
 
-    binding_report_path = markdown_path.parent / BINDING_REPORT_NAME
-    if not binding_report_path.exists():
+    report_path = resolve_binding_report_path(markdown_path)
+    if not report_path.exists():
         return "metrics_unavailable", None, None, quality_debt
+    expected_report_hash = manifest.get("binding_report_content_hash")
+    if expected_report_hash:
+        try:
+            actual_report_hash = hashlib.sha256(report_path.read_bytes()).hexdigest()
+        except OSError:
+            return "metrics_unavailable", None, None, quality_debt
+        if actual_report_hash != expected_report_hash:
+            logger.warning("output_metrics_unavailable path=%s reason=report_hash_mismatch", markdown_path)
+            return "metrics_unavailable", None, None, quality_debt
 
     try:
         binding_report = parse_binding_report(
-            json.loads(binding_report_path.read_text(encoding="utf-8"))
+            json.loads(report_path.read_text(encoding="utf-8"))
         )
         if not binding_report["arguments"]:
             return "metrics_unavailable", None, None, quality_debt
@@ -534,7 +557,7 @@ class MetricsCollectionConfig:
     # 是否遞迴掃描子目錄
     recursive: bool = True
     # 檔案模式
-    file_pattern: str = "delivery_manifest.json"
+    file_pattern: str = "*delivery_manifest.json"
     # 告警門檻
     alert_thresholds: dict[str, float] = field(default_factory=lambda: {
         "functional_gap_score": 0.5,
@@ -738,6 +761,21 @@ def scan_and_collect_metrics(
             manifest_files = list(scan_dir.glob(f"**/{config.file_pattern}"))
         else:
             manifest_files = list(scan_dir.glob(config.file_pattern))
+
+        # A legacy latest-only copy is scanned only when its note-owned receipt
+        # is not also in this scan. Otherwise one delivery would count twice.
+        found = set(manifest_files)
+        filtered = []
+        for manifest_path in manifest_files:
+            if manifest_path.name == DELIVERY_MANIFEST_NAME:
+                try:
+                    output = json.loads(manifest_path.read_text(encoding="utf-8")).get("output_path")
+                except (OSError, ValueError, AttributeError):
+                    output = None
+                if isinstance(output, str) and delivery_manifest_path(manifest_path.parent / Path(output).name) in found:
+                    continue
+            filtered.append(manifest_path)
+        manifest_files = sorted(filtered)
         
         logger.info(f"在 {scan_dir} 找到 {len(manifest_files)} 個 manifest 檔案")
         
@@ -1165,8 +1203,13 @@ def rerun_note(
     source_path = manifest_data.get("input_path", str(manifest_path))
     note_id = derive_note_id(source_path)
 
-    # 嘗試從同目錄的 binding_report.json 重新計算
-    binding_report_path = manifest_path.parent / "binding_report.json"
+    # Prefer the report for this output; older manifests use the directory copy.
+    output_path = manifest_data.get("output_path")
+    binding_report_path = (
+        resolve_binding_report_path(manifest_path.parent / Path(output_path).name)
+        if isinstance(output_path, str) and output_path
+        else manifest_path.parent / "binding_report.json"
+    )
     if not binding_report_path.exists():
         _emit_alert(
             alerts,
@@ -1190,6 +1233,19 @@ def rerun_note(
             note_id=note_id,
             source_path=source_path,
             error_message=f"binding_report.json 讀取失敗: {exc}",
+        )
+        return None, alerts
+
+    expected_report_hash = manifest_data.get("binding_report_content_hash")
+    if expected_report_hash and hashlib.sha256(binding_report_path.read_bytes()).hexdigest() != expected_report_hash:
+        _emit_alert(
+            alerts,
+            alert_type="rerun_failure",
+            severity="critical",
+            metric_name="pipeline",
+            note_id=note_id,
+            source_path=source_path,
+            error_message=f"binding_report.json 內容雜湊不符: {binding_report_path}",
         )
         return None, alerts
 

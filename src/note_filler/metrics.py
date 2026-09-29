@@ -1032,7 +1032,7 @@ def calculate_polaris_metrics(
     delivery_status: dict[str, Any] | None = None,
 ) -> PolarisMetrics:
     """從 binding_report 與 delivery_status 計算所有北極星指標。"""
-    from datetime import datetime
+    from datetime import datetime, timezone
     
     arguments = binding_report.get("arguments", [])
     angle_summary = binding_report.get("angle_coverage_summary", {})
@@ -1056,5 +1056,5 @@ def calculate_polaris_metrics(
         traceability_markers=list(binding_report.get("traceability_markers") or []),
         claim_source_map=dict(binding_report.get("claim_source_map") or {}),
         citation_span_map=list(binding_report.get("citation_span_map") or []),
-        calculated_at=datetime.utcnow().isoformat(),
+        calculated_at=datetime.now(timezone.utc).isoformat(),
     )
