@@ -100,12 +100,13 @@ def record_pipeline_metrics(source_path: str, correction) -> dict[str, Any]:
     from .binding_report import build_binding_report
     from .metrics import calculate_polaris_metrics
 
+    canonical_source_path = str(Path(source_path).resolve())
     try:
         binding_report = build_binding_report(correction)
     except ValueError as exc:
         logger.warning(
             "metrics_unavailable note_id=%s reason=%s",
-            derive_note_id(source_path),
+            derive_note_id(canonical_source_path),
             exc,
         )
         binding_report = {"metrics_unavailable": str(exc)}
@@ -120,7 +121,7 @@ def record_pipeline_metrics(source_path: str, correction) -> dict[str, Any]:
     history_path = Path(source_path).parent / PIPELINE_METRICS_HISTORY_NAME
     record = {
         "timestamp": datetime.now(timezone.utc).isoformat(),
-        "note_id": derive_note_id(source_path),
+        "note_id": derive_note_id(canonical_source_path),
         "product_hash": _pipeline_product_hash(correction, binding_report),
         "status": "calculated" if metrics_available else "metrics_unavailable",
         "traceability": (
@@ -727,7 +728,7 @@ def collect_metrics_from_manifest(
             )
             return None
         
-        source_path = manifest_data.get("input_path", "")
+        source_path = manifest_data.get("input_canonical_path") or manifest_data.get("input_path", "")
         note_id = derive_note_id(source_path)
         collection_time = datetime.now(timezone.utc).isoformat()
         
@@ -1204,7 +1205,7 @@ def rerun_note(
         )
         return None, alerts
 
-    source_path = manifest_data.get("input_path", str(manifest_path))
+    source_path = manifest_data.get("input_canonical_path") or manifest_data.get("input_path", str(manifest_path))
     note_id = derive_note_id(source_path)
 
     # Prefer the report for this output; older manifests use the directory copy.

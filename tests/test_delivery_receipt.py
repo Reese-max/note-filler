@@ -19,6 +19,8 @@ import pytest
 from note_filler import __main__ as cli
 from note_filler.metrics_pipeline import (
     MetricsCollectionConfig,
+    collect_metrics_from_manifest,
+    derive_note_id,
     rerun_note,
     scan_and_collect_metrics,
 )
@@ -521,6 +523,39 @@ def test_relative_input_uses_persisted_absolute_identity_after_cwd_change(tmp_pa
     second_result = cli.process_file(Path("../first/notes/note.txt"), None, None, None, out, "md", state_dir=state_dir)
     assert Path(second_result["output"]) == first_output
     assert len(list(out.glob("*.訂正稿.md"))) == 1
+    owned = delivery_manifest_path(first_output)
+    expected_id = derive_note_id(str(note.resolve()))
+    collected = collect_metrics_from_manifest(owned, MetricsCollectionConfig(scan_dirs=[out]))
+    assert collected is not None and collected.note_id == expected_id
+    rerun_record, alerts = rerun_note(owned, MetricsCollectionConfig(scan_dirs=[out]))
+    assert rerun_record is not None and rerun_record.note_id == expected_id
+    assert not any(alert.alert_type == "rerun_failure" for alert in alerts)
+
+
+def test_recovery_uses_canonical_artifact_paths_after_cwd_change(tmp_path, monkeypatch):
+    origin = tmp_path / "origin"
+    origin.mkdir()
+    note = origin / "note.txt"
+    note.write_text("source", encoding="utf-8")
+    monkeypatch.setattr(cli, "run_pipeline", lambda *a, **k: _FakeDoc())
+    monkeypatch.setattr(cli, "to_markdown", lambda doc: "# 訂正稿\n完整內容。")
+    monkeypatch.chdir(origin)
+    result = cli.process_file(
+        Path("note.txt"), None, None, None, Path("out"), "md", state_dir=tmp_path / "state"
+    )
+    owned = delivery_manifest_path(origin / result["output"])
+    before = owned.read_bytes()
+    data = json.loads(before)
+    assert data["input_path"] == "note.txt"
+    assert not Path(data["output_path"]).is_absolute()
+    assert not Path(data["binding_report_path"]).is_absolute()
+
+    monkeypatch.chdir(tmp_path)
+    verdict = recover_delivery(owned)
+    assert verdict.verified is True
+    assert verdict.status == "verified"
+    assert all(probe.code is None for probe in verdict.probes)
+    assert owned.read_bytes() == before
 
 
 def test_recovery_via_latest_manifest_updates_authoritative_receipt(tmp_path, monkeypatch):

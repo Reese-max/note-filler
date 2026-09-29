@@ -205,6 +205,9 @@ def write_delivery_receipt(
         "binding_report_path": (
             str(binding_report_path(output_path)) if status == "delivered" else ""
         ),
+        "binding_report_canonical_path": (
+            str(binding_report_path(output_path).resolve()) if status == "delivered" else ""
+        ),
         "binding_report_content_hash": (
             _content_hash_file(binding_report_path(output_path))
             if status == "delivered" else ""

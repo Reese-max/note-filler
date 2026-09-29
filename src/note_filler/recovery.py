@@ -184,18 +184,18 @@ def verify_delivery_artifacts(
     """依已持久化 manifest 定位並探測全部 artifact。"""
     probes: list[ArtifactProbe] = []
 
-    output_path = manifest.get("output_path")
+    output_path = manifest.get("output_canonical_path") or manifest.get("output_path")
     if isinstance(output_path, str) and output_path:
         expected = manifest.get("output_content_hash") or manifest.get("content_hash")
         probes.append(probe_artifact("generated", output_path, expected))
 
-    input_path = manifest.get("input_path")
+    input_path = manifest.get("input_canonical_path") or manifest.get("input_path")
     if isinstance(input_path, str) and input_path:
         probes.append(
             probe_artifact("source", input_path, manifest.get("input_content_hash"))
         )
 
-    report_path = manifest.get("binding_report_path")
+    report_path = manifest.get("binding_report_canonical_path") or manifest.get("binding_report_path")
     report_hash = manifest.get("binding_report_content_hash")
     if isinstance(report_path, str) and report_path and report_hash:
         probes.append(probe_artifact("binding_report", report_path, report_hash))

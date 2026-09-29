@@ -9,7 +9,8 @@ note-owned files. If two input directories contain a note with the same stem,
 the later output gets a stable source-path suffix so it cannot overwrite the
 first note. Receipts also store canonical absolute input and output identities
 so a change of working directory does not create a second output for the same
-relative-path input.
+relative-path input. The report's canonical path is stored for recovery, and
+metrics use the canonical input identity for a stable note ID.
 
 The older `delivery_manifest.json` and `binding_report.json` files remain as
 latest-output compatibility copies. They are **not** batch-wide evidence and
