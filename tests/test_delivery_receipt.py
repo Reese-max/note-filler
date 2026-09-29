@@ -614,6 +614,40 @@ def test_recovery_history_keeps_same_failure_for_each_note(tmp_path, monkeypatch
         assert data["recovery_attempts"][0]["note_manifest_path"] == str(receipt.resolve())
 
 
+def test_recovery_history_distinguishes_reused_receipt_path(tmp_path, monkeypatch):
+    first_dir = tmp_path / "first"
+    second_dir = tmp_path / "second"
+    first_dir.mkdir()
+    second_dir.mkdir()
+    first = first_dir / "note.txt"
+    second = second_dir / "note.txt"
+    first.write_text("first source", encoding="utf-8")
+    second.write_text("second source", encoding="utf-8")
+    out = tmp_path / "out"
+    monkeypatch.setattr(cli, "run_pipeline", lambda *a, **k: _FakeDoc())
+    monkeypatch.setattr(cli, "to_markdown", lambda doc: "# 訂正稿\n完整內容。")
+    state_dir = tmp_path / "state"
+
+    first_output = Path(cli.process_file(first, None, None, None, out, "md", state_dir=state_dir)["output"])
+    first_receipt = delivery_manifest_path(first_output)
+    first_report = binding_report_path(first_output)
+    first_output.unlink()
+    assert recover_delivery(first_receipt).status == "retryable"
+    first_receipt.unlink()
+    first_report.unlink()
+
+    second_output = Path(cli.process_file(second, None, None, None, out, "md", state_dir=state_dir)["output"])
+    assert second_output == first_output
+    second_output.unlink()
+    assert recover_delivery(delivery_manifest_path(second_output)).status == "retryable"
+
+    history = [json.loads(line) for line in (out / "recovery_history.jsonl").read_text(encoding="utf-8").splitlines()]
+    assert len(history) == 2
+    assert {entry["note_manifest_path"] for entry in history} == {str(first_receipt.resolve())}
+    assert {entry["note_source_path"] for entry in history} == {str(first.resolve()), str(second.resolve())}
+    assert len({entry["note_source_hash"] for entry in history}) == 2
+
+
 def test_failed_second_note_does_not_replace_first_note_receipt(tmp_path, monkeypatch):
     first = tmp_path / "first.txt"
     second = tmp_path / "second.txt"

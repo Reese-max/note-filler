@@ -247,6 +247,8 @@ def _attempt_signature(attempt: dict[str, Any]) -> frozenset[tuple[str, str | No
     )
     return frozenset({
         ("note_manifest_path", attempt.get("note_manifest_path")),
+        ("note_source_path", attempt.get("note_source_path")),
+        ("note_source_hash", attempt.get("note_source_hash")),
         ("status_after", attempt.get("status_after")),
         ("errors", ",".join(sorted(f"{a}|{b}" for a, b in codes))),
     })
@@ -352,6 +354,8 @@ def recover_delivery(
     new_status = force_status if force_status in ("failed", "retryable") else "retryable"
     attempt = {
         "note_manifest_path": str(manifest_path.resolve()),
+        "note_source_path": manifest.get("input_canonical_path") or manifest.get("input_path"),
+        "note_source_hash": manifest.get("input_content_hash"),
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "status_before": manifest.get("status"),
         "status_after": new_status,
