@@ -579,6 +579,41 @@ def test_recovery_via_latest_manifest_updates_authoritative_receipt(tmp_path, mo
     assert json.loads(latest.read_text(encoding="utf-8")) == owned_data
 
 
+def test_recovery_history_keeps_same_failure_for_each_note(tmp_path, monkeypatch):
+    first_dir = tmp_path / "first"
+    second_dir = tmp_path / "second"
+    first_dir.mkdir()
+    second_dir.mkdir()
+    first = first_dir / "note.txt"
+    second = second_dir / "note.txt"
+    first.write_text("first", encoding="utf-8")
+    second.write_text("second", encoding="utf-8")
+    out = tmp_path / "out"
+    monkeypatch.setattr(cli, "run_pipeline", lambda *a, **k: _FakeDoc())
+    monkeypatch.setattr(cli, "to_markdown", lambda doc: "# 訂正稿\n完整內容。")
+    state_dir = tmp_path / "state"
+    first_output = Path(cli.process_file(first, None, None, None, out, "md", state_dir=state_dir)["output"])
+    second_output = Path(cli.process_file(second, None, None, None, out, "md", state_dir=state_dir)["output"])
+    first_receipt = delivery_manifest_path(first_output)
+    second_receipt = delivery_manifest_path(second_output)
+    first_output.unlink()
+    second_output.unlink()
+
+    assert recover_delivery(first_receipt).status == "retryable"
+    assert recover_delivery(second_receipt).status == "retryable"
+    assert recover_delivery(first_receipt).status == "retryable"
+    attempts = [json.loads(line) for line in (out / "recovery_history.jsonl").read_text(encoding="utf-8").splitlines()]
+    assert {entry["note_manifest_path"] for entry in attempts} == {
+        str(first_receipt.resolve()), str(second_receipt.resolve())
+    }
+    assert len(attempts) == 2
+    for receipt in (first_receipt, second_receipt):
+        data = json.loads(receipt.read_text(encoding="utf-8"))
+        assert data["status"] == "retryable"
+        assert len(data["recovery_attempts"]) == 1
+        assert data["recovery_attempts"][0]["note_manifest_path"] == str(receipt.resolve())
+
+
 def test_failed_second_note_does_not_replace_first_note_receipt(tmp_path, monkeypatch):
     first = tmp_path / "first.txt"
     second = tmp_path / "second.txt"

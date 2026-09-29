@@ -236,7 +236,7 @@ def _append_history(history_path: Path, attempt: dict[str, Any]) -> None:
 
 
 def _attempt_signature(attempt: dict[str, Any]) -> frozenset[tuple[str, str | None]]:
-    """以失敗錯誤的 (kind, code) 集合＋目標狀態建立不重複特徵。
+    """Deduplicate a failure only within its own note receipt.
 
     不含 status_before，避免並行 resume 讀到前次寫入的狀態造成重複記錄；
     含 status_after，讓 failed→retryable 等不同目標狀態視為不同嘗試。
@@ -246,6 +246,7 @@ def _attempt_signature(attempt: dict[str, Any]) -> frozenset[tuple[str, str | No
         {(e.get("kind"), e.get("code")) for e in errors if isinstance(e, dict)}
     )
     return frozenset({
+        ("note_manifest_path", attempt.get("note_manifest_path")),
         ("status_after", attempt.get("status_after")),
         ("errors", ",".join(sorted(f"{a}|{b}" for a, b in codes))),
     })
@@ -350,19 +351,20 @@ def recover_delivery(
 
     new_status = force_status if force_status in ("failed", "retryable") else "retryable"
     attempt = {
+        "note_manifest_path": str(manifest_path.resolve()),
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "status_before": manifest.get("status"),
         "status_after": new_status,
         "error_before": manifest.get("error"),
         "errors": [dict(e) for e in errors],
     }
-    recorded = _append_history(history_path, attempt)
+    _append_history(history_path, attempt)
 
     attempts = manifest.get("recovery_attempts")
     if not isinstance(attempts, list):
         attempts = []
     signature = _attempt_signature(attempt)
-    if recorded and not any(
+    if not any(
         isinstance(item, dict) and _attempt_signature(item) == signature
         for item in attempts
     ):

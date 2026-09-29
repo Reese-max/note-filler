@@ -21,3 +21,5 @@ is in the same scan, so one delivery is counted once.
 When recovery or a metrics rerun is invoked with the latest-output copy, it
 reads that requested copy, updates the matching note-owned receipt, and refreshes
 the latest-output copy.
+The shared `recovery_history.jsonl` records the note-owned receipt path in
+each attempt so identical failures for different notes remain separate.
