@@ -21,7 +21,12 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from .sidecars import DELIVERY_MANIFEST_NAME, resolve_delivery_manifest_path
+from .sidecars import (
+    DELIVERY_MANIFEST_NAME,
+    resolve_delivery_manifest_path,
+    resolve_manifest_for_update,
+    write_manifest_and_latest,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -281,14 +286,17 @@ def recover_delivery(
 
     此入口絕不將狀態宣告為 ``delivered``。
     """
-    manifest_path = Path(manifest_path)
-    if not manifest_path.is_file():
+    requested_path = Path(manifest_path)
+    manifest_path = resolve_manifest_for_update(requested_path)
+    # A caller may deliberately inspect an edited legacy copy. Probe that
+    # requested evidence, then persist the result to the matching owned receipt.
+    if not requested_path.is_file():
         return RecoveryVerdict(
             verified=False,
             status="failed",
             errors=[{
                 "kind": "delivery_manifest",
-                "path": str(manifest_path),
+                "path": str(requested_path),
                 "code": ARTIFACT_MISSING,
                 "message": "交付狀態檔不存在，無法驗證已持久化 artifact",
             }],
@@ -297,14 +305,14 @@ def recover_delivery(
         )
 
     try:
-        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        manifest = json.loads(requested_path.read_text(encoding="utf-8"))
     except (json.JSONDecodeError, OSError) as exc:
         return RecoveryVerdict(
             verified=False,
             status="failed",
             errors=[{
                 "kind": "delivery_manifest",
-                "path": str(manifest_path),
+                "path": str(requested_path),
                 "code": ARTIFACT_INTEGRITY_MISMATCH,
                 "message": f"交付狀態檔損壞，無法驗證已持久化 artifact: {exc}",
             }],
@@ -318,7 +326,7 @@ def recover_delivery(
             status="failed",
             errors=[{
                 "kind": "delivery_manifest",
-                "path": str(manifest_path),
+                "path": str(requested_path),
                 "code": ARTIFACT_INTEGRITY_MISMATCH,
                 "message": "交付狀態檔非 JSON 物件，無法驗證已持久化 artifact",
             }],
@@ -326,7 +334,7 @@ def recover_delivery(
             history_preserved=True,
         )
 
-    probes = verify_delivery_artifacts(manifest, manifest_path)
+    probes = verify_delivery_artifacts(manifest, requested_path)
     errors = [_probe_error(p) for p in probes if p.code]
     history_path = manifest_path.parent / RECOVERY_HISTORY_NAME
 
@@ -365,11 +373,7 @@ def recover_delivery(
     manifest["error"] = "; ".join(
         f"{e['code']}:{e['kind']}:{e['path']}" for e in errors
     )
-    manifest_path.write_text(
-        json.dumps(manifest, ensure_ascii=False, indent=2),
-        encoding="utf-8",
-        newline="\n",
-    )
+    write_manifest_and_latest(manifest_path, manifest)
 
     return RecoveryVerdict(
         verified=False,

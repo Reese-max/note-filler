@@ -24,6 +24,8 @@ from .sidecars import (
     delivery_manifest_path,
     resolve_binding_report_path,
     resolve_delivery_manifest_path,
+    resolve_manifest_for_update,
+    write_manifest_and_latest,
 )
 
 logger = logging.getLogger(__name__)
@@ -1173,6 +1175,7 @@ def rerun_note(
       - alerts: 告警清單（可能為空）
     """
     alerts: list[MetricsAlert] = []
+    manifest_path = resolve_manifest_for_update(Path(manifest_path))
 
     if not manifest_path.exists():
         _emit_alert(
@@ -1274,11 +1277,7 @@ def rerun_note(
     # 更新 manifest 中的 polaris_metrics
     manifest_data["polaris_metrics"] = polaris_metrics
     manifest_data["metrics_rerun_at"] = datetime.now(timezone.utc).isoformat()
-    manifest_path.write_text(
-        json.dumps(manifest_data, ensure_ascii=False, indent=2),
-        encoding="utf-8",
-        newline="\n",
-    )
+    write_manifest_and_latest(manifest_path, manifest_data)
 
     collection_time = datetime.now(timezone.utc).isoformat()
     record = MetricsRecord(

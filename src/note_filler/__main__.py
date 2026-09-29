@@ -273,6 +273,13 @@ def _output_for_input(path: Path, dest_dir: Path, fmt: str) -> Path:
     """Keep a prior note's output when two source folders share a filename."""
     base = dest_dir / f"{path.stem}.訂正稿.{fmt}"
 
+    def claimed(candidate: Path) -> bool:
+        return (
+            candidate.exists()
+            or delivery_manifest_path(candidate).exists()
+            or binding_report_path(candidate).exists()
+        )
+
     def owned_by_this_input(candidate: Path) -> bool:
         receipt_path = delivery_manifest_path(candidate)
         if not receipt_path.is_file():
@@ -286,11 +293,11 @@ def _output_for_input(path: Path, dest_dir: Path, fmt: str) -> Path:
         except (OSError, ValueError, KeyError, TypeError):
             return False
 
-    if not base.exists() or owned_by_this_input(base):
+    if not claimed(base) or owned_by_this_input(base):
         return base
     source_id = hashlib.sha256(str(path.resolve()).encode("utf-8")).hexdigest()[:12]
     alternate = dest_dir / f"{path.stem}.{source_id}.訂正稿.{fmt}"
-    if alternate.exists() and not owned_by_this_input(alternate):
+    if claimed(alternate) and not owned_by_this_input(alternate):
         raise RuntimeError(f"輸出檔名衝突，拒絕覆寫既有訂正稿: {alternate}")
     return alternate
 
@@ -472,7 +479,10 @@ def main(argv: list[str] | None = None) -> int:
     ok = 0
     for f in files:
         r = None
+        planned_dest = None
         try:
+            planned_dir = out_dir if out_dir is not None else f.parent
+            planned_dest = _output_for_input(f, planned_dir, args.format)
             r = process_file(f, llm, twinkle, law, out_dir, args.format)
             delivery_status = r.setdefault(
                 "delivery_status",
@@ -529,7 +539,7 @@ def main(argv: list[str] | None = None) -> int:
             # 寫 delivery_manifest 失敗回執,讓下游可查詢交付狀態
             dest_dir = out_dir if out_dir is not None else f.parent
             try:
-                dest = _output_for_input(f, dest_dir, args.format)
+                dest = planned_dest or _output_for_input(f, dest_dir, args.format)
             except RuntimeError as collision:
                 print(f"❌ {f}:失敗回執無法安全定位:{collision}", file=sys.stderr)
                 continue

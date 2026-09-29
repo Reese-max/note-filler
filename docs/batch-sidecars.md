@@ -15,3 +15,5 @@ must not be used to inspect an earlier output. Readers prefer the note-owned
 pair when present and accept the directory-level pair only for older outputs.
 The metrics collector skips a directory-level copy when its note-owned receipt
 is in the same scan, so one delivery is counted once.
+When recovery or a metrics rerun is invoked with the latest-output copy, it
+updates the matching note-owned receipt and refreshes the latest-output copy.

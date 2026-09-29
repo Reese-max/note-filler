@@ -22,7 +22,7 @@ from note_filler.metrics_pipeline import (
     rerun_note,
     scan_and_collect_metrics,
 )
-from note_filler.recovery import verify_delivery_artifacts
+from note_filler.recovery import recover_delivery, verify_delivery_artifacts
 from note_filler.sidecars import binding_report_path, delivery_manifest_path
 
 
@@ -437,6 +437,77 @@ def test_batch_outputs_keep_independent_receipts_and_reports(tmp_path, monkeypat
     assert any(alert.alert_type == "rerun_failure" for alert in alerts)
 
 
+def test_missing_output_keeps_its_sidecars_and_reserves_its_name(tmp_path, monkeypatch):
+    """A missing output still owns its receipt and report filename."""
+    first_dir = tmp_path / "first"
+    second_dir = tmp_path / "second"
+    first_dir.mkdir()
+    second_dir.mkdir()
+    first = first_dir / "note.txt"
+    second = second_dir / "note.txt"
+    first.write_text("first", encoding="utf-8")
+    second.write_text("second", encoding="utf-8")
+    out = tmp_path / "out"
+    monkeypatch.setattr(cli, "run_pipeline", lambda *a, **k: _FakeDoc())
+    monkeypatch.setattr(cli, "to_markdown", lambda doc: "# 訂正稿\n完整內容。")
+    state_dir = tmp_path / "state"
+
+    first_result = cli.process_file(first, None, None, None, out, "md", state_dir=state_dir)
+    first_output = Path(first_result["output"])
+    first_manifest = delivery_manifest_path(first_output)
+    first_report = binding_report_path(first_output)
+    manifest_before = first_manifest.read_bytes()
+    report_before = first_report.read_bytes()
+    first_output.unlink()
+
+    second_result = cli.process_file(second, None, None, None, out, "md", state_dir=state_dir)
+    second_output = Path(second_result["output"])
+    assert second_output != first_output
+    assert first_manifest.read_bytes() == manifest_before
+    assert first_report.read_bytes() == report_before
+    assert json.loads(delivery_manifest_path(second_output).read_text(encoding="utf-8"))["input_path"] == str(second)
+
+
+def test_rerun_via_latest_manifest_updates_authoritative_receipt(tmp_path, monkeypatch):
+    note = tmp_path / "note.txt"
+    note.write_text("source", encoding="utf-8")
+    out = tmp_path / "out"
+    monkeypatch.setattr(cli, "run_pipeline", lambda *a, **k: _FakeDoc())
+    monkeypatch.setattr(cli, "to_markdown", lambda doc: "# 訂正稿\n完整內容。")
+    result = cli.process_file(note, None, None, None, out, "md", state_dir=tmp_path / "state")
+    owned = delivery_manifest_path(Path(result["output"]))
+    latest = out / cli.MANIFEST_NAME
+
+    record, alerts = rerun_note(latest, MetricsCollectionConfig(scan_dirs=[out]))
+    assert record is not None
+    assert not any(alert.alert_type == "rerun_failure" for alert in alerts)
+    assert Path(record.manifest_path) == owned
+    owned_data = json.loads(owned.read_text(encoding="utf-8"))
+    assert owned_data["metrics_rerun_at"]
+    assert json.loads(latest.read_text(encoding="utf-8")) == owned_data
+
+
+def test_recovery_via_latest_manifest_updates_authoritative_receipt(tmp_path, monkeypatch):
+    note = tmp_path / "note.txt"
+    note.write_text("source", encoding="utf-8")
+    out = tmp_path / "out"
+    monkeypatch.setattr(cli, "run_pipeline", lambda *a, **k: _FakeDoc())
+    monkeypatch.setattr(cli, "to_markdown", lambda doc: "# 訂正稿\n完整內容。")
+    result = cli.process_file(note, None, None, None, out, "md", state_dir=tmp_path / "state")
+    output = Path(result["output"])
+    owned = delivery_manifest_path(output)
+    latest = out / cli.MANIFEST_NAME
+    output.unlink()
+
+    verdict = recover_delivery(latest)
+    assert verdict.status == "retryable"
+    assert any(error["code"] == "artifact_missing" for error in verdict.errors)
+    owned_data = json.loads(owned.read_text(encoding="utf-8"))
+    assert owned_data["status"] == "retryable"
+    assert owned_data["recovery_attempts"]
+    assert json.loads(latest.read_text(encoding="utf-8")) == owned_data
+
+
 def test_failed_second_note_does_not_replace_first_note_receipt(tmp_path, monkeypatch):
     first = tmp_path / "first.txt"
     second = tmp_path / "second.txt"
@@ -463,3 +534,39 @@ def test_failed_second_note_does_not_replace_first_note_receipt(tmp_path, monkey
     failed = json.loads(delivery_manifest_path(out / "second.訂正稿.md").read_text(encoding="utf-8"))
     assert failed["status"] == "failed"
     assert failed["input_path"] == str(second)
+
+
+def test_post_write_failure_uses_second_notes_actual_output(tmp_path, monkeypatch):
+    first_dir = tmp_path / "first"
+    second_dir = tmp_path / "second"
+    first_dir.mkdir()
+    second_dir.mkdir()
+    first = first_dir / "note.txt"
+    second = second_dir / "note.txt"
+    first.write_text("first", encoding="utf-8")
+    second.write_text("second", encoding="utf-8")
+    out = tmp_path / "out"
+    monkeypatch.setattr(cli, "GrokClient", lambda: None)
+    monkeypatch.setattr(cli, "TwinkleClient", lambda **kwargs: None)
+    monkeypatch.setattr(cli, "LawLookup", lambda path: None)
+    monkeypatch.setattr(cli, "TASK_STATE_DIR", tmp_path / "state")
+    monkeypatch.setattr(cli, "run_pipeline", lambda *a, **k: _FakeDoc())
+    monkeypatch.setattr(cli, "to_markdown", lambda doc: "# 訂正稿\n完整內容。")
+
+    args = ["--outdir", str(out), "--db", str(tmp_path / "missing.db")]
+    assert cli.main([str(first), *args]) == 0
+    first_output = out / "note.訂正稿.md"
+    first_receipt = delivery_manifest_path(first_output)
+    first_bytes = first_receipt.read_bytes()
+
+    def fail_after_output(*args, **kwargs):
+        raise RuntimeError("synthetic report failure")
+
+    monkeypatch.setattr(cli, "write_binding_report", fail_after_output)
+    assert cli.main([str(second), *args]) == 1
+    second_output = cli._output_for_input(second, out, "md")
+    assert second_output != first_output and second_output.is_file()
+    failed = json.loads(delivery_manifest_path(second_output).read_text(encoding="utf-8"))
+    assert failed["status"] == "failed"
+    assert failed["output_path"] == str(second_output)
+    assert first_receipt.read_bytes() == first_bytes
