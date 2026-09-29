@@ -7,7 +7,9 @@ the input and output paths, their SHA-256 hashes, and the report path and hash.
 Recovery verifies the report hash; metrics scanning and reruns use the matching
 note-owned files. If two input directories contain a note with the same stem,
 the later output gets a stable source-path suffix so it cannot overwrite the
-first note.
+first note. Receipts also store canonical absolute input and output identities
+so a change of working directory does not create a second output for the same
+relative-path input.
 
 The older `delivery_manifest.json` and `binding_report.json` files remain as
 latest-output compatibility copies. They are **not** batch-wide evidence and
@@ -16,4 +18,5 @@ pair when present and accept the directory-level pair only for older outputs.
 The metrics collector skips a directory-level copy when its note-owned receipt
 is in the same scan, so one delivery is counted once.
 When recovery or a metrics rerun is invoked with the latest-output copy, it
-updates the matching note-owned receipt and refreshes the latest-output copy.
+reads that requested copy, updates the matching note-owned receipt, and refreshes
+the latest-output copy.

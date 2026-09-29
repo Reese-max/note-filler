@@ -1175,30 +1175,31 @@ def rerun_note(
       - alerts: 告警清單（可能為空）
     """
     alerts: list[MetricsAlert] = []
-    manifest_path = resolve_manifest_for_update(Path(manifest_path))
+    requested_path = Path(manifest_path)
+    manifest_path = resolve_manifest_for_update(requested_path)
 
-    if not manifest_path.exists():
+    if not requested_path.exists():
         _emit_alert(
             alerts,
             alert_type="rerun_failure",
             severity="critical",
             metric_name="pipeline",
             note_id="unknown",
-            source_path=str(manifest_path),
-            error_message=f"Manifest 檔案不存在: {manifest_path}",
+            source_path=str(requested_path),
+            error_message=f"Manifest 檔案不存在: {requested_path}",
         )
         return None, alerts
 
     try:
-        manifest_data = json.loads(manifest_path.read_text(encoding="utf-8"))
+        manifest_data = json.loads(requested_path.read_text(encoding="utf-8"))
     except (json.JSONDecodeError, OSError) as exc:
         _emit_alert(
             alerts,
             alert_type="rerun_failure",
             severity="critical",
             metric_name="pipeline",
-            note_id=derive_note_id(str(manifest_path)),
-            source_path=str(manifest_path),
+            note_id=derive_note_id(str(requested_path)),
+            source_path=str(requested_path),
             error_message=f"Manifest 讀取失敗: {exc}",
         )
         return None, alerts

@@ -190,6 +190,8 @@ def write_delivery_receipt(
     receipt = {
         "output_path": str(output_path),
         "input_path": str(input_path),
+        "output_canonical_path": str(output_path.resolve()),
+        "input_canonical_path": str(input_path.resolve()),
         "status": status,
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "content_hash": content_hash,
@@ -286,11 +288,17 @@ def _output_for_input(path: Path, dest_dir: Path, fmt: str) -> Path:
             receipt_path = candidate.parent / MANIFEST_NAME
         try:
             receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
+            recorded_input = receipt.get("input_canonical_path", receipt["input_path"])
+            recorded_output = receipt.get("output_canonical_path")
             return (
-                Path(receipt["input_path"]).resolve() == path.resolve()
-                and Path(receipt["output_path"]).name == candidate.name
+                Path(recorded_input).resolve() == path.resolve()
+                and (
+                    Path(recorded_output).resolve() == candidate.resolve()
+                    if recorded_output
+                    else Path(receipt["output_path"]).name == candidate.name
+                )
             )
-        except (OSError, ValueError, KeyError, TypeError):
+        except (OSError, ValueError, KeyError, TypeError, AttributeError):
             return False
 
     if not claimed(base) or owned_by_this_input(base):

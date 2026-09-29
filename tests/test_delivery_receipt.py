@@ -477,6 +477,15 @@ def test_rerun_via_latest_manifest_updates_authoritative_receipt(tmp_path, monke
     result = cli.process_file(note, None, None, None, out, "md", state_dir=tmp_path / "state")
     owned = delivery_manifest_path(Path(result["output"]))
     latest = out / cli.MANIFEST_NAME
+    latest_data = json.loads(latest.read_text(encoding="utf-8"))
+    assert latest_data["delivery_status"]["user_channel_sent"] is False
+    latest_data["delivery_status"]["user_channel_sent"] = True
+    latest_data["transmission_confirmation_hash"] = hashlib.sha256(
+        json.dumps(
+            latest_data["delivery_status"], ensure_ascii=False, sort_keys=True, separators=(",", ":")
+        ).encode("utf-8")
+    ).hexdigest()
+    latest.write_text(json.dumps(latest_data, ensure_ascii=False, indent=2), encoding="utf-8")
 
     record, alerts = rerun_note(latest, MetricsCollectionConfig(scan_dirs=[out]))
     assert record is not None
@@ -484,7 +493,34 @@ def test_rerun_via_latest_manifest_updates_authoritative_receipt(tmp_path, monke
     assert Path(record.manifest_path) == owned
     owned_data = json.loads(owned.read_text(encoding="utf-8"))
     assert owned_data["metrics_rerun_at"]
+    assert owned_data["delivery_status"]["user_channel_sent"] is True
+    assert owned_data["polaris_metrics"]["delivery_success_rate"]["score"] == 1.0
     assert json.loads(latest.read_text(encoding="utf-8")) == owned_data
+
+
+def test_relative_input_uses_persisted_absolute_identity_after_cwd_change(tmp_path, monkeypatch):
+    first_dir = tmp_path / "first"
+    second_dir = tmp_path / "second"
+    (first_dir / "notes").mkdir(parents=True)
+    second_dir.mkdir()
+    note = first_dir / "notes" / "note.txt"
+    note.write_text("source", encoding="utf-8")
+    out = tmp_path / "out"
+    monkeypatch.setattr(cli, "run_pipeline", lambda *a, **k: _FakeDoc())
+    monkeypatch.setattr(cli, "to_markdown", lambda doc: "# 訂正稿\n完整內容。")
+    state_dir = tmp_path / "state"
+
+    monkeypatch.chdir(first_dir)
+    first_result = cli.process_file(Path("notes/note.txt"), None, None, None, out, "md", state_dir=state_dir)
+    first_output = Path(first_result["output"])
+    first_receipt = json.loads(delivery_manifest_path(first_output).read_text(encoding="utf-8"))
+    assert first_receipt["input_canonical_path"] == str(note.resolve())
+    assert first_receipt["output_canonical_path"] == str(first_output.resolve())
+
+    monkeypatch.chdir(second_dir)
+    second_result = cli.process_file(Path("../first/notes/note.txt"), None, None, None, out, "md", state_dir=state_dir)
+    assert Path(second_result["output"]) == first_output
+    assert len(list(out.glob("*.訂正稿.md"))) == 1
 
 
 def test_recovery_via_latest_manifest_updates_authoritative_receipt(tmp_path, monkeypatch):
