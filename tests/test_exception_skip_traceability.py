@@ -126,8 +126,10 @@ async def test_web_pipeline_failure_returns_traceable_500(async_client, monkeypa
 
     assert response.status_code == 500
     assert "case-WEB-01.txt" in response.text
-    assert "RuntimeError: fault-WEB-01" in response.text
-    assert "case-WEB-01.txt" in caplog.text and "fault-WEB-01" in caplog.text
+    assert "處理失敗" in response.text
+    assert "fault-WEB-01" not in response.text
+    assert "case-WEB-01.txt" in caplog.text and "RuntimeError" in caplog.text
+    assert "fault-WEB-01" not in caplog.text
     assert (await async_client.get(export_url)).status_code == 404
 
     temp_path = tmp_path / "case-WEB-04.tmp"

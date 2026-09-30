@@ -385,7 +385,8 @@ async def test_upload_read_failure_returns_traceable_500(async_client, monkeypat
         "/run", files={"file": ("n.txt", b"x", "text/plain")}
     )
     assert r.status_code == 500
-    assert "RuntimeError: upload-read-boom" in r.text
+    assert "處理失敗" in r.text
+    assert "upload-read-boom" not in r.text
 
 
 @pytest.mark.anyio
@@ -418,3 +419,28 @@ async def test_uploaded_note_and_result_body_not_logged(async_client, monkeypatc
         await async_client.get(_export_path(run_resp.text))
     for record in caplog.records:
         assert secret_marker not in record.getMessage()
+
+
+@pytest.mark.anyio
+async def test_pipeline_failure_does_not_log_or_render_exception_details(async_client, monkeypatch, caplog):
+    """含敏感輸入的例外不得把筆記內容寫入日誌或錯誤頁。"""
+    sensitive = "SENSITIVE-NOTE-CONTENT-CASE-7F3A91"
+    monkeypatch.setattr(server, "_build_clients", lambda: (None, None, None))
+
+    def fail_with_sensitive_detail(*_args):
+        raise RuntimeError(sensitive)
+
+    monkeypatch.setattr(server, "run_pipeline", fail_with_sensitive_detail)
+    caplog.clear()
+    with caplog.at_level(logging.ERROR, logger="app.server"):
+        response = await async_client.post(
+            "/run",
+            files={"file": ("sensitive-case.txt", sensitive.encode("utf-8"), "text/plain")},
+        )
+
+    assert response.status_code == 500
+    assert "處理失敗" in response.text
+    assert sensitive not in response.text
+    assert "sensitive-case.txt" in caplog.text
+    assert "RuntimeError" in caplog.text and "web_pipeline_failed" in caplog.text
+    assert sensitive not in caplog.text

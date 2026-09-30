@@ -4,7 +4,6 @@ import logging
 import os
 import secrets
 import tempfile
-import traceback
 from pathlib import Path
 
 from fastapi import FastAPI, File, Request, UploadFile
@@ -84,21 +83,18 @@ async def run(request: Request, file: UploadFile = File(...)) -> HTMLResponse:
             {"doc": doc, "export_url": f"/export/{result_id}"},
         )
     except Exception as exc:
-        tb = traceback.format_exc()
         audit_event(
             logger,
             "web_pipeline_failed",
             file.filename or "upload:unnamed",
             level=logging.ERROR,
             error_type=type(exc).__name__,
-            error=str(exc),
-            traceback=tb,
         )
         response = TEMPLATES.TemplateResponse(
             request, "result.html",
             {
                 "doc": None,
-                "error": f"{type(exc).__name__}: {exc}",
+                "error": "處理失敗，請檢查檔案格式或稍後重試。",
                 "input_id": file.filename,
             },
             status_code=500,
