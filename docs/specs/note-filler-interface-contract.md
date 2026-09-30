@@ -113,7 +113,7 @@
 - **隔離機制（能力模型,非登入認證）**：每份結果同時要求 (a) `secrets.token_urlsafe(24)` 產生的 unguessable `result_id`（出現在結果頁的下載連結中,伺服器不主動揭露）與 (b) 呼叫端 `nf_session` cookie 與結果 owner 相符;任一不符即 `404`。`nf_session` 為 `HttpOnly + SameSite=Lax` 的 256-bit 隨機值,於 `GET /` 首次請求簽發（若 client 直接呼叫 `/run` 而未經首頁,則於 `/run` 補發）。
 - **失敗與重啟**：失敗的 `/run` 不產生 capability 且先清掉本 session 舊結果;process 重啟後 in-memory 結果全失,舊 `result_id` 確定性 `404`;TTL 過期確定性 `410`。任何路徑都不存在「回退到最新一份文件」。
 - **共用/遠端部署（不支援）**：若未來要把本服務暴露給多使用者或網路共享,必須另外加入呼叫端驗證（authentication）與結果擁有者授權檢查——目前的 `nf_session` 只是 per-browser 能力綁定,不是帳號身分,不得以它當作共享部署的授權控制。
-- **日誌**：成功路徑不記錄上傳筆記內文或訂正稿內容（`tests/test_server.py::test_uploaded_note_and_result_body_not_logged`）；失敗路徑僅記錄檔名、錯誤型別與訊息。
+- **日誌**：Web pipeline 與匯出工作內的日誌統一遮罩訊息、例外與堆疊，只保留檔名或操作識別碼、logger、層級與函式位置；外層失敗事件僅記錄檔名與錯誤型別，不記錄例外全文。遮罩以 request context 隔離，不影響同時執行的 CLI 稽核（`tests/test_server.py::test_web_real_pipeline_redacts_nested_logs`、`tests/test_server.py::test_web_log_redaction_is_request_scoped`）。
 
 ## 5) 交付對照表（回到「對照項目」）
 

@@ -1,8 +1,9 @@
-import asyncio
 import logging
 import re
+import threading
 from pathlib import Path
 
+import anyio
 import httpx
 import pytest
 from starlette.datastructures import UploadFile
@@ -11,6 +12,7 @@ import app.server as server
 
 from note_filler.parse import Document, Paragraph
 from note_filler.correction import Segment, CorrectionDoc, build_related_knowledge
+from note_filler.llm import FakeLLM
 from note_filler.retrieve.models import Source
 
 
@@ -280,10 +282,17 @@ async def test_concurrent_runs_do_not_mix_results(monkeypatch):
 
     monkeypatch.setattr(server, "run_pipeline", slow_pipeline)
     async with _new_client() as client_a, _new_client() as client_b:
-        run_a, run_b = await asyncio.gather(
-            client_a.post("/run", files={"file": ("a.txt", b"note-a", "text/plain")}),
-            client_b.post("/run", files={"file": ("b.txt", b"note-b", "text/plain")}),
-        )
+        runs = {}
+
+        async def upload(client, name):
+            runs[name] = await client.post(
+                "/run", files={"file": (f"{name}.txt", f"note-{name}".encode(), "text/plain")}
+            )
+
+        async with anyio.create_task_group() as group:
+            group.start_soon(upload, client_a, "a")
+            group.start_soon(upload, client_b, "b")
+        run_a, run_b = runs["a"], runs["b"]
         assert run_a.status_code == 200 and run_b.status_code == 200
         export_a = _export_path(run_a.text)
         export_b = _export_path(run_b.text)
@@ -443,4 +452,74 @@ async def test_pipeline_failure_does_not_log_or_render_exception_details(async_c
     assert sensitive not in response.text
     assert "sensitive-case.txt" in caplog.text
     assert "RuntimeError" in caplog.text and "web_pipeline_failed" in caplog.text
+    assert sensitive not in caplog.text
+
+
+@pytest.mark.anyio
+async def test_web_real_pipeline_redacts_nested_logs(async_client, monkeypatch, caplog, tmp_path):
+    """A normal provider-format fallback must not log the uploaded note."""
+    sensitive = "PRIVATE-NOTE-7F3A91"
+    monkeypatch.setattr(server.tempfile, "tempdir", str(tmp_path))
+    monkeypatch.setattr(
+        server, "_build_clients", lambda: (FakeLLM(["law", "[]"]), None, None)
+    )
+    with caplog.at_level(logging.WARNING):
+        response = await async_client.post(
+            "/run", files={"file": ("private.txt", sensitive.encode(), "text/plain")}
+        )
+        assert response.status_code == 200
+        exported = await async_client.get(_export_path(response.text))
+    assert exported.status_code == 200 and sensitive in exported.text
+    assert any(record.name == "note_filler.questions" for record in caplog.records)
+    assert sensitive not in caplog.text
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("stage", ["run", "export"])
+async def test_web_log_redaction_is_request_scoped(async_client, monkeypatch, caplog, stage):
+    """Worker exceptions stay private without hiding concurrent CLI diagnostics."""
+    sensitive = "PRIVATE-WORKER-7F3A91"
+    entered = anyio.Event()
+    release = threading.Event()
+    nested_logger = logging.getLogger("note_filler.pipeline")
+
+    def log_sensitive(*args):
+        anyio.from_thread.run_sync(entered.set)
+        assert release.wait(5), "test did not release the worker"
+        try:
+            raise RuntimeError(sensitive)
+        except RuntimeError:
+            nested_logger.exception("provider detail: %s", sensitive, stack_info=True)
+        return _fixed_doc() if stage == "run" else sensitive
+
+    _stub_pipeline(monkeypatch, {"note-a": "note-a"})
+    url = "/run"
+    if stage == "export":
+        response = await async_client.post(
+            "/run", files={"file": ("a.txt", b"note-a", "text/plain")}
+        )
+        url = _export_path(response.text)
+    monkeypatch.setattr(server, "run_pipeline" if stage == "run" else "to_markdown", log_sensitive)
+
+    async def request():
+        if stage == "run":
+            response = await async_client.post(
+                url, files={"file": ("a.txt", b"note-a", "text/plain")}
+            )
+        else:
+            response = await async_client.get(url)
+        assert response.status_code == 200
+
+    with caplog.at_level(logging.WARNING):
+        async with anyio.create_task_group() as group:
+            group.start_soon(request)
+            try:
+                with anyio.fail_after(5):
+                    await entered.wait()
+                nested_logger.warning("CLI-CONCURRENT-DETAIL")
+            finally:
+                release.set()
+        nested_logger.warning("CLI-AFTER-DETAIL")
+    assert "CLI-CONCURRENT-DETAIL" in caplog.text
+    assert "CLI-AFTER-DETAIL" in caplog.text
     assert sensitive not in caplog.text

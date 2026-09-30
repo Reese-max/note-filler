@@ -1,0 +1,25 @@
+{
+  "repo": "Reese-max/note-filler",
+  "issue": 15,
+  "base_sha": "ca02ea4fcec43523cea244a1b4f8e93643218901",
+  "red_proof": [
+    {
+      "command": ".venv/py311/Scripts/python.exe -X utf8 -B -m pytest -q tests/test_server.py -k \"redacts_nested_logs or redaction_is_request_scoped or concurrent_runs_do_not_mix_results\" --tb=no",
+      "exit": 1,
+      "tests_passed": 1,
+      "tests_failed": 7,
+      "output": "7 failed, 1 passed, 28 deselected in 0.29s. Real-pipeline note text and worker exception details leaked into caplog on asyncio and trio; the existing concurrent-runs test also failed on trio because it used asyncio.gather. Production code was unchanged when this red run was captured."
+    }
+  ],
+  "test_command": ".venv/py311/Scripts/python.exe -X utf8 -B -m pytest -q --tb=short",
+  "test_exit": 0,
+  "tests_passed": 935,
+  "tests_failed": 0,
+  "summary": "Fixed nested Web log privacy with a ContextVar and an idempotent chained LogRecordFactory; kept logs outside Web processing unchanged. Replaced asyncio.gather with AnyIO task groups without removing backend or content-isolation assertions, and updated the logging contract. Git Bash validation: focused suite 108 passed; full Python 3.11.9 suite 935 passed, 1 skipped, 12 deselected in 157.53s; scripts/validate_deselection_ci.py passed with all 38 substitute tests selected. Independent review and an in-memory factory/context restoration probe passed.",
+  "not_done": [
+    "No push, branch switch, PR mutation, merge, or issue closure was performed; the driver owns publication.",
+    "Hosted CI and the required fixed 50-persona audit on merged main were not run.",
+    "The 12 integration tests remained excluded by the existing project policy; one existing offline test skipped.",
+    "Python 3.13 checks encountered the pre-existing datetime.utcnow DeprecationWarning in src/note_filler/metrics.py:1059 (also present on main). No warning filters or unrelated metrics changes were added. The passing test_command uses the prepared Python 3.11.9 environment in .venv/py311."
+  ]
+}

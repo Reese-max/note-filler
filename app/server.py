@@ -12,7 +12,7 @@ from fastapi.templating import Jinja2Templates
 from starlette.concurrency import run_in_threadpool
 
 from note_filler.export import to_markdown
-from note_filler.audit import audit_event
+from note_filler.audit import audit_event, private_logs
 from note_filler.llm import GrokClient
 from note_filler.pipeline import run_pipeline
 from note_filler.knowledge.law_lookup import LawLookup
@@ -75,8 +75,9 @@ async def run(request: Request, file: UploadFile = File(...)) -> HTMLResponse:
         with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
             tmp.write(data)
             tmp_path = tmp.name
-        llm, twinkle, law = _build_clients()
-        doc = await run_in_threadpool(run_pipeline, tmp_path, llm, twinkle, law)
+        with private_logs(file.filename or "upload:unnamed"):
+            llm, twinkle, law = _build_clients()
+            doc = await run_in_threadpool(run_pipeline, tmp_path, llm, twinkle, law)
         result_id = app.state.results.put(doc, session)
         response = TEMPLATES.TemplateResponse(
             request, "result.html",
@@ -130,7 +131,8 @@ async def export_result(request: Request, result_id: str) -> PlainTextResponse:
         result_id, request.cookies.get(SESSION_COOKIE)
     )
     if status == OK:
-        md = await run_in_threadpool(to_markdown, doc)
+        with private_logs("export"):
+            md = await run_in_threadpool(to_markdown, doc)
         headers = {"Content-Disposition": 'attachment; filename="correction.md"'}
         return PlainTextResponse(
             md, media_type="text/markdown; charset=utf-8", headers=headers
