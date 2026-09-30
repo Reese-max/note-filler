@@ -46,9 +46,10 @@
     | <a href="/result?filter=stale_review">已失效</a>
     | <a href="/result?filter=needs_more_evidence">待補證</a>
     | <a href="/result?filter=accepted">已接受</a>
+    | <a href="/result?filter=edited_accepted">修訂後接受</a>
     | <a href="/result?filter=rejected">已拒絕</a>
     {% if review_summary.next_pending_argument_id %}
-    — <a href="#claim-{{ review_summary.next_pending_argument_id }}">下一個待審</a>
+    — <a href="/result#claim-{{ review_summary.next_pending_argument_id }}">下一個待審</a>
     {% endif %}
     {% if review_filter %}（目前篩選：{{ review_filter }}）{% endif %}
   </div>

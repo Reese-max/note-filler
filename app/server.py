@@ -4,6 +4,7 @@ import logging
 import os
 import tempfile
 import traceback
+from dataclasses import replace
 from pathlib import Path
 
 from fastapi import FastAPI, File, Request, UploadFile
@@ -161,6 +162,8 @@ async def review_decision(request: Request) -> HTMLResponse:
     if doc is None:
         return PlainTextResponse("尚無訂正稿,請先上傳筆記。", status_code=404)
     form = await request.form()
+    if doc is not app.state.last_doc:
+        return PlainTextResponse("訂正稿已變更,請重新載入後審查。", status_code=409)
     argument_id = str(form.get("argument_id") or "")
     decision = str(form.get("decision") or "")
     reason_code = str(form.get("reason_code") or "")
@@ -181,6 +184,8 @@ async def review_decision(request: Request) -> HTMLResponse:
             f"找不到可審查的論點:{argument_id}", status_code=404
         )
 
+    # 先建立候選修訂;寫檔失敗時不發布未持久化的主張或決策。
+    candidate = replace(seg)
     # 先驗證再修改:edited_text 只能搭配核准類決策,避免把拒絕/退回誤存成已核准
     if reason_code and reason_code not in REASON_CODES:
         return PlainTextResponse(
@@ -195,7 +200,7 @@ async def review_decision(request: Request) -> HTMLResponse:
             )
         if edited_text != seg.text:
             # 手動修改 claim 後不可沿用舊 ACCEPTED:建立 EDITED_ACCEPTED 新決策
-            seg.text = edited_text
+            candidate.text = edited_text
             decision = "edited_accepted"
     elif decision == "edited_accepted":
         return PlainTextResponse(
@@ -203,9 +208,10 @@ async def review_decision(request: Request) -> HTMLResponse:
         )
 
     ledger = _ledger_for(doc)
+    ledger = ReviewLedger(ledger.doc_fingerprint, ledger.records)
     try:
         record = ledger.record(
-            seg,
+            candidate,
             decision,
             reason_code=reason_code,
             note=note,
@@ -214,6 +220,9 @@ async def review_decision(request: Request) -> HTMLResponse:
     except ValueError as exc:
         return PlainTextResponse(f"審查決策不合法:{exc}", status_code=400)
     ledger.save(_ledger_path_for(doc))
+    doc = replace(doc, segments=[candidate if s is seg else s for s in doc.segments])
+    app.state.last_doc = doc
+    app.state.review_ledger = ledger
     audit_event(
         logger,
         "claim_review_decision_persisted",

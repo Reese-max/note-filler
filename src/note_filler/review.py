@@ -106,9 +106,14 @@ def doc_fingerprint(doc: "CorrectionDoc") -> str:
 
 def _declared_source_ids(segment: "Segment") -> list[str]:
     ids = list(getattr(segment, "source_ids", None) or [])
+    ids.extend(
+        span.get("source_id")
+        for span in getattr(segment, "citation_spans", None) or []
+        if isinstance(span, dict)
+    )
     if not ids:
         ids = [getattr(s, "id", "") for s in getattr(segment, "sources", []) or []]
-    return [sid for sid in ids if sid]
+    return list(dict.fromkeys(sid for sid in ids if sid))
 
 
 def claim_revision_hash(segment: "Segment") -> str:
@@ -173,7 +178,10 @@ def evidence_bundle_hash(segment: "Segment") -> str:
 
 
 def _missing_source_ids(segment: "Segment") -> list[str]:
-    present = {getattr(s, "id", "") for s in getattr(segment, "sources", []) or []}
+    present = {
+        getattr(s, "id", "") for s in getattr(segment, "sources", []) or []
+        if (getattr(s, "content", "") or "").strip()
+    }
     return [sid for sid in _declared_source_ids(segment) if sid not in present]
 
 
@@ -192,23 +200,23 @@ def _bigrams(text: str) -> set[str]:
     return out
 
 
-def _conflict_poles(text: str) -> set[str]:
+def _conflict_poles(text: str) -> dict[tuple[str, str], str]:
     """命中既有衝突關鍵詞對的正/反極性(沿用 verify 的 _CONFLICT_PAIRS)。"""
-    poles: set[str] = set()
+    poles: dict[tuple[str, str], str] = {}
     for pos, neg in _CONFLICT_PAIRS:
         if neg in text:
-            poles.add("neg")
+            poles[pos, neg] = "neg"
         elif pos in text:
-            poles.add("pos")
+            poles[pos, neg] = "pos"
     return poles
 
 
 def source_stances(segment: "Segment") -> list[dict]:
     """逐來源 deterministic 立場判定:supports/conflicts/context_only/unresolved。
 
-    - 全域衝突存在時:含反面詞 → conflicts;含正面詞(且不含反面詞) → supports;
-      皆無 → unresolved。
-    - 無衝突時:引用來源與主張共享 >=2 個詞彙單位 → supports,否則 unresolved。
+    - 與主張共享 >=2 個詞彙單位時,比較同一組正/反關鍵詞:相反 → conflicts。
+    - 有來源衝突時須與主張的極性一致才標 supports;無衝突時採詞彙重疊。
+      無法比較或詞彙不足 → unresolved。
     - 檢索到但未引用(extended_readings) → context_only。
     - 宣告但遺失的來源 → unresolved 且 missing=True。
     """
@@ -216,21 +224,25 @@ def source_stances(segment: "Segment") -> list[dict]:
     claim = getattr(segment, "text", "") or ""
     has_conflict = bool(getattr(segment, "conflict_note", None))
     claim_tokens = _bigrams(claim)
+    claim_poles = _conflict_poles(claim)
 
     items: list[dict] = []
     cited_ids: set[str] = set()
     for src in sources:
         sid = getattr(src, "id", "")
         cited_ids.add(sid)
-        poles = _conflict_poles(getattr(src, "content", "") or "")
+        content = (getattr(src, "content", "") or "").strip()
+        poles = _conflict_poles(content)
         source_tokens = _bigrams(
             f"{getattr(src, 'title', '')} {getattr(src, 'content', '')}"
         )
-        if has_conflict and "neg" in poles:
+        shared_poles = claim_poles.keys() & poles.keys()
+        overlaps = len(claim_tokens & source_tokens) >= 2
+        if not content:
+            stance = "unresolved"
+        elif overlaps and any(claim_poles[p] != poles[p] for p in shared_poles):
             stance = "conflicts"
-        elif has_conflict and "pos" in poles:
-            stance = "supports"
-        elif len(claim_tokens & source_tokens) >= 2:
+        elif overlaps and (not has_conflict or shared_poles):
             stance = "supports"
         else:
             stance = "unresolved"
@@ -243,7 +255,7 @@ def source_stances(segment: "Segment") -> list[dict]:
                 "doc_date": getattr(src, "doc_date", None),
                 "fetched_date": getattr(src, "fetched_date", "") or "",
                 "stance": stance,
-                "missing": False,
+                "missing": not bool(content),
             }
         )
     for sid in _declared_source_ids(segment):
@@ -426,6 +438,15 @@ class ReviewLedger:
                 "state": ReviewState.UNREVIEWED,
                 "stale_reason": None,
                 "record": None,
+            }
+        if rec.decision in EXPORTABLE_STATES and (
+            not getattr(segment, "sources", None) or _missing_source_ids(segment)
+        ):
+            return {
+                "argument_id": argument_id,
+                "state": ReviewState.STALE_REVIEW,
+                "stale_reason": "evidence_unavailable",
+                "record": rec,
             }
         if rec.claim_hash != claim_revision_hash(segment):
             return {

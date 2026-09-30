@@ -20,7 +20,7 @@ from pathlib import Path
 
 from .audit import audit_event
 from .binding_report import build_binding_report, write_binding_report
-from .export import to_docx, to_json, to_markdown
+from .export import prepare_export, to_docx, to_json, to_markdown
 from .knowledge.law_lookup import LawLookup
 from .llm import GrokClient
 from .metrics import calculate_polaris_metrics
@@ -295,8 +295,6 @@ def process_file(
 
     # 防禦層：即使 pipeline 被 stub，交付前仍硬性要求非空實際筆記
     require_non_empty_note_product(doc, source=path)
-    supp = [s for s in doc.segments if s.type == "supplement"]
-    ver = sum(1 for s in supp if s.confidence == "verified")
 
     dest_dir = out_dir if out_dir is not None else path.parent
     dest_dir.mkdir(parents=True, exist_ok=True)
@@ -307,6 +305,9 @@ def process_file(
         if ledger_path is not None
         else None
     )
+    doc, ledger = prepare_export(doc, export_mode, ledger)
+    supp = [s for s in doc.segments if s.type == "supplement"]
+    ver = sum(1 for s in supp if s.confidence == "verified")
     # 預設路徑維持舊呼叫簽名(to_markdown(doc)),避免既有 stub/呼叫方被 kwargs 打破
     export_kwargs = (
         {"export_mode": export_mode, "ledger": ledger}

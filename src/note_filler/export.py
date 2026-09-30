@@ -10,7 +10,7 @@ from note_filler.binding_report import TRACEABILITY_FIELD_KEYS, build_binding_re
 from note_filler.citation_formatter import build_reference_lines
 from note_filler.correction import CorrectionDoc
 from note_filler.metrics import calculate_polaris_metrics
-from note_filler.review import ReviewLedger, ReviewState, is_exportable
+from note_filler.review import ReviewLedger, ReviewState, doc_fingerprint, is_exportable
 from note_filler.retrieve.models import Source
 
 Cardinality = Literal["one_to_one", "one_to_many", "none"]
@@ -18,6 +18,21 @@ Cardinality = Literal["one_to_one", "one_to_many", "none"]
 ExportMode = Literal["review-draft", "accepted-only"]
 
 EXPORT_MODES = ("review-draft", "accepted-only")
+
+
+def prepare_export(
+    doc: CorrectionDoc, export_mode: ExportMode, ledger: ReviewLedger | None,
+) -> tuple[CorrectionDoc, ReviewLedger | None]:
+    """正文、統計與回執共用同一文件視圖,不修改原稿或研究結果。"""
+    _validate_export_mode(export_mode)
+    if ledger is not None and ledger.doc_fingerprint != doc_fingerprint(doc):
+        ledger = None
+    if export_mode == "accepted-only":
+        doc = CorrectionDoc(original=doc.original, segments=[
+            s for s in doc.segments
+            if s.type != "supplement" or is_exportable(s, ledger)
+        ])
+    return doc, ledger
 
 
 def _validate_export_mode(export_mode: str) -> None:
@@ -451,7 +466,7 @@ def to_json(
       - functional_gap_score / user_value_score / source_binding_integrity / 
         angle_diversity_index / delivery_success_rate：各分項分數與判定依據
     """
-    _validate_export_mode(export_mode)
+    doc, ledger = prepare_export(doc, export_mode, ledger)
     report = build_binding_report(doc)
     binding_summary = {
         "schema": report["schema"],
@@ -572,9 +587,6 @@ def to_json(
                 "openable_links_incomplete_reason": getattr(seg, "openable_links_incomplete_reason", ""),
             }
             for i, seg in enumerate(doc.segments)
-            if export_mode != "accepted-only"
-            or seg.type != "supplement"
-            or is_exportable(seg, ledger)
         ],
     }
 
@@ -612,7 +624,7 @@ def to_markdown(
         且系統仍 verified 的 supplement;REJECTED/STALE/NEEDS_MORE_EVIDENCE/
         UNREVIEWED 一律排除(fail closed)。
     """
-    _validate_export_mode(export_mode)
+    doc, ledger = prepare_export(doc, export_mode, ledger)
     report = build_binding_report(doc)
     argument_by_seg_index = {
         argument["segment_index"]: argument
@@ -628,10 +640,6 @@ def to_markdown(
             body.append(seg.text)
             if trace := _trace_text(seg):
                 original_traces.append(f"> 追溯：{trace}")
-            continue
-
-        # supplement:accepted-only 模式下未過人工審查閘者整段排除
-        if export_mode == "accepted-only" and not is_exportable(seg, ledger):
             continue
 
         if original_traces:
@@ -799,13 +807,14 @@ def to_docx(
     """
     from docx import Document as DocxDocument  # 延遲 import,不用 docx 輸出時免裝
 
-    _validate_export_mode(export_mode)
+    doc, ledger = prepare_export(doc, export_mode, ledger)
     report = build_binding_report(doc)
     argument_by_seg_index = {
         argument["segment_index"]: argument
         for argument in report["arguments"]
     }
     out = DocxDocument()
+    out.sections[0].header.paragraphs[0].text = f"匯出模式：export_mode={export_mode}"
     cited: list[Source] = []
     original_traces: list[str] = []
     counter = 0
@@ -815,9 +824,6 @@ def to_docx(
             out.add_paragraph(seg.text)
             if trace := _trace_text(seg):
                 original_traces.append(trace)
-            continue
-        # supplement:accepted-only 模式下未過人工審查閘者整段排除
-        if export_mode == "accepted-only" and not is_exportable(seg, ledger):
             continue
         if original_traces:
             for trace in original_traces:
@@ -839,6 +845,9 @@ def to_docx(
         run.italic = True  # 補充段視覺區隔於原文
         if trace := _trace_text(seg):
             out.add_paragraph(f"追溯：{trace}")
+
+        detail = ledger.state_detail(seg) if ledger is not None else None
+        out.add_paragraph(f"審查狀態：{_review_state_line(detail)}")
 
         # 多層面必要性區塊：功能缺口 → 使用者價值 → 關聯知識 → 來源 → 角度
         functional_gap = getattr(seg, "functional_gap", "")
