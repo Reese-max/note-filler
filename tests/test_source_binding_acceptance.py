@@ -586,7 +586,7 @@ def test_failure_semantic_missing_binding_blocks_pipeline_return(tmp_path, monke
     from note_filler.correction import Segment
     from note_filler.llm import FakeLLM
     from note_filler import pipeline as pl
-    from tests.test_pipeline import FakeLaw, FakeTwinkle
+    from test_pipeline import FakeLaw, FakeTwinkle
 
     note = tmp_path / "bind-fail.docx"
     d = DocxDocument()
