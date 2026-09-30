@@ -3,7 +3,7 @@
 本檔供 GOAL 明確路徑執行；實作測試在 test_note_product_gate.py（預設套件可收集）。
 """
 
-from tests.test_note_product_gate import (  # noqa: F401
+from test_note_product_gate import (  # noqa: F401
     test_process_file_rejects_empty_product_stub_with_reason,
     test_process_file_success_requires_non_empty_body,
     test_require_non_empty_accepts_original_or_supplement,
