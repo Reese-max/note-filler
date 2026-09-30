@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 import sqlite3
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -880,21 +881,28 @@ class TestEndToEndFaultInjection:
             p.unlink(missing_ok=True)
 
     @pytest.mark.anyio
-    async def test_web_pipeline_failure_clears_last_doc(self, async_client, monkeypatch, caplog):
-        """server.py:50 失敗時 app.state.last_doc 被清空，不得轉送上一份結果。"""
-        server.app.state.last_doc = CorrectionDoc(_doc(), [])
+    async def test_web_pipeline_failure_discards_previous_result(self, async_client, monkeypatch, caplog):
+        """/run 失敗後,同 session 先前結果不得被當成本次產物匯出。"""
         monkeypatch.setattr(server, "_build_clients", lambda: (None, None, None))
+        monkeypatch.setattr(
+            server, "run_pipeline",
+            lambda *a: CorrectionDoc(_doc(), []),
+        )
+        ok = await async_client.post(
+            "/run", files={"file": ("ok.txt", b"x", "text/plain")}
+        )
+        assert ok.status_code == 200
+        export_url = re.search(r'href="(/export/[^"]+)"', ok.text).group(1)
+
         monkeypatch.setattr(
             server, "run_pipeline",
             lambda *a: (_ for _ in ()).throw(RuntimeError("pipeline-boom")),
         )
-
         response = await async_client.post(
             "/run", files={"file": ("boom.txt", b"x", "text/plain")}
         )
         assert response.status_code == 500
-        assert server.app.state.last_doc is None
-        export_resp = await async_client.get("/export")
+        export_resp = await async_client.get(export_url)
         assert export_resp.status_code == 404
 
 

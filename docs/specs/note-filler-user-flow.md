@@ -32,8 +32,8 @@ flowchart LR
     N -->|yes| O["_verify_law_citations"]
     N -->|no| P["回傳 CorrectionDoc"]
     O --> P
-    P --> Q["app.state.last_doc = doc"]
-    Q --> R["TemplateResponse result.html"]
+    P --> Q["app.state.results.put(doc, owner=nf_session) → result_id"]
+    Q --> R["TemplateResponse result.html（含 /export/{result_id} 連結）"]
 ```
 
 ### 直接實作錨點
@@ -49,19 +49,27 @@ flowchart LR
 
 ```mermaid
 flowchart TD
-    E["GET /export"] --> F["if app.state.last_doc is None"]
-    F -->|是| G["404 + 提示訊息"]
-    F -->|否| H["to_markdown(doc)"]
+    E["GET /export"] --> E2["一律 404（無全域最新結果）"]
+    R["GET /export/{result_id}"] --> F["results.get(result_id, nf_session)"]
+    F -->|結果不存在或屬其他 session| G["404 + 提示訊息"]
+    F -->|已過期| G2["410 已過期,請重新上傳"]
+    F -->|ok| H["to_markdown(doc)"]
     H --> I["PlainTextResponse text/markdown"]
     I --> J["attachment: correction.md"]
 ```
 
 ### 實作錨點
 
-- `app/server.py:export`
+- `app/server.py:export`、`app/server.py:export_result`
+- `app/result_store.py:ResultStore`
 - `src/note_filler/export.py:to_markdown`
 - `tests/test_server.py::test_export_returns_markdown_attachment`
 - `tests/test_server.py::test_export_without_run_returns_404`
+- `tests/test_server.py::test_two_clients_export_only_own_result`
+- `tests/test_server.py::test_other_client_cannot_export_after_only_first_ran`
+- `tests/test_server.py::test_concurrent_runs_do_not_mix_results`
+- `tests/test_server.py::test_expired_result_returns_410`
+- `tests/test_server.py::test_restarted_result_store_returns_404`
 
 ## 3) 分支與降級規則
 
@@ -69,7 +77,7 @@ flowchart TD
 |---|---|---|---|
 | A | `detect_gaps` 回傳 `[]` | `assemble_correction` 只回原稿段，不新增補充 | `src/note_filler/gap.py`, `src/note_filler/correction.py` |
 | B | gap 補充輸出以 `【待補證】` 開頭 | `confidence = pending_evidence`, 不改 `sources` 計入正文 | `src/note_filler/write.py`, `src/note_filler/correction.py` |
-| C | `app.state.last_doc` 未建立 | `GET /export` 回 404 | `app/server.py`, `tests/test_server.py` |
+| C | `result_id` 不存在、屬其他 session 或未帶 `nf_session` cookie | `GET /export/{result_id}` 回 404（裸 `/export` 一律 404；過期回 410） | `app/server.py`, `app/result_store.py`, `tests/test_server.py` |
 | D | domain 是 `law` 且法條查核 `article_not_found` | 該段 `pending_evidence` 降級 | `src/note_filler/pipeline.py`, `src/note_filler/knowledge/law_citation_check.py` |
 
 ## 4) 最小風險註記

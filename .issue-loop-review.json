@@ -1,0 +1,20 @@
+{
+  "pr": 15,
+  "head": "ca02ea4fcec43523cea244a1b4f8e93643218901",
+  "findings": [
+    {
+      "severity": "high",
+      "file": "app/server.py",
+      "line": 79,
+      "issue": "The outer exception redaction does not protect logs emitted inside run_pipeline. For example, generate_questions logs the first 50 characters of the uploaded note when the provider returns a JSON wrapper; law-citation and retrieval degradation also log note/result text. The new privacy tests stub the entire pipeline, so issue #4's ordinary-log privacy acceptance is not satisfied. Apply request-scoped redaction to nested Web processing logs while preserving CLI diagnostics, and test the real pipeline."
+    },
+    {
+      "severity": "med",
+      "file": "tests/test_server.py",
+      "line": 283,
+      "issue": "The AnyIO-parametrized concurrency test uses asyncio.gather. With Trio installed, the default test suite fails on the trio case before testing isolation (RuntimeError: There is no current event loop). Use an AnyIO task group without excluding a backend or weakening the isolation assertions."
+    }
+  ],
+  "fixed": true,
+  "summary": "Fixed both findings: nested Web processing logs now use request-scoped redaction while concurrent CLI diagnostics remain intact, and the concurrency test uses backend-neutral AnyIO tasks. Regression tests failed before the fix (7 failed, 1 passed); the full Python 3.11 offline suite now reports 935 passed, 1 skipped, 12 deselected, with exit 0, and the deselection gate passes. Hosted CI and the post-merge 50-persona audit remain outstanding; the pre-existing main-branch datetime.utcnow deprecation failure on Python 3.13 was not changed."
+}

@@ -21,20 +21,20 @@
 |---|---|
 | `S0-空白頁` | 尚未上傳任何檔案，使用者位於 `/`。 |
 | `S1-產出中` | `POST /run` 已接到請求，執行 `run_pipeline(...)`（短暫伺服器端處理）。 |
-| `S2-已產生訂正稿` | `/run` 成功完成，`app.state.last_doc` 已設值，頁面顯示雙欄結果。 |
-| `S3-可匯出` | 呼叫 `/export` 時 `app.state.last_doc` 存在。 |
-| `S4-不可匯出` | 呼叫 `/export` 時 `app.state.last_doc is None`，回 404。 |
+| `S2-已產生訂正稿` | `/run` 成功完成，`app.state.results` 寫入 `{result_id: {doc, owner=session, expires_at}}`，頁面顯示雙欄結果與 `/export/{result_id}` 連結。 |
+| `S3-可匯出` | 呼叫 `GET /export/{result_id}` 時結果存在、未過期且 `nf_session` 與 owner 相符，回 200 Markdown。 |
+| `S4-不可匯出` | `result_id` 不存在／屬於其他 session（含未帶 cookie）回 404；已過期回 410。裸 `GET /export` 一律 404。 |
 
 ### 狀態轉移
 
 ```mermaid
 stateDiagram-v2
     [*] --> S0 : GET /
-    S0 --> S1 : POST /run(file)
-    S1 --> S2 : run_pipeline 成功回傳
-    S2 --> S3 : GET /export (last_doc exists)
+    S0 --> S1 : POST /run(file)（簽發/沿用 nf_session, 先 discard 本 session 舊結果）
+    S1 --> S2 : run_pipeline 成功回傳（results.put 得 result_id）
+    S2 --> S3 : GET /export/{result_id}（同 session 未過期）
     S2 --> S0 : 重載頁面回首頁
-    S0 --> S4 : GET /export(未上傳)
+    S0 --> S4 : GET /export 或 /export/{result_id}（無結果/他人 session）
     S1 --> S4 : POST /run 異常未處理（框架預設 500）*
     S4 --> S0 : 使用者回首頁
     S3 --> S0 : 重新上傳 /run
@@ -81,7 +81,7 @@ stateDiagram-v2
 
 | 元件 | 狀態主責 |
 |---|---|
-| `app.state.last_doc` | 會話內最後一次 `/run` 產物快取 |
+| `app.state.results` | 以 result_id+session owner 為鍵的結果暫存（`ResultStore`, TTL/容量上限） |
 | `run_pipeline` | 將輸入轉為 `CorrectionDoc` |
 | `assemble_correction` | 建立原稿/補充段序列與 `anchor_idx` |
 | `to_markdown` | 匯出結果檔案格式與檔頭 |

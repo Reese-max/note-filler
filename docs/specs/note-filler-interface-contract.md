@@ -2,7 +2,7 @@
 
 ## 版本
 
-- 日期：2026-07-19
+- 日期：2026-07-19（2026-09-30 修訂：`/export` 改為 per-result capability，移除 process-global `last_doc`）
 - 專案：`D:/Users/Administrator/Desktop/筆記補齊`
 - 目的：把前端/路由行為以可追溯條列，避免口頭契約漂移。
 
@@ -18,7 +18,7 @@
 
 ### `GET /`（上傳頁）
 
-- **方法 / 回傳**：`GET` → `HTMLResponse`，內容為上傳表單頁。
+- **方法 / 回傳**：`GET` → `HTMLResponse`，內容為上傳表單頁；若請求未帶 `nf_session` cookie 則順帶簽發（`HttpOnly`, `SameSite=Lax`），讓後續 `/run` 沿用同一 session。
 - **必要元件**：
   - `form action="/run" method="post" enctype="multipart/form-data"`
   - `input type="file" name="file" accept=".txt,.docx" required`
@@ -31,24 +31,38 @@
 - **方法 / 輸入**：`POST`，multipart 上傳欄位 `file`（`.txt` 或 `.docx`）。
 - **行為**：
   - 以暫存檔寫入上傳內容（保留副檔名）；
+  - 若請求未帶 `nf_session` cookie：以 `secrets.token_urlsafe(32)` 建立 session id，回應帶 `Set-Cookie`（`HttpOnly`, `SameSite=Lax`）；
+  - 先 `discard_owner(session)` 清掉本 session 舊結果（本次失敗時不得讓舊稿被當成本次產物匯出，且不影響其他 client）；
   - 組建 LLM/Twinkle/Law clients；
   - 呼叫 `run_pipeline(...)` 取得訂正稿；
-  - 將訂正稿存到 `app.state.last_doc`；
-  - 回傳 `result.html`（雙欄檢視）。
-- **實作錨點**：`app/server.py` `run()`
+  - 以 `secrets.token_urlsafe(24)` 產生 `result_id`，把訂正稿以 `{doc, owner=session, expires_at}` 存入 `app.state.results`；
+  - 回傳 `result.html`（雙欄檢視），下載連結為 `/export/{result_id}`。
+- **實作錨點**：`app/server.py` `run()`、`app/result_store.py`
 - **驗證證據**：
   - `tests/test_server.py::test_run_renders_two_columns`
   - `tests/test_server.py::_fixed_doc`（測試 fixture 驗證補充/原稿路徑）
 
-### `GET /export`（下載訂正稿）
+### `GET /export`（無結果身分）
 
-- **方法 / 行為**：
-  - 若 `app.state.last_doc is None`：回傳 `404`，訊息「尚無可匯出的訂正稿,請先上傳筆記。」
-  - 若存在 last_doc：用 `to_markdown(doc)` 產生純文字，回傳 `text/markdown; charset=utf-8`，含 `Content-Disposition: attachment; filename="correction.md"`。
+- **方法 / 行為**：一律回 `404`，訊息「匯出需使用本次訂正結果頁提供的下載連結。」——不存在全域「最新一份」可匯出。
 - **實作錨點**：`app/server.py` `export()`
+- **驗證證據**：`tests/test_server.py::test_export_without_run_returns_404`
+
+### `GET /export/{result_id}`（下載指定訂正稿）
+
+- **方法 / 行為**：以 `result_id` 與呼叫端 `nf_session` cookie 雙重比對：
+  - 查無此 `result_id`，或 `result_id` 屬於其他 session（含未帶 cookie）：回 `404`，不洩漏存在性；
+  - 已過期：回 `410`，訊息「該訂正稿已過期,請重新上傳筆記。」；
+  - 通過：`to_markdown(doc)` 產生純文字，回傳 `text/markdown; charset=utf-8`，含 `Content-Disposition: attachment; filename="correction.md"`。
+- **實作錨點**：`app/server.py` `export_result()`
 - **驗證證據**：
   - `tests/test_server.py::test_export_returns_markdown_attachment`
   - `tests/test_server.py::test_export_without_run_returns_404`
+  - `tests/test_server.py::test_two_clients_export_only_own_result`
+  - `tests/test_server.py::test_other_client_cannot_export_after_only_first_ran`
+  - `tests/test_server.py::test_concurrent_runs_do_not_mix_results`
+  - `tests/test_server.py::test_expired_result_returns_410`
+  - `tests/test_server.py::test_restarted_result_store_returns_404`
 
 ## 2) 視覺元件契約（薄弱但可核實）
 
@@ -60,7 +74,7 @@
 ### `result.html`
 
 - 頁首：`訂正結果`
-- 下載連結：`/export`。
+- 下載連結：`{{ export_url }}`（即 `/export/{result_id}`，僅本次 run 的結果）。
 - 雙欄容器：`.cols`
 - 原稿欄位：`.col#original`、標題 `原稿(不可變)`。
 - 訂正欄位：`.col#correction`、標題 `訂正稿`。
@@ -71,13 +85,15 @@
 
 ## 3) 資料契約（欄位層）
 
-### `app.state.last_doc`
+### `app.state.results`（`ResultStore`）
 
-- 型別：`CorrectionDoc`
-- 使用範圍：僅在 `/run` 成功後設值、`/export` 讀取並判斷是否可匯出。
-- 目前行為：未提供分頁、快取過期機制；為跨請求快取使用此欄位，重啟服務即清空。
-- **實作錨點**：`app/server.py`
-- **驗證證據**：`tests/test_server.py::test_export_without_run_returns_404`
+- 型別：`dict[result_id] -> {doc: CorrectionDoc, owner: str, expires_at: float}`；`result_id` 為 `secrets.token_urlsafe(24)`，`owner` 為呼叫端 `nf_session` session id。
+- 使用範圍：僅在 `/run` 成功後 `put()`、`GET /export/{result_id}` 以 `get(result_id, session)` 判讀；`POST /run` 開始時 `discard_owner(session)` 清掉本 session 舊結果。
+- TTL：`NOTE_FILLER_RESULT_TTL_SECONDS`（預設 3600 秒，monotonic clock）；過期回 `410` 並刪除。
+- 容量：上限 64 筆，超出時逐出最快到期者；每次寫入先清掉已過期項目。
+- 生命週期：in-memory，process 重啟即清空，舊 `result_id` 一律 `404`，永不回退到其他文件。
+- **實作錨點**：`app/result_store.py`、`app/server.py`
+- **驗證證據**：`tests/test_server.py::test_expired_result_returns_410`、`tests/test_server.py::test_restarted_result_store_returns_404`
 
 ### `Segment` / `CorrectionDoc`
 
@@ -91,7 +107,15 @@
 - pipeline 在交付前執行逐段追溯硬閘；原稿文字／段號、實際 `sources` ID 或處理紀錄任一漂移即拒絕成功。
 - **實作錨點**：`src/note_filler/correction.py`
 
-## 4) 交付對照表（回到「對照項目」）
+## 4) 部署模型與隔離邊界
+
+- **支援部署型態：單機 loopback、單使用者。** 本工具設計為本機 `127.0.0.1` 上跑的個人工具,不提供多用戶共享部署。
+- **隔離機制（能力模型,非登入認證）**：每份結果同時要求 (a) `secrets.token_urlsafe(24)` 產生的 unguessable `result_id`（出現在結果頁的下載連結中,伺服器不主動揭露）與 (b) 呼叫端 `nf_session` cookie 與結果 owner 相符;任一不符即 `404`。`nf_session` 為 `HttpOnly + SameSite=Lax` 的 256-bit 隨機值,於 `GET /` 首次請求簽發（若 client 直接呼叫 `/run` 而未經首頁,則於 `/run` 補發）。
+- **失敗與重啟**：失敗的 `/run` 不產生 capability 且先清掉本 session 舊結果;process 重啟後 in-memory 結果全失,舊 `result_id` 確定性 `404`;TTL 過期確定性 `410`。任何路徑都不存在「回退到最新一份文件」。
+- **共用/遠端部署（不支援）**：若未來要把本服務暴露給多使用者或網路共享,必須另外加入呼叫端驗證（authentication）與結果擁有者授權檢查——目前的 `nf_session` 只是 per-browser 能力綁定,不是帳號身分,不得以它當作共享部署的授權控制。
+- **日誌**：Web pipeline 與匯出工作內的日誌統一遮罩訊息、例外與堆疊，只保留檔名或操作識別碼、logger、層級與函式位置；外層失敗事件僅記錄檔名與錯誤型別，不記錄例外全文。遮罩以 request context 隔離，不影響同時執行的 CLI 稽核（`tests/test_server.py::test_web_real_pipeline_redacts_nested_logs`、`tests/test_server.py::test_web_log_redaction_is_request_scoped`）。
+
+## 5) 交付對照表（回到「對照項目」）
 
 | 對照項目 | 設計證據 | 實作文件 |
 |---|---|---|
