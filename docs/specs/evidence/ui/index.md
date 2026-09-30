@@ -22,12 +22,12 @@
 | 補充高亮欄位 | `.supplement` | 同上 |
 | 無來源警示 | `.pending` | 同上 |
 | 來源展開 | `details.sources` | 同上 |
-| 匯出連結 | `/export` | `app/templates/result.html`, `tests/test_server.py::test_export_returns_markdown_attachment` |
+| 匯出連結 | `/export/{result_id}`（per-result） | `app/templates/result.html`, `tests/test_server.py::test_export_returns_markdown_attachment` |
 
 ## 2) 與路由證據對照
 
-- `/run` 成功後，`app.state.last_doc` 可供 `/export` 使用：`app/server.py`
-- `/export` 未先跑 `/run` 時回 `404`：`tests/test_server.py::test_export_without_run_returns_404`
+- `/run` 成功後,結果以 `result_id`+`nf_session` owner 存入 `app.state.results`,結果頁提供 `/export/{result_id}` 連結：`app/server.py`, `app/result_store.py`
+- `/export` 未帶 `result_id` 一律回 `404`;`/export/{result_id}` 不存在/屬其他 session 回 404,過期回 410：`tests/test_server.py::test_export_without_run_returns_404`, `tests/test_server.py::test_expired_result_returns_410`
 
 ## 3) 畫面截圖與回歸命名規則（草案）
 

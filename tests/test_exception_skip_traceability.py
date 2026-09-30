@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 
 import pytest
 
@@ -104,8 +105,16 @@ def test_cli_failure_receipt_keeps_input_identifier_and_reason(tmp_path, monkeyp
 
 @pytest.mark.anyio
 async def test_web_pipeline_failure_returns_traceable_500(async_client, monkeypatch, caplog, tmp_path):
-    server.app.state.last_doc = CorrectionDoc(_doc(), [])
     monkeypatch.setattr(server, "_build_clients", lambda: (None, None, None))
+    monkeypatch.setattr(
+        server, "run_pipeline", lambda *args: CorrectionDoc(_doc(), [])
+    )
+    ok = await async_client.post(
+        "/run", files={"file": ("case-WEB-00.txt", b"raw", "text/plain")}
+    )
+    assert ok.status_code == 200
+    export_url = re.search(r'href="(/export/[^"]+)"', ok.text).group(1)
+
     monkeypatch.setattr(
         server, "run_pipeline", lambda *args: (_ for _ in ()).throw(RuntimeError("fault-WEB-01"))
     )
@@ -119,7 +128,7 @@ async def test_web_pipeline_failure_returns_traceable_500(async_client, monkeypa
     assert "case-WEB-01.txt" in response.text
     assert "RuntimeError: fault-WEB-01" in response.text
     assert "case-WEB-01.txt" in caplog.text and "fault-WEB-01" in caplog.text
-    assert (await async_client.get("/export")).status_code == 404
+    assert (await async_client.get(export_url)).status_code == 404
 
     temp_path = tmp_path / "case-WEB-04.tmp"
 

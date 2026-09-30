@@ -16,7 +16,8 @@
 
 | 元件 | 責任 | 應用檔 |
 |---|---|---|
-| `server.app` | FastAPI 應用初始化、路由註冊、狀態容器 `last_doc` 維持 | `app/server.py` |
+| `server.app` | FastAPI 應用初始化、路由註冊、session cookie 簽發與結果暫存容器維持 | `app/server.py` |
+| `ResultStore` | 以 unguessable `result_id`+session owner 為鍵的結果暫存（TTL/容量上限，過期與跨 session 一律拒絕） | `app/result_store.py` |
 | `index.html` | 上傳表單（唯一入口） | `app/templates/index.html` |
 | `result.html` | 雙欄展示結果、補充高亮、來源展開、下載入口 | `app/templates/result.html` |
 

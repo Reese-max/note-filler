@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import os
+import secrets
 import tempfile
 import traceback
 from pathlib import Path
@@ -9,6 +10,7 @@ from pathlib import Path
 from fastapi import FastAPI, File, Request, UploadFile
 from fastapi.responses import HTMLResponse, PlainTextResponse
 from fastapi.templating import Jinja2Templates
+from starlette.concurrency import run_in_threadpool
 
 from note_filler.export import to_markdown
 from note_filler.audit import audit_event
@@ -17,6 +19,8 @@ from note_filler.pipeline import run_pipeline
 from note_filler.knowledge.law_lookup import LawLookup
 from note_filler.retrieve.twinkle import TwinkleClient
 
+from .result_store import EXPIRED, OK, ResultStore
+
 logger = logging.getLogger(__name__)
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -24,9 +28,13 @@ TEMPLATES = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 DB_PATH = os.environ.get(
     "NOTE_FILLER_DB", str(BASE_DIR.parent / "data" / "law_index.db")
 )
+SESSION_COOKIE = "nf_session"
+RESULT_TTL_SECONDS = float(
+    os.environ.get("NOTE_FILLER_RESULT_TTL_SECONDS", "3600")
+)
 
 app = FastAPI(title="筆記補齊")
-app.state.last_doc = None
+app.state.results = ResultStore(ttl_seconds=RESULT_TTL_SECONDS)
 
 
 def _build_clients() -> tuple[GrokClient, TwinkleClient, LawLookup]:
@@ -39,24 +47,41 @@ def _build_clients() -> tuple[GrokClient, TwinkleClient, LawLookup]:
 
 @app.get("/", response_class=HTMLResponse)
 def index(request: Request) -> HTMLResponse:
-    return TEMPLATES.TemplateResponse(request, "index.html")
+    response = TEMPLATES.TemplateResponse(request, "index.html")
+    if SESSION_COOKIE not in request.cookies:
+        # 首頁即建立 session:避免新 client 併發 /run 時各自鑄造
+        # session、最後一個 Set-Cookie 覆蓋導致先到的結果被孤立。
+        response.set_cookie(
+            SESSION_COOKIE,
+            secrets.token_urlsafe(32),
+            httponly=True,
+            samesite="lax",
+        )
+    return response
 
 
 @app.post("/run", response_class=HTMLResponse)
 async def run(request: Request, file: UploadFile = File(...)) -> HTMLResponse:
     suffix = Path(file.filename or "note.txt").suffix or ".txt"
-    data = await file.read()
     tmp_path = None
-    app.state.last_doc = None  # 本次失敗時不得讓 /export 轉送上一份成功結果
+    session = request.cookies.get(SESSION_COOKIE)
+    issue_cookie = session is None
+    if issue_cookie:
+        session = secrets.token_urlsafe(32)
+    # 本次失敗時不得讓 /export 轉送上一份成功結果;
+    # 只清掉自己 session 的舊結果,不影響其他 client。
+    app.state.results.discard_owner(session)
     try:
+        data = await file.read()
         with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
             tmp.write(data)
             tmp_path = tmp.name
         llm, twinkle, law = _build_clients()
-        doc = run_pipeline(tmp_path, llm, twinkle, law)
-        app.state.last_doc = doc  # 供 /export 使用
-        return TEMPLATES.TemplateResponse(
-            request, "result.html", {"doc": doc}
+        doc = await run_in_threadpool(run_pipeline, tmp_path, llm, twinkle, law)
+        result_id = app.state.results.put(doc, session)
+        response = TEMPLATES.TemplateResponse(
+            request, "result.html",
+            {"doc": doc, "export_url": f"/export/{result_id}"},
         )
     except Exception as exc:
         tb = traceback.format_exc()
@@ -69,7 +94,7 @@ async def run(request: Request, file: UploadFile = File(...)) -> HTMLResponse:
             error=str(exc),
             traceback=tb,
         )
-        return TEMPLATES.TemplateResponse(
+        response = TEMPLATES.TemplateResponse(
             request, "result.html",
             {
                 "doc": None,
@@ -90,17 +115,34 @@ async def run(request: Request, file: UploadFile = File(...)) -> HTMLResponse:
                     temp_path=tmp_path,
                     error=str(exc),
                 )
+    if issue_cookie:
+        response.set_cookie(SESSION_COOKIE, session, httponly=True, samesite="lax")
+    return response
 
 
 @app.get("/export")
 def export() -> PlainTextResponse:
-    doc = app.state.last_doc
-    if doc is None:
-        return PlainTextResponse(
-            "尚無可匯出的訂正稿,請先上傳筆記。", status_code=404
-        )
-    md = to_markdown(doc)
-    headers = {"Content-Disposition": 'attachment; filename="correction.md"'}
+    """裸 /export 不帶結果身分:一律確定性 404,永不回退到「最新一份」。"""
     return PlainTextResponse(
-        md, media_type="text/markdown; charset=utf-8", headers=headers
+        "匯出需使用本次訂正結果頁提供的下載連結。", status_code=404
+    )
+
+
+@app.get("/export/{result_id}")
+async def export_result(request: Request, result_id: str) -> PlainTextResponse:
+    status, doc = app.state.results.get(
+        result_id, request.cookies.get(SESSION_COOKIE)
+    )
+    if status == OK:
+        md = await run_in_threadpool(to_markdown, doc)
+        headers = {"Content-Disposition": 'attachment; filename="correction.md"'}
+        return PlainTextResponse(
+            md, media_type="text/markdown; charset=utf-8", headers=headers
+        )
+    if status == EXPIRED:
+        return PlainTextResponse(
+            "該訂正稿已過期,請重新上傳筆記。", status_code=410
+        )
+    return PlainTextResponse(
+        "找不到可匯出的訂正稿,請先上傳筆記。", status_code=404
     )
