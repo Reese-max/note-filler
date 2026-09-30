@@ -26,6 +26,7 @@ from .llm import GrokClient
 from .metrics import calculate_polaris_metrics
 from .pipeline import require_non_empty_note_product, run_pipeline
 from .retrieve.twinkle import TwinkleClient
+from .review import ReviewLedger
 from .task_state import TaskStage, TaskStateManager, build_task_key
 
 logger = logging.getLogger(__name__)
@@ -261,11 +262,17 @@ def process_file(
     fmt: str,
     *,
     state_dir: Path | None = None,
+    export_mode: str = "review-draft",
+    ledger_path: Path | None = None,
 ) -> dict:
     """跑單檔 pipeline、寫出輸出檔、寫 delivery receipt,回統計 dict。
 
     交付回執(manifest)寫在輸出檔同目錄,作為可查詢的送達紀錄;
     使用者可讀取 manifest 確認交付狀態,而非只依賴本機檔案存在。
+
+    export_mode:"review-draft"(預設,全部 supplement 附審查狀態)或
+    "accepted-only"(只輸出通過人工審查閘的 supplement);ledger_path 為
+    決策履歷 JSON,同文件重播既有審查狀態,未提供時全部視為未審。
     """
     task_key = build_task_key(str(path))
     task_mgr = TaskStateManager(state_dir or TASK_STATE_DIR)
@@ -295,8 +302,24 @@ def process_file(
     dest_dir.mkdir(parents=True, exist_ok=True)
     dest = dest_dir / f"{path.stem}.訂正稿.{fmt}"
 
+    ledger = (
+        ReviewLedger.load_for_document(Path(ledger_path), doc)
+        if ledger_path is not None
+        else None
+    )
+    # 預設路徑維持舊呼叫簽名(to_markdown(doc)),避免既有 stub/呼叫方被 kwargs 打破
+    export_kwargs = (
+        {"export_mode": export_mode, "ledger": ledger}
+        if (export_mode != "review-draft" or ledger is not None)
+        else {}
+    )
+
     # stdout 的使用者送達內容；DOCX 另以 Markdown 提供可直接閱讀的完整筆記。
-    body = json.dumps(to_json(doc), ensure_ascii=False, indent=2) if fmt == "json" else to_markdown(doc)
+    body = (
+        json.dumps(to_json(doc, **export_kwargs), ensure_ascii=False, indent=2)
+        if fmt == "json"
+        else to_markdown(doc, **export_kwargs)
+    )
     if not body.strip():
         task_mgr.fail(
             task_key,
@@ -328,7 +351,7 @@ def process_file(
 
     if fmt == "docx":
         try:
-            to_docx(doc, str(dest))
+            to_docx(doc, str(dest), **export_kwargs)
         except Exception as exc:
             task_mgr.fail(
                 task_key,
@@ -409,6 +432,17 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("-o", "--outdir", default=None, help="輸出夾(預設寫在各輸入檔旁)")
     ap.add_argument("--db", default="data/law_index.db", help="法條索引 DB 路徑(預設 data/law_index.db)")
     ap.add_argument("--format", choices=["md", "json", "docx"], default="md", help="輸出格式(預設 md)")
+    ap.add_argument(
+        "--export-mode",
+        choices=["review-draft", "accepted-only"],
+        default="review-draft",
+        help="匯出模式:review-draft(全部 supplement 附審查狀態)或 accepted-only(僅人工核准段)",
+    )
+    ap.add_argument(
+        "--review-ledger",
+        default=os.environ.get("NOTE_FILLER_REVIEW_LEDGER", ""),
+        help="決策履歷 JSON 路徑(預設 .task_state/review_ledger.json,僅隨 export-mode 生效)",
+    )
     ap.add_argument("--token", default=os.environ.get("TWINKLE_HUB_TOKEN", ""), help="twinkle-hub token(預設讀環境變數)")
     args = ap.parse_args(argv)
 
@@ -430,7 +464,15 @@ def main(argv: list[str] | None = None) -> int:
     for f in files:
         r = None
         try:
-            r = process_file(f, llm, twinkle, law, out_dir, args.format)
+            # 僅在非預設時傳新 kwargs,保留 process_file 既有位置參數呼叫面
+            pf_kwargs: dict = {}
+            if args.export_mode != "review-draft":
+                pf_kwargs["export_mode"] = args.export_mode
+            if args.review_ledger or args.export_mode != "review-draft":
+                pf_kwargs["ledger_path"] = Path(
+                    args.review_ledger or TASK_STATE_DIR / "review_ledger.json"
+                )
+            r = process_file(f, llm, twinkle, law, out_dir, args.format, **pf_kwargs)
             delivery_status = r.setdefault(
                 "delivery_status",
                 _delivery_status(

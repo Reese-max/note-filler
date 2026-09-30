@@ -10,9 +10,45 @@ from note_filler.binding_report import TRACEABILITY_FIELD_KEYS, build_binding_re
 from note_filler.citation_formatter import build_reference_lines
 from note_filler.correction import CorrectionDoc
 from note_filler.metrics import calculate_polaris_metrics
+from note_filler.review import ReviewLedger, ReviewState, is_exportable
 from note_filler.retrieve.models import Source
 
 Cardinality = Literal["one_to_one", "one_to_many", "none"]
+
+ExportMode = Literal["review-draft", "accepted-only"]
+
+EXPORT_MODES = ("review-draft", "accepted-only")
+
+
+def _validate_export_mode(export_mode: str) -> None:
+    """fail closed:未知匯出模式一律拒絕,不得靜默退回草稿模式。"""
+    if export_mode not in EXPORT_MODES:
+        raise ValueError(
+            f"export_mode {export_mode!r} 非法(允許: {', '.join(EXPORT_MODES)})"
+        )
+
+
+def _review_state_line(detail: dict | None) -> str:
+    """審查狀態單行(機器可解析 key=value):review_state/stale_reason/record 摘要。"""
+    if detail is None:
+        return "review_state=unreviewed"
+    parts = [f"review_state={detail['state'].value}"]
+    if detail.get("stale_reason"):
+        parts.append(f"stale_reason={detail['stale_reason']}")
+    rec = detail.get("record")
+    if rec is not None:
+        parts.append(f"reviewer={rec.reviewer}")
+        parts.append(f"reviewed_at={rec.reviewed_at}")
+        parts.append(f"reason_code={rec.reason_code or '-'}")
+        parts.append(f"decision_id={rec.decision_id}")
+    return "；".join(parts)
+
+
+def _seg_review_state(seg, ledger: ReviewLedger | None) -> str:
+    """segment 的有效審查狀態字串(無 ledger → unreviewed)。"""
+    if ledger is None:
+        return ReviewState.UNREVIEWED.value
+    return ledger.state_of(seg).value
 
 
 def _cardinality(source_count: int) -> Cardinality:
@@ -393,8 +429,17 @@ def _three_part_annotation(seg) -> dict:
     }
 
 
-def to_json(doc: CorrectionDoc) -> dict:
+def to_json(
+    doc: CorrectionDoc,
+    *,
+    export_mode: ExportMode = "review-draft",
+    ledger: ReviewLedger | None = None,
+) -> dict:
     """序列化整份 CorrectionDoc；原文 immutable，僅讀不改。
+
+    export_mode="accepted-only" 時只輸出 original 段與通過人工審查閘
+    (is_exportable)的 supplement;review-draft(預設)保留全部並附逐段
+    review_state 欄位。
 
     頂層含 binding_summary（整合 binding_report 的摘要）與 polaris_metrics（北極星品質指標），
     讓訂正稿 JSON 本身就可被測試直接解析驗證綁定狀態與品質分數。
@@ -406,6 +451,7 @@ def to_json(doc: CorrectionDoc) -> dict:
       - functional_gap_score / user_value_score / source_binding_integrity / 
         angle_diversity_index / delivery_success_rate：各分項分數與判定依據
     """
+    _validate_export_mode(export_mode)
     report = build_binding_report(doc)
     binding_summary = {
         "schema": report["schema"],
@@ -482,12 +528,18 @@ def to_json(doc: CorrectionDoc) -> dict:
     return {
         "source_path": doc.original.source_path,
         "full_text": doc.original.full_text,
+        "export_mode": export_mode,
         "binding_summary": binding_summary,
         "angle_coverage_summary": dict(report.get("angle_coverage_summary") or {}),
         "polaris_metrics": polaris_metrics,
         "segments": [
             {
                 "type": seg.type,
+                "review_state": (
+                    _seg_review_state(seg, ledger)
+                    if seg.type == "supplement"
+                    else None
+                ),
                 "text": seg.text,
                 "anchor_idx": seg.anchor_idx,
                 "confidence": seg.confidence,
@@ -520,6 +572,9 @@ def to_json(doc: CorrectionDoc) -> dict:
                 "openable_links_incomplete_reason": getattr(seg, "openable_links_incomplete_reason", ""),
             }
             for i, seg in enumerate(doc.segments)
+            if export_mode != "accepted-only"
+            or seg.type != "supplement"
+            or is_exportable(seg, ledger)
         ],
     }
 
@@ -536,7 +591,12 @@ def _related_knowledge_of(seg, argument: dict | None) -> str:
     return ""
 
 
-def to_markdown(doc: CorrectionDoc) -> str:
+def to_markdown(
+    doc: CorrectionDoc,
+    *,
+    export_mode: ExportMode = "review-draft",
+    ledger: ReviewLedger | None = None,
+) -> str:
     """
     C3 鎖定格式：
       - original 段：原樣輸出(原文 immutable)。
@@ -544,7 +604,15 @@ def to_markdown(doc: CorrectionDoc) -> str:
       - pending_evidence 段：【補充】後加 '⚠待補證 '(sources 空則無 footnote)。
     文末以 build_reference_lines(所有被引用 sources) 產參考區塊(C7 內含 Date)。
     footnote 編號與 cited 順序一致，交給 T11 重新列 [^1..n]。
+
+    匯出閘(issue #3):
+      - review-draft(預設):每個 supplement 附「審查狀態」標記行,
+        UNREVIEWED/STALE_REVIEW 等皆保留供審。
+      - accepted-only:只輸出 original + 目前有效 ACCEPTED/EDITED_ACCEPTED
+        且系統仍 verified 的 supplement;REJECTED/STALE/NEEDS_MORE_EVIDENCE/
+        UNREVIEWED 一律排除(fail closed)。
     """
+    _validate_export_mode(export_mode)
     report = build_binding_report(doc)
     argument_by_seg_index = {
         argument["segment_index"]: argument
@@ -560,6 +628,10 @@ def to_markdown(doc: CorrectionDoc) -> str:
             body.append(seg.text)
             if trace := _trace_text(seg):
                 original_traces.append(f"> 追溯：{trace}")
+            continue
+
+        # supplement:accepted-only 模式下未過人工審查閘者整段排除
+        if export_mode == "accepted-only" and not is_exportable(seg, ledger):
             continue
 
         if original_traces:
@@ -582,6 +654,10 @@ def to_markdown(doc: CorrectionDoc) -> str:
         body.append(f"{prefix}{_render_supplement_text(seg, source_numbers)}")
         if trace := _trace_text(seg):
             body.append(f"> 追溯：{trace}")
+
+        # 審查狀態標記(review-draft 顯示當前決策;accepted-only 皆為已核准)
+        detail = ledger.state_detail(seg) if ledger is not None else None
+        body.append(f"> **審查狀態**：{_review_state_line(detail)}")
 
         # 多層面必要性區塊：功能缺口 → 使用者價值 → 關聯知識 → 來源 → 角度
         functional_gap = getattr(seg, "functional_gap", "")
@@ -706,16 +782,24 @@ def to_markdown(doc: CorrectionDoc) -> str:
     )
     md += "".join(f"\n> **北極星追蹤**：{line}" for line in _polaris_trace_lines(polaris))
 
-    return md
+    return f"> **匯出模式**：export_mode={export_mode}\n\n{md}"
 
 
-def to_docx(doc: CorrectionDoc, path: str) -> None:
+def to_docx(
+    doc: CorrectionDoc,
+    path: str,
+    *,
+    export_mode: ExportMode = "review-draft",
+    ledger: ReviewLedger | None = None,
+) -> None:
     """輸出 .docx 訂正稿,結構鏡射 to_markdown(原文 immutable、補充段標【補充】)。
 
     python-docx 原生 footnote 支援不佳,故 [^n] 以 inline 文字呈現、文末列參考來源。
+    export_mode="accepted-only" 時只輸出 original 與通過人工審查閘的 supplement。
     """
     from docx import Document as DocxDocument  # 延遲 import,不用 docx 輸出時免裝
 
+    _validate_export_mode(export_mode)
     report = build_binding_report(doc)
     argument_by_seg_index = {
         argument["segment_index"]: argument
@@ -731,6 +815,9 @@ def to_docx(doc: CorrectionDoc, path: str) -> None:
             out.add_paragraph(seg.text)
             if trace := _trace_text(seg):
                 original_traces.append(trace)
+            continue
+        # supplement:accepted-only 模式下未過人工審查閘者整段排除
+        if export_mode == "accepted-only" and not is_exportable(seg, ledger):
             continue
         if original_traces:
             for trace in original_traces:
