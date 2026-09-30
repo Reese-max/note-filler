@@ -21,12 +21,18 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from .sidecars import (
+    DELIVERY_MANIFEST_NAME,
+    resolve_delivery_manifest_path,
+    resolve_manifest_for_update,
+    write_manifest_and_latest,
+)
+
 logger = logging.getLogger(__name__)
 
 ARTIFACT_MISSING = "artifact_missing"
 ARTIFACT_INTEGRITY_MISMATCH = "artifact_integrity_mismatch"
 
-DELIVERY_MANIFEST_NAME = "delivery_manifest.json"
 RECOVERY_HISTORY_NAME = "recovery_history.jsonl"
 
 
@@ -136,8 +142,11 @@ def _transmission_probe(
     anchor = manifest_path
     if anchor is None:
         output_path = manifest.get("output_path")
-        parent = Path(output_path).parent if isinstance(output_path, str) and output_path else Path.cwd()
-        anchor = parent / DELIVERY_MANIFEST_NAME
+        anchor = (
+            resolve_delivery_manifest_path(Path(output_path))
+            if isinstance(output_path, str) and output_path
+            else Path.cwd() / DELIVERY_MANIFEST_NAME
+        )
     exists = anchor.is_file()
     if not exists:
         return ArtifactProbe(
@@ -175,16 +184,21 @@ def verify_delivery_artifacts(
     """依已持久化 manifest 定位並探測全部 artifact。"""
     probes: list[ArtifactProbe] = []
 
-    output_path = manifest.get("output_path")
+    output_path = manifest.get("output_canonical_path") or manifest.get("output_path")
     if isinstance(output_path, str) and output_path:
         expected = manifest.get("output_content_hash") or manifest.get("content_hash")
         probes.append(probe_artifact("generated", output_path, expected))
 
-    input_path = manifest.get("input_path")
+    input_path = manifest.get("input_canonical_path") or manifest.get("input_path")
     if isinstance(input_path, str) and input_path:
         probes.append(
             probe_artifact("source", input_path, manifest.get("input_content_hash"))
         )
+
+    report_path = manifest.get("binding_report_canonical_path") or manifest.get("binding_report_path")
+    report_hash = manifest.get("binding_report_content_hash")
+    if isinstance(report_path, str) and report_path and report_hash:
+        probes.append(probe_artifact("binding_report", report_path, report_hash))
 
     if manifest.get("delivery_status") is not None:
         probes.append(_transmission_probe(manifest, manifest_path))
@@ -222,7 +236,7 @@ def _append_history(history_path: Path, attempt: dict[str, Any]) -> None:
 
 
 def _attempt_signature(attempt: dict[str, Any]) -> frozenset[tuple[str, str | None]]:
-    """以失敗錯誤的 (kind, code) 集合＋目標狀態建立不重複特徵。
+    """Deduplicate a failure only within its own note receipt.
 
     不含 status_before，避免並行 resume 讀到前次寫入的狀態造成重複記錄；
     含 status_after，讓 failed→retryable 等不同目標狀態視為不同嘗試。
@@ -232,6 +246,9 @@ def _attempt_signature(attempt: dict[str, Any]) -> frozenset[tuple[str, str | No
         {(e.get("kind"), e.get("code")) for e in errors if isinstance(e, dict)}
     )
     return frozenset({
+        ("note_manifest_path", attempt.get("note_manifest_path")),
+        ("note_source_path", attempt.get("note_source_path")),
+        ("note_source_hash", attempt.get("note_source_hash")),
         ("status_after", attempt.get("status_after")),
         ("errors", ",".join(sorted(f"{a}|{b}" for a, b in codes))),
     })
@@ -272,14 +289,17 @@ def recover_delivery(
 
     此入口絕不將狀態宣告為 ``delivered``。
     """
-    manifest_path = Path(manifest_path)
-    if not manifest_path.is_file():
+    requested_path = Path(manifest_path)
+    manifest_path = resolve_manifest_for_update(requested_path)
+    # A caller may deliberately inspect an edited legacy copy. Probe that
+    # requested evidence, then persist the result to the matching owned receipt.
+    if not requested_path.is_file():
         return RecoveryVerdict(
             verified=False,
             status="failed",
             errors=[{
                 "kind": "delivery_manifest",
-                "path": str(manifest_path),
+                "path": str(requested_path),
                 "code": ARTIFACT_MISSING,
                 "message": "交付狀態檔不存在，無法驗證已持久化 artifact",
             }],
@@ -288,14 +308,14 @@ def recover_delivery(
         )
 
     try:
-        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        manifest = json.loads(requested_path.read_text(encoding="utf-8"))
     except (json.JSONDecodeError, OSError) as exc:
         return RecoveryVerdict(
             verified=False,
             status="failed",
             errors=[{
                 "kind": "delivery_manifest",
-                "path": str(manifest_path),
+                "path": str(requested_path),
                 "code": ARTIFACT_INTEGRITY_MISMATCH,
                 "message": f"交付狀態檔損壞，無法驗證已持久化 artifact: {exc}",
             }],
@@ -309,7 +329,7 @@ def recover_delivery(
             status="failed",
             errors=[{
                 "kind": "delivery_manifest",
-                "path": str(manifest_path),
+                "path": str(requested_path),
                 "code": ARTIFACT_INTEGRITY_MISMATCH,
                 "message": "交付狀態檔非 JSON 物件，無法驗證已持久化 artifact",
             }],
@@ -317,7 +337,7 @@ def recover_delivery(
             history_preserved=True,
         )
 
-    probes = verify_delivery_artifacts(manifest, manifest_path)
+    probes = verify_delivery_artifacts(manifest, requested_path)
     errors = [_probe_error(p) for p in probes if p.code]
     history_path = manifest_path.parent / RECOVERY_HISTORY_NAME
 
@@ -333,19 +353,22 @@ def recover_delivery(
 
     new_status = force_status if force_status in ("failed", "retryable") else "retryable"
     attempt = {
+        "note_manifest_path": str(manifest_path.resolve()),
+        "note_source_path": manifest.get("input_canonical_path") or manifest.get("input_path"),
+        "note_source_hash": manifest.get("input_content_hash"),
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "status_before": manifest.get("status"),
         "status_after": new_status,
         "error_before": manifest.get("error"),
         "errors": [dict(e) for e in errors],
     }
-    recorded = _append_history(history_path, attempt)
+    _append_history(history_path, attempt)
 
     attempts = manifest.get("recovery_attempts")
     if not isinstance(attempts, list):
         attempts = []
     signature = _attempt_signature(attempt)
-    if recorded and not any(
+    if not any(
         isinstance(item, dict) and _attempt_signature(item) == signature
         for item in attempts
     ):
@@ -356,11 +379,7 @@ def recover_delivery(
     manifest["error"] = "; ".join(
         f"{e['code']}:{e['kind']}:{e['path']}" for e in errors
     )
-    manifest_path.write_text(
-        json.dumps(manifest, ensure_ascii=False, indent=2),
-        encoding="utf-8",
-        newline="\n",
-    )
+    write_manifest_and_latest(manifest_path, manifest)
 
     return RecoveryVerdict(
         verified=False,

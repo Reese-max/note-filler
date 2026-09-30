@@ -34,10 +34,10 @@ from note_filler.correction import (
     related_knowledge_matches_views,
 )
 from note_filler.write import CITATION_SPAN_KEYS, citation_span_issues
+from .sidecars import BINDING_REPORT_NAME, binding_report_path
 
 SCHEMA_V1 = "note_filler.binding_report.v1"
 SCHEMA_ID = "note_filler.binding_report.v2"
-BINDING_REPORT_NAME = "binding_report.json"
 
 TRACEABILITY_MARKER_KEYS = ("argument_id", "kind", "id", "binding_status")
 SOURCE_FRAGMENT_KEYS = ("source_id", "text")
@@ -1609,8 +1609,14 @@ def write_binding_report(output_path: Path, correction) -> Path:
     parse_binding_report(report)
     dest_dir = output_path.parent
     dest_dir.mkdir(parents=True, exist_ok=True)
-    report_path = dest_dir / BINDING_REPORT_NAME
+    report_path = binding_report_path(output_path)
     report_path.write_text(
+        json.dumps(report, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+        newline="\n",
+    )
+    # Historical directory-level path remains a latest-only compatibility copy.
+    (dest_dir / BINDING_REPORT_NAME).write_text(
         json.dumps(report, ensure_ascii=False, indent=2),
         encoding="utf-8",
         newline="\n",
