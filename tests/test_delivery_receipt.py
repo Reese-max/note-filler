@@ -470,6 +470,35 @@ def test_missing_output_keeps_its_sidecars_and_reserves_its_name(tmp_path, monke
     assert json.loads(delivery_manifest_path(second_output).read_text(encoding="utf-8"))["input_path"] == str(second)
 
 
+
+def test_rerun_keeps_owned_alternate_when_base_artifacts_are_removed(tmp_path, monkeypatch):
+    first_dir = tmp_path / "first"
+    second_dir = tmp_path / "second"
+    first_dir.mkdir()
+    second_dir.mkdir()
+    first = first_dir / "note.txt"
+    second = second_dir / "note.txt"
+    first.write_text("first", encoding="utf-8")
+    second.write_text("second", encoding="utf-8")
+    out = tmp_path / "out"
+    monkeypatch.setattr(cli, "run_pipeline", lambda *a, **k: _FakeDoc())
+    monkeypatch.setattr(cli, "to_markdown", lambda doc: "# 訂正稿\n完整內容。")
+    state_dir = tmp_path / "state"
+
+    first_result = cli.process_file(first, None, None, None, out, "md", state_dir=state_dir)
+    first_output = Path(first_result["output"])
+    second_result = cli.process_file(second, None, None, None, out, "md", state_dir=state_dir)
+    second_output = Path(second_result["output"])
+    assert second_output != first_output
+
+    # Simulate cleanup of the first note's output and its owned audit artifacts.
+    first_output.unlink()
+    delivery_manifest_path(first_output).unlink()
+    binding_report_path(first_output).unlink()
+
+    assert cli._output_for_input(second, out, "md") == second_output
+
+
 def test_rerun_via_latest_manifest_updates_authoritative_receipt(tmp_path, monkeypatch):
     note = tmp_path / "note.txt"
     note.write_text("source", encoding="utf-8")

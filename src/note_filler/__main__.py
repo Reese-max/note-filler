@@ -304,11 +304,18 @@ def _output_for_input(path: Path, dest_dir: Path, fmt: str) -> Path:
         except (OSError, ValueError, KeyError, TypeError, AttributeError):
             return False
 
-    if not claimed(base) or owned_by_this_input(base):
-        return base
     source_id = hashlib.sha256(str(path.resolve()).encode("utf-8")).hexdigest()[:12]
     alternate = dest_dir / f"{path.stem}.{source_id}.訂正稿.{fmt}"
-    if claimed(alternate) and not owned_by_this_input(alternate):
+
+    # Prefer an existing output already owned by this input, even if the base
+    # name has since become free because another note's artifacts were removed.
+    if owned_by_this_input(base):
+        return base
+    if owned_by_this_input(alternate):
+        return alternate
+    if not claimed(base):
+        return base
+    if claimed(alternate):
         raise RuntimeError(f"輸出檔名衝突，拒絕覆寫既有訂正稿: {alternate}")
     return alternate
 

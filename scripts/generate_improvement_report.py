@@ -35,22 +35,50 @@ def _load_records_from_manifests(
 ) -> list[dict]:
     """從 delivery_manifest.json 蒐集 MetricsRecord。"""
     records = []
+    seen_records: set[tuple[str, str]] = set()
     for scan_dir in scan_dirs:
         if not scan_dir.exists():
             continue
-        pattern = "**/delivery_manifest.json" if recursive else "delivery_manifest.json"
-        for manifest_path in scan_dir.glob(pattern):
+        if recursive:
+            owned_pattern = "**/*.delivery_manifest.json"
+            latest_pattern = "**/delivery_manifest.json"
+        else:
+            owned_pattern = "*.delivery_manifest.json"
+            latest_pattern = "delivery_manifest.json"
+
+        # Note-owned receipts are authoritative. The directory-level manifest
+        # is retained for compatibility, but can duplicate the latest sidecar.
+        manifest_paths = [
+            *sorted(scan_dir.glob(owned_pattern)),
+            *sorted(scan_dir.glob(latest_pattern)),
+        ]
+        for manifest_path in manifest_paths:
             try:
                 manifest_data = json.loads(manifest_path.read_text(encoding="utf-8"))
                 polaris_metrics = manifest_data.get("polaris_metrics")
                 if not polaris_metrics:
                     continue
+
                 source_path = manifest_data.get("input_path", str(manifest_path))
+                output_path = (
+                    manifest_data.get("output_canonical_path")
+                    or manifest_data.get("output_path")
+                )
+                if isinstance(output_path, str) and output_path:
+                    record_id = ("output", output_path)
+                elif isinstance(source_path, str) and source_path:
+                    record_id = ("input", source_path)
+                else:
+                    record_id = ("manifest", str(manifest_path.resolve()))
+                if record_id in seen_records:
+                    continue
+
                 records.append({
                     "source_path": source_path,
                     "manifest_path": str(manifest_path),
                     "polaris_metrics": polaris_metrics,
                 })
+                seen_records.add(record_id)
             except Exception as exc:
                 logger.warning(f"跳過 manifest {manifest_path}: {exc}")
     return records
