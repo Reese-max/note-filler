@@ -19,6 +19,22 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from .sidecars import (
+    DELIVERY_MANIFEST_NAME,
+    delivery_manifest_path,
+    output_identity_key,
+    receipt_conflicts_with_note,
+    receipt_input_identity,
+    receipt_matches_output,
+    receipt_output_identity,
+    recorded_leaf_name,
+    is_receipt_file_name,
+    resolve_binding_report_path,
+    resolve_delivery_manifest_path,
+    resolve_manifest_for_update,
+    write_manifest_and_latest,
+)
+
 logger = logging.getLogger(__name__)
 
 PIPELINE_METRICS_HISTORY_NAME = "metrics_history.jsonl"
@@ -91,12 +107,13 @@ def record_pipeline_metrics(source_path: str, correction) -> dict[str, Any]:
     from .binding_report import build_binding_report
     from .metrics import calculate_polaris_metrics
 
+    canonical_source_path = str(Path(source_path).resolve())
     try:
         binding_report = build_binding_report(correction)
     except ValueError as exc:
         logger.warning(
             "metrics_unavailable note_id=%s reason=%s",
-            derive_note_id(source_path),
+            derive_note_id(canonical_source_path),
             exc,
         )
         binding_report = {"metrics_unavailable": str(exc)}
@@ -111,7 +128,7 @@ def record_pipeline_metrics(source_path: str, correction) -> dict[str, Any]:
     history_path = Path(source_path).parent / PIPELINE_METRICS_HISTORY_NAME
     record = {
         "timestamp": datetime.now(timezone.utc).isoformat(),
-        "note_id": derive_note_id(source_path),
+        "note_id": derive_note_id(canonical_source_path),
         "product_hash": _pipeline_product_hash(correction, binding_report),
         "status": "calculated" if metrics_available else "metrics_unavailable",
         "traceability": (
@@ -213,7 +230,7 @@ def _load_output_metrics(
     content_hash: str,
 ) -> tuple[str, float | None, float | None, dict[str, Any]]:
     """讀取既有結構化量測，舊旁車格式保留相容但主題標為 unknown。"""
-    from .binding_report import BINDING_REPORT_NAME, parse_binding_report
+    from .binding_report import parse_binding_report
     from .metrics import calculate_polaris_metrics
 
     quality_debt, quality = _load_quality_debt_metrics(markdown_path)
@@ -225,7 +242,7 @@ def _load_output_metrics(
             quality_debt,
         )
 
-    manifest_path = markdown_path.parent / "delivery_manifest.json"
+    manifest_path = resolve_delivery_manifest_path(markdown_path)
     if not manifest_path.exists():
         return "metrics_unavailable", None, None, quality_debt
 
@@ -241,18 +258,30 @@ def _load_output_metrics(
 
     if not isinstance(manifest, dict):
         return "metrics_unavailable", None, None, quality_debt
+    if receipt_output_identity(manifest) and not receipt_matches_output(manifest, markdown_path):
+        logger.warning("output_metrics_unavailable path=%s reason=wrong_note_receipt", markdown_path)
+        return "metrics_unavailable", None, None, quality_debt
     manifest_hash = manifest.get("content_hash")
     if manifest_hash and manifest_hash != content_hash[:16]:
         logger.warning("output_metrics_unavailable path=%s reason=content_hash_mismatch", markdown_path)
         return "metrics_unavailable", None, None, quality_debt
 
-    binding_report_path = markdown_path.parent / BINDING_REPORT_NAME
-    if not binding_report_path.exists():
+    report_path = resolve_binding_report_path(markdown_path, manifest)
+    if not report_path.exists():
         return "metrics_unavailable", None, None, quality_debt
+    expected_report_hash = manifest.get("binding_report_content_hash")
+    if expected_report_hash:
+        try:
+            actual_report_hash = hashlib.sha256(report_path.read_bytes()).hexdigest()
+        except OSError:
+            return "metrics_unavailable", None, None, quality_debt
+        if actual_report_hash != expected_report_hash:
+            logger.warning("output_metrics_unavailable path=%s reason=report_hash_mismatch", markdown_path)
+            return "metrics_unavailable", None, None, quality_debt
 
     try:
         binding_report = parse_binding_report(
-            json.loads(binding_report_path.read_text(encoding="utf-8"))
+            json.loads(report_path.read_text(encoding="utf-8"))
         )
         if not binding_report["arguments"]:
             return "metrics_unavailable", None, None, quality_debt
@@ -534,7 +563,7 @@ class MetricsCollectionConfig:
     # 是否遞迴掃描子目錄
     recursive: bool = True
     # 檔案模式
-    file_pattern: str = "delivery_manifest.json"
+    file_pattern: str = "*delivery_manifest.json"
     # 告警門檻
     alert_thresholds: dict[str, float] = field(default_factory=lambda: {
         "functional_gap_score": 0.5,
@@ -702,7 +731,7 @@ def collect_metrics_from_manifest(
             )
             return None
         
-        source_path = manifest_data.get("input_path", "")
+        source_path = receipt_input_identity(manifest_data) or ""
         note_id = derive_note_id(source_path)
         collection_time = datetime.now(timezone.utc).isoformat()
         
@@ -727,17 +756,57 @@ def scan_and_collect_metrics(
     回傳成功蒐集的 MetricsRecord 列表。
     """
     records: list[MetricsRecord] = []
-    
+    seen_keys: set[str] = set()
+
     for scan_dir in config.scan_dirs:
         if not scan_dir.exists():
             logger.warning(f"掃描目錄不存在: {scan_dir}")
             continue
-        
+
         # 遞迴或非遞迴掃描
         if config.recursive:
             manifest_files = list(scan_dir.glob(f"**/{config.file_pattern}"))
         else:
             manifest_files = list(scan_dir.glob(config.file_pattern))
+
+        # A legacy latest-only copy is scanned only when its note-owned receipt
+        # is not also in this scan. Otherwise one delivery would count twice.
+        # Note-owned receipts sort first so deduplication always keeps them.
+        found = set(manifest_files)
+        filtered = []
+        for manifest_path in sorted(
+            manifest_files,
+            key=lambda p: (p.name == DELIVERY_MANIFEST_NAME, str(p)),
+        ):
+            if manifest_path.name.endswith(DELIVERY_MANIFEST_NAME) and not is_receipt_file_name(
+                manifest_path.name
+            ):
+                # A file such as ``mydelivery_manifest.json`` only matched the
+                # broad default pattern; it is not a receipt.
+                continue
+            try:
+                manifest_data = json.loads(manifest_path.read_text(encoding="utf-8"))
+            except (OSError, ValueError):
+                manifest_data = None
+            if not isinstance(manifest_data, dict):
+                # Unreadable or non-object receipts stay in the scan so the
+                # collector reports them per file instead of aborting the scan.
+                filtered.append(manifest_path)
+                continue
+            declared = manifest_data.get("sidecar_for_output") or receipt_output_identity(manifest_data)
+            if (
+                manifest_path.name == DELIVERY_MANIFEST_NAME
+                and isinstance(declared, str)
+                and declared
+                and delivery_manifest_path(manifest_path.parent / Path(declared).name) in found
+            ):
+                continue
+            key = output_identity_key(manifest_path, manifest_data)
+            if key in seen_keys:
+                continue
+            seen_keys.add(key)
+            filtered.append(manifest_path)
+        manifest_files = sorted(filtered)
         
         logger.info(f"在 {scan_dir} 找到 {len(manifest_files)} 個 manifest 檔案")
         
@@ -1135,6 +1204,8 @@ def rerun_note(
       - alerts: 告警清單（可能為空）
     """
     alerts: list[MetricsAlert] = []
+    requested_path = Path(manifest_path)
+    manifest_path = resolve_manifest_for_update(requested_path)
 
     if not manifest_path.exists():
         _emit_alert(
@@ -1143,11 +1214,27 @@ def rerun_note(
             severity="critical",
             metric_name="pipeline",
             note_id="unknown",
-            source_path=str(manifest_path),
+            source_path=str(requested_path),
             error_message=f"Manifest 檔案不存在: {manifest_path}",
         )
         return None, alerts
 
+    if not is_receipt_file_name(manifest_path.name):
+        # Archives (…delivery_manifest.json.prev) and other non-receipt files
+        # are records of the past, never evidence to rewrite.
+        _emit_alert(
+            alerts,
+            alert_type="rerun_failure",
+            severity="critical",
+            metric_name="pipeline",
+            note_id=derive_note_id(str(manifest_path)),
+            source_path=str(manifest_path),
+            error_message=f"不是交付回執檔，拒絕重跑:{manifest_path.name}",
+        )
+        return None, alerts
+
+    # The authoritative receipt is read as well as written: a stale or
+    # hand-edited latest copy must never revert recorded recovery state.
     try:
         manifest_data = json.loads(manifest_path.read_text(encoding="utf-8"))
     except (json.JSONDecodeError, OSError) as exc:
@@ -1162,11 +1249,33 @@ def rerun_note(
         )
         return None, alerts
 
-    source_path = manifest_data.get("input_path", str(manifest_path))
+    if receipt_conflicts_with_note(manifest_data, manifest_path):
+        # A receipt that names another note's output is not this note's
+        # evidence, so it must never be rewritten with recomputed metrics.
+        _emit_alert(
+            alerts,
+            alert_type="rerun_failure",
+            severity="critical",
+            metric_name="pipeline",
+            note_id=derive_note_id(str(manifest_path)),
+            source_path=str(manifest_path),
+            error_message=f"回執記錄的是其他筆記的成品，拒絕重跑:{manifest_path}",
+        )
+        return None, alerts
+
+    source_path = receipt_input_identity(manifest_data) or str(manifest_path)
     note_id = derive_note_id(source_path)
 
-    # 嘗試從同目錄的 binding_report.json 重新計算
-    binding_report_path = manifest_path.parent / "binding_report.json"
+    # Prefer the report for this output; a receipt that states no report of its
+    # own never borrows the directory-level copy.
+    output_path = receipt_output_identity(manifest_data)
+    if output_path:
+        report_path = resolve_binding_report_path(
+            manifest_path.parent / recorded_leaf_name(output_path), manifest_data
+        )
+    else:
+        report_path = manifest_path.parent / "binding_report.json"
+    binding_report_path = report_path
     if not binding_report_path.exists():
         _emit_alert(
             alerts,
@@ -1193,6 +1302,33 @@ def rerun_note(
         )
         return None, alerts
 
+    expected_report_hash = manifest_data.get("binding_report_content_hash")
+    if expected_report_hash:
+        try:
+            actual_report_hash = hashlib.sha256(binding_report_path.read_bytes()).hexdigest()
+        except OSError as exc:
+            _emit_alert(
+                alerts,
+                alert_type="rerun_failure",
+                severity="critical",
+                metric_name="pipeline",
+                note_id=note_id,
+                source_path=source_path,
+                error_message=f"binding_report.json 讀取失敗: {exc}",
+            )
+            return None, alerts
+        if actual_report_hash != expected_report_hash:
+            _emit_alert(
+                alerts,
+                alert_type="rerun_failure",
+                severity="critical",
+                metric_name="pipeline",
+                note_id=note_id,
+                source_path=source_path,
+                error_message=f"binding_report.json 內容雜湊不符: {binding_report_path}",
+            )
+            return None, alerts
+
     # 從 manifest 取得 delivery_status
     delivery_status = manifest_data.get("delivery_status")
 
@@ -1218,11 +1354,7 @@ def rerun_note(
     # 更新 manifest 中的 polaris_metrics
     manifest_data["polaris_metrics"] = polaris_metrics
     manifest_data["metrics_rerun_at"] = datetime.now(timezone.utc).isoformat()
-    manifest_path.write_text(
-        json.dumps(manifest_data, ensure_ascii=False, indent=2),
-        encoding="utf-8",
-        newline="\n",
-    )
+    write_manifest_and_latest(manifest_path, manifest_data)
 
     collection_time = datetime.now(timezone.utc).isoformat()
     record = MetricsRecord(

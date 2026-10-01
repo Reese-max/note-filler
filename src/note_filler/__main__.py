@@ -26,13 +26,21 @@ from .llm import GrokClient
 from .metrics import calculate_polaris_metrics
 from .pipeline import require_non_empty_note_product, run_pipeline
 from .retrieve.twinkle import TwinkleClient
+from .sidecars import (
+    DELIVERY_MANIFEST_NAME,
+    binding_report_path,
+    delivery_manifest_path,
+    may_write_latest_copy,
+    migrate_legacy_sidecars,
+    recorded_leaf_name,
+)
 from .task_state import TaskStage, TaskStateManager, build_task_key
 
 logger = logging.getLogger(__name__)
 
 _SUFFIXES = {".txt", ".docx"}
 
-MANIFEST_NAME = "delivery_manifest.json"
+MANIFEST_NAME = DELIVERY_MANIFEST_NAME
 TASK_STATE_DIR = Path(os.environ.get("NOTE_FILLER_TASK_STATE", ".task_state"))
 
 
@@ -139,7 +147,7 @@ def write_delivery_receipt(
     delivery_status: dict[str, bool] | None = None,
     polaris_metrics: dict[str, Any] | None = None,
 ) -> Path:
-    """寫出 delivery_manifest.json,作為可查詢的交付回執。
+    """寫出成品專屬回執，並更新舊路徑作為最新一筆的相容副本。
 
     回傳 manifest 路徑。manifest 記錄:
       - output_path: 輸出檔路徑
@@ -154,22 +162,25 @@ def write_delivery_receipt(
       - polaris_metrics: 北極星筆記品質指標（可選）
     使用者可透過讀取此 manifest 確認交付已完成,而非只依賴本機檔案存在。
     """
-    manifest_dir = output_path.parent
-    manifest_path = manifest_dir / MANIFEST_NAME
-
-    if manifest_path.exists():
+    manifest_path = delivery_manifest_path(output_path)
+    legacy_path = output_path.parent / MANIFEST_NAME
+    # A pre-upgrade note sharing this directory keeps its own receipt and report
+    # before the latest-output copies below are replaced.
+    for migrated in migrate_legacy_sidecars(output_path.parent):
         audit_event(
             logger,
-            "delivery_receipt_replaced",
+            "legacy_sidecar_migrated",
             input_path,
             level=logging.INFO,
-            manifest_path=manifest_path,
-            reason="output directory keeps the latest delivery receipt",
+            manifest_path=migrated,
+            reason="directory-level evidence promoted to its note-owned path",
         )
 
     content_hash = ""
     if content is not None:
         content_hash = hashlib.sha256(content.encode("utf-8")).hexdigest()[:16]
+
+    carried = _carried_forward(manifest_path, output_path, input_path) if status != "delivered" else {}
 
     status_data = delivery_status or {}
     final_delivery_status = _delivery_status(
@@ -185,6 +196,10 @@ def write_delivery_receipt(
     receipt = {
         "output_path": str(output_path),
         "input_path": str(input_path),
+        "output_canonical_path": str(output_path.resolve()),
+        "input_canonical_path": str(input_path.resolve()),
+        "authoritative": True,
+        "sidecar_scope": "output",
         "status": status,
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "content_hash": content_hash,
@@ -195,6 +210,16 @@ def write_delivery_receipt(
         # 已持久化 artifact 的內容雜湊：生成成品、來源、傳輸確認
         "output_content_hash": _content_hash_file(output_path),
         "input_content_hash": _content_hash_file(input_path),
+        "binding_report_path": (
+            str(binding_report_path(output_path)) if status == "delivered" else ""
+        ),
+        "binding_report_canonical_path": (
+            str(binding_report_path(output_path).resolve()) if status == "delivered" else ""
+        ),
+        "binding_report_content_hash": (
+            _content_hash_file(binding_report_path(output_path))
+            if status == "delivered" else ""
+        ),
         "transmission_confirmation_hash": (
             hashlib.sha256(
                 json.dumps(
@@ -206,6 +231,16 @@ def write_delivery_receipt(
             ).hexdigest()
         ),
     }
+    if status == "delivered" and not receipt["binding_report_content_hash"]:
+        audit_event(
+            logger,
+            "binding_report_hash_unavailable",
+            input_path,
+            level=logging.WARNING,
+            manifest_path=binding_report_path(output_path),
+            reason="binding report exists but could not be hashed; readers fall back to its note-owned path",
+        )
+    receipt.update(carried)
     if error is not None:
         receipt["error"] = error
     if polaris_metrics is not None:
@@ -216,7 +251,129 @@ def write_delivery_receipt(
         encoding="utf-8",
         newline="\n",
     )
+    legacy_receipt = dict(receipt)
+    legacy_receipt.update(
+        {
+            "authoritative": False,
+            "sidecar_scope": "directory_latest",
+            "sidecar_for_output": str(output_path),
+        }
+    )
+    copy_refreshed = may_write_latest_copy(legacy_path, legacy_receipt)
+    replaced_path = (
+        manifest_path
+        if manifest_path.exists()
+        else legacy_path if copy_refreshed else None
+    )
+    if replaced_path is not None:
+        audit_event(
+            logger,
+            "delivery_receipt_replaced",
+            input_path,
+            level=logging.INFO,
+            manifest_path=replaced_path,
+            reason=(
+                "receipt for the same output note is being refreshed"
+                if replaced_path == manifest_path
+                else "legacy latest receipt is being refreshed"
+            ),
+        )
+    if copy_refreshed:
+        legacy_path.write_text(
+            json.dumps(legacy_receipt, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+            newline="\n",
+        )
+    else:
+        audit_event(
+            logger,
+            "delivery_receipt_latest_copy_preserved",
+            input_path,
+            level=logging.INFO,
+            manifest_path=legacy_path,
+            reason="another note's delivery is the current latest copy",
+        )
     return manifest_path
+
+
+def _same_input_file(recorded_input: str, input_path: Path, out_dir: Path) -> bool:
+    """Whether a recorded input identity names this input file.
+
+    A legacy receipt may have recorded the input relative to its own working
+    directory, so the output directory and its parent are tried as bases.
+    """
+    try:
+        target = input_path.resolve()
+    except OSError:
+        return False
+    recorded = Path(recorded_input)
+    bases = [recorded.parent] if recorded.is_absolute() else [
+        out_dir,
+        out_dir.parent,
+        Path.cwd(),
+    ]
+    for base in bases:
+        try:
+            if (base / recorded.name if recorded.is_absolute() else base / recorded).resolve() == target:
+                return True
+        except OSError:
+            continue
+    return False
+
+
+def _carried_forward(manifest_path: Path, output_path: Path, input_path: Path) -> dict:
+    """Keep this note's recorded delivery facts when a later attempt fails.
+
+    A failed re-run of a note that already delivered must not erase its
+    recovery history or its binding report identity. The replaced receipt is
+    also archived next to it, so the delivered record is never lost.
+    """
+    try:
+        previous = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+    if not isinstance(previous, dict):
+        return {}
+    recorded_input = previous.get("input_canonical_path") or previous.get("input_path")
+    if not isinstance(recorded_input, str) or not recorded_input:
+        return {}
+    if not _same_input_file(recorded_input, input_path, output_path.parent):
+        return {}
+    # Recorded recovery history belongs to the note, not to one attempt, and
+    # the metrics of an earlier delivery must not be advertised by a failure.
+    carried = {
+        key: previous[key]
+        for key in ("recovery_attempts", "recovered_at")
+        if previous.get(key)
+    }
+    report = binding_report_path(output_path)
+    report_hash = previous.get("binding_report_content_hash")
+    if report_hash and _content_hash_file(report) == report_hash:
+        carried.update(
+            {
+                "binding_report_path": str(report),
+                "binding_report_canonical_path": str(report.resolve()),
+                "binding_report_content_hash": report_hash,
+            }
+        )
+    archive = manifest_path.with_name(f"{manifest_path.name}.prev")
+    # One archive per note keeps the first replaced record; later attempts would
+    # otherwise push the earliest one out of the directory.
+    if not archive.exists():
+        try:
+            archive.write_bytes(manifest_path.read_bytes())
+        except OSError as exc:  # the archive is best effort; the receipt still lands
+            audit_event(
+                logger,
+                "delivery_receipt_archive_failed",
+                input_path,
+                level=logging.WARNING,
+                manifest_path=archive,
+                error=str(exc),
+            )
+    if archive.is_file():
+        carried["archived_receipt"] = archive.name
+    return carried
 
 
 def _iter_inputs(paths: list[str]) -> list[Path]:
@@ -252,6 +409,101 @@ def _iter_inputs(paths: list[str]) -> list[Path]:
     return out
 
 
+def _output_for_input(path: Path, dest_dir: Path, fmt: str) -> Path:
+    """Keep a prior note's output when two source folders share a filename.
+
+    Ownership comes from the note's own receipt, so it never depends on the
+    shared directory-level copy that a later note may legitimately replace. A
+    pre-upgrade output keeps its name while the copy still names it; when no
+    evidence attributes the name to any note, an existing output is left alone.
+    """
+    base = dest_dir / f"{path.stem}.訂正稿.{fmt}"
+    source_id = hashlib.sha256(str(path.resolve()).encode("utf-8")).hexdigest()[:12]
+    alternate = dest_dir / f"{path.stem}.{source_id}.訂正稿.{fmt}"
+    resolved_input = path.resolve()
+
+    def ownership_of(receipt: dict, base: Path) -> str:
+        """``this`` / ``other`` / ``ambiguous`` ownership of a receipt.
+
+        Legacy receipts recorded the input relative to their own working
+        directory. A recorded path that carries a directory component can be
+        resolved and trusted; a bare name only matches a same-named file in the
+        current directory, which proves nothing about who wrote the receipt, so
+        it stays ambiguous and the name is treated as unattributed.
+        """
+        recorded_input = receipt.get("input_canonical_path") or receipt.get("input_path")
+        if not isinstance(recorded_input, str) or not recorded_input:
+            return "other"
+        recorded_path = Path(recorded_input)
+        if recorded_path.is_absolute():
+            try:
+                return "this" if recorded_path.resolve() == resolved_input else "other"
+            except OSError:
+                return "other"
+        bases = {base, base.parent} if recorded_path.parent != Path(".") else set()
+        for candidate_base in bases:
+            try:
+                if (candidate_base / recorded_path).resolve() == resolved_input:
+                    return "this"
+            except OSError:
+                continue
+        try:
+            if (Path.cwd() / recorded_path).resolve() == resolved_input:
+                return "ambiguous" if recorded_path.parent == Path(".") else "this"
+        except OSError:
+            pass
+        # A relative identity that matches none of the candidate directories
+        # cannot be attributed to anyone, including this note.
+        return "ambiguous"
+
+    def read_receipt(receipt_path: Path) -> dict | None:
+        if not receipt_path.is_file():
+            return None
+        try:
+            receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            return None
+        return receipt if isinstance(receipt, dict) else None
+
+    def claims_name(candidate: Path) -> str:
+        """``this`` / ``other`` / ``unknown`` ownership evidence for a name."""
+        receipt = read_receipt(delivery_manifest_path(candidate))
+        if receipt is not None:
+            claim = ownership_of(receipt, candidate.parent)
+            return "unknown" if claim == "ambiguous" else claim
+        latest = read_receipt(candidate.parent / MANIFEST_NAME)
+        if latest is None:
+            return "unknown"
+        latest_output = latest.get("sidecar_for_output") or latest.get("output_path")
+        if not isinstance(latest_output, str) or recorded_leaf_name(latest_output) != candidate.name:
+            return "unknown"
+        claim = ownership_of(latest, candidate.parent)
+        if claim == "this":
+            return "this"
+        if claim == "ambiguous":
+            return "unknown"
+        # The copy alone keeps a name only while that note's own artifacts
+        # survive; once they are gone the name is free again.
+        return "other" if occupied(candidate) else "unknown"
+
+    def occupied(candidate: Path) -> bool:
+        return candidate.exists() or binding_report_path(candidate).exists()
+
+    base_claim = claims_name(base)
+    alternate_claim = claims_name(alternate)
+    if base_claim == "this":
+        return base
+    if alternate_claim == "this":
+        return alternate
+    if base_claim == "unknown" and not occupied(base):
+        return base
+    # The source-suffixed name belongs to this input alone; an existing file
+    # there that no receipt attributes to it is another note's output.
+    if alternate_claim == "other" or (alternate_claim == "unknown" and occupied(alternate)):
+        raise RuntimeError(f"輸出檔名衝突，拒絕覆寫既有訂正稿: {alternate}")
+    return alternate
+
+
 def process_file(
     path: Path,
     llm,
@@ -261,6 +513,7 @@ def process_file(
     fmt: str,
     *,
     state_dir: Path | None = None,
+    dest: Path | None = None,
 ) -> dict:
     """跑單檔 pipeline、寫出輸出檔、寫 delivery receipt,回統計 dict。
 
@@ -293,7 +546,9 @@ def process_file(
 
     dest_dir = out_dir if out_dir is not None else path.parent
     dest_dir.mkdir(parents=True, exist_ok=True)
-    dest = dest_dir / f"{path.stem}.訂正稿.{fmt}"
+    # A caller that already planned this note's destination keeps it, so the
+    # plan and the executed receipt can never disagree.
+    dest = dest if dest is not None else _output_for_input(path, dest_dir, fmt)
 
     # stdout 的使用者送達內容；DOCX 另以 Markdown 提供可直接閱讀的完整筆記。
     body = json.dumps(to_json(doc), ensure_ascii=False, indent=2) if fmt == "json" else to_markdown(doc)
@@ -429,8 +684,11 @@ def main(argv: list[str] | None = None) -> int:
     ok = 0
     for f in files:
         r = None
+        planned_dest = None
         try:
-            r = process_file(f, llm, twinkle, law, out_dir, args.format)
+            planned_dir = out_dir if out_dir is not None else f.parent
+            planned_dest = _output_for_input(f, planned_dir, args.format)
+            r = process_file(f, llm, twinkle, law, out_dir, args.format, dest=planned_dest)
             delivery_status = r.setdefault(
                 "delivery_status",
                 _delivery_status(
@@ -440,16 +698,16 @@ def main(argv: list[str] | None = None) -> int:
             )
             print(r["content"], flush=True)
             delivery_status["user_channel_sent"] = True
-            manifest_path = Path(r["output"]).parent / MANIFEST_NAME
+            manifest_path = delivery_manifest_path(Path(r["output"]))
             if manifest_path.exists():
                 # 重新計算 polaris_metrics（因為 user_channel_sent 狀態已更新）
                 polaris_metrics = None
                 try:
                     # 嘗試從已存在的 binding_report 重新計算
-                    binding_report_path = Path(r["output"]).parent / "binding_report.json"
-                    if binding_report_path.exists():
+                    report_path = binding_report_path(Path(r["output"]))
+                    if report_path.exists():
                         import json
-                        binding_report = json.loads(binding_report_path.read_text(encoding="utf-8"))
+                        binding_report = json.loads(report_path.read_text(encoding="utf-8"))
                         polaris_metrics = calculate_polaris_metrics(
                             binding_report=binding_report,
                             delivery_status=delivery_status,
@@ -485,7 +743,22 @@ def main(argv: list[str] | None = None) -> int:
             print(f"❌ {f}:{type(e).__name__}: {e}", file=sys.stderr)
             # 寫 delivery_manifest 失敗回執,讓下游可查詢交付狀態
             dest_dir = out_dir if out_dir is not None else f.parent
-            dest = dest_dir / f"{f.stem}.訂正稿.{args.format}"
+            try:
+                dest = planned_dest or _output_for_input(f, dest_dir, args.format)
+            except RuntimeError as collision:
+                # Both candidate names belong to other notes, so no receipt can
+                # be written for this input without destroying their evidence.
+                audit_event(
+                    logger,
+                    "delivery_receipt_not_written_name_collision",
+                    f,
+                    level=logging.ERROR,
+                    error_type=type(collision).__name__,
+                    error=str(collision),
+                    reason="every candidate output name is owned by another note",
+                )
+                print(f"❌ {f}:失敗回執無法安全定位:{collision}", file=sys.stderr)
+                continue
             if r is not None and isinstance(r.get("delivery_status"), dict):
                 delivery_status = r["delivery_status"]
             else:
@@ -514,7 +787,7 @@ def main(argv: list[str] | None = None) -> int:
                     "delivery_receipt_persist_failed",
                     f,
                     level=logging.ERROR,
-                    manifest_path=dest.parent / MANIFEST_NAME,
+                    manifest_path=delivery_manifest_path(dest),
                     error_type=type(receipt_error).__name__,
                     error=str(receipt_error),
                 )

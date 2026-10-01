@@ -45,11 +45,12 @@ def _create_test_manifest(
     tmp_path: Path,
     name: str,
     polaris_metrics: Optional[dict] = None,
+    output_name: str = "output.md",
 ) -> Path:
     """建立測試用 delivery_manifest.json。"""
     manifest_path = tmp_path / name
     manifest_data = {
-        "output_path": str(tmp_path / "output.md"),
+        "output_path": str(tmp_path / output_name),
         "input_path": str(tmp_path / "input.txt"),
         "status": "delivered",
         "timestamp": datetime.now(timezone.utc).isoformat(),
@@ -210,10 +211,12 @@ class TestScanAndCollectMetrics:
         """測試掃描單一目錄。"""
         # 建立多個 manifest
         _create_test_manifest(
-            tmp_path, "delivery_manifest1.json", _create_test_polaris_metrics()
+            tmp_path, "delivery_manifest1.json", _create_test_polaris_metrics(),
+            output_name="output1.md",
         )
         _create_test_manifest(
-            tmp_path, "delivery_manifest2.json", _create_test_polaris_metrics()
+            tmp_path, "delivery_manifest2.json", _create_test_polaris_metrics(),
+            output_name="output2.md",
         )
         _create_test_manifest(tmp_path, "invalid.json", None)  # 無效的
         
@@ -222,6 +225,73 @@ class TestScanAndCollectMetrics:
         
         assert len(records) == 2  # 只有 2 個有效的
     
+    def test_scan_deduplicates_stray_copy_of_same_output(self, tmp_path):
+        """指向同一輸出的目錄級複本不得重複計算一筆交付。"""
+        subdir = tmp_path / "subdir"
+        subdir.mkdir()
+        owned = _create_test_manifest(
+            tmp_path,
+            "note.md.delivery_manifest.json",
+            _create_test_polaris_metrics(),
+            output_name="note.md",
+        )
+        (subdir / "delivery_manifest.json").write_text(
+            owned.read_text(encoding="utf-8"), encoding="utf-8"
+        )
+
+        config = MetricsCollectionConfig(
+            scan_dirs=[tmp_path],
+            recursive=True,
+            file_pattern="*delivery_manifest.json",
+        )
+        records = scan_and_collect_metrics(config)
+
+        assert len(records) == 1
+        assert records[0].manifest_path == str(owned)
+
+    def test_scan_keeps_relative_receipts_of_different_directories(self, tmp_path):
+        """Two legacy receipts recording the same file name stay two notes."""
+        first_dir = tmp_path / "first"
+        second_dir = tmp_path / "second"
+        first_dir.mkdir()
+        second_dir.mkdir()
+        first = _create_test_manifest(
+            first_dir, "delivery_manifest.json", _create_test_polaris_metrics()
+        )
+        second = _create_test_manifest(
+            second_dir, "delivery_manifest.json", _create_test_polaris_metrics()
+        )
+        for receipt, note in ((first, "first.txt"), (second, "second.txt")):
+            data = json.loads(receipt.read_text(encoding="utf-8"))
+            data["output_path"] = "output.md"
+            data["input_path"] = note
+            receipt.write_text(json.dumps(data), encoding="utf-8")
+
+        config = MetricsCollectionConfig(scan_dirs=[tmp_path], recursive=True)
+        records = scan_and_collect_metrics(config)
+
+        assert {Path(record.manifest_path) for record in records} == {first, second}
+
+    def test_scan_ignores_non_receipt_name_and_non_object_json(self, tmp_path):
+        """A stray name and a JSON array must not abort or pollute the scan."""
+        owned = _create_test_manifest(
+            tmp_path,
+            "note.md.delivery_manifest.json",
+            _create_test_polaris_metrics(),
+            output_name="note.md",
+        )
+        (tmp_path / "mydelivery_manifest.json").write_text(
+            owned.read_text(encoding="utf-8"), encoding="utf-8"
+        )
+        (tmp_path / "other.md.delivery_manifest.json").write_text(
+            "[1, 2, 3]", encoding="utf-8"
+        )
+
+        config = MetricsCollectionConfig(scan_dirs=[tmp_path], recursive=True)
+        records = scan_and_collect_metrics(config)
+
+        assert [Path(record.manifest_path) for record in records] == [owned]
+
     def test_scan_recursive(self, tmp_path):
         """測試遞迴掃描子目錄。"""
         # 建立子目錄結構
@@ -569,12 +639,14 @@ class TestRunMetricsPipeline:
         """測試執行完整管線。"""
         # 建立測試 manifest
         _create_test_manifest(
-            tmp_path, "delivery_manifest1.json", _create_test_polaris_metrics()
+            tmp_path, "delivery_manifest1.json", _create_test_polaris_metrics(),
+            output_name="output1.md",
         )
         _create_test_manifest(
             tmp_path, "delivery_manifest2.json", _create_test_polaris_metrics(
                 functional_gap_score=0.4,  # 低於門檻，應觸發告警
-            )
+            ),
+            output_name="output2.md",
         )
         
         output_dir = tmp_path / "metrics_output"
