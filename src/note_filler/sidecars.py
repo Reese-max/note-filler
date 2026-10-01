@@ -36,23 +36,24 @@ def is_receipt_file_name(name: str) -> bool:
 def same_recorded_path(left: str | None, right: str | None) -> bool:
     """Compare two recorded identities, tolerating legacy relative paths.
 
-    Two absolute identities compare as resolved paths. A bare relative identity
-    (``note.txt``, recorded from an unknown working directory) can only be
-    compared by file name, which is the weaker but safe direction: an ambiguous
-    match keeps existing evidence instead of replacing it. A relative identity
-    that carries a directory component is never equal to an absolute one.
+    Two absolute identities compare as resolved paths. Two relative identities
+    were recorded from some working directory this code cannot know, so they
+    match only when they are identical strings, and never match an absolute
+    identity: an unprovable match must keep existing evidence rather than
+    replace it.
     """
     if not left or not right:
         return False
     left_path = Path(left)
     right_path = Path(right)
-    if left_path.is_absolute() and right_path.is_absolute():
+    if left_path.is_absolute() != right_path.is_absolute():
+        return False
+    if left_path.is_absolute():
         try:
             return left_path.resolve() == right_path.resolve()
         except OSError:
             return False
-    bare = left_path.parent == Path(".") or right_path.parent == Path(".")
-    return bare and left_path.name == right_path.name
+    return left == right
 
 
 def migrate_legacy_sidecars(dest_dir: Path) -> list[Path]:
@@ -192,16 +193,7 @@ def receipt_matches_output(manifest: dict, output_path: Path) -> bool:
     """
     output_path = Path(output_path)
     recorded = receipt_output_identity(manifest)
-    if recorded is None or Path(recorded).name != output_path.name:
-        return False
-    recorded_path = Path(recorded)
-    if recorded_path.is_absolute():
-        recorded_parent = recorded_path.parent
-        if recorded_parent != output_path.parent and recorded_parent.is_dir():
-            # The recorded directory still exists but is not this one: the
-            # receipt was copied or renamed onto another note's name.
-            return False
-    return True
+    return recorded is not None and Path(recorded).name == output_path.name
 
 
 def receipt_conflicts_with_note(manifest: dict, manifest_path: Path) -> bool:

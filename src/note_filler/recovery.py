@@ -23,7 +23,6 @@ from typing import Any
 
 from .sidecars import (
     DELIVERY_MANIFEST_NAME,
-    output_path_for_receipt,
     receipt_conflicts_with_note,
     receipt_input_identity,
     receipt_output_identity,

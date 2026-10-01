@@ -488,3 +488,50 @@ def test_tests_package_registers_legacy_test_pipeline_alias():
     alias = sys.modules["test_pipeline"]
     assert alias is tests_package.test_pipeline
     assert alias.__name__.endswith("test_pipeline")
+
+
+def test_batch_of_same_stem_notes_keeps_both_outputs(tmp_path, monkeypatch):
+    """Two notes with the same file name must each get their own output pair."""
+    first_dir = tmp_path / "first"
+    second_dir = tmp_path / "second"
+    first_dir.mkdir()
+    second_dir.mkdir()
+    note_a = first_dir / "note.txt"
+    note_b = second_dir / "note.txt"
+    note_a.write_text("第一份筆記", encoding="utf-8")
+    note_b.write_text("第二份筆記", encoding="utf-8")
+    out_dir = tmp_path / "out"
+    monkeypatch.setattr(cli, "GrokClient", lambda: None)
+    monkeypatch.setattr(cli, "TwinkleClient", lambda **kwargs: None)
+    monkeypatch.setattr(cli, "LawLookup", lambda path: None)
+    monkeypatch.setattr(cli, "run_pipeline", lambda *a, **k: _Doc())
+    monkeypatch.setattr(cli, "to_markdown", lambda doc: "批次成品內容。")
+    monkeypatch.setattr(cli, "TASK_STATE_DIR", tmp_path / "state")
+
+    class _Metrics:
+        def to_dict(self):
+            return {}
+
+    monkeypatch.setattr(cli, "calculate_polaris_metrics", lambda **kwargs: _Metrics())
+
+    args = ["--outdir", str(out_dir), "--db", str(tmp_path / "missing.db")]
+    assert cli.main([str(note_a), *args]) == 0
+    assert cli.main([str(note_b), *args]) == 0
+
+    outputs = sorted(out_dir.glob("*.訂正稿.md"))
+    assert len(outputs) == 2
+    for output in outputs:
+        receipt = json.loads(
+            output.with_name(f"{output.name}.delivery_manifest.json").read_text(encoding="utf-8")
+        )
+        report = output.with_name(f"{output.name}.binding_report.json")
+        assert receipt["output_path"] == str(output)
+        assert receipt["authoritative"] is True
+        assert report.is_file()
+        assert receipt["binding_report_path"] == str(report)
+    assert {
+        json.loads(
+            output.with_name(f"{output.name}.delivery_manifest.json").read_text(encoding="utf-8")
+        )["input_path"]
+        for output in outputs
+    } == {str(note_a), str(note_b)}

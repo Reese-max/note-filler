@@ -295,6 +295,31 @@ def write_delivery_receipt(
     return manifest_path
 
 
+def _same_input_file(recorded_input: str, input_path: Path, out_dir: Path) -> bool:
+    """Whether a recorded input identity names this input file.
+
+    A legacy receipt may have recorded the input relative to its own working
+    directory, so the output directory and its parent are tried as bases.
+    """
+    try:
+        target = input_path.resolve()
+    except OSError:
+        return False
+    recorded = Path(recorded_input)
+    bases = [recorded.parent] if recorded.is_absolute() else [
+        out_dir,
+        out_dir.parent,
+        Path.cwd(),
+    ]
+    for base in bases:
+        try:
+            if (base / recorded.name if recorded.is_absolute() else base / recorded).resolve() == target:
+                return True
+        except OSError:
+            continue
+    return False
+
+
 def _carried_forward(manifest_path: Path, output_path: Path, input_path: Path) -> dict:
     """Keep this note's recorded delivery facts when a later attempt fails.
 
@@ -311,10 +336,7 @@ def _carried_forward(manifest_path: Path, output_path: Path, input_path: Path) -
     recorded_input = previous.get("input_canonical_path") or previous.get("input_path")
     if not isinstance(recorded_input, str) or not recorded_input:
         return {}
-    try:
-        if Path(recorded_input).resolve() != input_path.resolve():
-            return {}
-    except OSError:
+    if not _same_input_file(recorded_input, input_path, output_path.parent):
         return {}
     # Recorded recovery history belongs to the note, not to one attempt, and
     # the metrics of an earlier delivery must not be advertised by a failure.
@@ -334,6 +356,8 @@ def _carried_forward(manifest_path: Path, output_path: Path, input_path: Path) -
             }
         )
     archive = manifest_path.with_name(f"{manifest_path.name}.prev")
+    # One archive per note keeps the first replaced record; later attempts would
+    # otherwise push the earliest one out of the directory.
     if not archive.exists():
         try:
             archive.write_bytes(manifest_path.read_bytes())
@@ -347,7 +371,7 @@ def _carried_forward(manifest_path: Path, output_path: Path, input_path: Path) -
                 error=str(exc),
             )
     if archive.is_file():
-        carried["previous_receipt_archive"] = archive.name
+        carried["archived_receipt"] = archive.name
     return carried
 
 
@@ -397,36 +421,37 @@ def _output_for_input(path: Path, dest_dir: Path, fmt: str) -> Path:
     alternate = dest_dir / f"{path.stem}.{source_id}.訂正稿.{fmt}"
     resolved_input = path.resolve()
 
-    def records_this_input(receipt: dict, base: Path) -> bool:
-        """Whether a receipt was written for this input.
+    def ownership_of(receipt: dict, base: Path) -> str:
+        """``this`` / ``other`` / ``ambiguous`` ownership of a receipt.
 
         Legacy receipts recorded the input relative to their own working
-        directory, so a relative path is resolved against the receipt's
-        directory and the current directory before giving up.
+        directory. A recorded path that carries a directory component can be
+        resolved and trusted; a bare name only matches a same-named file in the
+        current directory, which proves nothing about who wrote the receipt, so
+        it stays ambiguous and the name is treated as unattributed.
         """
         recorded_input = receipt.get("input_canonical_path") or receipt.get("input_path")
         if not isinstance(recorded_input, str) or not recorded_input:
-            return False
+            return "other"
         recorded_path = Path(recorded_input)
         if recorded_path.is_absolute():
             try:
-                return recorded_path.resolve() == resolved_input
+                return "this" if recorded_path.resolve() == resolved_input else "other"
             except OSError:
-                return False
-        # Legacy receipts recorded the input relative to their own working
-        # directory. A bare name can only mean that working directory, while a
-        # path with a directory component may point at the output's own
-        # directory (a common run shape: cwd = the output directory).
-        bases = {Path.cwd()}
-        if recorded_path.parent != Path("."):
-            bases |= {base, base.parent}
+                return "other"
+        bases = {base, base.parent} if recorded_path.parent != Path(".") else set()
         for candidate_base in bases:
             try:
                 if (candidate_base / recorded_path).resolve() == resolved_input:
-                    return True
+                    return "this"
             except OSError:
                 continue
-        return False
+        try:
+            if (Path.cwd() / recorded_path).resolve() == resolved_input:
+                return "ambiguous" if recorded_path.parent == Path(".") else "this"
+        except OSError:
+            pass
+        return "other"
 
     def read_receipt(receipt_path: Path) -> dict | None:
         if not receipt_path.is_file():
@@ -441,15 +466,19 @@ def _output_for_input(path: Path, dest_dir: Path, fmt: str) -> Path:
         """``this`` / ``other`` / ``unknown`` ownership evidence for a name."""
         receipt = read_receipt(delivery_manifest_path(candidate))
         if receipt is not None:
-            return "this" if records_this_input(receipt, candidate.parent) else "other"
+            claim = ownership_of(receipt, candidate.parent)
+            return "unknown" if claim == "ambiguous" else claim
         latest = read_receipt(candidate.parent / MANIFEST_NAME)
         if latest is None:
             return "unknown"
         latest_output = latest.get("sidecar_for_output") or latest.get("output_path")
         if not isinstance(latest_output, str) or Path(latest_output).name != candidate.name:
             return "unknown"
-        if records_this_input(latest, candidate.parent):
+        claim = ownership_of(latest, candidate.parent)
+        if claim == "this":
             return "this"
+        if claim == "ambiguous":
+            return "unknown"
         # The copy alone keeps a name only while that note's own artifacts
         # survive; once they are gone the name is free again.
         return "other" if occupied(candidate) else "unknown"

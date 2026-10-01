@@ -22,6 +22,7 @@ from typing import Any
 from .sidecars import (
     DELIVERY_MANIFEST_NAME,
     delivery_manifest_path,
+    receipt_conflicts_with_note,
     is_receipt_file_name,
     output_identity_key,
     receipt_input_identity,
@@ -1230,6 +1231,20 @@ def rerun_note(
             note_id=derive_note_id(str(manifest_path)),
             source_path=str(manifest_path),
             error_message=f"Manifest 讀取失敗: {exc}",
+        )
+        return None, alerts
+
+    if receipt_conflicts_with_note(manifest_data, manifest_path):
+        # A receipt that names another note's output is not this note's
+        # evidence, so it must never be rewritten with recomputed metrics.
+        _emit_alert(
+            alerts,
+            alert_type="rerun_failure",
+            severity="critical",
+            metric_name="pipeline",
+            note_id=derive_note_id(str(manifest_path)),
+            source_path=str(manifest_path),
+            error_message=f"回執記錄的是其他筆記的成品，拒絕重跑:{manifest_path}",
         )
         return None, alerts
 

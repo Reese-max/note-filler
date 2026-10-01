@@ -31,11 +31,13 @@ names its own report in `binding_report_path` / `binding_report_content_hash`,
 and a legacy receipt without those fields may fall back to the copy. A receipt
 that states no report of its own never does.
 
-Receipts and their artifacts are bound by name, so moving or archiving an output
-directory keeps a note resolvable: recovery then probes the sibling file beside
-the receipt — the corrected note and its binding report, which live beside it —
-and only when a recorded content hash exists and matches. A receipt copied onto
-another note's name is still rejected while its recorded directory exists.
+Receipts and their artifacts are bound by name, so relative paths, symlinked
+output directories and moves or archives of the whole directory all keep a note
+resolvable. Recovery additionally probes the sibling file beside the receipt —
+the corrected note and its binding report, which live beside it — when the
+recorded path is gone and a recorded content hash exists to match. A receipt
+whose recorded output names a different note is rejected by recovery, metrics
+and rerun alike.
 
 Copy policy:
 
@@ -43,9 +45,9 @@ Copy policy:
 - A failure receipt refreshes the copy only while the copy still belongs to the
   same note, so a failing note never replaces another note's latest delivery.
   Identity is compared by resolved path when both sides are absolute, and by
-  file name only for a bare relative legacy identity; a relative identity that
-  carries a directory component is never equal to an absolute one, so an
-  ambiguous match preserves the existing copy.
+  recorded identically. A relative identity is never equal to an absolute one,
+  and two relative identities match only when they are the same string, so an
+  unprovable match preserves the existing copy.
 - Recovery or a metrics rerun invoked with the directory-level path is routed to
   the matching note-owned receipt, which is what gets read and updated; the copy
   is recreated when it is absent and refreshed when it still names that output.
@@ -68,16 +70,24 @@ but it never erases what the note has already recorded:
   and are carried into the failure receipt;
 - the note's binding report identity is carried only while the note-owned report
   still hashes to the recorded value, so metrics stay bound to this note;
-- the metrics of an earlier delivery are **not** carried: a failed note must not
-  be counted as a successful delivery;
-- the replaced receipt is archived once as `<output>.delivery_manifest.json.prev`
-  (recorded in the receipt as `previous_receipt_archive`), so the delivered
-  record survives. Archive files are not matched by any scan pattern.
+- the metrics of an earlier delivery are **not** carried by the CLI's failure
+  receipt: a note this version failed must not be counted as a successful
+  delivery. Recovery is different by design — it never rewrites a delivered
+  note and keeps the metrics already recorded while it downgrades the status,
+  so a note under recovery stays visible with its last known scores;
+- the first replaced receipt is archived once as
+  `<output>.delivery_manifest.json.prev` (recorded in the receipt as
+  `archived_receipt`), so the earliest record of the note survives. Archive
+  files are not matched by any scan pattern.
 
 ## Ownership and compatibility rules
 
 - Output naming reads ownership from the note's own receipt. A receipt filed
   under another note's output name is never treated as evidence for that note.
+  A pre-upgrade receipt that recorded only a bare relative input name cannot be
+  attributed when the note is processed again from another working directory:
+  the name is then treated as unattributed, so the note receives a
+  source-suffixed output instead of overwriting the earlier one.
 - A pre-upgrade output keeps its name while the directory-level copy still names
   it and its artifacts still exist; the next delivery into that directory first
   promotes the shared pair to the earlier note's own paths
