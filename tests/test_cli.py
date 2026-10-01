@@ -471,3 +471,20 @@ def test_main_missing_token_and_db_both_warn(tmp_path, monkeypatch, capsys):
     assert code == 0
     assert "TWINKLE_HUB_TOKEN" in captured.err
     assert "法條 DB 不存在" in captured.err
+
+
+def test_tests_package_registers_legacy_test_pipeline_alias():
+    """Suites import the shared fixtures as top-level `test_pipeline`.
+
+    Declaring `tests` as a package makes pytest import test modules as
+    `tests.*`, so `tests/__init__.py` registers the legacy top-level name once.
+    A foreign `tests` package earlier on sys.path would otherwise shadow the
+    repository's suite.
+    """
+    import sys
+
+    import tests as tests_package
+
+    alias = sys.modules["test_pipeline"]
+    assert alias is tests_package.test_pipeline
+    assert alias.__name__.endswith("test_pipeline")

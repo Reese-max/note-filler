@@ -226,8 +226,8 @@ def verify_delivery_artifacts(
 def _append_history(history_path: Path, attempt: dict[str, Any]) -> None:
     """以檔案鎖追加單筆恢復嘗試，既有歷程絕不覆寫。
 
-    同一次失敗特徵（errors 的 kind+code 集合與 status_before）已存在時
-    回傳 False 不重複追加，避免並行 resume 重複落盤。
+    同一筆記內重複的失敗特徵（errors 的 kind+code 集合、目標狀態與筆記身分）
+    不重複追加，避免並行 resume 重複落盤；跨筆記的相同失敗各自留痕。
     """
     history_path.parent.mkdir(parents=True, exist_ok=True)
     signature = _attempt_signature(attempt)

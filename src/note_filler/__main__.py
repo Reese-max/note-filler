@@ -31,6 +31,7 @@ from .sidecars import (
     binding_report_path,
     delivery_manifest_path,
     may_write_latest_copy,
+    migrate_legacy_sidecars,
 )
 from .task_state import TaskStage, TaskStateManager, build_task_key
 
@@ -162,6 +163,17 @@ def write_delivery_receipt(
     """
     manifest_path = delivery_manifest_path(output_path)
     legacy_path = output_path.parent / MANIFEST_NAME
+    # A pre-upgrade note sharing this directory keeps its own receipt and report
+    # before the latest-output copies below are replaced.
+    for migrated in migrate_legacy_sidecars(output_path.parent):
+        audit_event(
+            logger,
+            "legacy_sidecar_migrated",
+            input_path,
+            level=logging.INFO,
+            manifest_path=migrated,
+            reason="directory-level evidence promoted to its note-owned path",
+        )
 
     existing_manifest_path = (
         manifest_path if manifest_path.exists() else legacy_path
@@ -233,6 +245,15 @@ def write_delivery_receipt(
             ).hexdigest()
         ),
     }
+    if status == "delivered" and not receipt["binding_report_content_hash"]:
+        audit_event(
+            logger,
+            "binding_report_hash_unavailable",
+            input_path,
+            level=logging.WARNING,
+            manifest_path=binding_report_path(output_path),
+            reason="binding report exists but could not be hashed; readers fall back to its note-owned path",
+        )
     if error is not None:
         receipt["error"] = error
     if polaris_metrics is not None:
@@ -361,7 +382,9 @@ def _output_for_input(path: Path, dest_dir: Path, fmt: str) -> Path:
         return alternate
     if base_claim == "unknown" and not occupied(base):
         return base
-    if alternate_claim == "other":
+    # The source-suffixed name belongs to this input alone; an existing file
+    # there that no receipt attributes to it is another note's output.
+    if alternate_claim == "other" or (alternate_claim == "unknown" and occupied(alternate)):
         raise RuntimeError(f"輸出檔名衝突，拒絕覆寫既有訂正稿: {alternate}")
     return alternate
 
@@ -608,6 +631,17 @@ def main(argv: list[str] | None = None) -> int:
             try:
                 dest = planned_dest or _output_for_input(f, dest_dir, args.format)
             except RuntimeError as collision:
+                # Both candidate names belong to other notes, so no receipt can
+                # be written for this input without destroying their evidence.
+                audit_event(
+                    logger,
+                    "delivery_receipt_not_written_name_collision",
+                    f,
+                    level=logging.ERROR,
+                    error_type=type(collision).__name__,
+                    error=str(collision),
+                    reason="every candidate output name is owned by another note",
+                )
                 print(f"❌ {f}:失敗回執無法安全定位:{collision}", file=sys.stderr)
                 continue
             if r is not None and isinstance(r.get("delivery_status"), dict):

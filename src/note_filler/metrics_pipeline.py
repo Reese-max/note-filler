@@ -264,7 +264,7 @@ def _load_output_metrics(
         logger.warning("output_metrics_unavailable path=%s reason=content_hash_mismatch", markdown_path)
         return "metrics_unavailable", None, None, quality_debt
 
-    report_path = resolve_binding_report_path(markdown_path)
+    report_path = resolve_binding_report_path(markdown_path, manifest)
     if not report_path.exists():
         return "metrics_unavailable", None, None, quality_debt
     expected_report_hash = manifest.get("binding_report_content_hash")
@@ -1236,13 +1236,16 @@ def rerun_note(
     source_path = receipt_input_identity(manifest_data) or str(manifest_path)
     note_id = derive_note_id(source_path)
 
-    # Prefer the report for this output; older manifests use the directory copy.
+    # Prefer the report for this output; a receipt that states no report of its
+    # own never borrows the directory-level copy.
     output_path = receipt_output_identity(manifest_data)
-    binding_report_path = (
-        resolve_binding_report_path(manifest_path.parent / Path(output_path).name)
-        if output_path
-        else manifest_path.parent / "binding_report.json"
-    )
+    if output_path:
+        report_path = resolve_binding_report_path(
+            manifest_path.parent / Path(output_path).name, manifest_data
+        )
+    else:
+        report_path = manifest_path.parent / "binding_report.json"
+    binding_report_path = report_path
     if not binding_report_path.exists():
         _emit_alert(
             alerts,

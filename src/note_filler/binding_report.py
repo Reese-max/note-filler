@@ -34,7 +34,7 @@ from note_filler.correction import (
     related_knowledge_matches_views,
 )
 from note_filler.write import CITATION_SPAN_KEYS, citation_span_issues
-from .sidecars import BINDING_REPORT_NAME, binding_report_path
+from .sidecars import BINDING_REPORT_NAME, binding_report_path, migrate_legacy_sidecars
 
 SCHEMA_V1 = "note_filler.binding_report.v1"
 SCHEMA_ID = "note_filler.binding_report.v2"
@@ -1609,6 +1609,9 @@ def write_binding_report(output_path: Path, correction) -> Path:
     parse_binding_report(report)
     dest_dir = output_path.parent
     dest_dir.mkdir(parents=True, exist_ok=True)
+    # A pre-upgrade note in this directory keeps its own copy of the evidence
+    # before the latest-output copies below are replaced.
+    migrate_legacy_sidecars(dest_dir)
     report_path = binding_report_path(output_path)
     report_path.write_text(
         json.dumps(report, ensure_ascii=False, indent=2),

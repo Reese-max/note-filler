@@ -33,6 +33,61 @@ def is_receipt_file_name(name: str) -> bool:
     return name == DELIVERY_MANIFEST_NAME or name.endswith(f".{DELIVERY_MANIFEST_NAME}")
 
 
+def same_recorded_path(left: str | None, right: str | None) -> bool:
+    """Compare two recorded identities, tolerating legacy relative paths.
+
+    Two absolute identities compare as resolved paths. A relative identity can
+    only be compared by file name, which is the weaker but safe direction: an
+    ambiguous match keeps existing evidence instead of replacing it.
+    """
+    if not left or not right:
+        return False
+    left_path = Path(left)
+    right_path = Path(right)
+    if left_path.is_absolute() and right_path.is_absolute():
+        try:
+            return left_path.resolve() == right_path.resolve()
+        except OSError:
+            return False
+    return left_path.name == right_path.name
+
+
+def migrate_legacy_sidecars(dest_dir: Path) -> list[Path]:
+    """Promote a pre-upgrade directory-level pair to the note's own paths.
+
+    A legacy output whose only evidence is the shared pair keeps it once a
+    later note writes the next pair into the same directory.
+    """
+    dest_dir = Path(dest_dir)
+    migrated: list[Path] = []
+    legacy_receipt_path = dest_dir / DELIVERY_MANIFEST_NAME
+    legacy_report_path = dest_dir / BINDING_REPORT_NAME
+    try:
+        legacy = json.loads(legacy_receipt_path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return migrated
+    if not isinstance(legacy, dict):
+        return migrated
+    output = receipt_output_identity(legacy)
+    if output:
+        owned_receipt = delivery_manifest_path(dest_dir / Path(output).name)
+        if not owned_receipt.exists():
+            receipt = dict(legacy)
+            receipt.update({"authoritative": True, "sidecar_scope": "output"})
+            receipt.pop("sidecar_for_output", None)
+            owned_receipt.write_text(
+                json.dumps(receipt, ensure_ascii=False, indent=2),
+                encoding="utf-8",
+                newline="\n",
+            )
+            migrated.append(owned_receipt)
+        if not binding_report_path(dest_dir / Path(output).name).exists() and legacy_report_path.is_file():
+            owned_report = binding_report_path(dest_dir / Path(output).name)
+            owned_report.write_bytes(legacy_report_path.read_bytes())
+            migrated.append(owned_report)
+    return migrated
+
+
 def output_path_for_receipt(manifest_path: Path) -> Path | None:
     """The output a note-owned receipt is filed under, or None for a legacy copy."""
     name = Path(manifest_path).name
@@ -48,10 +103,21 @@ def resolve_delivery_manifest_path(output_path: Path) -> Path:
     return owned if owned.is_file() else Path(output_path).parent / DELIVERY_MANIFEST_NAME
 
 
-def resolve_binding_report_path(output_path: Path) -> Path:
-    """Prefer the note-owned report; accept an older directory-level report."""
+def resolve_binding_report_path(output_path: Path, receipt: dict | None = None) -> Path:
+    """Resolve the binding report for an output.
+
+    The note-owned report wins. The directory-level copy is accepted only for a
+    receipt written before per-note reports existed: a receipt that states its
+    own report identity (``binding_report_content_hash`` present, empty when the
+    note has none) must never borrow another note's report.
+    """
+    output_path = Path(output_path)
     owned = binding_report_path(output_path)
-    return owned if owned.is_file() else Path(output_path).parent / BINDING_REPORT_NAME
+    if owned.is_file():
+        return owned
+    if receipt is not None and "binding_report_content_hash" in receipt:
+        return owned
+    return output_path.parent / BINDING_REPORT_NAME
 
 
 def resolve_manifest_for_update(manifest_path: Path) -> Path:
@@ -177,7 +243,9 @@ def may_write_latest_copy(legacy_path: Path, receipt: dict) -> bool:
     if not isinstance(latest, dict):
         logger.warning("latest_copy_malformed path=%s action=preserved", legacy_path)
         return False
-    return receipt_input_identity(latest) == receipt_input_identity(receipt)
+    return same_recorded_path(
+        receipt_input_identity(latest), receipt_input_identity(receipt)
+    )
 
 
 def write_manifest_and_latest(manifest_path: Path, data: dict) -> None:
@@ -217,7 +285,9 @@ def write_manifest_and_latest(manifest_path: Path, data: dict) -> None:
     except (OSError, ValueError):
         logger.warning("latest_copy_unreadable path=%s action=preserved", legacy)
         return
-    if latest is not None and receipt_output_identity(latest) != receipt_output_identity(data):
+    if latest is not None and not same_recorded_path(
+        receipt_output_identity(latest), receipt_output_identity(data)
+    ):
         return
     legacy_data = dict(data)
     legacy_data.update(

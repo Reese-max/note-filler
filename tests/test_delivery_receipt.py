@@ -656,6 +656,43 @@ def test_recovery_rejects_receipt_filed_under_another_note(tmp_path, monkeypatch
     assert metrics_status == "metrics_unavailable"
 
 
+def test_legacy_relative_copy_is_refreshed_by_the_same_notes_failure(tmp_path, monkeypatch):
+    """A copy written with relative paths still tracks its own note."""
+    note = tmp_path / "note.txt"
+    note.write_text("source", encoding="utf-8")
+    out = tmp_path / "out"
+    out.mkdir()
+    (out / "note.訂正稿.md").write_text("# 訂正稿\n舊成品。", encoding="utf-8")
+    (out / "binding_report.json").write_text(json.dumps({"schema": "x"}), encoding="utf-8")
+    (out / cli.MANIFEST_NAME).write_text(
+        json.dumps(
+            {
+                "input_path": "note.txt",
+                "output_path": "note.訂正稿.md",
+                "status": "delivered",
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(cli, "GrokClient", lambda: None)
+    monkeypatch.setattr(cli, "TwinkleClient", lambda **kwargs: None)
+    monkeypatch.setattr(cli, "LawLookup", lambda path: None)
+    monkeypatch.setattr(cli, "TASK_STATE_DIR", tmp_path / "state")
+    monkeypatch.setattr(
+        cli, "run_pipeline", lambda *a, **k: (_ for _ in ()).throw(RuntimeError("boom"))
+    )
+
+    assert cli.main(["note.txt", "--outdir", str(out), "--db", str(tmp_path / "missing.db")]) == 1
+
+    failed = json.loads(delivery_manifest_path(out / "note.訂正稿.md").read_text(encoding="utf-8"))
+    assert failed["status"] == "failed"
+    copy = json.loads((out / cli.MANIFEST_NAME).read_text(encoding="utf-8"))
+    assert copy["status"] == "failed"
+    assert copy["authoritative"] is False
+
+
 def test_failed_note_keeps_pre_upgrade_latest_copy_of_delivered_note(tmp_path, monkeypatch):
     """A failure receipt must not erase another note's only legacy receipt."""
     first = tmp_path / "first.txt"
@@ -726,8 +763,75 @@ def test_unattributable_output_is_never_overwritten_by_another_note(tmp_path, mo
     monkeypatch.setattr(cli, "TASK_STATE_DIR", tmp_path / "state")
     monkeypatch.setattr(cli, "calculate_polaris_metrics", lambda **kwargs: _Metrics())
 
-    legacy_output = out / "note.訂正稿.md"
+    # A corrected note whose receipt and report are both gone: nothing
+    # attributes the name to any note.
+    unattributed = out / "note.訂正稿.md"
+    unattributed.write_text("# 訂正稿\n舊成品。", encoding="utf-8")
+
+    args = ["--outdir", str(out), "--db", str(tmp_path / "missing.db")]
+    assert cli.main([str(second), *args]) == 0
+    second_output = cli._output_for_input(second, out, "md")
+    assert second_output != unattributed
+    assert unattributed.read_text(encoding="utf-8") == "# 訂正稿\n舊成品。"
+
+    rerun_target = cli._output_for_input(first, out, "md")
+    assert rerun_target != unattributed
+    assert not rerun_target.exists()
+    assert cli._output_for_input(first, out, "md") == rerun_target
+
+
+def test_source_suffixed_name_is_never_overwritten(tmp_path, monkeypatch):
+    """An existing file at the source-suffixed name blocks the write."""
+    first_dir = tmp_path / "first"
+    second_dir = tmp_path / "second"
+    first_dir.mkdir()
+    second_dir.mkdir()
+    first = first_dir / "note.txt"
+    second = second_dir / "note.txt"
+    first.write_text("first", encoding="utf-8")
+    second.write_text("second", encoding="utf-8")
+    out = tmp_path / "out"
+    out.mkdir()
+    monkeypatch.setattr(cli, "GrokClient", lambda: None)
+    monkeypatch.setattr(cli, "TwinkleClient", lambda **kwargs: None)
+    monkeypatch.setattr(cli, "LawLookup", lambda path: None)
+    monkeypatch.setattr(cli, "run_pipeline", lambda *a, **k: _FakeDoc())
+    monkeypatch.setattr(cli, "to_markdown", lambda doc: "# 訂正稿\n完整內容。")
+    monkeypatch.setattr(cli, "TASK_STATE_DIR", tmp_path / "state")
+    monkeypatch.setattr(cli, "calculate_polaris_metrics", lambda **kwargs: _Metrics())
+
+    base = out / "note.訂正稿.md"
+    base.write_text("# 訂正稿\n既有成品。", encoding="utf-8")
+    alternate = out / f"note.{hashlib.sha256(str(second.resolve()).encode()).hexdigest()[:12]}.訂正稿.md"
+    alternate.write_text("# 訂正稿\n別人的成品。", encoding="utf-8")
+
+    assert cli.main([str(second), "--outdir", str(out), "--db", str(tmp_path / "missing.db")]) == 1
+    assert base.read_text(encoding="utf-8") == "# 訂正稿\n既有成品。"
+    assert alternate.read_text(encoding="utf-8") == "# 訂正稿\n別人的成品。"
+    assert not delivery_manifest_path(alternate).exists()
+
+
+def test_legacy_directory_pair_is_migrated_to_the_note_owned_paths(tmp_path, monkeypatch):
+    """A pre-upgrade note keeps its evidence when a later note delivers."""
+    first = tmp_path / "first.txt"
+    second = tmp_path / "second.txt"
+    first.write_text("first source", encoding="utf-8")
+    second.write_text("second source", encoding="utf-8")
+    out = tmp_path / "out"
+    out.mkdir()
+    monkeypatch.setattr(cli, "GrokClient", lambda: None)
+    monkeypatch.setattr(cli, "TwinkleClient", lambda **kwargs: None)
+    monkeypatch.setattr(cli, "LawLookup", lambda path: None)
+    monkeypatch.setattr(cli, "run_pipeline", lambda *a, **k: _FakeDoc())
+    monkeypatch.setattr(cli, "to_markdown", lambda doc: "# 訂正稿\n完整內容。")
+    monkeypatch.setattr(cli, "TASK_STATE_DIR", tmp_path / "state")
+    monkeypatch.setattr(cli, "calculate_polaris_metrics", lambda **kwargs: _Metrics())
+
+    legacy_output = out / "first.訂正稿.md"
     legacy_output.write_text("# 訂正稿\n舊成品。", encoding="utf-8")
+    legacy_report = out / "binding_report.json"
+    legacy_report.write_text(json.dumps({"schema": "note_filler.binding_report.v2"}), encoding="utf-8")
+    legacy_report_text = legacy_report.read_text(encoding="utf-8")
     (out / cli.MANIFEST_NAME).write_text(
         json.dumps(
             {
@@ -742,19 +846,65 @@ def test_unattributable_output_is_never_overwritten_by_another_note(tmp_path, mo
         encoding="utf-8",
     )
 
-    args = ["--outdir", str(out), "--db", str(tmp_path / "missing.db")]
-    assert cli.main([str(second), *args]) == 0
-    second_output = cli._output_for_input(second, out, "md")
-    assert second_output != legacy_output
-    assert legacy_output.read_text(encoding="utf-8") == "# 訂正稿\n舊成品。"
+    assert cli.main([str(second), "--outdir", str(out), "--db", str(tmp_path / "missing.db")]) == 0
 
-    # The later delivery replaced the directory-level copy, so nothing now
-    # attributes the earlier output; the safe rule keeps it and gives the
-    # earlier note a source-suffixed output instead of overwriting it.
-    rerun_target = cli._output_for_input(first, out, "md")
-    assert rerun_target != legacy_output
-    assert not rerun_target.exists()
-    assert cli._output_for_input(first, out, "md") == rerun_target
+    migrated_receipt = delivery_manifest_path(legacy_output)
+    migrated_report = binding_report_path(legacy_output)
+    assert migrated_receipt.is_file()
+    assert json.loads(migrated_receipt.read_text(encoding="utf-8"))["input_path"] == str(first)
+    assert json.loads(migrated_receipt.read_text(encoding="utf-8"))["authoritative"] is True
+    assert migrated_report.read_text(encoding="utf-8") == legacy_report_text
+    # The shared copies now describe the newer note only.
+    assert json.loads((out / cli.MANIFEST_NAME).read_text(encoding="utf-8"))["input_path"] == str(second)
+    assert legacy_report.read_text(encoding="utf-8") != legacy_report_text
+
+
+def test_failed_note_never_borrows_another_notes_report(tmp_path, monkeypatch):
+    """A receipt with no report of its own must not read the shared copy."""
+    first = tmp_path / "first.txt"
+    second = tmp_path / "second.txt"
+    first.write_text("first source", encoding="utf-8")
+    second.write_text("second source", encoding="utf-8")
+    out = tmp_path / "out"
+    monkeypatch.setattr(cli, "run_pipeline", lambda *a, **k: _FakeDoc())
+    monkeypatch.setattr(cli, "to_markdown", lambda doc: "# 訂正稿\n完整內容。")
+    state_dir = tmp_path / "state"
+
+    first_output = Path(cli.process_file(first, None, None, None, out, "md", state_dir=state_dir)["output"])
+    first_report = binding_report_path(first_output)
+
+    def fail_report(*args, **kwargs):
+        raise RuntimeError("synthetic report failure")
+
+    # The output lands, its report never does: the failure receipt then states
+    # that this note has no report of its own.
+    monkeypatch.setattr(cli, "write_binding_report", fail_report)
+    monkeypatch.setattr(cli, "GrokClient", lambda: None)
+    monkeypatch.setattr(cli, "TwinkleClient", lambda **kwargs: None)
+    monkeypatch.setattr(cli, "LawLookup", lambda path: None)
+    monkeypatch.setattr(cli, "TASK_STATE_DIR", state_dir)
+    assert cli.main([str(second), "--outdir", str(out), "--db", str(tmp_path / "missing.db")]) == 1
+
+    second_output = out / "second.訂正稿.md"
+    second_receipt = delivery_manifest_path(second_output)
+    failed = json.loads(second_receipt.read_text(encoding="utf-8"))
+    assert failed["status"] == "failed"
+    assert failed["binding_report_content_hash"] == ""
+    assert second_output.is_file()
+    assert not binding_report_path(second_output).exists()
+
+    # The shared report copy still holds the first note's report; the failed
+    # note must resolve metrics as unavailable instead of borrowing it.
+    assert (out / "binding_report.json").read_text(encoding="utf-8") == first_report.read_text(
+        encoding="utf-8"
+    )
+    status, *_ = _load_output_metrics(
+        second_output, hashlib.sha256(second_output.read_bytes()).hexdigest()
+    )
+    assert status == "metrics_unavailable"
+    record, alerts = rerun_note(second_receipt, MetricsCollectionConfig(scan_dirs=[out]))
+    assert record is None
+    assert any(alert.alert_type == "rerun_failure" for alert in alerts)
 
 
 def test_relative_input_uses_persisted_absolute_identity_after_cwd_change(tmp_path, monkeypatch):
