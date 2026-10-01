@@ -23,6 +23,9 @@ from typing import Any
 
 from .sidecars import (
     DELIVERY_MANIFEST_NAME,
+    receipt_conflicts_with_note,
+    receipt_input_identity,
+    receipt_output_identity,
     resolve_delivery_manifest_path,
     resolve_manifest_for_update,
     write_manifest_and_latest,
@@ -184,12 +187,26 @@ def verify_delivery_artifacts(
     """依已持久化 manifest 定位並探測全部 artifact。"""
     probes: list[ArtifactProbe] = []
 
-    output_path = manifest.get("output_canonical_path") or manifest.get("output_path")
+    output_path = receipt_output_identity(manifest)
+    if manifest_path is not None and receipt_conflicts_with_note(manifest, manifest_path):
+        # The receipt is filed under one note but records another note's output,
+        # so it is not evidence for the note it was opened as.
+        probes.append(
+            ArtifactProbe(
+                "delivery_manifest",
+                str(manifest_path),
+                exists=True,
+                expected_hash=None,
+                actual_hash=None,
+                code=ARTIFACT_INTEGRITY_MISMATCH,
+            )
+        )
+        return probes
     if isinstance(output_path, str) and output_path:
         expected = manifest.get("output_content_hash") or manifest.get("content_hash")
         probes.append(probe_artifact("generated", output_path, expected))
 
-    input_path = manifest.get("input_canonical_path") or manifest.get("input_path")
+    input_path = receipt_input_identity(manifest)
     if isinstance(input_path, str) and input_path:
         probes.append(
             probe_artifact("source", input_path, manifest.get("input_content_hash"))
@@ -291,15 +308,16 @@ def recover_delivery(
     """
     requested_path = Path(manifest_path)
     manifest_path = resolve_manifest_for_update(requested_path)
-    # A caller may deliberately inspect an edited legacy copy. Probe that
-    # requested evidence, then persist the result to the matching owned receipt.
-    if not requested_path.is_file():
+    # A latest-only path is routed to its authoritative note receipt, and that
+    # receipt is what gets read and updated: a stale or hand-edited copy must
+    # never revert the recorded recovery state of its note.
+    if not manifest_path.is_file():
         return RecoveryVerdict(
             verified=False,
             status="failed",
             errors=[{
                 "kind": "delivery_manifest",
-                "path": str(requested_path),
+                "path": str(manifest_path),
                 "code": ARTIFACT_MISSING,
                 "message": "交付狀態檔不存在，無法驗證已持久化 artifact",
             }],
@@ -308,14 +326,14 @@ def recover_delivery(
         )
 
     try:
-        manifest = json.loads(requested_path.read_text(encoding="utf-8"))
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     except (json.JSONDecodeError, OSError) as exc:
         return RecoveryVerdict(
             verified=False,
             status="failed",
             errors=[{
                 "kind": "delivery_manifest",
-                "path": str(requested_path),
+                "path": str(manifest_path),
                 "code": ARTIFACT_INTEGRITY_MISMATCH,
                 "message": f"交付狀態檔損壞，無法驗證已持久化 artifact: {exc}",
             }],
@@ -329,7 +347,7 @@ def recover_delivery(
             status="failed",
             errors=[{
                 "kind": "delivery_manifest",
-                "path": str(requested_path),
+                "path": str(manifest_path),
                 "code": ARTIFACT_INTEGRITY_MISMATCH,
                 "message": "交付狀態檔非 JSON 物件，無法驗證已持久化 artifact",
             }],
@@ -337,8 +355,8 @@ def recover_delivery(
             history_preserved=True,
         )
 
-    probes = verify_delivery_artifacts(manifest, requested_path)
-    errors = [_probe_error(p) for p in probes if p.code]
+    probes = verify_delivery_artifacts(manifest, manifest_path)
+    errors = [_probe_error(probe) for probe in probes if probe.code]
     history_path = manifest_path.parent / RECOVERY_HISTORY_NAME
 
     if not errors:
@@ -354,7 +372,7 @@ def recover_delivery(
     new_status = force_status if force_status in ("failed", "retryable") else "retryable"
     attempt = {
         "note_manifest_path": str(manifest_path.resolve()),
-        "note_source_path": manifest.get("input_canonical_path") or manifest.get("input_path"),
+        "note_source_path": receipt_input_identity(manifest),
         "note_source_hash": manifest.get("input_content_hash"),
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "status_before": manifest.get("status"),

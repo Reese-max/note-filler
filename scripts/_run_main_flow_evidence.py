@@ -17,6 +17,7 @@ from note_filler.knowledge.law_lookup import LawLookup
 from note_filler.llm import GrokClient
 from note_filler.pipeline import require_non_empty_note_product, run_pipeline
 from note_filler.retrieve.twinkle import TwinkleClient
+from note_filler.sidecars import resolve_delivery_manifest_path
 
 
 def main():
@@ -57,7 +58,13 @@ def main():
     # Verify artifacts
     print("\n=== ARTIFACT VERIFICATION ===")
     md_files = list(out_dir.glob("*.md"))
-    manifest_path = out_dir / MANIFEST_NAME
+    # Prefer the note-owned receipt; the directory-level manifest is only a
+    # latest-output convenience copy (see docs/batch-sidecars.md).
+    manifest_path = (
+        resolve_delivery_manifest_path(md_files[0])
+        if md_files
+        else out_dir / MANIFEST_NAME
+    )
 
     for f in out_dir.iterdir():
         print(f"  {f.name} ({f.stat().st_size} bytes)")

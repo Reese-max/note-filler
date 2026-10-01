@@ -249,6 +249,49 @@ class TestScanAndCollectMetrics:
         assert len(records) == 1
         assert records[0].manifest_path == str(owned)
 
+    def test_scan_keeps_relative_receipts_of_different_directories(self, tmp_path):
+        """Two legacy receipts recording the same file name stay two notes."""
+        first_dir = tmp_path / "first"
+        second_dir = tmp_path / "second"
+        first_dir.mkdir()
+        second_dir.mkdir()
+        first = _create_test_manifest(
+            first_dir, "delivery_manifest.json", _create_test_polaris_metrics()
+        )
+        second = _create_test_manifest(
+            second_dir, "delivery_manifest.json", _create_test_polaris_metrics()
+        )
+        for receipt, note in ((first, "first.txt"), (second, "second.txt")):
+            data = json.loads(receipt.read_text(encoding="utf-8"))
+            data["output_path"] = "output.md"
+            data["input_path"] = note
+            receipt.write_text(json.dumps(data), encoding="utf-8")
+
+        config = MetricsCollectionConfig(scan_dirs=[tmp_path], recursive=True)
+        records = scan_and_collect_metrics(config)
+
+        assert {Path(record.manifest_path) for record in records} == {first, second}
+
+    def test_scan_ignores_non_receipt_name_and_non_object_json(self, tmp_path):
+        """A stray name and a JSON array must not abort or pollute the scan."""
+        owned = _create_test_manifest(
+            tmp_path,
+            "note.md.delivery_manifest.json",
+            _create_test_polaris_metrics(),
+            output_name="note.md",
+        )
+        (tmp_path / "mydelivery_manifest.json").write_text(
+            owned.read_text(encoding="utf-8"), encoding="utf-8"
+        )
+        (tmp_path / "other.md.delivery_manifest.json").write_text(
+            "[1, 2, 3]", encoding="utf-8"
+        )
+
+        config = MetricsCollectionConfig(scan_dirs=[tmp_path], recursive=True)
+        records = scan_and_collect_metrics(config)
+
+        assert [Path(record.manifest_path) for record in records] == [owned]
+
     def test_scan_recursive(self, tmp_path):
         """測試遞迴掃描子目錄。"""
         # 建立子目錄結構

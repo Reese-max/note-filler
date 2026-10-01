@@ -10,6 +10,13 @@ import logging
 import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
+
+from note_filler.sidecars import (  # noqa: E402
+    output_identity_key,
+    receipt_input_identity,
+)
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
@@ -33,9 +40,9 @@ def _load_records_from_manifests(
     scan_dirs: list[Path],
     recursive: bool = True,
 ) -> list[dict]:
-    """從 delivery_manifest.json 蒐集 MetricsRecord。"""
+    """從 note-owned 與相容的 delivery_manifest.json 蒐集 MetricsRecord。"""
     records = []
-    seen_records: set[tuple[str, str]] = set()
+    seen_records: set[str] = set()
     for scan_dir in scan_dirs:
         if not scan_dir.exists():
             continue
@@ -55,28 +62,14 @@ def _load_records_from_manifests(
         for manifest_path in manifest_paths:
             try:
                 manifest_data = json.loads(manifest_path.read_text(encoding="utf-8"))
+                if not isinstance(manifest_data, dict):
+                    raise ValueError("manifest is not a JSON object")
                 polaris_metrics = manifest_data.get("polaris_metrics")
                 if not polaris_metrics:
                     continue
 
-                source_path = manifest_data.get("input_path", str(manifest_path))
-                output_path = (
-                    manifest_data.get("output_canonical_path")
-                    or manifest_data.get("output_path")
-                )
-                if isinstance(output_path, str) and output_path:
-                    resolved_output = Path(output_path)
-                    if not resolved_output.is_absolute():
-                        resolved_output = manifest_path.parent / resolved_output.name
-                    try:
-                        resolved_output = resolved_output.resolve()
-                    except OSError:
-                        resolved_output = resolved_output.absolute()
-                    record_id = ("output", str(resolved_output))
-                elif isinstance(source_path, str) and source_path:
-                    record_id = ("input", source_path)
-                else:
-                    record_id = ("manifest", str(manifest_path.resolve()))
+                source_path = receipt_input_identity(manifest_data) or str(manifest_path)
+                record_id = output_identity_key(manifest_path, manifest_data)
                 if record_id in seen_records:
                     continue
 

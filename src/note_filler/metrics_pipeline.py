@@ -22,6 +22,11 @@ from typing import Any
 from .sidecars import (
     DELIVERY_MANIFEST_NAME,
     delivery_manifest_path,
+    is_receipt_file_name,
+    output_identity_key,
+    receipt_input_identity,
+    receipt_matches_output,
+    receipt_output_identity,
     resolve_binding_report_path,
     resolve_delivery_manifest_path,
     resolve_manifest_for_update,
@@ -251,11 +256,7 @@ def _load_output_metrics(
 
     if not isinstance(manifest, dict):
         return "metrics_unavailable", None, None, quality_debt
-    recorded_output = manifest.get("output_path")
-    if recorded_output and (
-        Path(recorded_output).name != markdown_path.name
-        or (Path(recorded_output).is_absolute() and Path(recorded_output).resolve() != markdown_path.resolve())
-    ):
+    if receipt_output_identity(manifest) and not receipt_matches_output(manifest, markdown_path):
         logger.warning("output_metrics_unavailable path=%s reason=wrong_note_receipt", markdown_path)
         return "metrics_unavailable", None, None, quality_debt
     manifest_hash = manifest.get("content_hash")
@@ -728,7 +729,7 @@ def collect_metrics_from_manifest(
             )
             return None
         
-        source_path = manifest_data.get("input_canonical_path") or manifest_data.get("input_path", "")
+        source_path = receipt_input_identity(manifest_data) or ""
         note_id = derive_note_id(source_path)
         collection_time = datetime.now(timezone.utc).isoformat()
         
@@ -753,8 +754,7 @@ def scan_and_collect_metrics(
     回傳成功蒐集的 MetricsRecord 列表。
     """
     records: list[MetricsRecord] = []
-    seen_outputs: set[str] = set()
-    seen_manifests: set[Path] = set()
+    seen_keys: set[str] = set()
 
     for scan_dir in config.scan_dirs:
         if not scan_dir.exists():
@@ -774,38 +774,35 @@ def scan_and_collect_metrics(
         filtered = []
         for manifest_path in sorted(
             manifest_files,
-            key=lambda p: p.name == DELIVERY_MANIFEST_NAME,
+            key=lambda p: (p.name == DELIVERY_MANIFEST_NAME, str(p)),
         ):
+            if manifest_path.name.endswith(DELIVERY_MANIFEST_NAME) and not is_receipt_file_name(
+                manifest_path.name
+            ):
+                # A file such as ``mydelivery_manifest.json`` only matched the
+                # broad default pattern; it is not a receipt.
+                continue
             try:
                 manifest_data = json.loads(manifest_path.read_text(encoding="utf-8"))
-            except (OSError, ValueError, AttributeError):
-                manifest_data = {}
-            output = manifest_data.get("output_canonical_path") or manifest_data.get(
-                "output_path"
-            )
-            try:
-                manifest_key = manifest_path.resolve()
-            except OSError:
-                manifest_key = manifest_path.absolute()
-            if manifest_key in seen_manifests:
+            except (OSError, ValueError):
+                manifest_data = None
+            if not isinstance(manifest_data, dict):
+                # Unreadable or non-object receipts stay in the scan so the
+                # collector reports them per file instead of aborting the scan.
+                filtered.append(manifest_path)
                 continue
-            if manifest_path.name == DELIVERY_MANIFEST_NAME and isinstance(
-                output, str
-            ) and delivery_manifest_path(manifest_path.parent / Path(output).name) in found:
+            declared = manifest_data.get("sidecar_for_output") or receipt_output_identity(manifest_data)
+            if (
+                manifest_path.name == DELIVERY_MANIFEST_NAME
+                and isinstance(declared, str)
+                and declared
+                and delivery_manifest_path(manifest_path.parent / Path(declared).name) in found
+            ):
                 continue
-            if isinstance(output, str) and output:
-                resolved_output = Path(output)
-                if not resolved_output.is_absolute():
-                    resolved_output = manifest_path.parent / resolved_output.name
-                try:
-                    resolved_output = resolved_output.resolve()
-                except OSError:
-                    resolved_output = resolved_output.absolute()
-                key = str(resolved_output)
-                if key in seen_outputs:
-                    continue
-                seen_outputs.add(key)
-            seen_manifests.add(manifest_key)
+            key = output_identity_key(manifest_path, manifest_data)
+            if key in seen_keys:
+                continue
+            seen_keys.add(key)
             filtered.append(manifest_path)
         manifest_files = sorted(filtered)
         
@@ -1208,7 +1205,7 @@ def rerun_note(
     requested_path = Path(manifest_path)
     manifest_path = resolve_manifest_for_update(requested_path)
 
-    if not requested_path.exists():
+    if not manifest_path.exists():
         _emit_alert(
             alerts,
             alert_type="rerun_failure",
@@ -1216,32 +1213,34 @@ def rerun_note(
             metric_name="pipeline",
             note_id="unknown",
             source_path=str(requested_path),
-            error_message=f"Manifest 檔案不存在: {requested_path}",
+            error_message=f"Manifest 檔案不存在: {manifest_path}",
         )
         return None, alerts
 
+    # The authoritative receipt is read as well as written: a stale or
+    # hand-edited latest copy must never revert recorded recovery state.
     try:
-        manifest_data = json.loads(requested_path.read_text(encoding="utf-8"))
+        manifest_data = json.loads(manifest_path.read_text(encoding="utf-8"))
     except (json.JSONDecodeError, OSError) as exc:
         _emit_alert(
             alerts,
             alert_type="rerun_failure",
             severity="critical",
             metric_name="pipeline",
-            note_id=derive_note_id(str(requested_path)),
-            source_path=str(requested_path),
+            note_id=derive_note_id(str(manifest_path)),
+            source_path=str(manifest_path),
             error_message=f"Manifest 讀取失敗: {exc}",
         )
         return None, alerts
 
-    source_path = manifest_data.get("input_canonical_path") or manifest_data.get("input_path", str(manifest_path))
+    source_path = receipt_input_identity(manifest_data) or str(manifest_path)
     note_id = derive_note_id(source_path)
 
     # Prefer the report for this output; older manifests use the directory copy.
-    output_path = manifest_data.get("output_path")
+    output_path = receipt_output_identity(manifest_data)
     binding_report_path = (
         resolve_binding_report_path(manifest_path.parent / Path(output_path).name)
-        if isinstance(output_path, str) and output_path
+        if output_path
         else manifest_path.parent / "binding_report.json"
     )
     if not binding_report_path.exists():
@@ -1271,17 +1270,31 @@ def rerun_note(
         return None, alerts
 
     expected_report_hash = manifest_data.get("binding_report_content_hash")
-    if expected_report_hash and hashlib.sha256(binding_report_path.read_bytes()).hexdigest() != expected_report_hash:
-        _emit_alert(
-            alerts,
-            alert_type="rerun_failure",
-            severity="critical",
-            metric_name="pipeline",
-            note_id=note_id,
-            source_path=source_path,
-            error_message=f"binding_report.json 內容雜湊不符: {binding_report_path}",
-        )
-        return None, alerts
+    if expected_report_hash:
+        try:
+            actual_report_hash = hashlib.sha256(binding_report_path.read_bytes()).hexdigest()
+        except OSError as exc:
+            _emit_alert(
+                alerts,
+                alert_type="rerun_failure",
+                severity="critical",
+                metric_name="pipeline",
+                note_id=note_id,
+                source_path=source_path,
+                error_message=f"binding_report.json 讀取失敗: {exc}",
+            )
+            return None, alerts
+        if actual_report_hash != expected_report_hash:
+            _emit_alert(
+                alerts,
+                alert_type="rerun_failure",
+                severity="critical",
+                metric_name="pipeline",
+                note_id=note_id,
+                source_path=source_path,
+                error_message=f"binding_report.json 內容雜湊不符: {binding_report_path}",
+            )
+            return None, alerts
 
     # 從 manifest 取得 delivery_status
     delivery_status = manifest_data.get("delivery_status")

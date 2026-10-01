@@ -1,10 +1,13 @@
-"""Repository test package and compatibility alias for legacy test imports."""
+"""Repository test package.
+
+Several suites import the shared fixtures as a top-level ``test_pipeline``
+module. Declaring ``tests`` as a package makes pytest import test modules as
+``tests.*``, so the legacy top-level name is registered here — once, and
+without hiding an import failure behind a silent fallback.
+"""
 
 import sys
 
-try:
-    from . import test_pipeline as _test_pipeline
-except ImportError:
-    _test_pipeline = None
-else:
-    sys.modules.setdefault("test_pipeline", _test_pipeline)
+from . import test_pipeline
+
+sys.modules.setdefault("test_pipeline", test_pipeline)

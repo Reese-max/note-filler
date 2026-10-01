@@ -30,6 +30,7 @@ from .sidecars import (
     DELIVERY_MANIFEST_NAME,
     binding_report_path,
     delivery_manifest_path,
+    may_write_latest_copy,
 )
 from .task_state import TaskStage, TaskStateManager, build_task_key
 
@@ -250,11 +251,21 @@ def write_delivery_receipt(
             "sidecar_for_output": str(output_path),
         }
     )
-    legacy_path.write_text(
-        json.dumps(legacy_receipt, ensure_ascii=False, indent=2),
-        encoding="utf-8",
-        newline="\n",
-    )
+    if may_write_latest_copy(legacy_path, legacy_receipt):
+        legacy_path.write_text(
+            json.dumps(legacy_receipt, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+            newline="\n",
+        )
+    else:
+        audit_event(
+            logger,
+            "delivery_receipt_latest_copy_preserved",
+            input_path,
+            level=logging.INFO,
+            manifest_path=legacy_path,
+            reason="another note's delivery is the current latest copy",
+        )
     return manifest_path
 
 
@@ -292,47 +303,65 @@ def _iter_inputs(paths: list[str]) -> list[Path]:
 
 
 def _output_for_input(path: Path, dest_dir: Path, fmt: str) -> Path:
-    """Keep a prior note's output when two source folders share a filename."""
+    """Keep a prior note's output when two source folders share a filename.
+
+    Ownership comes from the note's own receipt, so it never depends on the
+    shared directory-level copy that a later note may legitimately replace. A
+    pre-upgrade output keeps its name while the copy still names it; when no
+    evidence attributes the name to any note, an existing output is left alone.
+    """
     base = dest_dir / f"{path.stem}.訂正稿.{fmt}"
-
-    def claimed(candidate: Path) -> bool:
-        return (
-            candidate.exists()
-            or delivery_manifest_path(candidate).exists()
-            or binding_report_path(candidate).exists()
-        )
-
-    def owned_by_this_input(candidate: Path) -> bool:
-        receipt_path = delivery_manifest_path(candidate)
-        if not receipt_path.is_file():
-            receipt_path = candidate.parent / MANIFEST_NAME
-        try:
-            receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
-            recorded_input = receipt.get("input_canonical_path", receipt["input_path"])
-            recorded_output = receipt.get("output_canonical_path")
-            return (
-                Path(recorded_input).resolve() == path.resolve()
-                and (
-                    Path(recorded_output).resolve() == candidate.resolve()
-                    if recorded_output
-                    else Path(receipt["output_path"]).name == candidate.name
-                )
-            )
-        except (OSError, ValueError, KeyError, TypeError, AttributeError):
-            return False
-
     source_id = hashlib.sha256(str(path.resolve()).encode("utf-8")).hexdigest()[:12]
     alternate = dest_dir / f"{path.stem}.{source_id}.訂正稿.{fmt}"
+    resolved_input = path.resolve()
 
-    # Prefer an existing output already owned by this input, even if the base
-    # name has since become free because another note's artifacts were removed.
-    if owned_by_this_input(base):
+    def records_this_input(receipt: dict) -> bool:
+        recorded_input = receipt.get("input_canonical_path") or receipt.get("input_path")
+        if not isinstance(recorded_input, str) or not recorded_input:
+            return False
+        try:
+            return Path(recorded_input).resolve() == resolved_input
+        except OSError:
+            return False
+
+    def read_receipt(receipt_path: Path) -> dict | None:
+        if not receipt_path.is_file():
+            return None
+        try:
+            receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            return None
+        return receipt if isinstance(receipt, dict) else None
+
+    def claims_name(candidate: Path) -> str:
+        """``this`` / ``other`` / ``unknown`` ownership evidence for a name."""
+        receipt = read_receipt(delivery_manifest_path(candidate))
+        if receipt is not None:
+            return "this" if records_this_input(receipt) else "other"
+        latest = read_receipt(candidate.parent / MANIFEST_NAME)
+        if latest is None:
+            return "unknown"
+        latest_output = latest.get("sidecar_for_output") or latest.get("output_path")
+        if not isinstance(latest_output, str) or Path(latest_output).name != candidate.name:
+            return "unknown"
+        if records_this_input(latest):
+            return "this"
+        # The copy alone keeps a name only while that note's own artifacts
+        # survive; once they are gone the name is free again.
+        return "other" if occupied(candidate) else "unknown"
+
+    def occupied(candidate: Path) -> bool:
+        return candidate.exists() or binding_report_path(candidate).exists()
+
+    base_claim = claims_name(base)
+    alternate_claim = claims_name(alternate)
+    if base_claim == "this":
         return base
-    if owned_by_this_input(alternate):
+    if alternate_claim == "this":
         return alternate
-    if not claimed(base):
+    if base_claim == "unknown" and not occupied(base):
         return base
-    if claimed(alternate):
+    if alternate_claim == "other":
         raise RuntimeError(f"輸出檔名衝突，拒絕覆寫既有訂正稿: {alternate}")
     return alternate
 
@@ -346,6 +375,7 @@ def process_file(
     fmt: str,
     *,
     state_dir: Path | None = None,
+    dest: Path | None = None,
 ) -> dict:
     """跑單檔 pipeline、寫出輸出檔、寫 delivery receipt,回統計 dict。
 
@@ -378,7 +408,9 @@ def process_file(
 
     dest_dir = out_dir if out_dir is not None else path.parent
     dest_dir.mkdir(parents=True, exist_ok=True)
-    dest = _output_for_input(path, dest_dir, fmt)
+    # A caller that already planned this note's destination keeps it, so the
+    # plan and the executed receipt can never disagree.
+    dest = dest if dest is not None else _output_for_input(path, dest_dir, fmt)
 
     # stdout 的使用者送達內容；DOCX 另以 Markdown 提供可直接閱讀的完整筆記。
     body = json.dumps(to_json(doc), ensure_ascii=False, indent=2) if fmt == "json" else to_markdown(doc)
@@ -518,7 +550,7 @@ def main(argv: list[str] | None = None) -> int:
         try:
             planned_dir = out_dir if out_dir is not None else f.parent
             planned_dest = _output_for_input(f, planned_dir, args.format)
-            r = process_file(f, llm, twinkle, law, out_dir, args.format)
+            r = process_file(f, llm, twinkle, law, out_dir, args.format, dest=planned_dest)
             delivery_status = r.setdefault(
                 "delivery_status",
                 _delivery_status(
