@@ -23,6 +23,7 @@ from typing import Any
 
 from .sidecars import (
     DELIVERY_MANIFEST_NAME,
+    is_receipt_file_name,
     receipt_conflicts_with_note,
     receipt_input_identity,
     receipt_output_identity,
@@ -347,6 +348,22 @@ def recover_delivery(
                 "path": str(manifest_path),
                 "code": ARTIFACT_MISSING,
                 "message": "交付狀態檔不存在，無法驗證已持久化 artifact",
+            }],
+            probes=[],
+            history_preserved=True,
+        )
+
+    if not is_receipt_file_name(manifest_path.name):
+        # Archives (…delivery_manifest.json.prev) record a past state; rewriting
+        # them would destroy the record the archive exists to preserve.
+        return RecoveryVerdict(
+            verified=False,
+            status="failed",
+            errors=[{
+                "kind": "delivery_manifest",
+                "path": str(manifest_path),
+                "code": ARTIFACT_INTEGRITY_MISMATCH,
+                "message": "不是交付回執檔，拒絕改寫其狀態",
             }],
             probes=[],
             history_preserved=True,

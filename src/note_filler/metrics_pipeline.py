@@ -22,12 +22,13 @@ from typing import Any
 from .sidecars import (
     DELIVERY_MANIFEST_NAME,
     delivery_manifest_path,
-    receipt_conflicts_with_note,
-    is_receipt_file_name,
     output_identity_key,
+    receipt_conflicts_with_note,
     receipt_input_identity,
     receipt_matches_output,
     receipt_output_identity,
+    recorded_leaf_name,
+    is_receipt_file_name,
     resolve_binding_report_path,
     resolve_delivery_manifest_path,
     resolve_manifest_for_update,
@@ -1218,6 +1219,20 @@ def rerun_note(
         )
         return None, alerts
 
+    if not is_receipt_file_name(manifest_path.name):
+        # Archives (…delivery_manifest.json.prev) and other non-receipt files
+        # are records of the past, never evidence to rewrite.
+        _emit_alert(
+            alerts,
+            alert_type="rerun_failure",
+            severity="critical",
+            metric_name="pipeline",
+            note_id=derive_note_id(str(manifest_path)),
+            source_path=str(manifest_path),
+            error_message=f"不是交付回執檔，拒絕重跑:{manifest_path.name}",
+        )
+        return None, alerts
+
     # The authoritative receipt is read as well as written: a stale or
     # hand-edited latest copy must never revert recorded recovery state.
     try:
@@ -1256,7 +1271,7 @@ def rerun_note(
     output_path = receipt_output_identity(manifest_data)
     if output_path:
         report_path = resolve_binding_report_path(
-            manifest_path.parent / Path(output_path).name, manifest_data
+            manifest_path.parent / recorded_leaf_name(output_path), manifest_data
         )
     else:
         report_path = manifest_path.parent / "binding_report.json"

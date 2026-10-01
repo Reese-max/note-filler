@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
@@ -31,6 +32,15 @@ def binding_report_path(output_path: Path) -> Path:
 def is_receipt_file_name(name: str) -> bool:
     """Only real receipt names count; ``mydelivery_manifest.json`` does not."""
     return name == DELIVERY_MANIFEST_NAME or name.endswith(f".{DELIVERY_MANIFEST_NAME}")
+
+
+def recorded_leaf_name(recorded_path: str) -> str:
+    """File name of a recorded path, whichever separator it was written with.
+
+    A receipt recorded on Windows keeps its backslashes, which ``Path.name``
+    does not split on POSIX, so the leaf name is taken explicitly.
+    """
+    return re.split(r"[\\/]", str(recorded_path))[-1]
 
 
 def same_recorded_path(left: str | None, right: str | None) -> bool:
@@ -75,7 +85,7 @@ def migrate_legacy_sidecars(dest_dir: Path) -> list[Path]:
     output = receipt_output_identity(legacy)
     if not output:
         return migrated
-    output_name = Path(output).name
+    output_name = recorded_leaf_name(output)
     if output_name in ("", ".", "..") or "/" in output_name or "\\" in output_name:
         logger.warning("legacy_receipt_output_unusable path=%s output=%r", legacy_receipt_path, output)
         return migrated
@@ -148,7 +158,7 @@ def resolve_manifest_for_update(manifest_path: Path) -> Path:
     output = receipt_output_identity(data)
     if output is None:
         return manifest_path
-    owned = delivery_manifest_path(manifest_path.parent / Path(output).name)
+    owned = delivery_manifest_path(manifest_path.parent / recorded_leaf_name(output))
     if not owned.is_file():
         return manifest_path
     try:
@@ -193,7 +203,7 @@ def receipt_matches_output(manifest: dict, output_path: Path) -> bool:
     """
     output_path = Path(output_path)
     recorded = receipt_output_identity(manifest)
-    return recorded is not None and Path(recorded).name == output_path.name
+    return recorded is not None and recorded_leaf_name(recorded) == output_path.name
 
 
 def receipt_conflicts_with_note(manifest: dict, manifest_path: Path) -> bool:
@@ -207,7 +217,7 @@ def receipt_conflicts_with_note(manifest: dict, manifest_path: Path) -> bool:
         return not receipt_matches_output(manifest, owned_output)
     # A directory-level copy carries no filename binding of its own; its
     # declared output may legitimately sit in an archived layout.
-    return Path(recorded).name in ("", ".", "..")
+    return recorded_leaf_name(recorded) in ("", ".", "..")
 
 
 def output_identity_key(manifest_path: Path, manifest: dict) -> str:
@@ -257,12 +267,17 @@ def write_manifest_and_latest(manifest_path: Path, data: dict) -> None:
     untouched so one note's update cannot repoint another note's evidence.
     """
     manifest_path = Path(manifest_path)
-    authoritative = manifest_path.name != DELIVERY_MANIFEST_NAME
+    name = manifest_path.name
+    # Only a real note-owned receipt is authoritative; an archive or any other
+    # non-receipt file keeps exactly the scope it was written with, and only
+    # the shared directory-level name acts as a "latest" copy.
+    authoritative = is_receipt_file_name(name)
+    is_latest_copy = name == DELIVERY_MANIFEST_NAME
     data = dict(data)
     if authoritative:
         data.update({"authoritative": True, "sidecar_scope": "output"})
         data.pop("sidecar_for_output", None)
-    else:
+    elif is_latest_copy:
         data.update(
             {
                 "authoritative": False,

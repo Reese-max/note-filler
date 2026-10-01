@@ -1544,3 +1544,92 @@ def test_unrelated_note_cannot_take_over_a_bare_legacy_name(tmp_path, monkeypatc
     ]
     assert len(other_receipts) == 1
     assert json.loads(other_receipts[0].read_text(encoding="utf-8"))["input_canonical_path"] == str(other)
+
+
+def test_recorded_leaf_name_splits_both_separators():
+    """A receipt recorded on Windows still resolves its own file name."""
+    from note_filler.sidecars import is_receipt_file_name, recorded_leaf_name
+
+    assert recorded_leaf_name(r"C:\notes\out\case.訂正稿.md") == "case.訂正稿.md"
+    assert recorded_leaf_name("out/case.訂正稿.md") == "case.訂正稿.md"
+    assert recorded_leaf_name(r"case.訂正稿.md.delivery_manifest.json") == (
+        "case.訂正稿.md.delivery_manifest.json"
+    )
+    assert is_receipt_file_name(recorded_leaf_name(r"C:\out\case.md.delivery_manifest.json"))
+
+
+def test_windows_recorded_output_resolves_its_own_note(tmp_path):
+    """A receipt recording backslashes is still evidence for the note it names."""
+    from note_filler.sidecars import (
+        migrate_legacy_sidecars,
+        receipt_conflicts_with_note,
+        receipt_matches_output,
+        resolve_manifest_for_update,
+    )
+
+    out = tmp_path / "out"
+    out.mkdir()
+    output = out / "case.訂正稿.md"
+    output.write_text("# 訂正稿\nA 的成品。", encoding="utf-8")
+    legacy = {
+        "input_path": r"C:\notes\case.txt",
+        "output_path": r"C:\notes\out\case.訂正稿.md",
+        "status": "delivered",
+    }
+    (out / cli.MANIFEST_NAME).write_text(json.dumps(legacy), encoding="utf-8")
+
+    assert receipt_matches_output(legacy, output) is True
+    assert receipt_conflicts_with_note(legacy, out / cli.MANIFEST_NAME) is False
+
+    migrated = migrate_legacy_sidecars(out)
+    assert [path.name for path in migrated] == [
+        "case.訂正稿.md.delivery_manifest.json"
+    ]
+    promoted = json.loads(
+        delivery_manifest_path(output).read_text(encoding="utf-8")
+    )
+    assert promoted["authoritative"] is True
+    assert promoted["sidecar_scope"] == "output"
+    assert receipt_conflicts_with_note(promoted, delivery_manifest_path(output)) is False
+    assert resolve_manifest_for_update(out / cli.MANIFEST_NAME) == delivery_manifest_path(
+        output
+    )
+
+
+def test_archived_receipt_write_is_not_authoritative(tmp_path):
+    """Writing an archived receipt must not promote it or refresh the latest copy."""
+    from note_filler.sidecars import (
+        delivery_manifest_path as owned_receipt_path,
+        write_manifest_and_latest,
+    )
+
+    out = tmp_path / "out"
+    out.mkdir()
+    output = out / "case.訂正稿.md"
+    output.write_text("# 訂正稿\n", encoding="utf-8")
+    archive = Path(str(owned_receipt_path(output)) + ".prev")
+    receipt = {"output_path": str(output), "input_path": str(tmp_path / "case.txt")}
+
+    write_manifest_and_latest(archive, receipt)
+
+    stored = json.loads(archive.read_text(encoding="utf-8"))
+    assert "authoritative" not in stored
+    assert "sidecar_scope" not in stored
+    assert not (out / cli.MANIFEST_NAME).exists()
+    assert not owned_receipt_path(output).exists()
+
+
+def test_non_receipt_name_is_not_authoritative(tmp_path):
+    """A broad-pattern match such as ``mydelivery_manifest.json`` proves nothing."""
+    from note_filler.sidecars import write_manifest_and_latest
+
+    out = tmp_path / "out"
+    out.mkdir()
+    impostor = out / "mydelivery_manifest.json"
+    receipt = {"output_path": str(out / "case.md"), "input_path": str(tmp_path / "case.txt")}
+
+    write_manifest_and_latest(impostor, receipt)
+
+    stored = json.loads(impostor.read_text(encoding="utf-8"))
+    assert stored.get("authoritative") is not True
+    assert not (out / cli.MANIFEST_NAME).exists()

@@ -79,6 +79,14 @@ but it never erases what the note has already recorded:
   `<output>.delivery_manifest.json.prev` (recorded in the receipt as
   `archived_receipt`), so the earliest record of the note survives. Archive
   files are not matched by any scan pattern.
+- Only a real receipt name counts as evidence: `<output>.delivery_manifest.json`
+  or the shared `delivery_manifest.json`. A broad pattern match such as
+  `mydelivery_manifest.json`, and an archive such as
+  `<output>.delivery_manifest.json.prev`, are never treated as authoritative or
+  as a note's latest copy.
+- Receipt identities are read with a separator-agnostic file name, so a receipt
+  recorded on Windows (`C:\notes\out\case.訂正稿.md`) still resolves the note it
+  names and still promotes its legacy directory-level pair.
 
 ## Ownership and compatibility rules
 

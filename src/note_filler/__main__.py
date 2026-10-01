@@ -32,6 +32,7 @@ from .sidecars import (
     delivery_manifest_path,
     may_write_latest_copy,
     migrate_legacy_sidecars,
+    recorded_leaf_name,
 )
 from .task_state import TaskStage, TaskStateManager, build_task_key
 
@@ -451,7 +452,9 @@ def _output_for_input(path: Path, dest_dir: Path, fmt: str) -> Path:
                 return "ambiguous" if recorded_path.parent == Path(".") else "this"
         except OSError:
             pass
-        return "other"
+        # A relative identity that matches none of the candidate directories
+        # cannot be attributed to anyone, including this note.
+        return "ambiguous"
 
     def read_receipt(receipt_path: Path) -> dict | None:
         if not receipt_path.is_file():
@@ -472,7 +475,7 @@ def _output_for_input(path: Path, dest_dir: Path, fmt: str) -> Path:
         if latest is None:
             return "unknown"
         latest_output = latest.get("sidecar_for_output") or latest.get("output_path")
-        if not isinstance(latest_output, str) or Path(latest_output).name != candidate.name:
+        if not isinstance(latest_output, str) or recorded_leaf_name(latest_output) != candidate.name:
             return "unknown"
         claim = ownership_of(latest, candidate.parent)
         if claim == "this":
