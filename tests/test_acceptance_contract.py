@@ -15,7 +15,7 @@ from note_filler.metrics import (
 )
 from note_filler.pipeline import run_pipeline
 from note_filler.value_classifier import classify_note_value
-from test_pipeline import FakeLaw, FakeTwinkle
+from tests.test_pipeline import FakeLaw, FakeTwinkle
 
 
 def _argument(

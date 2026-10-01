@@ -30,7 +30,7 @@ from note_filler.metrics import (
 )
 from note_filler.pipeline import run_pipeline
 from note_filler.retrieve.models import Source
-from test_pipeline import FakeLaw, FakeTwinkle
+from tests.test_pipeline import FakeLaw, FakeTwinkle
 
 
 # ---- fixtures ----------------------------------------------------------------

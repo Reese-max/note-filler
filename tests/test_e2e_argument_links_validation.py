@@ -379,7 +379,7 @@ def test_e2e_final_output_links_validation(tmp_path):
         "行政處分係指行政機關就公法上具體事件所為之對外發生法律效果之單方行政行為[^1]。",
     ])
     
-    from test_pipeline import FakeTwinkle, FakeLaw
+    from tests.test_pipeline import FakeTwinkle, FakeLaw
     twinkle = FakeTwinkle([[
         _source("s1", "行政程序法第92條", "A", "https://law.moj.gov.tw/LawClass/A0030055"),
         _source("s2", "行政處分解釋", "B", "https://www.judicial.gov.tw/tw/cp-1.php"),
