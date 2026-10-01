@@ -119,8 +119,14 @@ async def test_web_pipeline_failure_returns_traceable_500(async_client, monkeypa
 
     assert response.status_code == 500
     assert "case-WEB-01.txt" in response.text
-    assert "RuntimeError: fault-WEB-01" in response.text
-    assert "case-WEB-01.txt" in caplog.text and "fault-WEB-01" in caplog.text
+    assert "筆記處理失敗，請檢查輸入或稍後重試。" in response.text
+    assert "fault-WEB-01" not in response.text
+    assert "fault-WEB-01" not in caplog.text
+    failure = next(
+        row for row in _audit_records(caplog)
+        if row["event"] == "web_pipeline_failed"
+    )
+    assert failure["error_type"] == "RuntimeError"
     assert (await async_client.get("/export")).status_code == 404
     assert list(server.app.state.results) == [prior_id]
     assert (await async_client.get(f"/export/{prior_id}")).status_code == 200
@@ -152,9 +158,10 @@ async def test_web_pipeline_failure_returns_traceable_500(async_client, monkeypa
         row for row in _audit_records(caplog)
         if row["event"] == "temp_file_cleanup_failed"
     )
-    assert cleanup["data_id"] == "case-WEB-04.txt"
-    assert cleanup["temp_path"] == str(temp_path)
-    assert cleanup["error"] == "fault-WEB-04"
+    assert cleanup["data_id"] == "web_upload"
+    assert cleanup["error_type"] == "OSError"
+    assert str(temp_path) not in caplog.text
+    assert "fault-WEB-04" not in caplog.text
 
 
 def test_parse_domain_and_questions_degradations_are_identified(tmp_path, caplog):
