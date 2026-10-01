@@ -58,11 +58,13 @@ def main():
     # Verify artifacts
     print("\n=== ARTIFACT VERIFICATION ===")
     md_files = list(out_dir.glob("*.md"))
-    # Prefer the note-owned receipt; the directory-level manifest is only a
+    # Verify the receipt of the note this run produced, not whichever output
+    # happens to sort first; the directory-level manifest is only a
     # latest-output convenience copy (see docs/batch-sidecars.md).
+    produced_output = Path(result["output"]) if result and result.get("output") else None
     manifest_path = (
-        resolve_delivery_manifest_path(md_files[0])
-        if md_files
+        resolve_delivery_manifest_path(produced_output)
+        if produced_output is not None
         else out_dir / MANIFEST_NAME
     )
 

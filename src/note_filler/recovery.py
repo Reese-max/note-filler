@@ -23,6 +23,7 @@ from typing import Any
 
 from .sidecars import (
     DELIVERY_MANIFEST_NAME,
+    output_path_for_receipt,
     receipt_conflicts_with_note,
     receipt_input_identity,
     receipt_output_identity,
@@ -180,6 +181,26 @@ def _transmission_probe(
     )
 
 
+def _probe_bound_artifact(
+    kind: str,
+    recorded_path: str,
+    manifest_path: Path | None,
+    expected_hash: str | None,
+) -> ArtifactProbe:
+    """探測回執記錄的 artifact，允許整批輸出被搬移或封存。
+
+    回執與其成品一起移動時，記錄的絕對路徑會失效；此時改探測回執同目錄下
+    同名的檔案，內容雜湊仍必須一致，因此搬移不會被誤判為竄改。
+    """
+    probe = probe_artifact(kind, recorded_path, expected_hash)
+    if probe.exists or manifest_path is None:
+        return probe
+    sibling = Path(manifest_path).parent / Path(recorded_path).name
+    if sibling == Path(recorded_path):
+        return probe
+    return probe_artifact(kind, sibling, expected_hash)
+
+
 def verify_delivery_artifacts(
     manifest: dict[str, Any],
     manifest_path: Path | None = None,
@@ -204,18 +225,24 @@ def verify_delivery_artifacts(
         return probes
     if isinstance(output_path, str) and output_path:
         expected = manifest.get("output_content_hash") or manifest.get("content_hash")
-        probes.append(probe_artifact("generated", output_path, expected))
+        probes.append(
+            _probe_bound_artifact("generated", output_path, manifest_path, expected)
+        )
 
     input_path = receipt_input_identity(manifest)
     if isinstance(input_path, str) and input_path:
         probes.append(
-            probe_artifact("source", input_path, manifest.get("input_content_hash"))
+            _probe_bound_artifact(
+                "source", input_path, manifest_path, manifest.get("input_content_hash")
+            )
         )
 
     report_path = manifest.get("binding_report_canonical_path") or manifest.get("binding_report_path")
     report_hash = manifest.get("binding_report_content_hash")
     if isinstance(report_path, str) and report_path and report_hash:
-        probes.append(probe_artifact("binding_report", report_path, report_hash))
+        probes.append(
+            _probe_bound_artifact("binding_report", report_path, manifest_path, report_hash)
+        )
 
     if manifest.get("delivery_status") is not None:
         probes.append(_transmission_probe(manifest, manifest_path))

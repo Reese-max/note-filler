@@ -1149,3 +1149,171 @@ def test_post_write_failure_uses_second_notes_actual_output(tmp_path, monkeypatc
     assert failed["status"] == "failed"
     assert failed["output_path"] == str(second_output)
     assert first_receipt.read_bytes() == first_bytes
+
+
+def test_failed_rerun_keeps_the_notes_delivery_record(tmp_path, monkeypatch):
+    """A failed re-run must not erase the note's own delivery evidence."""
+    note = tmp_path / "note.txt"
+    note.write_text("source", encoding="utf-8")
+    out = tmp_path / "out"
+    monkeypatch.setattr(cli, "run_pipeline", lambda *a, **k: _FakeDoc())
+    monkeypatch.setattr(cli, "to_markdown", lambda doc: "# 訂正稿\n完整內容。")
+    state_dir = tmp_path / "state"
+    result = cli.process_file(note, None, None, None, out, "md", state_dir=state_dir)
+    output = Path(result["output"])
+    owned = delivery_manifest_path(output)
+    delivered = json.loads(owned.read_text(encoding="utf-8"))
+    assert delivered["status"] == "delivered"
+    assert delivered["polaris_metrics"]
+    assert delivered["binding_report_content_hash"]
+
+    monkeypatch.setattr(
+        cli,
+        "run_pipeline",
+        lambda *a, **k: (_ for _ in ()).throw(RuntimeError("transient outage")),
+    )
+    assert cli.main([str(note), "--outdir", str(out), "--db", str(tmp_path / "missing.db")]) == 1
+
+    failed = json.loads(owned.read_text(encoding="utf-8"))
+    assert failed["status"] == "failed"
+    assert failed["polaris_metrics"] == delivered["polaris_metrics"]
+    assert failed["binding_report_content_hash"] == delivered["binding_report_content_hash"]
+    archive = out / f"{owned.name}.prev"
+    assert json.loads(archive.read_text(encoding="utf-8"))["status"] == "delivered"
+    # The note's own report is still bound, so its metrics stay resolvable.
+    status, *_ = _load_output_metrics(
+        output, hashlib.sha256(output.read_bytes()).hexdigest()
+    )
+    assert status == "calculated"
+
+
+def test_moved_output_directory_keeps_resolving_its_note(tmp_path, monkeypatch):
+    """Archiving the output directory must not break the note's metrics."""
+    note = tmp_path / "note.txt"
+    note.write_text("source", encoding="utf-8")
+    out = tmp_path / "out"
+    monkeypatch.setattr(cli, "run_pipeline", lambda *a, **k: _FakeDoc())
+    monkeypatch.setattr(cli, "to_markdown", lambda doc: "# 訂正稿\n完整內容。")
+    result = cli.process_file(note, None, None, None, out, "md", state_dir=tmp_path / "state")
+    output = Path(result["output"])
+
+    archive = tmp_path / "archive" / "2026"
+    archive.parent.mkdir()
+    out.rename(archive)
+    moved_output = archive / output.name
+
+    content_hash = hashlib.sha256(moved_output.read_bytes()).hexdigest()
+    status, *_ = _load_output_metrics(moved_output, content_hash)
+    assert status == "calculated"
+    verdict = recover_delivery(delivery_manifest_path(moved_output))
+    assert verdict.verified is True
+    assert all(probe.code is None for probe in verdict.probes)
+
+
+def test_stale_copy_of_a_deleted_output_is_not_promoted(tmp_path, monkeypatch):
+    """A copy whose output is gone must not become authoritative evidence."""
+    first = tmp_path / "first.txt"
+    first.write_text("first source", encoding="utf-8")
+    out = tmp_path / "out"
+    out.mkdir()
+    (out / cli.MANIFEST_NAME).write_text(
+        json.dumps(
+            {"input_path": str(first), "output_path": str(out / "ghost.訂正稿.md"), "status": "delivered"},
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(cli, "GrokClient", lambda: None)
+    monkeypatch.setattr(cli, "TwinkleClient", lambda **kwargs: None)
+    monkeypatch.setattr(cli, "LawLookup", lambda path: None)
+    monkeypatch.setattr(cli, "run_pipeline", lambda *a, **k: _FakeDoc())
+    monkeypatch.setattr(cli, "to_markdown", lambda doc: "# 訂正稿\n完整內容。")
+    monkeypatch.setattr(cli, "TASK_STATE_DIR", tmp_path / "state")
+    monkeypatch.setattr(cli, "calculate_polaris_metrics", lambda **kwargs: _Metrics())
+
+    assert cli.main([str(first), "--outdir", str(out), "--db", str(tmp_path / "missing.db")]) == 0
+    assert not (out / "ghost.訂正稿.md.delivery_manifest.json").exists()
+    assert (out / "first.訂正稿.md.delivery_manifest.json").is_file()
+
+
+def test_latest_copy_of_another_note_is_left_untouched(tmp_path):
+    """Recovering note A must not repoint the copy that names note B."""
+    from note_filler.sidecars import (
+        delivery_manifest_path as owned_receipt_path,
+        write_manifest_and_latest,
+    )
+
+    out = tmp_path / "out"
+    out.mkdir()
+    a_output = out / "a.訂正稿.md"
+    b_output = out / "b.訂正稿.md"
+    b_receipt = {
+        "output_path": str(b_output),
+        "input_path": str(tmp_path / "b.txt"),
+        "status": "delivered",
+        "polaris_metrics": {"schema": "note_filler.polaris_metrics.v1"},
+    }
+    (out / cli.MANIFEST_NAME).write_text(json.dumps(b_receipt), encoding="utf-8")
+
+    a_receipt = dict(b_receipt, output_path=str(a_output), input_path=str(tmp_path / "a.txt"))
+    write_manifest_and_latest(owned_receipt_path(a_output), a_receipt)
+
+    copy = json.loads((out / cli.MANIFEST_NAME).read_text(encoding="utf-8"))
+    assert copy["input_path"] == str(tmp_path / "b.txt")
+    assert copy["output_path"] == str(b_output)
+    assert copy["status"] == "delivered"
+
+
+def test_unreadable_latest_copy_is_preserved(tmp_path):
+    """A corrupt copy is reported and kept, never overwritten blindly."""
+    from note_filler.sidecars import (
+        delivery_manifest_path as owned_receipt_path,
+        may_write_latest_copy,
+    )
+
+    out = tmp_path / "out"
+    out.mkdir()
+    (out / cli.MANIFEST_NAME).write_text("{not json", encoding="utf-8")
+    receipt = {
+        "output_path": str(out / "note.訂正稿.md"),
+        "input_path": str(tmp_path / "note.txt"),
+        "status": "failed",
+    }
+    assert may_write_latest_copy(out / cli.MANIFEST_NAME, receipt) is False
+    assert (out / cli.MANIFEST_NAME).read_text(encoding="utf-8") == "{not json"
+    assert owned_receipt_path(out / "note.訂正稿.md").name.endswith(
+        ".delivery_manifest.json"
+    )
+
+
+def test_legacy_relative_input_path_keeps_its_output_name(tmp_path, monkeypatch):
+    """A legacy receipt recorded from the output directory still owns its name."""
+    notes = tmp_path / "notes"
+    notes.mkdir()
+    out = tmp_path / "out"
+    out.mkdir()
+    note = notes / "note.txt"
+    note.write_text("source", encoding="utf-8")
+    (out / "note.訂正稿.md").write_text("# 訂正稿\n舊成品。", encoding="utf-8")
+    (out / cli.MANIFEST_NAME).write_text(
+        json.dumps(
+            {
+                "input_path": "../notes/note.txt",
+                "output_path": "note.訂正稿.md",
+                "status": "delivered",
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(cli, "GrokClient", lambda: None)
+    monkeypatch.setattr(cli, "TwinkleClient", lambda **kwargs: None)
+    monkeypatch.setattr(cli, "LawLookup", lambda path: None)
+    monkeypatch.setattr(cli, "run_pipeline", lambda *a, **k: _FakeDoc())
+    monkeypatch.setattr(cli, "to_markdown", lambda doc: "# 訂正稿\n完整內容。")
+    monkeypatch.setattr(cli, "TASK_STATE_DIR", tmp_path / "state")
+
+    assert cli.main([str(note), "--outdir", str(out), "--db", str(tmp_path / "missing.db")]) == 0
+    assert sorted(p.name for p in out.glob("*.訂正稿.md")) == ["note.訂正稿.md"]
+    assert (out / "note.訂正稿.md.delivery_manifest.json").is_file()

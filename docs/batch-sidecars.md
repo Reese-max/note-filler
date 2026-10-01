@@ -24,9 +24,16 @@ they mirror. Readers prefer the note-owned pair and accept the directory-level
 pair only for outputs that have no note-owned pair yet; a copy is never batch
 evidence for an earlier output.
 
-The marker scheme applies to delivery receipts. A binding report is bound to its
-output through its note-owned filename and through the receipt's
-`binding_report_path` / `binding_report_content_hash` fields.
+The marker scheme applies to delivery receipts only: the directory-level
+`binding_report.json` is a raw copy of the latest report with no marker of its
+own, so it can only be attributed through the receipt — a note-owned receipt
+names its own report in `binding_report_path` / `binding_report_content_hash`,
+and a legacy receipt without those fields may fall back to the copy. A receipt
+that states no report of its own never does.
+
+Receipts and their artifacts are bound by name, so moving or archiving an output
+directory keeps a note resolvable: recovery then probes the sibling file beside
+the receipt and still requires the recorded content hash.
 
 Copy policy:
 

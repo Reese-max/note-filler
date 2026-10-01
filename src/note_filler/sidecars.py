@@ -69,22 +69,32 @@ def migrate_legacy_sidecars(dest_dir: Path) -> list[Path]:
     if not isinstance(legacy, dict):
         return migrated
     output = receipt_output_identity(legacy)
-    if output:
-        owned_receipt = delivery_manifest_path(dest_dir / Path(output).name)
-        if not owned_receipt.exists():
-            receipt = dict(legacy)
-            receipt.update({"authoritative": True, "sidecar_scope": "output"})
-            receipt.pop("sidecar_for_output", None)
-            owned_receipt.write_text(
-                json.dumps(receipt, ensure_ascii=False, indent=2),
-                encoding="utf-8",
-                newline="\n",
-            )
-            migrated.append(owned_receipt)
-        if not binding_report_path(dest_dir / Path(output).name).exists() and legacy_report_path.is_file():
-            owned_report = binding_report_path(dest_dir / Path(output).name)
-            owned_report.write_bytes(legacy_report_path.read_bytes())
-            migrated.append(owned_report)
+    if not output:
+        return migrated
+    output_name = Path(output).name
+    if output_name in ("", ".", "..") or "/" in output_name or "\\" in output_name:
+        logger.warning("legacy_receipt_output_unusable path=%s output=%r", legacy_receipt_path, output)
+        return migrated
+    # A copy whose output no longer exists proves nothing: promoting it would
+    # publish authoritative evidence for a note that is gone and would reserve
+    # its output name forever.
+    if not (dest_dir / output_name).exists():
+        return migrated
+    owned_receipt = delivery_manifest_path(dest_dir / output_name)
+    if not owned_receipt.exists():
+        receipt = dict(legacy)
+        receipt.update({"authoritative": True, "sidecar_scope": "output"})
+        receipt.pop("sidecar_for_output", None)
+        owned_receipt.write_text(
+            json.dumps(receipt, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+            newline="\n",
+        )
+        migrated.append(owned_receipt)
+    owned_report = binding_report_path(dest_dir / output_name)
+    if not owned_report.exists() and legacy_report_path.is_file():
+        owned_report.write_bytes(legacy_report_path.read_bytes())
+        migrated.append(owned_report)
     return migrated
 
 
@@ -171,23 +181,15 @@ def receipt_input_identity(manifest: dict) -> str | None:
 def receipt_matches_output(manifest: dict, output_path: Path) -> bool:
     """Whether a receipt is the evidence filed under ``output_path``.
 
-    A note-owned receipt is named after its output, so a receipt whose recorded
-    output names a different note is never evidence for this output — including
-    when the recorded identity is a canonical path.
+    A note-owned receipt is named after its output, so that filename is the
+    binding: a receipt whose recorded output names a *different* note is never
+    evidence for this output, while a note whose output directory was moved or
+    archived keeps resolving to its own receipt. Content hashes and the
+    receipt's own probes still verify the artifacts themselves.
     """
     output_path = Path(output_path)
     recorded = receipt_output_identity(manifest)
-    if recorded is None or Path(recorded).name != output_path.name:
-        return False
-    recorded_path = Path(recorded)
-    if not recorded_path.is_absolute():
-        # Legacy receipts may store a path relative to their original working
-        # directory; the filename binding is the only identity left to check.
-        return True
-    try:
-        return recorded_path.resolve() == output_path.resolve()
-    except OSError:
-        return False
+    return recorded is not None and Path(recorded).name == output_path.name
 
 
 def receipt_conflicts_with_note(manifest: dict, manifest_path: Path) -> bool:
@@ -199,14 +201,9 @@ def receipt_conflicts_with_note(manifest: dict, manifest_path: Path) -> bool:
     owned_output = output_path_for_receipt(manifest_path)
     if owned_output is not None:
         return not receipt_matches_output(manifest, owned_output)
-    recorded_path = Path(recorded)
-    if not recorded_path.is_absolute():
-        return False
-    try:
-        # A legacy directory-level copy may only speak for an output beside it.
-        return recorded_path.resolve().parent != manifest_path.parent.resolve()
-    except OSError:
-        return True
+    # A directory-level copy carries no filename binding of its own; its
+    # declared output may legitimately sit in an archived layout.
+    return Path(recorded).name in ("", ".", "..")
 
 
 def output_identity_key(manifest_path: Path, manifest: dict) -> str:

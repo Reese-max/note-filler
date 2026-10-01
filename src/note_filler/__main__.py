@@ -196,6 +196,8 @@ def write_delivery_receipt(
     if content is not None:
         content_hash = hashlib.sha256(content.encode("utf-8")).hexdigest()[:16]
 
+    carried = _carried_forward(manifest_path, output_path, input_path) if status != "delivered" else {}
+
     status_data = delivery_status or {}
     final_delivery_status = _delivery_status(
         primary_note_ready=bool(
@@ -254,6 +256,7 @@ def write_delivery_receipt(
             manifest_path=binding_report_path(output_path),
             reason="binding report exists but could not be hashed; readers fall back to its note-owned path",
         )
+    receipt.update(carried)
     if error is not None:
         receipt["error"] = error
     if polaris_metrics is not None:
@@ -288,6 +291,58 @@ def write_delivery_receipt(
             reason="another note's delivery is the current latest copy",
         )
     return manifest_path
+
+
+def _carried_forward(manifest_path: Path, output_path: Path, input_path: Path) -> dict:
+    """Keep this note's recorded delivery facts when a later attempt fails.
+
+    A failed re-run of a note that already delivered must not erase its
+    recovery history or its binding report identity. The replaced receipt is
+    also archived next to it, so the delivered record is never lost.
+    """
+    try:
+        previous = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+    if not isinstance(previous, dict) or previous.get("status") != "delivered":
+        return {}
+    recorded_input = previous.get("input_canonical_path") or previous.get("input_path")
+    if not isinstance(recorded_input, str) or not recorded_input:
+        return {}
+    try:
+        if Path(recorded_input).resolve() != input_path.resolve():
+            return {}
+    except OSError:
+        return {}
+    carried = {
+        key: previous[key]
+        for key in ("recovery_attempts", "recovered_at", "polaris_metrics")
+        if previous.get(key)
+    }
+    report = binding_report_path(output_path)
+    report_hash = previous.get("binding_report_content_hash")
+    if report_hash and _content_hash_file(report) == report_hash:
+        carried.update(
+            {
+                "binding_report_path": str(report),
+                "binding_report_canonical_path": str(report.resolve()),
+                "binding_report_content_hash": report_hash,
+            }
+        )
+    archive = manifest_path.with_name(f"{manifest_path.name}.prev")
+    try:
+        archive.write_bytes(manifest_path.read_bytes())
+        carried["previous_receipt_archive"] = archive.name
+    except OSError as exc:  # the archive is best effort; the receipt still lands
+        audit_event(
+            logger,
+            "delivery_receipt_archive_failed",
+            input_path,
+            level=logging.WARNING,
+            manifest_path=archive,
+            error=str(exc),
+        )
+    return carried
 
 
 def _iter_inputs(paths: list[str]) -> list[Path]:
@@ -336,14 +391,29 @@ def _output_for_input(path: Path, dest_dir: Path, fmt: str) -> Path:
     alternate = dest_dir / f"{path.stem}.{source_id}.訂正稿.{fmt}"
     resolved_input = path.resolve()
 
-    def records_this_input(receipt: dict) -> bool:
+    def records_this_input(receipt: dict, base: Path) -> bool:
+        """Whether a receipt was written for this input.
+
+        Legacy receipts recorded the input relative to their own working
+        directory, so a relative path is resolved against the receipt's
+        directory and the current directory before giving up.
+        """
         recorded_input = receipt.get("input_canonical_path") or receipt.get("input_path")
         if not isinstance(recorded_input, str) or not recorded_input:
             return False
-        try:
-            return Path(recorded_input).resolve() == resolved_input
-        except OSError:
-            return False
+        recorded_path = Path(recorded_input)
+        if recorded_path.is_absolute():
+            try:
+                return recorded_path.resolve() == resolved_input
+            except OSError:
+                return False
+        for candidate_base in {base, base.parent, Path.cwd()}:
+            try:
+                if (candidate_base / recorded_path).resolve() == resolved_input:
+                    return True
+            except OSError:
+                continue
+        return False
 
     def read_receipt(receipt_path: Path) -> dict | None:
         if not receipt_path.is_file():
@@ -358,14 +428,14 @@ def _output_for_input(path: Path, dest_dir: Path, fmt: str) -> Path:
         """``this`` / ``other`` / ``unknown`` ownership evidence for a name."""
         receipt = read_receipt(delivery_manifest_path(candidate))
         if receipt is not None:
-            return "this" if records_this_input(receipt) else "other"
+            return "this" if records_this_input(receipt, candidate.parent) else "other"
         latest = read_receipt(candidate.parent / MANIFEST_NAME)
         if latest is None:
             return "unknown"
         latest_output = latest.get("sidecar_for_output") or latest.get("output_path")
         if not isinstance(latest_output, str) or Path(latest_output).name != candidate.name:
             return "unknown"
-        if records_this_input(latest):
+        if records_this_input(latest, candidate.parent):
             return "this"
         # The copy alone keeps a name only while that note's own artifacts
         # survive; once they are gone the name is free again.
