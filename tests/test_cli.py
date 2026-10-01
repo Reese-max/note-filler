@@ -146,6 +146,90 @@ def test_process_file_json_format_and_outdir(tmp_path, monkeypatch):
     assert r["content"] == dest.read_text(encoding="utf-8")
 
 
+def test_batch_outputs_keep_authoritative_sidecars_bound_to_each_output(
+    tmp_path, monkeypatch
+):
+    """A later batch item must not replace the first item's audit sidecars."""
+    note_a = tmp_path / "a.txt"
+    note_b = tmp_path / "b.txt"
+    note_a.write_text("第一份筆記", encoding="utf-8")
+    note_b.write_text("第二份筆記", encoding="utf-8")
+    out_dir = tmp_path / "out"
+    monkeypatch.setattr(cli, "run_pipeline", lambda *a, **k: _Doc())
+    monkeypatch.setattr(cli, "to_markdown", lambda doc: "批次成品內容。")
+
+    class _Metrics:
+        def to_dict(self):
+            return {}
+
+    monkeypatch.setattr(cli, "calculate_polaris_metrics", lambda **kwargs: _Metrics())
+
+    result_a = cli.process_file(
+        note_a, None, None, None, out_dir=out_dir, fmt="md"
+    )
+    output_a = Path(result_a["output"])
+    manifest_a = output_a.with_name(f"{output_a.name}.delivery_manifest.json")
+    report_a = output_a.with_name(f"{output_a.name}.binding_report.json")
+    assert manifest_a.is_file()
+    assert report_a.is_file()
+    manifest_a_before = manifest_a.read_bytes()
+    report_a_before = report_a.read_bytes()
+
+    result_b = cli.process_file(
+        note_b, None, None, None, out_dir=out_dir, fmt="md"
+    )
+    output_b = Path(result_b["output"])
+    manifest_b = output_b.with_name(f"{output_b.name}.delivery_manifest.json")
+    report_b = output_b.with_name(f"{output_b.name}.binding_report.json")
+
+    assert manifest_b.is_file()
+    assert report_b.is_file()
+    assert manifest_a.read_bytes() == manifest_a_before
+    assert report_a.read_bytes() == report_a_before
+    assert json.loads(manifest_a.read_text(encoding="utf-8"))["output_path"] == str(
+        output_a
+    )
+    assert json.loads(manifest_b.read_text(encoding="utf-8"))["output_path"] == str(
+        output_b
+    )
+    latest = json.loads((out_dir / "delivery_manifest.json").read_text(encoding="utf-8"))
+    assert latest["authoritative"] is False
+    assert latest["output_path"] == str(output_b)
+
+
+def test_improvement_report_scans_each_output_bound_manifest(tmp_path, monkeypatch):
+    """The standalone metrics report must retain every batch note."""
+    from scripts.generate_improvement_report import _load_records_from_manifests
+
+    note_a = tmp_path / "a.txt"
+    note_b = tmp_path / "b.txt"
+    note_a.write_text("第一份筆記", encoding="utf-8")
+    note_b.write_text("第二份筆記", encoding="utf-8")
+    out_dir = tmp_path / "out"
+    monkeypatch.setattr(cli, "run_pipeline", lambda *a, **k: _Doc())
+    monkeypatch.setattr(cli, "to_markdown", lambda doc: "批次成品內容。")
+
+    class _Metrics:
+        def to_dict(self):
+            return {"schema": "note_filler.polaris_metrics.v1"}
+
+    monkeypatch.setattr(cli, "calculate_polaris_metrics", lambda **kwargs: _Metrics())
+    result_a = cli.process_file(
+        note_a, None, None, None, out_dir=out_dir, fmt="md"
+    )
+    result_b = cli.process_file(
+        note_b, None, None, None, out_dir=out_dir, fmt="md"
+    )
+
+    records = _load_records_from_manifests([out_dir])
+    assert {record["manifest_path"] for record in records} == {
+        f"{result_a['output']}.delivery_manifest.json",
+        f"{result_b['output']}.delivery_manifest.json",
+    }
+    latest = json.loads((out_dir / "delivery_manifest.json").read_text(encoding="utf-8"))
+    assert latest["authoritative"] is False
+
+
 def test_process_file_delivery_write_failure_does_not_return_success(tmp_path, monkeypatch):
     """digest 已生成但寫出(送達)失敗時,不得回傳成功 dict。
 

@@ -11,11 +11,30 @@ L035/L036:不可只靠 exit code 或檔案存在判定成功;
 from __future__ import annotations
 
 import json
+import hashlib
 from pathlib import Path
 
 import pytest
 
 from note_filler import __main__ as cli
+from note_filler.metrics_pipeline import (
+    MetricsCollectionConfig,
+    collect_metrics_from_manifest,
+    derive_note_id,
+    rerun_note,
+    scan_and_collect_metrics,
+)
+from note_filler.recovery import recover_delivery, verify_delivery_artifacts
+
+def delivery_manifest_path(output):
+    from note_filler.sidecars import delivery_manifest_path as _impl
+    return _impl(output)
+
+
+def binding_report_path(output):
+    from note_filler.sidecars import binding_report_path as _impl
+    return _impl(output)
+
 
 
 class _FakeDoc:
@@ -365,3 +384,406 @@ def test_check_no_leaked_errors_case_insensitive(tmp_path, monkeypatch):
 
     with pytest.raises(RuntimeError, match="traceback"):
         cli.process_file(note, None, None, None, out_dir=None, fmt="md")
+
+
+def test_batch_outputs_keep_independent_receipts_and_reports(tmp_path, monkeypatch):
+    """A second note cannot replace the first note's authoritative evidence."""
+    inputs = tmp_path / "inputs"
+    inputs.mkdir()
+    (inputs / "first").mkdir()
+    (inputs / "second").mkdir()
+    first = inputs / "first" / "note.txt"
+    second = inputs / "second" / "note.txt"
+    first.write_text("first source", encoding="utf-8")
+    second.write_text("second source", encoding="utf-8")
+    out = tmp_path / "out"
+    monkeypatch.setattr(cli, "run_pipeline", lambda *a, **k: _FakeDoc())
+    monkeypatch.setattr(cli, "to_markdown", lambda doc: "# 訂正稿\n完整內容。")
+    state_dir = tmp_path / "state"
+
+    first_result = cli.process_file(first, None, None, None, out, "md", state_dir=state_dir)
+    first_output = Path(first_result["output"])
+    first_manifest = delivery_manifest_path(first_output)
+    first_report = binding_report_path(first_output)
+    manifest_before = first_manifest.read_bytes()
+    report_before = first_report.read_bytes()
+
+    second_result = cli.process_file(second, None, None, None, out, "md", state_dir=state_dir)
+    second_output = Path(second_result["output"])
+    second_manifest = delivery_manifest_path(second_output)
+    second_report = binding_report_path(second_output)
+    assert first_output != second_output
+    assert first_manifest != second_manifest and first_report != second_report
+    assert first_manifest.read_bytes() == manifest_before
+    assert first_report.read_bytes() == report_before
+
+    for source, output, receipt, report in (
+        (first, first_output, first_manifest, first_report),
+        (second, second_output, second_manifest, second_report),
+    ):
+        data = json.loads(receipt.read_text(encoding="utf-8"))
+        assert data["status"] == "delivered"
+        assert data["input_path"] == str(source)
+        assert data["output_path"] == str(output)
+        assert data["output_content_hash"] == hashlib.sha256(output.read_bytes()).hexdigest()
+        assert data["binding_report_path"] == str(report)
+        assert data["binding_report_content_hash"] == hashlib.sha256(report.read_bytes()).hexdigest()
+        assert all(probe.code is None for probe in verify_delivery_artifacts(data, receipt))
+
+    records = scan_and_collect_metrics(MetricsCollectionConfig(scan_dirs=[out]))
+    assert {Path(r.manifest_path) for r in records} == {first_manifest, second_manifest}
+    rerun_record, alerts = rerun_note(first_manifest, MetricsCollectionConfig(scan_dirs=[out]))
+    assert rerun_record is not None
+    assert all(alert.alert_type != "rerun_failure" for alert in alerts)
+    assert rerun_record.source_path == str(first)
+
+    first_report.write_text("{}", encoding="utf-8")
+    stale = json.loads(first_manifest.read_text(encoding="utf-8"))
+    assert any(
+        probe.kind == "binding_report" and probe.code == "artifact_integrity_mismatch"
+        for probe in verify_delivery_artifacts(stale, first_manifest)
+    )
+    rerun_record, alerts = rerun_note(first_manifest, MetricsCollectionConfig(scan_dirs=[out]))
+    assert rerun_record is None
+    assert any(alert.alert_type == "rerun_failure" for alert in alerts)
+
+
+def test_missing_output_keeps_its_sidecars_and_reserves_its_name(tmp_path, monkeypatch):
+    """A missing output still owns its receipt and report filename."""
+    first_dir = tmp_path / "first"
+    second_dir = tmp_path / "second"
+    first_dir.mkdir()
+    second_dir.mkdir()
+    first = first_dir / "note.txt"
+    second = second_dir / "note.txt"
+    first.write_text("first", encoding="utf-8")
+    second.write_text("second", encoding="utf-8")
+    out = tmp_path / "out"
+    monkeypatch.setattr(cli, "run_pipeline", lambda *a, **k: _FakeDoc())
+    monkeypatch.setattr(cli, "to_markdown", lambda doc: "# 訂正稿\n完整內容。")
+    state_dir = tmp_path / "state"
+
+    first_result = cli.process_file(first, None, None, None, out, "md", state_dir=state_dir)
+    first_output = Path(first_result["output"])
+    first_manifest = delivery_manifest_path(first_output)
+    first_report = binding_report_path(first_output)
+    manifest_before = first_manifest.read_bytes()
+    report_before = first_report.read_bytes()
+    first_output.unlink()
+
+    second_result = cli.process_file(second, None, None, None, out, "md", state_dir=state_dir)
+    second_output = Path(second_result["output"])
+    assert second_output != first_output
+    assert first_manifest.read_bytes() == manifest_before
+    assert first_report.read_bytes() == report_before
+    assert json.loads(delivery_manifest_path(second_output).read_text(encoding="utf-8"))["input_path"] == str(second)
+
+
+
+def test_rerun_keeps_owned_alternate_when_base_artifacts_are_removed(tmp_path, monkeypatch):
+    first_dir = tmp_path / "first"
+    second_dir = tmp_path / "second"
+    first_dir.mkdir()
+    second_dir.mkdir()
+    first = first_dir / "note.txt"
+    second = second_dir / "note.txt"
+    first.write_text("first", encoding="utf-8")
+    second.write_text("second", encoding="utf-8")
+    out = tmp_path / "out"
+    monkeypatch.setattr(cli, "run_pipeline", lambda *a, **k: _FakeDoc())
+    monkeypatch.setattr(cli, "to_markdown", lambda doc: "# 訂正稿\n完整內容。")
+    state_dir = tmp_path / "state"
+
+    first_result = cli.process_file(first, None, None, None, out, "md", state_dir=state_dir)
+    first_output = Path(first_result["output"])
+    second_result = cli.process_file(second, None, None, None, out, "md", state_dir=state_dir)
+    second_output = Path(second_result["output"])
+    assert second_output != first_output
+
+    # Simulate cleanup of the first note's output and its owned audit artifacts.
+    first_output.unlink()
+    delivery_manifest_path(first_output).unlink()
+    binding_report_path(first_output).unlink()
+
+    assert cli._output_for_input(second, out, "md") == second_output
+
+
+def test_rerun_via_latest_manifest_updates_authoritative_receipt(tmp_path, monkeypatch):
+    note = tmp_path / "note.txt"
+    note.write_text("source", encoding="utf-8")
+    out = tmp_path / "out"
+    monkeypatch.setattr(cli, "run_pipeline", lambda *a, **k: _FakeDoc())
+    monkeypatch.setattr(cli, "to_markdown", lambda doc: "# 訂正稿\n完整內容。")
+    result = cli.process_file(note, None, None, None, out, "md", state_dir=tmp_path / "state")
+    owned = delivery_manifest_path(Path(result["output"]))
+    latest = out / cli.MANIFEST_NAME
+    latest_data = json.loads(latest.read_text(encoding="utf-8"))
+    assert latest_data["delivery_status"]["user_channel_sent"] is False
+    latest_data["delivery_status"]["user_channel_sent"] = True
+    latest_data["transmission_confirmation_hash"] = hashlib.sha256(
+        json.dumps(
+            latest_data["delivery_status"], ensure_ascii=False, sort_keys=True, separators=(",", ":")
+        ).encode("utf-8")
+    ).hexdigest()
+    latest.write_text(json.dumps(latest_data, ensure_ascii=False, indent=2), encoding="utf-8")
+
+    record, alerts = rerun_note(latest, MetricsCollectionConfig(scan_dirs=[out]))
+    assert record is not None
+    assert not any(alert.alert_type == "rerun_failure" for alert in alerts)
+    assert Path(record.manifest_path) == owned
+    owned_data = json.loads(owned.read_text(encoding="utf-8"))
+    assert owned_data["metrics_rerun_at"]
+    assert owned_data["delivery_status"]["user_channel_sent"] is True
+    assert owned_data["polaris_metrics"]["delivery_success_rate"]["score"] == 1.0
+    assert owned_data["authoritative"] is True
+    latest_now = json.loads(latest.read_text(encoding="utf-8"))
+    assert latest_now["authoritative"] is False
+    assert latest_now["sidecar_for_output"] == owned_data["output_path"]
+    for key in ("authoritative", "sidecar_scope", "sidecar_for_output"):
+        latest_now.pop(key, None)
+        owned_data.pop(key, None)
+    assert latest_now == owned_data
+
+
+def test_relative_input_uses_persisted_absolute_identity_after_cwd_change(tmp_path, monkeypatch):
+    first_dir = tmp_path / "first"
+    second_dir = tmp_path / "second"
+    (first_dir / "notes").mkdir(parents=True)
+    second_dir.mkdir()
+    note = first_dir / "notes" / "note.txt"
+    note.write_text("source", encoding="utf-8")
+    out = tmp_path / "out"
+    monkeypatch.setattr(cli, "run_pipeline", lambda *a, **k: _FakeDoc())
+    monkeypatch.setattr(cli, "to_markdown", lambda doc: "# 訂正稿\n完整內容。")
+    state_dir = tmp_path / "state"
+
+    monkeypatch.chdir(first_dir)
+    first_result = cli.process_file(Path("notes/note.txt"), None, None, None, out, "md", state_dir=state_dir)
+    first_output = Path(first_result["output"])
+    first_receipt = json.loads(delivery_manifest_path(first_output).read_text(encoding="utf-8"))
+    assert first_receipt["input_canonical_path"] == str(note.resolve())
+    assert first_receipt["output_canonical_path"] == str(first_output.resolve())
+
+    monkeypatch.chdir(second_dir)
+    second_result = cli.process_file(Path("../first/notes/note.txt"), None, None, None, out, "md", state_dir=state_dir)
+    assert Path(second_result["output"]) == first_output
+    assert len(list(out.glob("*.訂正稿.md"))) == 1
+    owned = delivery_manifest_path(first_output)
+    expected_id = derive_note_id(str(note.resolve()))
+    collected = collect_metrics_from_manifest(owned, MetricsCollectionConfig(scan_dirs=[out]))
+    assert collected is not None and collected.note_id == expected_id
+    rerun_record, alerts = rerun_note(owned, MetricsCollectionConfig(scan_dirs=[out]))
+    assert rerun_record is not None and rerun_record.note_id == expected_id
+    assert not any(alert.alert_type == "rerun_failure" for alert in alerts)
+
+
+def test_recovery_uses_canonical_artifact_paths_after_cwd_change(tmp_path, monkeypatch):
+    origin = tmp_path / "origin"
+    origin.mkdir()
+    note = origin / "note.txt"
+    note.write_text("source", encoding="utf-8")
+    monkeypatch.setattr(cli, "run_pipeline", lambda *a, **k: _FakeDoc())
+    monkeypatch.setattr(cli, "to_markdown", lambda doc: "# 訂正稿\n完整內容。")
+    monkeypatch.chdir(origin)
+    result = cli.process_file(
+        Path("note.txt"), None, None, None, Path("out"), "md", state_dir=tmp_path / "state"
+    )
+    owned = delivery_manifest_path(origin / result["output"])
+    before = owned.read_bytes()
+    data = json.loads(before)
+    assert data["input_path"] == "note.txt"
+    assert not Path(data["output_path"]).is_absolute()
+    assert not Path(data["binding_report_path"]).is_absolute()
+
+    monkeypatch.chdir(tmp_path)
+    verdict = recover_delivery(owned)
+    assert verdict.verified is True
+    assert verdict.status == "verified"
+    assert all(probe.code is None for probe in verdict.probes)
+    assert owned.read_bytes() == before
+
+
+def test_recovery_via_latest_manifest_updates_authoritative_receipt(tmp_path, monkeypatch):
+    note = tmp_path / "note.txt"
+    note.write_text("source", encoding="utf-8")
+    out = tmp_path / "out"
+    monkeypatch.setattr(cli, "run_pipeline", lambda *a, **k: _FakeDoc())
+    monkeypatch.setattr(cli, "to_markdown", lambda doc: "# 訂正稿\n完整內容。")
+    result = cli.process_file(note, None, None, None, out, "md", state_dir=tmp_path / "state")
+    output = Path(result["output"])
+    owned = delivery_manifest_path(output)
+    latest = out / cli.MANIFEST_NAME
+    output.unlink()
+
+    verdict = recover_delivery(latest)
+    assert verdict.status == "retryable"
+    assert any(error["code"] == "artifact_missing" for error in verdict.errors)
+    owned_data = json.loads(owned.read_text(encoding="utf-8"))
+    assert owned_data["status"] == "retryable"
+    assert owned_data["recovery_attempts"]
+    latest_now = json.loads(latest.read_text(encoding="utf-8"))
+    assert latest_now["authoritative"] is False
+    for key in ("authoritative", "sidecar_scope", "sidecar_for_output"):
+        latest_now.pop(key, None)
+        owned_data.pop(key, None)
+    assert latest_now == owned_data
+
+
+def test_legacy_only_receipt_updated_in_place_is_marked_non_authoritative(tmp_path):
+    """A directory-level receipt with no owned pair stays marked non-authoritative."""
+    legacy = tmp_path / "delivery_manifest.json"
+    legacy.write_text(
+        json.dumps(
+            {
+                "input_path": "in.txt",
+                "output_path": str(tmp_path / "out.md"),
+                "status": "delivered",
+                "delivery_status": {
+                    "primary_note_ready": True,
+                    "user_channel_sent": False,
+                    "local_fallback_written": True,
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    recover_delivery(legacy)
+
+    data = json.loads(legacy.read_text(encoding="utf-8"))
+    assert data["authoritative"] is False
+    assert data["sidecar_scope"] == "directory_latest"
+    assert data["sidecar_for_output"] == str(tmp_path / "out.md")
+
+
+def test_recovery_history_keeps_same_failure_for_each_note(tmp_path, monkeypatch):
+    first_dir = tmp_path / "first"
+    second_dir = tmp_path / "second"
+    first_dir.mkdir()
+    second_dir.mkdir()
+    first = first_dir / "note.txt"
+    second = second_dir / "note.txt"
+    first.write_text("first", encoding="utf-8")
+    second.write_text("second", encoding="utf-8")
+    out = tmp_path / "out"
+    monkeypatch.setattr(cli, "run_pipeline", lambda *a, **k: _FakeDoc())
+    monkeypatch.setattr(cli, "to_markdown", lambda doc: "# 訂正稿\n完整內容。")
+    state_dir = tmp_path / "state"
+    first_output = Path(cli.process_file(first, None, None, None, out, "md", state_dir=state_dir)["output"])
+    second_output = Path(cli.process_file(second, None, None, None, out, "md", state_dir=state_dir)["output"])
+    first_receipt = delivery_manifest_path(first_output)
+    second_receipt = delivery_manifest_path(second_output)
+    first_output.unlink()
+    second_output.unlink()
+
+    assert recover_delivery(first_receipt).status == "retryable"
+    assert recover_delivery(second_receipt).status == "retryable"
+    assert recover_delivery(first_receipt).status == "retryable"
+    attempts = [json.loads(line) for line in (out / "recovery_history.jsonl").read_text(encoding="utf-8").splitlines()]
+    assert {entry["note_manifest_path"] for entry in attempts} == {
+        str(first_receipt.resolve()), str(second_receipt.resolve())
+    }
+    assert len(attempts) == 2
+    for receipt in (first_receipt, second_receipt):
+        data = json.loads(receipt.read_text(encoding="utf-8"))
+        assert data["status"] == "retryable"
+        assert len(data["recovery_attempts"]) == 1
+        assert data["recovery_attempts"][0]["note_manifest_path"] == str(receipt.resolve())
+
+
+def test_recovery_history_distinguishes_reused_receipt_path(tmp_path, monkeypatch):
+    first_dir = tmp_path / "first"
+    second_dir = tmp_path / "second"
+    first_dir.mkdir()
+    second_dir.mkdir()
+    first = first_dir / "note.txt"
+    second = second_dir / "note.txt"
+    first.write_text("first source", encoding="utf-8")
+    second.write_text("second source", encoding="utf-8")
+    out = tmp_path / "out"
+    monkeypatch.setattr(cli, "run_pipeline", lambda *a, **k: _FakeDoc())
+    monkeypatch.setattr(cli, "to_markdown", lambda doc: "# 訂正稿\n完整內容。")
+    state_dir = tmp_path / "state"
+
+    first_output = Path(cli.process_file(first, None, None, None, out, "md", state_dir=state_dir)["output"])
+    first_receipt = delivery_manifest_path(first_output)
+    first_report = binding_report_path(first_output)
+    first_output.unlink()
+    assert recover_delivery(first_receipt).status == "retryable"
+    first_receipt.unlink()
+    first_report.unlink()
+
+    second_output = Path(cli.process_file(second, None, None, None, out, "md", state_dir=state_dir)["output"])
+    assert second_output == first_output
+    second_output.unlink()
+    assert recover_delivery(delivery_manifest_path(second_output)).status == "retryable"
+
+    history = [json.loads(line) for line in (out / "recovery_history.jsonl").read_text(encoding="utf-8").splitlines()]
+    assert len(history) == 2
+    assert {entry["note_manifest_path"] for entry in history} == {str(first_receipt.resolve())}
+    assert {entry["note_source_path"] for entry in history} == {str(first.resolve()), str(second.resolve())}
+    assert len({entry["note_source_hash"] for entry in history}) == 2
+
+
+def test_failed_second_note_does_not_replace_first_note_receipt(tmp_path, monkeypatch):
+    first = tmp_path / "first.txt"
+    second = tmp_path / "second.txt"
+    first.write_text("first source", encoding="utf-8")
+    second.write_text("second source", encoding="utf-8")
+    out = tmp_path / "out"
+    monkeypatch.setattr(cli, "GrokClient", lambda: None)
+    monkeypatch.setattr(cli, "TwinkleClient", lambda **kwargs: None)
+    monkeypatch.setattr(cli, "LawLookup", lambda path: None)
+    monkeypatch.setattr(cli, "to_markdown", lambda doc: "# 訂正稿\n完整內容。")
+    monkeypatch.setattr(cli, "TASK_STATE_DIR", tmp_path / "state")
+
+    def pipeline(path, *args):
+        if Path(path) == second:
+            raise RuntimeError("synthetic B failure")
+        return _FakeDoc()
+
+    monkeypatch.setattr(cli, "run_pipeline", pipeline)
+    assert cli.main([str(first), "--outdir", str(out), "--db", str(tmp_path / "missing.db")]) == 0
+    first_receipt = delivery_manifest_path(out / "first.訂正稿.md")
+    first_bytes = first_receipt.read_bytes()
+    assert cli.main([str(second), "--outdir", str(out), "--db", str(tmp_path / "missing.db")]) == 1
+    assert first_receipt.read_bytes() == first_bytes
+    failed = json.loads(delivery_manifest_path(out / "second.訂正稿.md").read_text(encoding="utf-8"))
+    assert failed["status"] == "failed"
+    assert failed["input_path"] == str(second)
+
+
+def test_post_write_failure_uses_second_notes_actual_output(tmp_path, monkeypatch):
+    first_dir = tmp_path / "first"
+    second_dir = tmp_path / "second"
+    first_dir.mkdir()
+    second_dir.mkdir()
+    first = first_dir / "note.txt"
+    second = second_dir / "note.txt"
+    first.write_text("first", encoding="utf-8")
+    second.write_text("second", encoding="utf-8")
+    out = tmp_path / "out"
+    monkeypatch.setattr(cli, "GrokClient", lambda: None)
+    monkeypatch.setattr(cli, "TwinkleClient", lambda **kwargs: None)
+    monkeypatch.setattr(cli, "LawLookup", lambda path: None)
+    monkeypatch.setattr(cli, "TASK_STATE_DIR", tmp_path / "state")
+    monkeypatch.setattr(cli, "run_pipeline", lambda *a, **k: _FakeDoc())
+    monkeypatch.setattr(cli, "to_markdown", lambda doc: "# 訂正稿\n完整內容。")
+
+    args = ["--outdir", str(out), "--db", str(tmp_path / "missing.db")]
+    assert cli.main([str(first), *args]) == 0
+    first_output = out / "note.訂正稿.md"
+    first_receipt = delivery_manifest_path(first_output)
+    first_bytes = first_receipt.read_bytes()
+
+    def fail_after_output(*args, **kwargs):
+        raise RuntimeError("synthetic report failure")
+
+    monkeypatch.setattr(cli, "write_binding_report", fail_after_output)
+    assert cli.main([str(second), *args]) == 1
+    second_output = cli._output_for_input(second, out, "md")
+    assert second_output != first_output and second_output.is_file()
+    failed = json.loads(delivery_manifest_path(second_output).read_text(encoding="utf-8"))
+    assert failed["status"] == "failed"
+    assert failed["output_path"] == str(second_output)
+    assert first_receipt.read_bytes() == first_bytes
