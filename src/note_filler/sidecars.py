@@ -36,9 +36,11 @@ def is_receipt_file_name(name: str) -> bool:
 def same_recorded_path(left: str | None, right: str | None) -> bool:
     """Compare two recorded identities, tolerating legacy relative paths.
 
-    Two absolute identities compare as resolved paths. A relative identity can
-    only be compared by file name, which is the weaker but safe direction: an
-    ambiguous match keeps existing evidence instead of replacing it.
+    Two absolute identities compare as resolved paths. A bare relative identity
+    (``note.txt``, recorded from an unknown working directory) can only be
+    compared by file name, which is the weaker but safe direction: an ambiguous
+    match keeps existing evidence instead of replacing it. A relative identity
+    that carries a directory component is never equal to an absolute one.
     """
     if not left or not right:
         return False
@@ -49,7 +51,8 @@ def same_recorded_path(left: str | None, right: str | None) -> bool:
             return left_path.resolve() == right_path.resolve()
         except OSError:
             return False
-    return left_path.name == right_path.name
+    bare = left_path.parent == Path(".") or right_path.parent == Path(".")
+    return bare and left_path.name == right_path.name
 
 
 def migrate_legacy_sidecars(dest_dir: Path) -> list[Path]:
@@ -189,7 +192,16 @@ def receipt_matches_output(manifest: dict, output_path: Path) -> bool:
     """
     output_path = Path(output_path)
     recorded = receipt_output_identity(manifest)
-    return recorded is not None and Path(recorded).name == output_path.name
+    if recorded is None or Path(recorded).name != output_path.name:
+        return False
+    recorded_path = Path(recorded)
+    if recorded_path.is_absolute():
+        recorded_parent = recorded_path.parent
+        if recorded_parent != output_path.parent and recorded_parent.is_dir():
+            # The recorded directory still exists but is not this one: the
+            # receipt was copied or renamed onto another note's name.
+            return False
+    return True
 
 
 def receipt_conflicts_with_note(manifest: dict, manifest_path: Path) -> bool:

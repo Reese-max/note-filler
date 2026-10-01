@@ -190,10 +190,11 @@ def _probe_bound_artifact(
     """探測回執記錄的 artifact，允許整批輸出被搬移或封存。
 
     回執與其成品一起移動時，記錄的絕對路徑會失效；此時改探測回執同目錄下
-    同名的檔案，內容雜湊仍必須一致，因此搬移不會被誤判為竄改。
+    同名的檔案（成品與綁定報告就在回執旁邊，來源筆記不在），且記錄的內容雜湊
+    必須存在並一致，因此搬移不會被誤判為竄改，無雜湊則一律照實回報遺失。
     """
     probe = probe_artifact(kind, recorded_path, expected_hash)
-    if probe.exists or manifest_path is None:
+    if probe.exists or manifest_path is None or kind == "source" or not expected_hash:
         return probe
     sibling = Path(manifest_path).parent / Path(recorded_path).name
     if sibling == Path(recorded_path):

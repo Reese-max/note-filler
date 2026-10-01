@@ -1176,8 +1176,10 @@ def test_failed_rerun_keeps_the_notes_delivery_record(tmp_path, monkeypatch):
 
     failed = json.loads(owned.read_text(encoding="utf-8"))
     assert failed["status"] == "failed"
-    assert failed["polaris_metrics"] == delivered["polaris_metrics"]
+    # A failure must not advertise the earlier delivery's metrics.
+    assert "polaris_metrics" not in failed
     assert failed["binding_report_content_hash"] == delivered["binding_report_content_hash"]
+    assert failed["previous_receipt_archive"] == f"{owned.name}.prev"
     archive = out / f"{owned.name}.prev"
     assert json.loads(archive.read_text(encoding="utf-8"))["status"] == "delivered"
     # The note's own report is still bound, so its metrics stay resolvable.
@@ -1185,6 +1187,108 @@ def test_failed_rerun_keeps_the_notes_delivery_record(tmp_path, monkeypatch):
         output, hashlib.sha256(output.read_bytes()).hexdigest()
     )
     assert status == "calculated"
+
+
+def test_failed_rerun_keeps_recorded_recovery_history(tmp_path, monkeypatch):
+    """Recovery history in the receipt survives a later failed attempt."""
+    note = tmp_path / "note.txt"
+    note.write_text("source", encoding="utf-8")
+    out = tmp_path / "out"
+    monkeypatch.setattr(cli, "run_pipeline", lambda *a, **k: _FakeDoc())
+    monkeypatch.setattr(cli, "to_markdown", lambda doc: "# 訂正稿\n完整內容。")
+    state_dir = tmp_path / "state"
+    result = cli.process_file(note, None, None, None, out, "md", state_dir=state_dir)
+    output = Path(result["output"])
+    owned = delivery_manifest_path(output)
+
+    note.unlink()
+    assert recover_delivery(owned).status == "retryable"
+    recovering = json.loads(owned.read_text(encoding="utf-8"))
+    assert recovering["status"] == "retryable"
+    assert len(recovering["recovery_attempts"]) == 1
+
+    note.write_text("source", encoding="utf-8")
+    monkeypatch.setattr(
+        cli,
+        "run_pipeline",
+        lambda *a, **k: (_ for _ in ()).throw(RuntimeError("transient outage")),
+    )
+    assert cli.main([str(note), "--outdir", str(out), "--db", str(tmp_path / "missing.db")]) == 1
+
+    failed = json.loads(owned.read_text(encoding="utf-8"))
+    assert failed["status"] == "failed"
+    assert failed["recovery_attempts"] == recovering["recovery_attempts"]
+    assert failed["recovered_at"] == recovering["recovered_at"]
+
+
+def test_bare_relative_legacy_input_cannot_claim_another_notes_output(tmp_path, monkeypatch):
+    """A copy recorded from another cwd never hands its name to this note."""
+    first = tmp_path / "case.txt"
+    second_dir = tmp_path / "notes"
+    second_dir.mkdir()
+    second = second_dir / "case.txt"
+    first.write_text("note A", encoding="utf-8")
+    second.write_text("note B", encoding="utf-8")
+    out = tmp_path / "out"
+    out.mkdir()
+    (out / "case.訂正稿.md").write_text("# 訂正稿\nA 的成品。", encoding="utf-8")
+    (out / cli.MANIFEST_NAME).write_text(
+        json.dumps(
+            {
+                "input_path": "case.txt",
+                "output_path": "out/case.訂正稿.md",
+                "status": "delivered",
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(cli, "GrokClient", lambda: None)
+    monkeypatch.setattr(cli, "TwinkleClient", lambda **kwargs: None)
+    monkeypatch.setattr(cli, "LawLookup", lambda path: None)
+    monkeypatch.setattr(cli, "run_pipeline", lambda *a, **k: _FakeDoc())
+    monkeypatch.setattr(cli, "to_markdown", lambda doc: "# 訂正稿\nB 的成品。")
+    monkeypatch.setattr(cli, "TASK_STATE_DIR", tmp_path / "state")
+
+    assert cli.main([str(second), "--outdir", str(out), "--db", str(tmp_path / "missing.db")]) == 0
+    assert (out / "case.訂正稿.md").read_text(encoding="utf-8") == "# 訂正稿\nA 的成品。"
+    second_output = cli._output_for_input(second, out, "md")
+    assert second_output.name != "case.訂正稿.md"
+    # Note A keeps its own receipt, promoted from the shared copy untouched.
+    a_receipt = json.loads(
+        delivery_manifest_path(out / "case.訂正稿.md").read_text(encoding="utf-8")
+    )
+    assert a_receipt["input_path"] == "case.txt"
+    assert a_receipt["status"] == "delivered"
+
+
+def test_receipt_copied_onto_another_note_is_rejected(tmp_path, monkeypatch):
+    """A cloned receipt must not pass as another note's evidence."""
+    first_dir = tmp_path / "first"
+    second_dir = tmp_path / "second"
+    first_dir.mkdir()
+    second_dir.mkdir()
+    first = first_dir / "note.txt"
+    second = second_dir / "note.txt"
+    first.write_text("first", encoding="utf-8")
+    second.write_text("second", encoding="utf-8")
+    out = tmp_path / "out"
+    monkeypatch.setattr(cli, "run_pipeline", lambda *a, **k: _FakeDoc())
+    monkeypatch.setattr(cli, "to_markdown", lambda doc: "# 訂正稿\n完整內容。")
+    state_dir = tmp_path / "state"
+    first_output = Path(cli.process_file(first, None, None, None, out, "md", state_dir=state_dir)["output"])
+    second_output = Path(cli.process_file(second, None, None, None, out, "md", state_dir=state_dir)["output"])
+
+    clone = delivery_manifest_path(second_output)
+    clone.write_bytes(delivery_manifest_path(first_output).read_bytes())
+
+    verdict = recover_delivery(clone)
+    assert verdict.verified is False
+    status, *_ = _load_output_metrics(
+        second_output, hashlib.sha256(second_output.read_bytes()).hexdigest()
+    )
+    assert status == "metrics_unavailable"
 
 
 def test_moved_output_directory_keeps_resolving_its_note(tmp_path, monkeypatch):

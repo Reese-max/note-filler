@@ -33,13 +33,19 @@ that states no report of its own never does.
 
 Receipts and their artifacts are bound by name, so moving or archiving an output
 directory keeps a note resolvable: recovery then probes the sibling file beside
-the receipt and still requires the recorded content hash.
+the receipt — the corrected note and its binding report, which live beside it —
+and only when a recorded content hash exists and matches. A receipt copied onto
+another note's name is still rejected while its recorded directory exists.
 
 Copy policy:
 
 - A delivered receipt always refreshes the copy.
 - A failure receipt refreshes the copy only while the copy still belongs to the
   same note, so a failing note never replaces another note's latest delivery.
+  Identity is compared by resolved path when both sides are absolute, and by
+  file name only for a bare relative legacy identity; a relative identity that
+  carries a directory component is never equal to an absolute one, so an
+  ambiguous match preserves the existing copy.
 - Recovery or a metrics rerun invoked with the directory-level path is routed to
   the matching note-owned receipt, which is what gets read and updated; the copy
   is recreated when it is absent and refreshed when it still names that output.
@@ -52,6 +58,21 @@ Copy policy:
   note-owned receipts because it globs them first. A relative identity counts
   together with the receipt's own directory, so two directories recording the
   same file name stay two notes.
+
+## A later failed attempt
+
+A receipt describes the note's latest attempt, so a failed re-run rewrites it —
+but it never erases what the note has already recorded:
+
+- `recovery_attempts` and `recovered_at` belong to the note, not to one attempt,
+  and are carried into the failure receipt;
+- the note's binding report identity is carried only while the note-owned report
+  still hashes to the recorded value, so metrics stay bound to this note;
+- the metrics of an earlier delivery are **not** carried: a failed note must not
+  be counted as a successful delivery;
+- the replaced receipt is archived once as `<output>.delivery_manifest.json.prev`
+  (recorded in the receipt as `previous_receipt_archive`), so the delivered
+  record survives. Archive files are not matched by any scan pattern.
 
 ## Ownership and compatibility rules
 

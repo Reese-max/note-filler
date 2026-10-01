@@ -175,23 +175,6 @@ def write_delivery_receipt(
             reason="directory-level evidence promoted to its note-owned path",
         )
 
-    existing_manifest_path = (
-        manifest_path if manifest_path.exists() else legacy_path
-    )
-    if existing_manifest_path.exists():
-        audit_event(
-            logger,
-            "delivery_receipt_replaced",
-            input_path,
-            level=logging.INFO,
-            manifest_path=existing_manifest_path,
-            reason=(
-                "receipt for the same output note is being refreshed"
-                if existing_manifest_path == manifest_path
-                else "legacy latest receipt is being refreshed"
-            ),
-        )
-
     content_hash = ""
     if content is not None:
         content_hash = hashlib.sha256(content.encode("utf-8")).hexdigest()[:16]
@@ -275,7 +258,26 @@ def write_delivery_receipt(
             "sidecar_for_output": str(output_path),
         }
     )
-    if may_write_latest_copy(legacy_path, legacy_receipt):
+    copy_refreshed = may_write_latest_copy(legacy_path, legacy_receipt)
+    replaced_path = (
+        manifest_path
+        if manifest_path.exists()
+        else legacy_path if copy_refreshed else None
+    )
+    if replaced_path is not None:
+        audit_event(
+            logger,
+            "delivery_receipt_replaced",
+            input_path,
+            level=logging.INFO,
+            manifest_path=replaced_path,
+            reason=(
+                "receipt for the same output note is being refreshed"
+                if replaced_path == manifest_path
+                else "legacy latest receipt is being refreshed"
+            ),
+        )
+    if copy_refreshed:
         legacy_path.write_text(
             json.dumps(legacy_receipt, ensure_ascii=False, indent=2),
             encoding="utf-8",
@@ -304,7 +306,7 @@ def _carried_forward(manifest_path: Path, output_path: Path, input_path: Path) -
         previous = json.loads(manifest_path.read_text(encoding="utf-8"))
     except (OSError, ValueError):
         return {}
-    if not isinstance(previous, dict) or previous.get("status") != "delivered":
+    if not isinstance(previous, dict):
         return {}
     recorded_input = previous.get("input_canonical_path") or previous.get("input_path")
     if not isinstance(recorded_input, str) or not recorded_input:
@@ -314,9 +316,11 @@ def _carried_forward(manifest_path: Path, output_path: Path, input_path: Path) -
             return {}
     except OSError:
         return {}
+    # Recorded recovery history belongs to the note, not to one attempt, and
+    # the metrics of an earlier delivery must not be advertised by a failure.
     carried = {
         key: previous[key]
-        for key in ("recovery_attempts", "recovered_at", "polaris_metrics")
+        for key in ("recovery_attempts", "recovered_at")
         if previous.get(key)
     }
     report = binding_report_path(output_path)
@@ -330,18 +334,20 @@ def _carried_forward(manifest_path: Path, output_path: Path, input_path: Path) -
             }
         )
     archive = manifest_path.with_name(f"{manifest_path.name}.prev")
-    try:
-        archive.write_bytes(manifest_path.read_bytes())
+    if not archive.exists():
+        try:
+            archive.write_bytes(manifest_path.read_bytes())
+        except OSError as exc:  # the archive is best effort; the receipt still lands
+            audit_event(
+                logger,
+                "delivery_receipt_archive_failed",
+                input_path,
+                level=logging.WARNING,
+                manifest_path=archive,
+                error=str(exc),
+            )
+    if archive.is_file():
         carried["previous_receipt_archive"] = archive.name
-    except OSError as exc:  # the archive is best effort; the receipt still lands
-        audit_event(
-            logger,
-            "delivery_receipt_archive_failed",
-            input_path,
-            level=logging.WARNING,
-            manifest_path=archive,
-            error=str(exc),
-        )
     return carried
 
 
@@ -407,7 +413,14 @@ def _output_for_input(path: Path, dest_dir: Path, fmt: str) -> Path:
                 return recorded_path.resolve() == resolved_input
             except OSError:
                 return False
-        for candidate_base in {base, base.parent, Path.cwd()}:
+        # Legacy receipts recorded the input relative to their own working
+        # directory. A bare name can only mean that working directory, while a
+        # path with a directory component may point at the output's own
+        # directory (a common run shape: cwd = the output directory).
+        bases = {Path.cwd()}
+        if recorded_path.parent != Path("."):
+            bases |= {base, base.parent}
+        for candidate_base in bases:
             try:
                 if (candidate_base / recorded_path).resolve() == resolved_input:
                     return True
