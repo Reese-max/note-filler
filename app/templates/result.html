@@ -24,6 +24,13 @@
     details.sources { margin-top: .35rem; font-size: .9em; }
     details.sources ul { margin: .3rem 0 0; padding-left: 1.2rem; }
     .traceability { color: #555; font-size: .85em; margin-top: .35rem; }
+    .review-queue { border: 1px solid #888; padding: .5rem .75rem; border-radius: 6px; }
+    .review-card { border-top: 1px dashed #bbb; margin-top: .5rem; padding-top: .4rem; font-size: .92em; }
+    .review-state { margin: .2rem 0; }
+    .review-form { margin: .3rem 0; display: flex; flex-wrap: wrap; gap: .3rem; }
+    .review-form input, .review-form select { font-size: .9em; }
+    .source-stances { margin: .25rem 0; padding-left: 1.2rem; }
+    .decision-history { margin-top: .3rem; font-size: .9em; }
   </style>
 </head>
 <body>
@@ -31,7 +38,23 @@
   {% if error %}
   <p class="pending">{{ input_id }}：{{ error }}</p>
   {% else %}
-  <p><a href="/export/{{ result_id }}">下載 Markdown 訂正稿</a></p>
+  {% if review_summary %}
+  <div class="review-queue">
+    <strong>審查佇列</strong>：待審 {{ review_summary.pending }} 筆（共 {{ review_summary.total }} 筆）
+    — 篩選：<a href="/result/{{ result_id }}">全部</a>
+    | <a href="/result/{{ result_id }}?filter=unreviewed">未審</a>
+    | <a href="/result/{{ result_id }}?filter=stale_review">已失效</a>
+    | <a href="/result/{{ result_id }}?filter=needs_more_evidence">待補證</a>
+    | <a href="/result/{{ result_id }}?filter=accepted">已接受</a>
+    | <a href="/result/{{ result_id }}?filter=edited_accepted">修訂後接受</a>
+    | <a href="/result/{{ result_id }}?filter=rejected">已拒絕</a>
+    {% if review_summary.next_pending_argument_id %}
+    — <a href="/result/{{ result_id }}#claim-{{ review_summary.next_pending_argument_id }}">下一個待審</a>
+    {% endif %}
+    {% if review_filter %}（目前篩選：{{ review_filter }}）{% endif %}
+  </div>
+  {% endif %}
+  <p><a href="/export/{{ result_id }}">下載 Markdown 訂正稿</a>｜<a href="/export/{{ result_id }}?mode=accepted-only">下載 accepted-only 正式稿</a></p>
   <div class="cols">
     <div class="col" id="original">
       <h2>原稿(不可變)</h2>
@@ -42,8 +65,10 @@
     <div class="col" id="correction">
       <h2>訂正稿</h2>
       {% for seg in doc.segments %}
+        {% set item = queue_by_arg.get(seg.argument_id) if queue_by_arg else None %}
         {% if seg.type == "supplement" %}
-        <div class="supplement">
+        {% if not review_filter or item %}
+        <div class="supplement" id="claim-{{ seg.argument_id }}">
           <section class="summary-visible" data-argument-id="{{ seg.argument_id }}">
             <h3>摘要可見</h3>
           <div class="seg"><strong>論點：</strong>{{ seg.text }}</div>
@@ -115,7 +140,59 @@
           <div class="traceability">追溯：{% for ref in seg.traceability %}{{ ref.kind }} {{ ref.id }}{% if ref.kind == "original_input" %}#paragraph-{{ ref.paragraph_idx }}{% endif %}{% if not loop.last %}、{% endif %}{% endfor %}</div>
           {% endif %}
           </section>
+          {% if item %}
+          <div class="review-card" data-argument-id="{{ seg.argument_id }}" data-review-state="{{ item.state }}">
+            <p class="review-state">審查狀態：<strong>{{ item.state }}</strong>
+              {% if item.stale_reason %}<span class="pending">（{{ item.stale_reason }}，舊決策已失效，需重新審查）</span>{% endif %}
+            </p>
+            {% if item.pending_evidence_reason %}
+            <p class="pending">待補證原因：{{ item.pending_evidence_reason }}</p>
+            {% endif %}
+            {% if item.conflict_note %}
+            <p class="pending">衝突原因：{{ item.conflict_note }}</p>
+            {% endif %}
+            {% if item.source_stances %}
+            <ul class="source-stances">
+              {% for s in item.source_stances %}
+              <li>{{ s.source_id }}{% if s.level %} [Level {{ s.level }}]{% endif %} {{ s.title }}
+                — <strong>{{ s.stance }}</strong>{% if s.missing %}<span class="pending">（來源遺失）</span>{% endif %}
+                {% if s.url %}<a href="{{ s.url }}" target="_blank" rel="noopener">連結</a>{% endif %}
+                {% if s.doc_date or s.fetched_date %}<br><small>{% if s.doc_date %}文件日:{{ s.doc_date }}{% endif %}{% if s.fetched_date %} / 擷取日:{{ s.fetched_date }}{% endif %}</small>{% endif %}
+              </li>
+              {% endfor %}
+            </ul>
+            {% endif %}
+            <form method="post" action="/review/{{ result_id }}" class="review-form">
+              <input type="hidden" name="argument_id" value="{{ seg.argument_id }}">
+              <input type="hidden" name="document_instance" value="{{ document_instance }}">
+              {% for key, value in item.revision_tokens.items() %}
+              <input type="hidden" name="{{ key }}" value="{{ value }}">
+              {% endfor %}
+              <select name="reason_code">
+                <option value="">（無理由碼）</option>
+                {% for code in reason_codes %}<option value="{{ code }}">{{ code }}</option>{% endfor %}
+              </select>
+              <input type="text" name="note" placeholder="審查備註">
+              <input type="text" name="reviewer" placeholder="審查者" value="local">
+              <input type="text" name="edited_text" placeholder="（可選）修訂後主張文字 → EDITED_ACCEPTED" size="30">
+              <button type="submit" name="decision" value="accepted">Accept</button>
+              <button type="submit" name="decision" value="rejected">Reject</button>
+              <button type="submit" name="decision" value="needs_more_evidence">Needs more evidence</button>
+            </form>
+            {% if item.history %}
+            <details class="decision-history">
+              <summary>決策履歷（{{ item.history|length }} 筆）</summary>
+              <ul>
+                {% for h in item.history %}
+                <li>{{ h.decision }} — {{ h.reviewer }} @ {{ h.reviewed_at }}{% if h.reason_code %}（{{ h.reason_code }}）{% endif %}{% if h.note %}：{{ h.note }}{% endif %}</li>
+                {% endfor %}
+              </ul>
+            </details>
+            {% endif %}
+          </div>
+          {% endif %}
         </div>
+        {% endif %}
         {% else %}
         <p class="seg">{{ seg.text }}</p>
         {% if seg.traceability %}

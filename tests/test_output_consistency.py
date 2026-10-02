@@ -424,6 +424,11 @@ class TestOutputConsistency:
                 continue
             if stripped.startswith("> - ["):
                 continue
+            # Skip review-mode lines (issue #3 匯出閘/審查狀態標記)
+            if stripped.startswith("> **匯出模式**"):
+                continue
+            if stripped.startswith("> **審查狀態**"):
+                continue
             md_originals.append(stripped)
 
         # Original paragraphs from docx (first N paragraphs where N = original count)
