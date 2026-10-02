@@ -16,6 +16,7 @@ import json
 import pytest
 
 import app.server as server
+from tests.review_forms import result_id_from_html
 from note_filler.correction import CorrectionDoc, Segment
 from note_filler.export import to_markdown
 from note_filler.parse import Document, Paragraph
@@ -478,21 +479,20 @@ async def test_review_endpoint_records_and_export_gate(async_client, monkeypatch
     monkeypatch.setattr(server, "_build_clients", lambda: (None, None, None))
     monkeypatch.setattr(server, "run_pipeline", lambda path, llm, twinkle, law: doc)
     monkeypatch.setattr(server, "LEDGER_PATH", tmp_path / "review_ledger.json")
-    server.app.state.review_ledger = None
-    server.app.state.last_doc = None
 
     r = await async_client.post(
         "/run", files={"file": ("note.txt", ORIGINAL_TEXT.encode(), "text/plain")}
     )
     assert r.status_code == 200
+    result_id = result_id_from_html(r.text)
     assert "待審" in r.text
     assert 'data-review-state="unreviewed"' in r.text
-    assert 'action="/review"' in r.text
+    assert f'action="/review/{result_id}"' in r.text
 
     r = await async_client.post(
-        "/review",
+        f"/review/{result_id}",
         data={
-            **await review_form(async_client),
+            **await review_form(async_client, result_id=result_id),
             "argument_id": "argument:0",
             "decision": "accepted",
             "reason_code": "",
@@ -508,7 +508,7 @@ async def test_review_endpoint_records_and_export_gate(async_client, monkeypatch
     saved = json.loads(saved_files[0].read_text(encoding="utf-8"))
     assert saved["records"][0]["decision"] == "accepted"
 
-    r = await async_client.get("/export", params={"mode": "accepted-only"})
+    r = await async_client.get(f"/export/{result_id}", params={"mode": "accepted-only"})
     assert r.status_code == 200
     assert "行政處分係指" in r.text
     assert "施行細節仍待查證" not in r.text
@@ -521,15 +521,15 @@ async def test_review_endpoint_rejects_unknown_argument(async_client, monkeypatc
     monkeypatch.setattr(server, "_build_clients", lambda: (None, None, None))
     monkeypatch.setattr(server, "run_pipeline", lambda path, llm, twinkle, law: doc)
     monkeypatch.setattr(server, "LEDGER_PATH", tmp_path / "l.json")
-    server.app.state.review_ledger = None
-    await async_client.post(
+    response = await async_client.post(
         "/run", files={"file": ("note.txt", ORIGINAL_TEXT.encode(), "text/plain")}
     )
+    result_id = result_id_from_html(response.text)
     r = await async_client.post(
-        "/review", data={"argument_id": "argument:99", "decision": "accepted"}
+        f"/review/{result_id}", data={"argument_id": "argument:99", "decision": "accepted"}
     )
     assert r.status_code == 404
     r = await async_client.post(
-        "/review", data={"argument_id": "argument:0", "decision": "bogus"}
+        f"/review/{result_id}", data={"argument_id": "argument:0", "decision": "bogus"}
     )
     assert r.status_code == 400

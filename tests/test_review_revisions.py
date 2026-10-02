@@ -6,7 +6,7 @@ import pytest
 import app.server as server
 from note_filler.export import to_markdown
 from note_filler.review import ReviewLedger, ReviewState
-from tests.review_forms import review_form
+from tests.review_forms import review_form, seed_result, result_id_from_html
 from tests.test_review_queue import _doc, _ledger, ORIGINAL_TEXT
 
 
@@ -15,10 +15,9 @@ from tests.test_review_queue import _doc, _ledger, ORIGINAL_TEXT
 async def test_old_browser_form_cannot_approve_a_new_revision(async_client, monkeypatch, tmp_path, drift):
     doc = _doc()
     ledger = _ledger(doc)
-    monkeypatch.setattr(server.app.state, "last_doc", doc)
-    monkeypatch.setattr(server.app.state, "review_ledger", ledger)
+    result_id = seed_result(doc, ledger)
     monkeypatch.setattr(server, "LEDGER_PATH", tmp_path / "ledger.json")
-    form = await review_form(async_client)
+    form = await review_form(async_client, result_id=result_id)
     assert {"document_revision", "document_instance", "claim_revision", "evidence_revision", "decision_revision"} <= form.keys()
     if drift == "claim":
         doc.segments[1].text = "新的主張版本。"
@@ -32,9 +31,9 @@ async def test_old_browser_form_cannot_approve_a_new_revision(async_client, monk
         replacement = replace(doc, segments=list(doc.segments))
         if drift == "upload":
             replacement.original = replace(doc.original, full_text="另一份上傳。")
-        server.app.state.last_doc = replacement
+        result_id = seed_result(replacement)
     before = ledger.to_dict()
-    response = await async_client.post("/review", data={**form, "decision": "accepted"})
+    response = await async_client.post(f"/review/{result_id}", data={**form, "decision": "accepted"})
     assert response.status_code == 409
     assert ledger.to_dict() == before
 
@@ -43,10 +42,9 @@ async def test_old_browser_form_cannot_approve_a_new_revision(async_client, monk
 async def test_missing_revision_tokens_fail_closed(async_client, monkeypatch, tmp_path):
     doc = _doc()
     ledger = _ledger(doc)
-    monkeypatch.setattr(server.app.state, "last_doc", doc)
-    monkeypatch.setattr(server.app.state, "review_ledger", ledger)
+    result_id = seed_result(doc, ledger)
     monkeypatch.setattr(server, "LEDGER_PATH", tmp_path / "ledger.json")
-    response = await async_client.post("/review", data={
+    response = await async_client.post(f"/review/{result_id}", data={
         "argument_id": "argument:0", "decision": "accepted",
     })
     assert response.status_code == 409
@@ -59,27 +57,31 @@ async def test_manual_edit_survives_regeneration_and_process_state_reload(async_
     monkeypatch.setattr(server, "_build_clients", lambda: (None, None, None))
     monkeypatch.setattr(server, "run_pipeline", lambda *args: _doc())
     monkeypatch.setattr(server, "LEDGER_PATH", tmp_path / "ledger.json")
-    monkeypatch.setattr(server.app.state, "last_doc", original)
-    monkeypatch.setattr(server.app.state, "review_ledger", _ledger(original))
-    for text in ("第一次人工修訂。", "第二次人工修訂。"):
-        form = await review_form(async_client)
-        response = await async_client.post("/review", data={
-            **form, "decision": "accepted", "edited_text": text,
-        })
-        assert response.status_code == 200
-    before_original = original.original.full_text
-    server.app.state.last_doc = None
-    server.app.state.review_ledger = None
     response = await async_client.post("/run", files={
         "file": ("note.txt", ORIGINAL_TEXT.encode(), "text/plain"),
     })
     assert response.status_code == 200
+    result_id = result_id_from_html(response.text)
+    for text in ("第一次人工修訂。", "第二次人工修訂。"):
+        form = await review_form(async_client, result_id=result_id)
+        response = await async_client.post(f"/review/{result_id}", data={
+            **form, "decision": "accepted", "edited_text": text,
+        })
+        assert response.status_code == 200
+    before_original = original.original.full_text
+    server.app.state.results.clear()
+    assert (await async_client.get(f"/export/{result_id}")).status_code == 404
+    response = await async_client.post("/run", files={
+        "file": ("note.txt", ORIGINAL_TEXT.encode(), "text/plain"),
+    })
+    assert response.status_code == 200
+    result_id = result_id_from_html(response.text)
     assert "第二次人工修訂。" in response.text
     assert 'data-review-state="edited_accepted"' in response.text
-    export = await async_client.get("/export?mode=accepted-only")
+    export = await async_client.get(f"/export/{result_id}?mode=accepted-only")
     assert "第二次人工修訂。" in export.text
     assert original.segments[1].text not in export.text
-    assert server.app.state.last_doc.original.full_text == before_original
+    assert server.app.state.results[result_id]["doc"].original.full_text == before_original
 
 
 def edited_ledger(tmp_path):
@@ -136,3 +138,105 @@ def test_legacy_ledger_can_replay_unedited_decisions(tmp_path):
     path.write_text(json.dumps(data))
     loaded = ReviewLedger.load_for_document(path, doc)
     assert loaded.state_of(doc.segments[1]) == ReviewState.ACCEPTED
+
+
+@pytest.mark.anyio
+async def test_identical_uploads_do_not_share_private_reviews_between_browsers(monkeypatch, tmp_path):
+    import httpx
+
+    monkeypatch.setattr(server, "_build_clients", lambda: (None, None, None))
+    monkeypatch.setattr(server, "run_pipeline", lambda *args: _doc())
+    monkeypatch.setattr(server, "LEDGER_PATH", tmp_path / "ledger.json")
+    transport = httpx.ASGITransport(app=server.app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as a, \
+               httpx.AsyncClient(transport=transport, base_url="http://testserver") as b:
+        upload = {"file": ("note.txt", ORIGINAL_TEXT.encode(), "text/plain")}
+        result_a = result_id_from_html((await a.post("/run", files=upload)).text)
+        form_a = await review_form(a, result_id=result_a)
+        edited = "只有第一位使用者的私人修訂。"
+        assert (await a.post(f"/review/{result_a}", data={
+            **form_a, "decision": "accepted", "edited_text": edited,
+        })).status_code == 200
+        result_b = result_id_from_html((await b.post("/run", files=upload)).text)
+        assert result_b != result_a
+        for url in ("/result", "/export", "/result/unknown", "/export/unknown"):
+            assert (await b.get(url)).status_code == 404
+        assert (await b.post("/review", data=form_a)).status_code == 404
+        assert (await b.post("/review/unknown", data=form_a)).status_code == 404
+        assert (await b.post(f"/review/{result_b}", data={
+            **form_a, "decision": "accepted",
+        })).status_code == 409
+        visible_b = await b.get(f"/result/{result_b}")
+        assert edited not in visible_b.text
+        assert 'data-review-state="unreviewed"' in visible_b.text
+        export_b = await b.get(f"/export/{result_b}?mode=accepted-only")
+        assert edited not in export_b.text
+        assert _doc().segments[1].text not in export_b.text
+        assert edited in (await a.get(f"/export/{result_a}?mode=accepted-only")).text
+        assert visible_b.headers["cache-control"] == "no-store"
+        assert visible_b.headers["referrer-policy"] == "no-referrer"
+
+
+@pytest.mark.anyio
+async def test_same_browser_old_tab_cannot_overwrite_a_newer_durable_review(async_client, monkeypatch, tmp_path):
+    monkeypatch.setattr(server, "_build_clients", lambda: (None, None, None))
+    monkeypatch.setattr(server, "run_pipeline", lambda *args: _doc())
+    monkeypatch.setattr(server, "LEDGER_PATH", tmp_path / "ledger.json")
+    upload = {"file": ("note.txt", ORIGINAL_TEXT.encode(), "text/plain")}
+    first = result_id_from_html((await async_client.post("/run", files=upload)).text)
+    old_form = await review_form(async_client, result_id=first)
+    second = result_id_from_html((await async_client.post("/run", files=upload)).text)
+    second_form = await review_form(async_client, result_id=second)
+    assert (await async_client.post(f"/review/{second}", data={
+        **second_form, "decision": "accepted", "edited_text": "另一個分頁的新修訂。",
+    })).status_code == 200
+    assert (await async_client.post(f"/review/{first}", data={
+        **old_form, "decision": "accepted",
+    })).status_code == 409
+    refreshed = await async_client.get(f"/result/{first}")
+    assert "另一個分頁的新修訂。" in refreshed.text
+    assert 'data-review-state="edited_accepted"' in refreshed.text
+
+
+@pytest.mark.anyio
+async def test_expired_capability_cannot_read_review_or_export(async_client, monkeypatch, tmp_path):
+    import time
+
+    result_id = seed_result(_doc())
+    monkeypatch.setattr(server, "LEDGER_PATH", tmp_path / "ledger.json")
+    form = await review_form(async_client, result_id=result_id)
+    server.app.state.results[result_id]["created_at"] = time.monotonic() - server.RESULT_TTL_SECONDS - 1
+    assert (await async_client.post(f"/review/{result_id}", data={
+        **form, "decision": "accepted",
+    })).status_code == 404
+    assert (await async_client.get(f"/result/{result_id}")).status_code == 404
+    assert (await async_client.get(f"/export/{result_id}")).status_code == 404
+    assert not list(tmp_path.glob("ledger.*.json"))
+
+
+@pytest.mark.anyio
+async def test_already_edited_result_replays_a_second_tab_newest_revision(async_client, monkeypatch, tmp_path):
+    monkeypatch.setattr(server, "_build_clients", lambda: (None, None, None))
+    monkeypatch.setattr(server, "run_pipeline", lambda *args: _doc())
+    monkeypatch.setattr(server, "LEDGER_PATH", tmp_path / "ledger.json")
+    upload = {"file": ("note.txt", ORIGINAL_TEXT.encode(), "text/plain")}
+    first = result_id_from_html((await async_client.post("/run", files=upload)).text)
+    first_form = await review_form(async_client, result_id=first)
+    assert (await async_client.post(f"/review/{first}", data={
+        **first_form, "decision": "accepted", "edited_text": "第一個人工版本。",
+    })).status_code == 200
+    second_response = await async_client.post("/run", files=upload)
+    second = result_id_from_html(second_response.text)
+    assert "第一個人工版本。" in second_response.text
+    second_form = await review_form(async_client, result_id=second)
+    assert (await async_client.post(f"/review/{second}", data={
+        **second_form, "decision": "accepted", "edited_text": "第二個人工版本。",
+    })).status_code == 200
+    for result_id in (first, second):
+        visible = await async_client.get(f"/result/{result_id}")
+        assert "第二個人工版本。" in visible.text
+        assert "第一個人工版本。" not in visible.text
+        assert 'data-review-state="edited_accepted"' in visible.text
+        exported = await async_client.get(f"/export/{result_id}?mode=accepted-only")
+        assert "第二個人工版本。" in exported.text
+        assert "第一個人工版本。" not in exported.text

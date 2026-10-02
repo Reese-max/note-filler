@@ -104,7 +104,9 @@ def test_cli_failure_receipt_keeps_input_identifier_and_reason(tmp_path, monkeyp
 
 @pytest.mark.anyio
 async def test_web_pipeline_failure_returns_traceable_500(async_client, monkeypatch, caplog, tmp_path):
-    server.app.state.last_doc = CorrectionDoc(_doc(), [])
+    # 既有成功結果有有效 capability;失敗的 run 不得產生或破壞它。
+    server.app.state.results.clear()
+    prior_id = server._store_result(CorrectionDoc(_doc(), []))
     monkeypatch.setattr(server, "_build_clients", lambda: (None, None, None))
     monkeypatch.setattr(
         server, "run_pipeline", lambda *args: (_ for _ in ()).throw(RuntimeError("fault-WEB-01"))
@@ -117,9 +119,17 @@ async def test_web_pipeline_failure_returns_traceable_500(async_client, monkeypa
 
     assert response.status_code == 500
     assert "case-WEB-01.txt" in response.text
-    assert "RuntimeError: fault-WEB-01" in response.text
-    assert "case-WEB-01.txt" in caplog.text and "fault-WEB-01" in caplog.text
+    assert "筆記處理失敗，請檢查輸入或稍後重試。" in response.text
+    assert "fault-WEB-01" not in response.text
+    assert "fault-WEB-01" not in caplog.text
+    failure = next(
+        row for row in _audit_records(caplog)
+        if row["event"] == "web_pipeline_failed"
+    )
+    assert failure["error_type"] == "RuntimeError"
     assert (await async_client.get("/export")).status_code == 404
+    assert list(server.app.state.results) == [prior_id]
+    assert (await async_client.get(f"/export/{prior_id}")).status_code == 200
 
     temp_path = tmp_path / "case-WEB-04.tmp"
 
@@ -148,9 +158,10 @@ async def test_web_pipeline_failure_returns_traceable_500(async_client, monkeypa
         row for row in _audit_records(caplog)
         if row["event"] == "temp_file_cleanup_failed"
     )
-    assert cleanup["data_id"] == "case-WEB-04.txt"
-    assert cleanup["temp_path"] == str(temp_path)
-    assert cleanup["error"] == "fault-WEB-04"
+    assert cleanup["data_id"] == "web_upload"
+    assert cleanup["error_type"] == "OSError"
+    assert str(temp_path) not in caplog.text
+    assert "fault-WEB-04" not in caplog.text
 
 
 def test_parse_domain_and_questions_degradations_are_identified(tmp_path, caplog):
@@ -291,7 +302,7 @@ def test_web_exception_and_skip_matrix_preserves_later_good_source(caplog):
         "query-fault",
         "https://fetch-fault",
         "fetch-fault-reason",
-        "bad-grade-json",
+        "grade JSON parse failed",  # raw LLM 輸出不進日誌,只記失敗事件
         "https://grade-fault",
         "grade-fault-reason",
     ):
@@ -437,7 +448,8 @@ def test_law_citation_skips_and_penalty_mismatch_are_traceable(monkeypatch, capl
         _verify_law_citations(correction, Lookup())
 
     assert correction.segments[-1].confidence == "pending_evidence"
-    for evidence in ("本法", "no preceding", "外星保護法", "not found", "case-CITE-04", "fault-CITE-04"):
+    # 段落內容不進日誌;關聯識別用 segment index + finding detail。
+    for evidence in ("本法", "no preceding", "外星保護法", "not found", "segment#1", "fault-CITE-04"):
         assert evidence in caplog.text
 
 

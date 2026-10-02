@@ -14,7 +14,7 @@ from note_filler import __main__ as cli
 from note_filler.parse import Paragraph
 from note_filler.review import ReviewLedger, ReviewState, source_stances
 from tests.test_review_queue import _doc, _ledger
-from tests.review_forms import review_form
+from tests.review_forms import review_form, seed_result
 
 
 @pytest.mark.parametrize("clear_ids", [False, True])
@@ -114,12 +114,11 @@ async def test_edited_accepted_has_a_queue_filter(async_client, monkeypatch, tmp
     doc = _doc()
     ledger = _ledger(doc)
     ledger.record(doc.segments[1], "edited_accepted")
-    monkeypatch.setattr(server.app.state, "last_doc", doc)
-    monkeypatch.setattr(server.app.state, "review_ledger", ledger)
+    result_id = seed_result(doc, ledger)
     monkeypatch.setattr(server, "LEDGER_PATH", tmp_path / "ledger.json")
-    response = await async_client.get("/result")
-    assert 'href="/result?filter=edited_accepted"' in response.text
-    response = await async_client.get("/result?filter=edited_accepted")
+    response = await async_client.get(f"/result/{result_id}")
+    assert f'href="/result/{result_id}?filter=edited_accepted"' in response.text
+    response = await async_client.get(f"/result/{result_id}?filter=edited_accepted")
     assert 'data-review-state="edited_accepted"' in response.text
     assert 'data-review-state="unreviewed"' not in response.text
 
@@ -129,12 +128,11 @@ async def test_next_pending_leaves_a_filter_that_hides_the_claim(async_client, m
     doc = _doc()
     ledger = _ledger(doc)
     ledger.record(doc.segments[1], "accepted")
-    monkeypatch.setattr(server.app.state, "last_doc", doc)
-    monkeypatch.setattr(server.app.state, "review_ledger", ledger)
+    result_id = seed_result(doc, ledger)
     monkeypatch.setattr(server, "LEDGER_PATH", tmp_path / "ledger.json")
-    response = await async_client.get("/result?filter=accepted")
+    response = await async_client.get(f"/result/{result_id}?filter=accepted")
     assert 'id="claim-argument:1"' not in response.text
-    assert 'href="/result#claim-argument:1"' in response.text
+    assert f'href="/result/{result_id}#claim-argument:1"' in response.text
 
 
 @pytest.mark.parametrize("edited_text", ["", "尚未存檔的人工修訂。"])
@@ -145,10 +143,9 @@ async def test_failed_save_does_not_publish_review_or_edit(monkeypatch, tmp_path
     before_text = seg.text
     ledger = _ledger(doc)
     ledger.record(seg, "rejected")
-    monkeypatch.setattr(server.app.state, "last_doc", doc)
-    monkeypatch.setattr(server.app.state, "review_ledger", ledger)
+    result_id = seed_result(doc, ledger)
     monkeypatch.setattr(server, "LEDGER_PATH", tmp_path / "ledger.json")
-    ledger.save(server._ledger_path_for(doc))
+    ledger.save(server._ledger_path_for(doc, result_id))
     before_ledger = ledger.to_dict()
 
     def fail_save(self, path):
@@ -157,17 +154,17 @@ async def test_failed_save_does_not_publish_review_or_edit(monkeypatch, tmp_path
     monkeypatch.setattr(ReviewLedger, "save", fail_save)
     transport = httpx.ASGITransport(app=server.app, raise_app_exceptions=False)
     async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
-        response = await client.post("/review", data={
-            **await review_form(client, seg.argument_id),
+        response = await client.post(f"/review/{result_id}", data={
+            **await review_form(client, seg.argument_id, result_id=result_id),
             "argument_id": seg.argument_id,
             "decision": "accepted",
             "edited_text": edited_text,
         })
         assert response.status_code == 500
-        assert server.app.state.last_doc.segments[1].text == before_text
-        assert server.app.state.review_ledger.to_dict() == before_ledger
-        assert ReviewLedger.load(server._ledger_path_for(doc)).to_dict() == before_ledger
-        assert "行政處分係指" not in (await client.get("/export?mode=accepted-only")).text
+        assert server.app.state.results[result_id]["doc"].segments[1].text == before_text
+        assert server.app.state.results[result_id]["review_ledger"].to_dict() == before_ledger
+        assert ReviewLedger.load(server._ledger_path_for(doc, result_id)).to_dict() == before_ledger
+        assert "行政處分係指" not in (await client.get(f"/export/{result_id}?mode=accepted-only")).text
 
     assert doc.original.full_text == doc.segments[0].text
 
@@ -187,25 +184,27 @@ async def test_review_does_not_overwrite_a_document_changed_while_reading_form(
         concurrent.original = replace(doc.original, full_text="新上傳。")
     concurrent_ledger = _ledger(concurrent)
     concurrent_ledger.record(concurrent.segments[1], "edited_accepted")
-    monkeypatch.setattr(server.app.state, "last_doc", doc)
-    monkeypatch.setattr(server.app.state, "review_ledger", ledger)
+    result_id = seed_result(doc, ledger)
     monkeypatch.setattr(server, "LEDGER_PATH", tmp_path / "ledger.json")
+    form = await review_form(async_client, result_id=result_id)
     parse_form = server.Request.form
 
     async def interleaved_form(request):
         form = await parse_form(request)
-        concurrent_ledger.save(server._ledger_path_for(concurrent))
-        server.app.state.last_doc = concurrent
-        server.app.state.review_ledger = concurrent_ledger
+        concurrent_ledger.save(server._ledger_path_for(concurrent, result_id))
+        server.app.state.results[result_id]["doc"] = concurrent
+        server.app.state.results[result_id]["generated_doc"] = concurrent
+        server.app.state.results[result_id]["review_ledger"] = concurrent_ledger
         return form
 
     monkeypatch.setattr(server.Request, "form", interleaved_form)
-    response = await async_client.post("/review", data={
+    response = await async_client.post(f"/review/{result_id}", data={
+        **form,
         "argument_id": "argument:0", "decision": "rejected",
     })
     assert response.status_code == 409
-    assert server.app.state.last_doc is concurrent
-    assert server.app.state.review_ledger is concurrent_ledger
+    assert server.app.state.results[result_id]["doc"] is concurrent
+    assert server.app.state.results[result_id]["review_ledger"] is concurrent_ledger
     assert concurrent_ledger.state_of(concurrent.segments[1]) == ReviewState.EDITED_ACCEPTED
 
 

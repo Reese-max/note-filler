@@ -39,12 +39,12 @@ append-only ledger，匯出端新增 `accepted-only` 正式稿閘門。
 
 `ReviewLedger.save(path)` / `ReviewLedger.load_for_document(path, doc)`：
 
-- schema `note_filler.review_ledger.v1`，atomic tmp+replace 寫入
+- schema `note_filler.review_ledger.v2`，相容讀取 v1，atomic tmp+replace 寫入
 - 以 `doc_fingerprint`（full_text + paragraphs 的 SHA-256，不依檔名）綁定
   文件；檔案不存在、毀損、schema 不符或文件指紋不符 → 回傳全新 ledger
   （全部 `unreviewed`，匯出端 fail closed）
-- Web 端每份文件一個履歷檔：`LEDGER_PATH` 衍生為
-  `review_ledger.<fingerprint16>.json`，新文件不覆寫舊文件的決策歷史
+- Web 端依瀏覽器擁有者與文件保存履歷：`LEDGER_PATH` 衍生為
+  `review_ledger.<owner_hash32>.<fingerprint16>.json`，不同瀏覽器不共用私人決策
 
 ## 匯出閘
 
@@ -68,16 +68,17 @@ CLI：`python -m note_filler … --export-mode accepted-only --review-ledger <pa
 
 - `POST /run`：產出訂正稿並載入/重建本文件的 ledger；結果頁上方顯示
   審查佇列計數（待審 N 筆）、狀態篩選連結與「下一個待審」錨點
-- `POST /review`：`argument_id` + `decision`（`accepted`/`rejected`/
+- `POST /review/{result_id}`：`argument_id` + `decision`（`accepted`/`rejected`/
   `needs_more_evidence`）+ `reason_code`/`note`/`reviewer`/`edited_text`；
   `edited_text` 只能搭配核准類決策（文字有變動一律記 `edited_accepted`）；
   決策寫入每文件履歷檔（`LEDGER_PATH` 衍生，預設
-  `.task_state/review_ledger.json` → `review_ledger.<fp16>.json`）；
+  `.task_state/review_ledger.json` → `review_ledger.<owner_hash32>.<fp16>.json`）；
   寫檔成功才發布主張修訂與決策，寫檔失敗時維持原有記憶體與履歷內容；
   若讀取表單期間已有新文件或修訂發布，回應 409，避免覆蓋該修訂
-- `GET /result?filter=<state>`：依審查狀態篩選審查卡，包含 `edited_accepted`；
+- `GET /result/{result_id}?filter=<state>`：依審查狀態篩選審查卡，包含 `edited_accepted`；
   「下一個待審」會回到全部佇列再定位，避免目標被目前篩選隱藏
-- `GET /export?mode=review-draft|accepted-only`：匯出閘
+- `GET /export/{result_id}?mode=review-draft|accepted-only`：匯出閘
+- `result_id` 是不可猜測的結果存取連結；裸路徑、未知或過期結果一律 404
 
 審查卡顯示：審查狀態（含 stale 原因）、系統 confidence 與待補證/衝突原因、
 逐來源立場（`supports`/`conflicts`/`context_only`/`unresolved` + 來源遺失標記）、
@@ -107,15 +108,15 @@ CLI：`python -m note_filler … --export-mode accepted-only --review-ledger <pa
 EDITED_ACCEPTED、source hash drift、citation span 變動、驗證契約變動、
 來源遺失（evidence_unavailable）、衝突來源立場、accepted-only 匯出閘
 （含無 ledger fail-closed）、ledger 存取/重播/指紋不符、原稿不可變、
-`POST /review` + `GET /export?mode=` 端對端。
+`POST /review/{result_id}` + `GET /export/{result_id}?mode=` 端對端。
 
 `tests/test_review_regressions.py`：缺證後重新核准仍阻擋、否定主張的來源立場、
 跨文件履歷的三格式匯出、寫檔失敗不發布修訂、交錯請求不覆蓋新文件、
 DOCX 草稿標記、篩選導覽，以及依正式稿內容計算的統計與 CLI 回執。
 
-## 尚待人工決定的契約
+## 2026-10-02 契約補正
 
-- `/review` 尚未要求文件／主張／證據版本資訊；舊分頁提交可能核准目前的新內容。
-  需決定新增版本欄位、衝突回應及相容方式後才可視為安全的跨分頁審查。
-- 修訂文字目前只在記憶體；履歷保存的是指紋，重新產生同文件時可能變成
-  `stale_review` 且無法還原手動文字。修訂 overlay 的保存／重播方式尚未定義。
+- 審查表單帶文件、結果實例、主張、證據及最新決策版本；缺少或過期版本回應 409。
+- v2 履歷保存人工文字 overlay 與原始／修訂主張和證據指紋；同瀏覽器重新產生
+  同文件可重播修訂，來源或生成內容變動仍失效。舊分頁顯示和匯出從保存的生成
+  基底重播最新履歷，不會遺失第二次跨分頁修訂。

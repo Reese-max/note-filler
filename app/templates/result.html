@@ -41,20 +41,20 @@
   {% if review_summary %}
   <div class="review-queue">
     <strong>審查佇列</strong>：待審 {{ review_summary.pending }} 筆（共 {{ review_summary.total }} 筆）
-    — 篩選：<a href="/result">全部</a>
-    | <a href="/result?filter=unreviewed">未審</a>
-    | <a href="/result?filter=stale_review">已失效</a>
-    | <a href="/result?filter=needs_more_evidence">待補證</a>
-    | <a href="/result?filter=accepted">已接受</a>
-    | <a href="/result?filter=edited_accepted">修訂後接受</a>
-    | <a href="/result?filter=rejected">已拒絕</a>
+    — 篩選：<a href="/result/{{ result_id }}">全部</a>
+    | <a href="/result/{{ result_id }}?filter=unreviewed">未審</a>
+    | <a href="/result/{{ result_id }}?filter=stale_review">已失效</a>
+    | <a href="/result/{{ result_id }}?filter=needs_more_evidence">待補證</a>
+    | <a href="/result/{{ result_id }}?filter=accepted">已接受</a>
+    | <a href="/result/{{ result_id }}?filter=edited_accepted">修訂後接受</a>
+    | <a href="/result/{{ result_id }}?filter=rejected">已拒絕</a>
     {% if review_summary.next_pending_argument_id %}
-    — <a href="/result#claim-{{ review_summary.next_pending_argument_id }}">下一個待審</a>
+    — <a href="/result/{{ result_id }}#claim-{{ review_summary.next_pending_argument_id }}">下一個待審</a>
     {% endif %}
     {% if review_filter %}（目前篩選：{{ review_filter }}）{% endif %}
   </div>
   {% endif %}
-  <p><a href="/export">下載 Markdown 訂正稿</a>｜<a href="/export?mode=accepted-only">下載 accepted-only 正式稿</a></p>
+  <p><a href="/export/{{ result_id }}">下載 Markdown 訂正稿</a>｜<a href="/export/{{ result_id }}?mode=accepted-only">下載 accepted-only 正式稿</a></p>
   <div class="cols">
     <div class="col" id="original">
       <h2>原稿(不可變)</h2>
@@ -162,7 +162,7 @@
               {% endfor %}
             </ul>
             {% endif %}
-            <form method="post" action="/review" class="review-form">
+            <form method="post" action="/review/{{ result_id }}" class="review-form">
               <input type="hidden" name="argument_id" value="{{ seg.argument_id }}">
               <input type="hidden" name="document_instance" value="{{ document_instance }}">
               {% for key, value in item.revision_tokens.items() %}

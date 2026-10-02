@@ -492,7 +492,7 @@ class TestPolarisMetrics:
             source_binding_integrity=source_binding,
             angle_diversity_index=angle_diversity,
             delivery_success_rate=delivery,
-            calculated_at=datetime.now(timezone.utc).isoformat(),
+            calculated_at=datetime.now(timezone.utc).replace(tzinfo=None).isoformat(),
         )
         
         # 由於門檻設定，實際上需要所有指標都通過
@@ -533,7 +533,7 @@ class TestPolarisMetrics:
             source_binding_integrity=source_binding,
             angle_diversity_index=angle_diversity,
             delivery_success_rate=delivery,
-            calculated_at=datetime.now(timezone.utc).isoformat(),
+            calculated_at=datetime.now(timezone.utc).replace(tzinfo=None).isoformat(),
         )
         
         # 大部分指標未通過門檻
@@ -666,7 +666,7 @@ class TestPolarisMetrics:
             source_binding_integrity=source_binding,
             angle_diversity_index=angle_diversity,
             delivery_success_rate=delivery,
-            calculated_at=datetime.now(timezone.utc).isoformat(),
+            calculated_at=datetime.now(timezone.utc).replace(tzinfo=None).isoformat(),
         )
         
         # 有錯誤狀態時，整體狀態應為 error
@@ -707,7 +707,7 @@ class TestMetricsIntegration:
             "output_path": "/path/to/output.md",
             "input_path": "/path/to/input.txt",
             "status": "delivered",
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": datetime.now(timezone.utc).replace(tzinfo=None).isoformat(),
             "polaris_metrics": polaris_metrics,
         }
         
