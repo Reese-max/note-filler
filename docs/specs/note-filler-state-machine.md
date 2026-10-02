@@ -21,9 +21,9 @@
 |---|---|
 | `S0-空白頁` | 尚未上傳任何檔案，使用者位於 `/`。 |
 | `S1-產出中` | `POST /run` 已接到請求，執行 `run_pipeline(...)`（短暫伺服器端處理）。 |
-| `S2-已產生訂正稿` | `/run` 成功完成，`app.state.last_doc` 已設值，頁面顯示雙欄結果。 |
-| `S3-可匯出` | 呼叫 `/export` 時 `app.state.last_doc` 存在。 |
-| `S4-不可匯出` | 呼叫 `/export` 時 `app.state.last_doc is None`，回 404。 |
+| `S2-已產生訂正稿` | `/run` 成功完成，`app.state.results[result_id]` 已設值，頁面顯示雙欄結果與 capability 連結。 |
+| `S3-可匯出` | 呼叫 `/export/{result_id}` 且對應 capability 存在且未過 TTL。 |
+| `S4-不可匯出` | 呼叫 `/export` 或 `/export/{result_id}` 時無對應 capability（未跑、過期或重啟），回 404。 |
 
 ### 狀態轉移
 
@@ -32,15 +32,13 @@ stateDiagram-v2
     [*] --> S0 : GET /
     S0 --> S1 : POST /run(file)
     S1 --> S2 : run_pipeline 成功回傳
-    S2 --> S3 : GET /export (last_doc exists)
+    S2 --> S3 : GET /export/{result_id} (capability 有效)
     S2 --> S0 : 重載頁面回首頁
-    S0 --> S4 : GET /export(未上傳)
-    S1 --> S4 : POST /run 異常未處理（框架預設 500）*
+    S0 --> S4 : GET /export 或 /export/{未知id}(未上傳)
+    S1 --> S4 : POST /run 異常 → result.html 錯誤頁 500，不產生 capability
     S4 --> S0 : 使用者回首頁
     S3 --> S0 : 重新上傳 /run
 ```
-
-> 註：`S1` 到 `S4` 的失敗邊為框架預設異常路徑，當前未有明確錯誤頁（可視為未填的設計缺口）。
 
 ### 主要實作錨點
 
@@ -81,7 +79,7 @@ stateDiagram-v2
 
 | 元件 | 狀態主責 |
 |---|---|
-| `app.state.last_doc` | 會話內最後一次 `/run` 產物快取 |
+| `app.state.results` | 各次 `/run` 產物的能力綁定暫存（`result_id` → doc，TTL/上限逐出） |
 | `run_pipeline` | 將輸入轉為 `CorrectionDoc` |
 | `assemble_correction` | 建立原稿/補充段序列與 `anchor_idx` |
 | `to_markdown` | 匯出結果檔案格式與檔頭 |
