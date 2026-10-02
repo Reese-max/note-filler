@@ -6,6 +6,7 @@ import tempfile
 import traceback
 from dataclasses import replace
 from pathlib import Path
+from uuid import uuid4
 
 from fastapi import FastAPI, File, Request, UploadFile
 from fastapi.responses import HTMLResponse, PlainTextResponse
@@ -16,7 +17,7 @@ from note_filler.audit import audit_event
 from note_filler.llm import GrokClient
 from note_filler.pipeline import run_pipeline
 from note_filler.knowledge.law_lookup import LawLookup
-from note_filler.review import REASON_CODES, ReviewLedger, doc_fingerprint
+from note_filler.review import REASON_CODES, REVIEWABLE_DECISIONS, ReviewLedger, doc_fingerprint
 from note_filler.retrieve.twinkle import TwinkleClient
 
 logger = logging.getLogger(__name__)
@@ -65,6 +66,13 @@ def _ledger_for(doc) -> ReviewLedger:
     return ledger
 
 
+def _document_instance_for(doc) -> str:
+    if getattr(app.state, "review_document", None) is not doc:
+        app.state.review_document = doc
+        app.state.review_document_instance = uuid4().hex
+    return app.state.review_document_instance
+
+
 def _render_result(
     request: Request,
     doc,
@@ -78,6 +86,12 @@ def _render_result(
     context = {"doc": doc, "error": error, "input_id": input_id}
     if doc is not None:
         ledger = _ledger_for(doc)
+        replay = ledger.apply_overlays(doc)
+        if app.state.last_doc is doc:
+            app.state.last_doc = replay
+        doc = replay
+        context["doc"] = doc
+        context["document_instance"] = _document_instance_for(doc)
         items = ledger.queue_items(doc)
         if status_filter:
             items = [i for i in items if i["state"] == status_filter]
@@ -208,6 +222,14 @@ async def review_decision(request: Request) -> HTMLResponse:
         )
 
     ledger = _ledger_for(doc)
+    if decision not in {value.value for value in REVIEWABLE_DECISIONS}:
+        return PlainTextResponse("審查決策不合法:未知 decision", status_code=400)
+    expected_tokens = {
+        **ledger.revision_tokens(doc, seg),
+        "document_instance": _document_instance_for(doc),
+    }
+    if any(str(form.get(key) or "") != value for key, value in expected_tokens.items()):
+        return PlainTextResponse("訂正稿或審查版本已變更,請重新載入後審查。", status_code=409)
     ledger = ReviewLedger(ledger.doc_fingerprint, ledger.records)
     try:
         record = ledger.record(
@@ -216,6 +238,7 @@ async def review_decision(request: Request) -> HTMLResponse:
             reason_code=reason_code,
             note=note,
             reviewer=reviewer,
+            base_segment=seg if candidate.text != seg.text else None,
         )
     except ValueError as exc:
         return PlainTextResponse(f"審查決策不合法:{exc}", status_code=400)

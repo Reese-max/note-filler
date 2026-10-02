@@ -473,6 +473,7 @@ def _fixed_doc_for_server():
 
 @pytest.mark.anyio
 async def test_review_endpoint_records_and_export_gate(async_client, monkeypatch, tmp_path):
+    from tests.review_forms import review_form
     doc = _fixed_doc_for_server()
     monkeypatch.setattr(server, "_build_clients", lambda: (None, None, None))
     monkeypatch.setattr(server, "run_pipeline", lambda path, llm, twinkle, law: doc)
@@ -491,6 +492,7 @@ async def test_review_endpoint_records_and_export_gate(async_client, monkeypatch
     r = await async_client.post(
         "/review",
         data={
+            **await review_form(async_client),
             "argument_id": "argument:0",
             "decision": "accepted",
             "reason_code": "",

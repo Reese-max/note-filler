@@ -18,7 +18,7 @@ import hashlib
 import json
 import logging
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime, timezone
 from enum import Enum
 from pathlib import Path
@@ -32,7 +32,8 @@ if TYPE_CHECKING:                      # 僅型別提示,執行期零硬耦合
 
 logger = logging.getLogger(__name__)
 
-REVIEW_LEDGER_SCHEMA = "note_filler.review_ledger.v1"
+REVIEW_LEDGER_SCHEMA = "note_filler.review_ledger.v2"
+LEGACY_REVIEW_LEDGER_SCHEMA = "note_filler.review_ledger.v1"
 
 
 class ReviewState(str, Enum):
@@ -307,6 +308,7 @@ class DecisionRecord:
     claim_hash: str = ""
     evidence_hash: str = ""
     previous_decision_id: str | None = None
+    revision_overlay: dict | None = None
 
     def to_dict(self) -> dict:
         return {
@@ -320,10 +322,18 @@ class DecisionRecord:
             "claim_hash": self.claim_hash,
             "evidence_hash": self.evidence_hash,
             "previous_decision_id": self.previous_decision_id,
+            "revision_overlay": self.revision_overlay,
         }
 
     @classmethod
     def from_dict(cls, data: dict) -> "DecisionRecord":
+        overlay = data.get("revision_overlay")
+        if overlay is not None:
+            if not isinstance(overlay, dict) or not isinstance(overlay.get("edited_text"), str):
+                raise ValueError("Invalid revision overlay")
+            for key in ("base_claim_hash", "evidence_hash", "edited_claim_hash"):
+                if not isinstance(overlay.get(key), str) or not re.fullmatch(r"[a-f0-9]{64}", overlay[key]):
+                    raise ValueError("Invalid revision overlay hash")
         return cls(
             decision_id=str(data["decision_id"]),
             argument_id=str(data["argument_id"]),
@@ -335,6 +345,7 @@ class DecisionRecord:
             claim_hash=str(data.get("claim_hash") or ""),
             evidence_hash=str(data.get("evidence_hash") or ""),
             previous_decision_id=data.get("previous_decision_id"),
+            revision_overlay=dict(overlay) if overlay is not None else None,
         )
 
 
@@ -369,6 +380,7 @@ class ReviewLedger:
         note: str = "",
         reviewer: str = "local",
         now: str | None = None,
+        base_segment: "Segment | None" = None,
     ) -> DecisionRecord:
         """記錄一筆人工決策並綁定當前 claim/evidence 指紋。
 
@@ -396,6 +408,27 @@ class ReviewLedger:
         reviewer = (reviewer or "").strip() or "local"
         reviewed_at = now or datetime.now(timezone.utc).isoformat()
         previous = self.latest(argument_id)
+        overlay = None
+        previous_overlay = previous.revision_overlay if previous is not None else None
+        if base_segment is not None:
+            if (
+                getattr(base_segment, "argument_id", "") != argument_id
+                or evidence_bundle_hash(base_segment) != evidence_bundle_hash(segment)
+            ):
+                raise ValueError("Manual edit must preserve the reviewed evidence and argument")
+            if base_segment.text != segment.text:
+                base_hash = claim_revision_hash(base_segment)
+                if previous_overlay and base_hash == previous.claim_hash:
+                    base_hash = previous_overlay["base_claim_hash"]
+                overlay = {
+                    "base_claim_hash": base_hash,
+                    "evidence_hash": evidence_bundle_hash(segment),
+                    "edited_text": segment.text,
+                    "edited_claim_hash": claim_revision_hash(segment),
+                }
+        if overlay is None and previous_overlay and claim_revision_hash(segment) == previous.claim_hash:
+            overlay = dict(previous_overlay)
+            overlay["evidence_hash"] = evidence_bundle_hash(segment)
         decision_id = _sha(
             f"{self.doc_fingerprint}|{argument_id}|{decision.value}|"
             f"{reviewed_at}|{len(self.records)}"
@@ -413,6 +446,7 @@ class ReviewLedger:
             previous_decision_id=(
                 previous.decision_id if previous is not None else None
             ),
+            revision_overlay=overlay,
         )
         self.records.append(rec)
         audit_event(
@@ -427,6 +461,50 @@ class ReviewLedger:
             previous_decision_id=rec.previous_decision_id,
         )
         return rec
+
+    def apply_overlays(self, doc: "CorrectionDoc") -> "CorrectionDoc":
+        """Replay edits only over the exact generated claim and evidence reviewed."""
+        if self.doc_fingerprint != doc_fingerprint(doc):
+            return doc
+        segments = []
+        changed = False
+        for segment in doc.segments:
+            record = self.latest(getattr(segment, "argument_id", ""))
+            overlay = record.revision_overlay if record is not None else None
+            if (
+                segment.type == "supplement"
+                and overlay
+                and claim_revision_hash(segment) == overlay["base_claim_hash"]
+                and evidence_bundle_hash(segment) == overlay["evidence_hash"]
+            ):
+                candidate = replace(segment, text=overlay["edited_text"])
+                candidate_hash = claim_revision_hash(candidate)
+                if candidate_hash == record.claim_hash == overlay["edited_claim_hash"]:
+                    segment = candidate
+                    changed = True
+            segments.append(segment)
+        return replace(doc, segments=segments) if changed else doc
+
+    def revision_tokens(self, doc: "CorrectionDoc", segment: "Segment") -> dict[str, str]:
+        """Bind a browser decision to document, claim, evidence and decision revisions."""
+        document_revision = _sha(_canonical({
+            "original": doc_fingerprint(doc),
+            "segments": [
+                {
+                    "type": current.type,
+                    "claim": claim_revision_hash(current),
+                    "evidence": evidence_bundle_hash(current),
+                }
+                for current in doc.segments
+            ],
+        }))
+        latest = self.latest(getattr(segment, "argument_id", ""))
+        return {
+            "document_revision": document_revision,
+            "claim_revision": claim_revision_hash(segment),
+            "evidence_revision": evidence_bundle_hash(segment),
+            "decision_revision": latest.decision_id if latest is not None else "unreviewed",
+        }
 
     def state_detail(self, segment: "Segment") -> dict:
         """有效審查狀態:舊決策的指紋與當前不符 → STALE_REVIEW(fail closed)。"""
@@ -487,6 +565,7 @@ class ReviewLedger:
             items.append(
                 {
                     "argument_id": getattr(seg, "argument_id", "") or "",
+                    "revision_tokens": self.revision_tokens(doc, seg),
                     "state": detail["state"].value,
                     "stale_reason": detail["stale_reason"],
                     "claim": getattr(seg, "text", "") or "",
@@ -579,7 +658,9 @@ class ReviewLedger:
             data = json.loads(path.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError):
             return None
-        if not isinstance(data, dict) or data.get("schema") != REVIEW_LEDGER_SCHEMA:
+        if not isinstance(data, dict) or data.get("schema") not in {
+            REVIEW_LEDGER_SCHEMA, LEGACY_REVIEW_LEDGER_SCHEMA,
+        }:
             return None
         try:
             return cls.from_dict(data)

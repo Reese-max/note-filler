@@ -27,6 +27,8 @@ def prepare_export(
     _validate_export_mode(export_mode)
     if ledger is not None and ledger.doc_fingerprint != doc_fingerprint(doc):
         ledger = None
+    if ledger is not None:
+        doc = ledger.apply_overlays(doc)
     if export_mode == "accepted-only":
         doc = CorrectionDoc(original=doc.original, segments=[
             s for s in doc.segments

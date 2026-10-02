@@ -14,6 +14,7 @@ from note_filler import __main__ as cli
 from note_filler.parse import Paragraph
 from note_filler.review import ReviewLedger, ReviewState, source_stances
 from tests.test_review_queue import _doc, _ledger
+from tests.review_forms import review_form
 
 
 @pytest.mark.parametrize("clear_ids", [False, True])
@@ -157,6 +158,7 @@ async def test_failed_save_does_not_publish_review_or_edit(monkeypatch, tmp_path
     transport = httpx.ASGITransport(app=server.app, raise_app_exceptions=False)
     async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
         response = await client.post("/review", data={
+            **await review_form(client, seg.argument_id),
             "argument_id": seg.argument_id,
             "decision": "accepted",
             "edited_text": edited_text,

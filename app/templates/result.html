@@ -164,6 +164,10 @@
             {% endif %}
             <form method="post" action="/review" class="review-form">
               <input type="hidden" name="argument_id" value="{{ seg.argument_id }}">
+              <input type="hidden" name="document_instance" value="{{ document_instance }}">
+              {% for key, value in item.revision_tokens.items() %}
+              <input type="hidden" name="{{ key }}" value="{{ value }}">
+              {% endfor %}
               <select name="reason_code">
                 <option value="">（無理由碼）</option>
                 {% for code in reason_codes %}<option value="{{ code }}">{{ code }}</option>{% endfor %}
