@@ -628,8 +628,15 @@ class ReviewLedger:
 
     @classmethod
     def from_dict(cls, data: dict) -> "ReviewLedger":
+        if not isinstance(data, dict):
+            raise ValueError("Invalid review ledger object")
+        raw_records = data.get("records", [])
+        if not isinstance(raw_records, list) or any(
+            not isinstance(record, dict) for record in raw_records
+        ):
+            raise ValueError("Invalid review ledger records")
         records = [
-            DecisionRecord.from_dict(r) for r in data.get("records", [])
+            DecisionRecord.from_dict(r) for r in raw_records
         ]
         return cls(
             doc_fingerprint=str(data.get("doc_fingerprint") or ""),
@@ -656,9 +663,10 @@ class ReviewLedger:
             return None
         try:
             data = json.loads(path.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError):
+        except (OSError, UnicodeError, json.JSONDecodeError):
             return None
-        if not isinstance(data, dict) or data.get("schema") not in {
+        schema = data.get("schema") if isinstance(data, dict) else None
+        if not isinstance(schema, str) or schema not in {
             REVIEW_LEDGER_SCHEMA, LEGACY_REVIEW_LEDGER_SCHEMA,
         }:
             return None

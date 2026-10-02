@@ -30,3 +30,7 @@ a decision.
 Python 3.12 computes timestamps from UTC instead of deprecated utcnow while
 preserving the latest main branch's serialized format. Deprecation warnings
 remain errors.
+
+Malformed ledger schemas, non-object decision records, invalid record containers,
+and invalid UTF-8 fall back to a fresh unreviewed ledger. Accepted-only export
+retains the original paragraphs and excludes every supplement until reviewed again.

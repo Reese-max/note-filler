@@ -419,6 +419,41 @@ def test_ledger_load_missing_or_corrupt_is_fresh(tmp_path):
     assert fresh.state_of(doc.segments[1]) == review_mod.ReviewState.UNREVIEWED
 
 
+@pytest.mark.parametrize("field,value", [
+    ("records", [None]), ("records", ["invalid-record"]),
+    ("records", {}), ("records", "invalid-container"), ("records", None),
+    ("schema", []), ("schema", {}),
+])
+def test_malformed_ledger_shapes_fail_closed(tmp_path, field, value):
+    doc = _doc()
+    ledger = _ledger(doc)
+    ledger.record(doc.segments[1], "accepted")
+    payload = ledger.to_dict()
+    payload[field] = value
+    path = tmp_path / "ledger.json"
+    path.write_text(json.dumps(payload), encoding="utf-8")
+
+    assert review_mod.ReviewLedger.load(path) is None
+    fresh = review_mod.ReviewLedger.load_for_document(path, doc)
+    assert fresh.records == []
+    assert fresh.state_of(doc.segments[1]) == review_mod.ReviewState.UNREVIEWED
+    exported = to_markdown(doc, export_mode="accepted-only", ledger=fresh)
+    assert ORIGINAL_TEXT in exported
+    assert doc.segments[1].text not in exported
+
+
+def test_ledger_invalid_utf8_fails_closed(tmp_path):
+    doc = _doc()
+    path = tmp_path / "ledger.json"
+    path.write_bytes(b"\xff\xfe{invalid UTF-8}")
+    assert review_mod.ReviewLedger.load(path) is None
+    fresh = review_mod.ReviewLedger.load_for_document(path, doc)
+    assert fresh.state_of(doc.segments[1]) == review_mod.ReviewState.UNREVIEWED
+    exported = to_markdown(doc, export_mode="accepted-only", ledger=fresh)
+    assert ORIGINAL_TEXT in exported
+    assert doc.segments[1].text not in exported
+
+
 # ---- 原稿不可變 ------------------------------------------------------------
 
 
