@@ -12,9 +12,15 @@ import app.server as server
 from note_filler.export import to_docx, to_json, to_markdown
 from note_filler import __main__ as cli
 from note_filler.parse import Paragraph
-from note_filler.review import ReviewLedger, ReviewState, source_stances
 from tests.test_review_queue import _doc, _ledger
 from tests.review_forms import review_form, seed_result
+
+
+@pytest.fixture(autouse=True)
+def require_review_api():
+    # Keep a missing feature red at test setup, rather than abort collection.
+    global ReviewLedger, ReviewState, source_stances
+    from note_filler.review import ReviewLedger, ReviewState, source_stances
 
 
 @pytest.mark.parametrize("clear_ids", [False, True])

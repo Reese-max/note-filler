@@ -5,9 +5,16 @@ import pytest
 
 import app.server as server
 from note_filler.export import to_markdown
-from note_filler.review import ReviewLedger, ReviewState
 from tests.review_forms import review_form, seed_result, result_id_from_html
 from tests.test_review_queue import _doc, _ledger, ORIGINAL_TEXT
+
+
+@pytest.fixture(autouse=True)
+def require_review_api():
+    # Import during setup so the fixed base records a normal failing test,
+    # while the supervisor can still collect and run the complete suite.
+    global ReviewLedger, ReviewState
+    from note_filler.review import ReviewLedger, ReviewState
 
 
 @pytest.mark.anyio
