@@ -1,12 +1,12 @@
 {
   "schema": "note-filler.design-acceptance/v1",
-  "generated_at": "2026-07-19T15:34:02+08:00",
+  "generated_at": "2026-09-16T15:52:26+08:00",
   "rule": "每一項主張必須同時具備：規格檔、實作錨點檔、測試錨點；禁止只靠敘述或彙總數字驗收。",
   "source_claims": "docs/specs/evidence/design-acceptance-claims.json",
   "git": {
-    "head": "16361a56a0b0f965bbab9ae976a65e950a955499",
+    "head": "b58d1324bac1276170d53342aafbc4158b285163",
     "working_tree_clean_before_refresh": false,
-    "status_porcelain_before_refresh": "M docs/specs/evidence/design-acceptance-claims.json\n M scripts/refresh_design_acceptance.py\n M tests/test_design_acceptance.py"
+    "status_porcelain_before_refresh": "M README.md\n M app/server.py\n M docs/specs/design-traceability-index.md\n M docs/specs/evidence/design-acceptance-claims.json\n M docs/specs/evidence/ui/index.md\n M docs/specs/note-filler-component-responsibilities.md\n M docs/specs/note-filler-interface-contract.md\n M docs/specs/note-filler-state-machine.md\n M docs/specs/note-filler-user-flow.md\n M src/note_filler/pipeline.py\n M src/note_filler/retrieve/web.py\n M tests/0a8e5521d41101e3-restored-notes-output.py\n M tests/test_exception_skip_traceability.py\n M tests/test_fault_injection.py\n?? tests/fixtures/metrics_history.jsonl\n?? tests/metrics_history.jsonl"
   },
   "quality_gates_immutable": [
     "原稿逐字不可變",
@@ -15,7 +15,7 @@
     "法條引用須通過離線查核"
   ],
   "invocations": {
-    "refresh_script": "D:\\Users\\Administrator\\Desktop\\筆記補齊\\.venv\\Scripts\\python.exe -X utf8 D:\\Users\\Administrator\\Desktop\\autodev-ng\\data\\note-filler\\worktrees\\5d3a1041\\scripts\\refresh_design_acceptance.py",
+    "refresh_script": "C:\\Users\\Administrator\\AppData\\Local\\Microsoft\\WindowsApps\\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\\python.exe -X utf8 C:\\Users\\Administrator\\note-filler\\scripts\\refresh_design_acceptance.py",
     "claims_path": "docs/specs/evidence/design-acceptance-claims.json"
   },
   "claim_ids": [
@@ -58,16 +58,23 @@
           "tests/test_server.py::test_index_returns_upload_form",
           "tests/test_server.py::test_run_renders_two_columns",
           "tests/test_server.py::test_export_returns_markdown_attachment",
-          "tests/test_server.py::test_export_without_run_returns_404"
+          "tests/test_server.py::test_export_without_run_returns_404",
+          "tests/test_server.py::test_export_b_cannot_receive_a_result"
         ],
         "collected": [
           "tests/test_server.py::test_index_returns_upload_form[asyncio]",
           "tests/test_server.py::test_run_renders_two_columns[asyncio]",
           "tests/test_server.py::test_export_returns_markdown_attachment[asyncio]",
-          "tests/test_server.py::test_export_without_run_returns_404[asyncio]"
+          "tests/test_server.py::test_export_without_run_returns_404[asyncio]",
+          "tests/test_server.py::test_export_b_cannot_receive_a_result[asyncio]",
+          "tests/test_server.py::test_index_returns_upload_form[trio]",
+          "tests/test_server.py::test_run_renders_two_columns[trio]",
+          "tests/test_server.py::test_export_returns_markdown_attachment[trio]",
+          "tests/test_server.py::test_export_without_run_returns_404[trio]",
+          "tests/test_server.py::test_export_b_cannot_receive_a_result[trio]"
         ],
         "missing": [],
-        "invocation": "D:\\Users\\Administrator\\Desktop\\筆記補齊\\.venv\\Scripts\\python.exe -X utf8 -m pytest --collect-only -q tests/test_server.py::test_index_returns_upload_form tests/test_server.py::test_run_renders_two_columns tests/test_server.py::test_export_returns_markdown_attachment tests/test_server.py::test_export_without_run_returns_404 --color=no",
+        "invocation": "C:\\Users\\Administrator\\AppData\\Local\\Microsoft\\WindowsApps\\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\\python.exe -X utf8 -m pytest --collect-only -q tests/test_server.py::test_index_returns_upload_form tests/test_server.py::test_run_renders_two_columns tests/test_server.py::test_export_returns_markdown_attachment tests/test_server.py::test_export_without_run_returns_404 tests/test_server.py::test_export_b_cannot_receive_a_result --color=no",
         "returncode": 0
       },
       "test_individual_results": [
@@ -75,29 +82,36 @@
           "test_id": "tests/test_server.py::test_index_returns_upload_form",
           "status": "passed",
           "exit_code": 0,
-          "summary": "tests/test_server.py::test_index_returns_upload_form[asyncio] PASSED     [100%]",
-          "invocation": "D:\\Users\\Administrator\\Desktop\\筆記補齊\\.venv\\Scripts\\python.exe -X utf8 -m pytest tests/test_server.py::test_index_returns_upload_form -vv --tb=line --color=no"
+          "summary": "tests/test_server.py::test_index_returns_upload_form[asyncio] PASSED     [ 50%]",
+          "invocation": "C:\\Users\\Administrator\\AppData\\Local\\Microsoft\\WindowsApps\\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\\python.exe -X utf8 -m pytest tests/test_server.py::test_index_returns_upload_form -vv --tb=line --color=no"
         },
         {
           "test_id": "tests/test_server.py::test_run_renders_two_columns",
           "status": "passed",
           "exit_code": 0,
-          "summary": "tests/test_server.py::test_run_renders_two_columns[asyncio] PASSED       [100%]",
-          "invocation": "D:\\Users\\Administrator\\Desktop\\筆記補齊\\.venv\\Scripts\\python.exe -X utf8 -m pytest tests/test_server.py::test_run_renders_two_columns -vv --tb=line --color=no"
+          "summary": "tests/test_server.py::test_run_renders_two_columns[asyncio] PASSED       [ 50%]",
+          "invocation": "C:\\Users\\Administrator\\AppData\\Local\\Microsoft\\WindowsApps\\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\\python.exe -X utf8 -m pytest tests/test_server.py::test_run_renders_two_columns -vv --tb=line --color=no"
         },
         {
           "test_id": "tests/test_server.py::test_export_returns_markdown_attachment",
           "status": "passed",
           "exit_code": 0,
-          "summary": "tests/test_server.py::test_export_returns_markdown_attachment[asyncio] PASSED [100%]",
-          "invocation": "D:\\Users\\Administrator\\Desktop\\筆記補齊\\.venv\\Scripts\\python.exe -X utf8 -m pytest tests/test_server.py::test_export_returns_markdown_attachment -vv --tb=line --color=no"
+          "summary": "tests/test_server.py::test_export_returns_markdown_attachment[asyncio] PASSED [ 50%]",
+          "invocation": "C:\\Users\\Administrator\\AppData\\Local\\Microsoft\\WindowsApps\\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\\python.exe -X utf8 -m pytest tests/test_server.py::test_export_returns_markdown_attachment -vv --tb=line --color=no"
         },
         {
           "test_id": "tests/test_server.py::test_export_without_run_returns_404",
           "status": "passed",
           "exit_code": 0,
-          "summary": "tests/test_server.py::test_export_without_run_returns_404[asyncio] PASSED [100%]",
-          "invocation": "D:\\Users\\Administrator\\Desktop\\筆記補齊\\.venv\\Scripts\\python.exe -X utf8 -m pytest tests/test_server.py::test_export_without_run_returns_404 -vv --tb=line --color=no"
+          "summary": "tests/test_server.py::test_export_without_run_returns_404[asyncio] PASSED [ 50%]",
+          "invocation": "C:\\Users\\Administrator\\AppData\\Local\\Microsoft\\WindowsApps\\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\\python.exe -X utf8 -m pytest tests/test_server.py::test_export_without_run_returns_404 -vv --tb=line --color=no"
+        },
+        {
+          "test_id": "tests/test_server.py::test_export_b_cannot_receive_a_result",
+          "status": "passed",
+          "exit_code": 0,
+          "summary": "tests/test_server.py::test_export_b_cannot_receive_a_result[asyncio] PASSED [ 50%]",
+          "invocation": "C:\\Users\\Administrator\\AppData\\Local\\Microsoft\\WindowsApps\\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\\python.exe -X utf8 -m pytest tests/test_server.py::test_export_b_cannot_receive_a_result -vv --tb=line --color=no"
         }
       ],
       "screenshot_status": null,
@@ -117,7 +131,7 @@
     },
     {
       "id": "D-02",
-      "title": "UI／資料狀態轉移（last_doc／confidence）",
+      "title": "UI／資料狀態轉移（results capability／confidence）",
       "spec_file": "docs/specs/note-filler-state-machine.md",
       "spec_exists": true,
       "manifest_ref": "docs/specs/evidence/note-filler-design-evidence-manifest.md",
@@ -146,17 +160,25 @@
         "requested": [
           "tests/test_server.py::test_export_without_run_returns_404",
           "tests/test_server.py::test_export_returns_markdown_attachment",
+          "tests/test_server.py::test_export_two_clients_each_receive_own_result",
+          "tests/test_server.py::test_export_expired_result_returns_404",
           "tests/test_pipeline.py::test_run_pipeline_invariant",
           "tests/test_e2e_acceptance.py::test_e2e_minimal_quality_gates_offline_regression"
         ],
         "collected": [
           "tests/test_server.py::test_export_without_run_returns_404[asyncio]",
           "tests/test_server.py::test_export_returns_markdown_attachment[asyncio]",
+          "tests/test_server.py::test_export_two_clients_each_receive_own_result[asyncio]",
+          "tests/test_server.py::test_export_expired_result_returns_404[asyncio]",
+          "tests/test_server.py::test_export_without_run_returns_404[trio]",
+          "tests/test_server.py::test_export_returns_markdown_attachment[trio]",
+          "tests/test_server.py::test_export_two_clients_each_receive_own_result[trio]",
+          "tests/test_server.py::test_export_expired_result_returns_404[trio]",
           "tests/test_pipeline.py::test_run_pipeline_invariant",
           "tests/test_e2e_acceptance.py::test_e2e_minimal_quality_gates_offline_regression"
         ],
         "missing": [],
-        "invocation": "D:\\Users\\Administrator\\Desktop\\筆記補齊\\.venv\\Scripts\\python.exe -X utf8 -m pytest --collect-only -q tests/test_server.py::test_export_without_run_returns_404 tests/test_server.py::test_export_returns_markdown_attachment tests/test_pipeline.py::test_run_pipeline_invariant tests/test_e2e_acceptance.py::test_e2e_minimal_quality_gates_offline_regression --color=no",
+        "invocation": "C:\\Users\\Administrator\\AppData\\Local\\Microsoft\\WindowsApps\\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\\python.exe -X utf8 -m pytest --collect-only -q tests/test_server.py::test_export_without_run_returns_404 tests/test_server.py::test_export_returns_markdown_attachment tests/test_server.py::test_export_two_clients_each_receive_own_result tests/test_server.py::test_export_expired_result_returns_404 tests/test_pipeline.py::test_run_pipeline_invariant tests/test_e2e_acceptance.py::test_e2e_minimal_quality_gates_offline_regression --color=no",
         "returncode": 0
       },
       "test_individual_results": [
@@ -164,29 +186,43 @@
           "test_id": "tests/test_server.py::test_export_without_run_returns_404",
           "status": "passed",
           "exit_code": 0,
-          "summary": "tests/test_server.py::test_export_without_run_returns_404[asyncio] PASSED [100%]",
-          "invocation": "D:\\Users\\Administrator\\Desktop\\筆記補齊\\.venv\\Scripts\\python.exe -X utf8 -m pytest tests/test_server.py::test_export_without_run_returns_404 -vv --tb=line --color=no"
+          "summary": "tests/test_server.py::test_export_without_run_returns_404[asyncio] PASSED [ 50%]",
+          "invocation": "C:\\Users\\Administrator\\AppData\\Local\\Microsoft\\WindowsApps\\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\\python.exe -X utf8 -m pytest tests/test_server.py::test_export_without_run_returns_404 -vv --tb=line --color=no"
         },
         {
           "test_id": "tests/test_server.py::test_export_returns_markdown_attachment",
           "status": "passed",
           "exit_code": 0,
-          "summary": "tests/test_server.py::test_export_returns_markdown_attachment[asyncio] PASSED [100%]",
-          "invocation": "D:\\Users\\Administrator\\Desktop\\筆記補齊\\.venv\\Scripts\\python.exe -X utf8 -m pytest tests/test_server.py::test_export_returns_markdown_attachment -vv --tb=line --color=no"
+          "summary": "tests/test_server.py::test_export_returns_markdown_attachment[asyncio] PASSED [ 50%]",
+          "invocation": "C:\\Users\\Administrator\\AppData\\Local\\Microsoft\\WindowsApps\\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\\python.exe -X utf8 -m pytest tests/test_server.py::test_export_returns_markdown_attachment -vv --tb=line --color=no"
+        },
+        {
+          "test_id": "tests/test_server.py::test_export_two_clients_each_receive_own_result",
+          "status": "passed",
+          "exit_code": 0,
+          "summary": "tests/test_server.py::test_export_two_clients_each_receive_own_result[asyncio] PASSED [ 50%]",
+          "invocation": "C:\\Users\\Administrator\\AppData\\Local\\Microsoft\\WindowsApps\\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\\python.exe -X utf8 -m pytest tests/test_server.py::test_export_two_clients_each_receive_own_result -vv --tb=line --color=no"
+        },
+        {
+          "test_id": "tests/test_server.py::test_export_expired_result_returns_404",
+          "status": "passed",
+          "exit_code": 0,
+          "summary": "tests/test_server.py::test_export_expired_result_returns_404[asyncio] PASSED [ 50%]",
+          "invocation": "C:\\Users\\Administrator\\AppData\\Local\\Microsoft\\WindowsApps\\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\\python.exe -X utf8 -m pytest tests/test_server.py::test_export_expired_result_returns_404 -vv --tb=line --color=no"
         },
         {
           "test_id": "tests/test_pipeline.py::test_run_pipeline_invariant",
           "status": "passed",
           "exit_code": 0,
           "summary": "tests/test_pipeline.py::test_run_pipeline_invariant PASSED               [100%]",
-          "invocation": "D:\\Users\\Administrator\\Desktop\\筆記補齊\\.venv\\Scripts\\python.exe -X utf8 -m pytest tests/test_pipeline.py::test_run_pipeline_invariant -vv --tb=line --color=no"
+          "invocation": "C:\\Users\\Administrator\\AppData\\Local\\Microsoft\\WindowsApps\\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\\python.exe -X utf8 -m pytest tests/test_pipeline.py::test_run_pipeline_invariant -vv --tb=line --color=no"
         },
         {
           "test_id": "tests/test_e2e_acceptance.py::test_e2e_minimal_quality_gates_offline_regression",
           "status": "passed",
           "exit_code": 0,
           "summary": "tests/test_e2e_acceptance.py::test_e2e_minimal_quality_gates_offline_regression PASSED [100%]",
-          "invocation": "D:\\Users\\Administrator\\Desktop\\筆記補齊\\.venv\\Scripts\\python.exe -X utf8 -m pytest tests/test_e2e_acceptance.py::test_e2e_minimal_quality_gates_offline_regression -vv --tb=line --color=no"
+          "invocation": "C:\\Users\\Administrator\\AppData\\Local\\Microsoft\\WindowsApps\\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\\python.exe -X utf8 -m pytest tests/test_e2e_acceptance.py::test_e2e_minimal_quality_gates_offline_regression -vv --tb=line --color=no"
         }
       ],
       "screenshot_status": null,
@@ -241,11 +277,13 @@
         "collected": [
           "tests/test_server.py::test_run_renders_two_columns[asyncio]",
           "tests/test_server.py::test_export_returns_markdown_attachment[asyncio]",
+          "tests/test_server.py::test_run_renders_two_columns[trio]",
+          "tests/test_server.py::test_export_returns_markdown_attachment[trio]",
           "tests/test_pipeline.py::test_run_pipeline_invariant",
           "tests/test_e2e_acceptance.py::test_e2e_structural_invariants"
         ],
         "missing": [],
-        "invocation": "D:\\Users\\Administrator\\Desktop\\筆記補齊\\.venv\\Scripts\\python.exe -X utf8 -m pytest --collect-only -q tests/test_server.py::test_run_renders_two_columns tests/test_server.py::test_export_returns_markdown_attachment tests/test_pipeline.py::test_run_pipeline_invariant tests/test_e2e_acceptance.py::test_e2e_structural_invariants --color=no",
+        "invocation": "C:\\Users\\Administrator\\AppData\\Local\\Microsoft\\WindowsApps\\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\\python.exe -X utf8 -m pytest --collect-only -q tests/test_server.py::test_run_renders_two_columns tests/test_server.py::test_export_returns_markdown_attachment tests/test_pipeline.py::test_run_pipeline_invariant tests/test_e2e_acceptance.py::test_e2e_structural_invariants --color=no",
         "returncode": 0
       },
       "test_individual_results": [
@@ -253,29 +291,29 @@
           "test_id": "tests/test_server.py::test_run_renders_two_columns",
           "status": "passed",
           "exit_code": 0,
-          "summary": "tests/test_server.py::test_run_renders_two_columns[asyncio] PASSED       [100%]",
-          "invocation": "D:\\Users\\Administrator\\Desktop\\筆記補齊\\.venv\\Scripts\\python.exe -X utf8 -m pytest tests/test_server.py::test_run_renders_two_columns -vv --tb=line --color=no"
+          "summary": "tests/test_server.py::test_run_renders_two_columns[asyncio] PASSED       [ 50%]",
+          "invocation": "C:\\Users\\Administrator\\AppData\\Local\\Microsoft\\WindowsApps\\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\\python.exe -X utf8 -m pytest tests/test_server.py::test_run_renders_two_columns -vv --tb=line --color=no"
         },
         {
           "test_id": "tests/test_server.py::test_export_returns_markdown_attachment",
           "status": "passed",
           "exit_code": 0,
-          "summary": "tests/test_server.py::test_export_returns_markdown_attachment[asyncio] PASSED [100%]",
-          "invocation": "D:\\Users\\Administrator\\Desktop\\筆記補齊\\.venv\\Scripts\\python.exe -X utf8 -m pytest tests/test_server.py::test_export_returns_markdown_attachment -vv --tb=line --color=no"
+          "summary": "tests/test_server.py::test_export_returns_markdown_attachment[asyncio] PASSED [ 50%]",
+          "invocation": "C:\\Users\\Administrator\\AppData\\Local\\Microsoft\\WindowsApps\\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\\python.exe -X utf8 -m pytest tests/test_server.py::test_export_returns_markdown_attachment -vv --tb=line --color=no"
         },
         {
           "test_id": "tests/test_pipeline.py::test_run_pipeline_invariant",
           "status": "passed",
           "exit_code": 0,
           "summary": "tests/test_pipeline.py::test_run_pipeline_invariant PASSED               [100%]",
-          "invocation": "D:\\Users\\Administrator\\Desktop\\筆記補齊\\.venv\\Scripts\\python.exe -X utf8 -m pytest tests/test_pipeline.py::test_run_pipeline_invariant -vv --tb=line --color=no"
+          "invocation": "C:\\Users\\Administrator\\AppData\\Local\\Microsoft\\WindowsApps\\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\\python.exe -X utf8 -m pytest tests/test_pipeline.py::test_run_pipeline_invariant -vv --tb=line --color=no"
         },
         {
           "test_id": "tests/test_e2e_acceptance.py::test_e2e_structural_invariants",
           "status": "passed",
           "exit_code": 0,
           "summary": "tests/test_e2e_acceptance.py::test_e2e_structural_invariants PASSED      [100%]",
-          "invocation": "D:\\Users\\Administrator\\Desktop\\筆記補齊\\.venv\\Scripts\\python.exe -X utf8 -m pytest tests/test_e2e_acceptance.py::test_e2e_structural_invariants -vv --tb=line --color=no"
+          "invocation": "C:\\Users\\Administrator\\AppData\\Local\\Microsoft\\WindowsApps\\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\\python.exe -X utf8 -m pytest tests/test_e2e_acceptance.py::test_e2e_structural_invariants -vv --tb=line --color=no"
         }
       ],
       "screenshot_status": null,
@@ -359,12 +397,13 @@
         ],
         "collected": [
           "tests/test_server.py::test_index_returns_upload_form[asyncio]",
+          "tests/test_server.py::test_index_returns_upload_form[trio]",
           "tests/test_pipeline.py::test_run_pipeline_invariant",
           "tests/test_e2e_acceptance.py::test_e2e_minimal_quality_gates_offline_regression",
           "tests/test_correction.py::test_retrieved_five_but_only_two_cited"
         ],
         "missing": [],
-        "invocation": "D:\\Users\\Administrator\\Desktop\\筆記補齊\\.venv\\Scripts\\python.exe -X utf8 -m pytest --collect-only -q tests/test_server.py::test_index_returns_upload_form tests/test_pipeline.py::test_run_pipeline_invariant tests/test_e2e_acceptance.py::test_e2e_minimal_quality_gates_offline_regression tests/test_correction.py::test_retrieved_five_but_only_two_cited --color=no",
+        "invocation": "C:\\Users\\Administrator\\AppData\\Local\\Microsoft\\WindowsApps\\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\\python.exe -X utf8 -m pytest --collect-only -q tests/test_server.py::test_index_returns_upload_form tests/test_pipeline.py::test_run_pipeline_invariant tests/test_e2e_acceptance.py::test_e2e_minimal_quality_gates_offline_regression tests/test_correction.py::test_retrieved_five_but_only_two_cited --color=no",
         "returncode": 0
       },
       "test_individual_results": [
@@ -372,29 +411,29 @@
           "test_id": "tests/test_server.py::test_index_returns_upload_form",
           "status": "passed",
           "exit_code": 0,
-          "summary": "tests/test_server.py::test_index_returns_upload_form[asyncio] PASSED     [100%]",
-          "invocation": "D:\\Users\\Administrator\\Desktop\\筆記補齊\\.venv\\Scripts\\python.exe -X utf8 -m pytest tests/test_server.py::test_index_returns_upload_form -vv --tb=line --color=no"
+          "summary": "tests/test_server.py::test_index_returns_upload_form[asyncio] PASSED     [ 50%]",
+          "invocation": "C:\\Users\\Administrator\\AppData\\Local\\Microsoft\\WindowsApps\\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\\python.exe -X utf8 -m pytest tests/test_server.py::test_index_returns_upload_form -vv --tb=line --color=no"
         },
         {
           "test_id": "tests/test_pipeline.py::test_run_pipeline_invariant",
           "status": "passed",
           "exit_code": 0,
           "summary": "tests/test_pipeline.py::test_run_pipeline_invariant PASSED               [100%]",
-          "invocation": "D:\\Users\\Administrator\\Desktop\\筆記補齊\\.venv\\Scripts\\python.exe -X utf8 -m pytest tests/test_pipeline.py::test_run_pipeline_invariant -vv --tb=line --color=no"
+          "invocation": "C:\\Users\\Administrator\\AppData\\Local\\Microsoft\\WindowsApps\\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\\python.exe -X utf8 -m pytest tests/test_pipeline.py::test_run_pipeline_invariant -vv --tb=line --color=no"
         },
         {
           "test_id": "tests/test_e2e_acceptance.py::test_e2e_minimal_quality_gates_offline_regression",
           "status": "passed",
           "exit_code": 0,
           "summary": "tests/test_e2e_acceptance.py::test_e2e_minimal_quality_gates_offline_regression PASSED [100%]",
-          "invocation": "D:\\Users\\Administrator\\Desktop\\筆記補齊\\.venv\\Scripts\\python.exe -X utf8 -m pytest tests/test_e2e_acceptance.py::test_e2e_minimal_quality_gates_offline_regression -vv --tb=line --color=no"
+          "invocation": "C:\\Users\\Administrator\\AppData\\Local\\Microsoft\\WindowsApps\\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\\python.exe -X utf8 -m pytest tests/test_e2e_acceptance.py::test_e2e_minimal_quality_gates_offline_regression -vv --tb=line --color=no"
         },
         {
           "test_id": "tests/test_correction.py::test_retrieved_five_but_only_two_cited",
           "status": "passed",
           "exit_code": 0,
           "summary": "tests/test_correction.py::test_retrieved_five_but_only_two_cited PASSED  [100%]",
-          "invocation": "D:\\Users\\Administrator\\Desktop\\筆記補齊\\.venv\\Scripts\\python.exe -X utf8 -m pytest tests/test_correction.py::test_retrieved_five_but_only_two_cited -vv --tb=line --color=no"
+          "invocation": "C:\\Users\\Administrator\\AppData\\Local\\Microsoft\\WindowsApps\\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\\python.exe -X utf8 -m pytest tests/test_correction.py::test_retrieved_five_but_only_two_cited -vv --tb=line --color=no"
         }
       ],
       "screenshot_status": null,
@@ -456,10 +495,14 @@
           "tests/test_server.py::test_index_returns_upload_form[asyncio]",
           "tests/test_server.py::test_run_renders_two_columns[asyncio]",
           "tests/test_server.py::test_export_returns_markdown_attachment[asyncio]",
-          "tests/test_server.py::test_export_without_run_returns_404[asyncio]"
+          "tests/test_server.py::test_export_without_run_returns_404[asyncio]",
+          "tests/test_server.py::test_index_returns_upload_form[trio]",
+          "tests/test_server.py::test_run_renders_two_columns[trio]",
+          "tests/test_server.py::test_export_returns_markdown_attachment[trio]",
+          "tests/test_server.py::test_export_without_run_returns_404[trio]"
         ],
         "missing": [],
-        "invocation": "D:\\Users\\Administrator\\Desktop\\筆記補齊\\.venv\\Scripts\\python.exe -X utf8 -m pytest --collect-only -q tests/test_server.py::test_index_returns_upload_form tests/test_server.py::test_run_renders_two_columns tests/test_server.py::test_export_returns_markdown_attachment tests/test_server.py::test_export_without_run_returns_404 --color=no",
+        "invocation": "C:\\Users\\Administrator\\AppData\\Local\\Microsoft\\WindowsApps\\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\\python.exe -X utf8 -m pytest --collect-only -q tests/test_server.py::test_index_returns_upload_form tests/test_server.py::test_run_renders_two_columns tests/test_server.py::test_export_returns_markdown_attachment tests/test_server.py::test_export_without_run_returns_404 --color=no",
         "returncode": 0
       },
       "test_individual_results": [
@@ -467,29 +510,29 @@
           "test_id": "tests/test_server.py::test_index_returns_upload_form",
           "status": "passed",
           "exit_code": 0,
-          "summary": "tests/test_server.py::test_index_returns_upload_form[asyncio] PASSED     [100%]",
-          "invocation": "D:\\Users\\Administrator\\Desktop\\筆記補齊\\.venv\\Scripts\\python.exe -X utf8 -m pytest tests/test_server.py::test_index_returns_upload_form -vv --tb=line --color=no"
+          "summary": "tests/test_server.py::test_index_returns_upload_form[asyncio] PASSED     [ 50%]",
+          "invocation": "C:\\Users\\Administrator\\AppData\\Local\\Microsoft\\WindowsApps\\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\\python.exe -X utf8 -m pytest tests/test_server.py::test_index_returns_upload_form -vv --tb=line --color=no"
         },
         {
           "test_id": "tests/test_server.py::test_run_renders_two_columns",
           "status": "passed",
           "exit_code": 0,
-          "summary": "tests/test_server.py::test_run_renders_two_columns[asyncio] PASSED       [100%]",
-          "invocation": "D:\\Users\\Administrator\\Desktop\\筆記補齊\\.venv\\Scripts\\python.exe -X utf8 -m pytest tests/test_server.py::test_run_renders_two_columns -vv --tb=line --color=no"
+          "summary": "tests/test_server.py::test_run_renders_two_columns[asyncio] PASSED       [ 50%]",
+          "invocation": "C:\\Users\\Administrator\\AppData\\Local\\Microsoft\\WindowsApps\\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\\python.exe -X utf8 -m pytest tests/test_server.py::test_run_renders_two_columns -vv --tb=line --color=no"
         },
         {
           "test_id": "tests/test_server.py::test_export_returns_markdown_attachment",
           "status": "passed",
           "exit_code": 0,
-          "summary": "tests/test_server.py::test_export_returns_markdown_attachment[asyncio] PASSED [100%]",
-          "invocation": "D:\\Users\\Administrator\\Desktop\\筆記補齊\\.venv\\Scripts\\python.exe -X utf8 -m pytest tests/test_server.py::test_export_returns_markdown_attachment -vv --tb=line --color=no"
+          "summary": "tests/test_server.py::test_export_returns_markdown_attachment[asyncio] PASSED [ 50%]",
+          "invocation": "C:\\Users\\Administrator\\AppData\\Local\\Microsoft\\WindowsApps\\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\\python.exe -X utf8 -m pytest tests/test_server.py::test_export_returns_markdown_attachment -vv --tb=line --color=no"
         },
         {
           "test_id": "tests/test_server.py::test_export_without_run_returns_404",
           "status": "passed",
           "exit_code": 0,
-          "summary": "tests/test_server.py::test_export_without_run_returns_404[asyncio] PASSED [100%]",
-          "invocation": "D:\\Users\\Administrator\\Desktop\\筆記補齊\\.venv\\Scripts\\python.exe -X utf8 -m pytest tests/test_server.py::test_export_without_run_returns_404 -vv --tb=line --color=no"
+          "summary": "tests/test_server.py::test_export_without_run_returns_404[asyncio] PASSED [ 50%]",
+          "invocation": "C:\\Users\\Administrator\\AppData\\Local\\Microsoft\\WindowsApps\\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\\python.exe -X utf8 -m pytest tests/test_server.py::test_export_without_run_returns_404 -vv --tb=line --color=no"
         }
       ],
       "screenshot_status": "absent",
@@ -522,7 +565,8 @@
         "tests/test_server.py::test_index_returns_upload_form",
         "tests/test_server.py::test_run_renders_two_columns",
         "tests/test_server.py::test_export_returns_markdown_attachment",
-        "tests/test_server.py::test_export_without_run_returns_404"
+        "tests/test_server.py::test_export_without_run_returns_404",
+        "tests/test_server.py::test_export_b_cannot_receive_a_result"
       ],
       "package_fields": [
         "per_claim[D-01].spec_file",
@@ -536,7 +580,7 @@
     },
     {
       "claim_id": "D-02",
-      "title": "UI／資料狀態轉移（last_doc／confidence）",
+      "title": "UI／資料狀態轉移（results capability／confidence）",
       "spec_file": "docs/specs/note-filler-state-machine.md",
       "impl_files": [
         "app/server.py",
@@ -546,6 +590,8 @@
       "test_ids": [
         "tests/test_server.py::test_export_without_run_returns_404",
         "tests/test_server.py::test_export_returns_markdown_attachment",
+        "tests/test_server.py::test_export_two_clients_each_receive_own_result",
+        "tests/test_server.py::test_export_expired_result_returns_404",
         "tests/test_pipeline.py::test_run_pipeline_invariant",
         "tests/test_e2e_acceptance.py::test_e2e_minimal_quality_gates_offline_regression"
       ],
@@ -646,7 +692,10 @@
     "tests/test_e2e_acceptance.py::test_e2e_minimal_quality_gates_offline_regression",
     "tests/test_e2e_acceptance.py::test_e2e_structural_invariants",
     "tests/test_pipeline.py::test_run_pipeline_invariant",
+    "tests/test_server.py::test_export_b_cannot_receive_a_result",
+    "tests/test_server.py::test_export_expired_result_returns_404",
     "tests/test_server.py::test_export_returns_markdown_attachment",
+    "tests/test_server.py::test_export_two_clients_each_receive_own_result",
     "tests/test_server.py::test_export_without_run_returns_404",
     "tests/test_server.py::test_index_returns_upload_form",
     "tests/test_server.py::test_run_renders_two_columns"

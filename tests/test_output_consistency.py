@@ -16,7 +16,7 @@ from note_filler.pipeline import run_pipeline
 from note_filler.export import to_json, to_markdown, to_docx
 from note_filler.llm import FakeLLM
 from note_filler.retrieve.models import Source
-from tests.test_pipeline import FakeTwinkle, FakeLaw
+from test_pipeline import FakeTwinkle, FakeLaw
 
 
 def _note_fixture(tmp_path: Path, content: str) -> str:

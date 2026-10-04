@@ -31,7 +31,7 @@
   {% if error %}
   <p class="pending">{{ input_id }}：{{ error }}</p>
   {% else %}
-  <p><a href="/export">下載 Markdown 訂正稿</a></p>
+  <p><a href="/export/{{ result_id }}">下載 Markdown 訂正稿</a></p>
   <div class="cols">
     <div class="col" id="original">
       <h2>原稿(不可變)</h2>

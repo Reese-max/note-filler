@@ -22,12 +22,12 @@
 | 補充高亮欄位 | `.supplement` | 同上 |
 | 無來源警示 | `.pending` | 同上 |
 | 來源展開 | `details.sources` | 同上 |
-| 匯出連結 | `/export` | `app/templates/result.html`, `tests/test_server.py::test_export_returns_markdown_attachment` |
+| 匯出連結 | `/export/{result_id}` | `app/templates/result.html`, `tests/test_server.py::test_export_returns_markdown_attachment` |
 
 ## 2) 與路由證據對照
 
-- `/run` 成功後，`app.state.last_doc` 可供 `/export` 使用：`app/server.py`
-- `/export` 未先跑 `/run` 時回 `404`：`tests/test_server.py::test_export_without_run_returns_404`
+- `/run` 成功後，`app.state.results[result_id]` 可供 `/export/{result_id}` 使用：`app/server.py`
+- `/export` 或 `/export/{未知id}` 無有效 capability 時回 `404`：`tests/test_server.py::test_export_without_run_returns_404`、`test_export_b_cannot_receive_a_result`
 
 ## 3) 畫面截圖與回歸命名規則（草案）
 
