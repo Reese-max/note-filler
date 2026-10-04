@@ -54,3 +54,29 @@ def test_report_nonrecursive_scan_reads_only_top_level_sidecars(tmp_path: Path) 
     records = _load_records_from_manifests([tmp_path], recursive=False)
 
     assert [record["source_path"] for record in records] == ["notes/top.txt"]
+
+
+def test_report_rejects_foreign_receipt_before_deduplicating_output(tmp_path: Path) -> None:
+    foreign = tmp_path / "first.md.delivery_manifest.json"
+    matching = tmp_path / "second.md.delivery_manifest.json"
+    latest = tmp_path / "delivery_manifest.json"
+    # A copied receipt sorts first, but its name does not bind the output it
+    # claims. It must neither publish wrong metrics nor hide the real receipt.
+    _write_manifest(foreign, "notes/foreign.txt", "out/second.md", 0)
+    _write_manifest(matching, "notes/second.txt", "out/second.md", 2)
+    _write_manifest(latest, "notes/second.txt", "out/second.md", 2)
+
+    records = _load_records_from_manifests([tmp_path], recursive=False)
+
+    assert records == [{
+        "source_path": "notes/second.txt",
+        "manifest_path": str(matching),
+        "polaris_metrics": {"sample_metric": {"score": 2}},
+    }]
+
+
+def test_report_rejects_foreign_receipt_without_a_matching_copy(tmp_path: Path) -> None:
+    foreign = tmp_path / "first.md.delivery_manifest.json"
+    _write_manifest(foreign, "notes/foreign.txt", "out/second.md", 0)
+
+    assert _load_records_from_manifests([tmp_path]) == []

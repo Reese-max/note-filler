@@ -715,6 +715,12 @@ def collect_metrics_from_manifest(
             return None
         
         manifest_data = json.loads(manifest_path.read_text(encoding="utf-8"))
+        if not isinstance(manifest_data, dict):
+            logger.warning("Manifest 不是 JSON 物件: %s", manifest_path)
+            return None
+        if receipt_conflicts_with_note(manifest_data, manifest_path):
+            logger.warning("Manifest 記錄其他筆記的輸出: %s", manifest_path)
+            return None
         
         # 檢查是否包含 polaris_metrics
         polaris_metrics = manifest_data.get("polaris_metrics")
@@ -792,6 +798,9 @@ def scan_and_collect_metrics(
                 # Unreadable or non-object receipts stay in the scan so the
                 # collector reports them per file instead of aborting the scan.
                 filtered.append(manifest_path)
+                continue
+            if receipt_conflicts_with_note(manifest_data, manifest_path):
+                logger.warning("Manifest 記錄其他筆記的輸出: %s", manifest_path)
                 continue
             declared = manifest_data.get("sidecar_for_output") or receipt_output_identity(manifest_data)
             if (
@@ -1237,7 +1246,9 @@ def rerun_note(
     # hand-edited latest copy must never revert recorded recovery state.
     try:
         manifest_data = json.loads(manifest_path.read_text(encoding="utf-8"))
-    except (json.JSONDecodeError, OSError) as exc:
+        if not isinstance(manifest_data, dict):
+            raise ValueError("Manifest 不是 JSON 物件")
+    except (ValueError, OSError) as exc:
         _emit_alert(
             alerts,
             alert_type="rerun_failure",

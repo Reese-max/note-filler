@@ -14,6 +14,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
 from note_filler.sidecars import (  # noqa: E402
     output_identity_key,
+    receipt_conflicts_with_note,
     receipt_input_identity,
 )
 
@@ -64,6 +65,8 @@ def _load_records_from_manifests(
                 manifest_data = json.loads(manifest_path.read_text(encoding="utf-8"))
                 if not isinstance(manifest_data, dict):
                     raise ValueError("manifest is not a JSON object")
+                if receipt_conflicts_with_note(manifest_data, manifest_path):
+                    raise ValueError("manifest names another note's output")
                 polaris_metrics = manifest_data.get("polaris_metrics")
                 if not polaris_metrics:
                     continue

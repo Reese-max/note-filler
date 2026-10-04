@@ -206,6 +206,26 @@ class TestCollectMetricsFromManifest:
 
 class TestScanAndCollectMetrics:
     """測試掃描目錄並蒐集指標。"""
+
+    def test_foreign_receipt_cannot_replace_matching_metrics(self, tmp_path):
+        """A cloned receipt must be rejected before it reserves a dedup key."""
+        metrics = _create_test_polaris_metrics()
+        foreign = _create_test_manifest(
+            tmp_path, "a.md.delivery_manifest.json", metrics, output_name="b.md"
+        )
+        matching = _create_test_manifest(
+            tmp_path, "b.md.delivery_manifest.json", metrics, output_name="b.md"
+        )
+        data = json.loads(foreign.read_text(encoding="utf-8"))
+        data["input_path"] = str(tmp_path / "foreign.txt")
+        foreign.write_text(json.dumps(data), encoding="utf-8")
+
+        config = MetricsCollectionConfig(scan_dirs=[tmp_path])
+        assert collect_metrics_from_manifest(foreign, config) is None
+        records = scan_and_collect_metrics(config)
+
+        assert [record.manifest_path for record in records] == [str(matching)]
+        assert records[0].source_path == str(tmp_path / "input.txt")
     
     def test_scan_single_directory(self, tmp_path):
         """測試掃描單一目錄。"""
@@ -922,6 +942,22 @@ class TestRerunNote:
         assert record is None
         assert len(alerts) == 1
         assert alerts[0].alert_type == "rerun_failure"
+
+    @pytest.mark.parametrize("payload", [[], None, "not an object", 42])
+    @pytest.mark.parametrize("name", ["delivery_manifest.json", "note.md.delivery_manifest.json"])
+    def test_rerun_non_object_manifest_returns_alert_without_rewriting(self, tmp_path, payload, name):
+        manifest_path = tmp_path / name
+        original = json.dumps(payload)
+        manifest_path.write_text(original, encoding="utf-8")
+
+        record, alerts = rerun_note(manifest_path, MetricsCollectionConfig())
+
+        assert record is None
+        assert len(alerts) == 1
+        assert alerts[0].alert_type == "rerun_failure"
+        assert alerts[0].severity == "critical"
+        assert "JSON 物件" in alerts[0].error_message
+        assert manifest_path.read_text(encoding="utf-8") == original
 
     def test_rerun_idempotent(self, tmp_path):
         """重跑冪等：兩次重跑結果一致。"""
