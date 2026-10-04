@@ -1056,5 +1056,5 @@ def calculate_polaris_metrics(
         traceability_markers=list(binding_report.get("traceability_markers") or []),
         claim_source_map=dict(binding_report.get("claim_source_map") or {}),
         citation_span_map=list(binding_report.get("citation_span_map") or []),
-        calculated_at=datetime.now(timezone.utc).isoformat(),
+        calculated_at=datetime.now(timezone.utc).replace(tzinfo=None).isoformat(),
     )

@@ -880,9 +880,9 @@ class TestEndToEndFaultInjection:
             p.unlink(missing_ok=True)
 
     @pytest.mark.anyio
-    async def test_web_pipeline_failure_clears_last_doc(self, async_client, monkeypatch, caplog):
-        """server.py:50 失敗時 app.state.last_doc 被清空，不得轉送上一份結果。"""
-        server.app.state.last_doc = CorrectionDoc(_doc(), [])
+    async def test_web_pipeline_failure_no_export_capability(self, async_client, monkeypatch, caplog):
+        """失敗的 /run 不產生新 result capability，也不得轉送既有結果。"""
+        server.app.state.results.clear()
         monkeypatch.setattr(server, "_build_clients", lambda: (None, None, None))
         monkeypatch.setattr(
             server, "run_pipeline",
@@ -893,7 +893,7 @@ class TestEndToEndFaultInjection:
             "/run", files={"file": ("boom.txt", b"x", "text/plain")}
         )
         assert response.status_code == 500
-        assert server.app.state.last_doc is None
+        assert server.app.state.results == {}
         export_resp = await async_client.get("/export")
         assert export_resp.status_code == 404
 

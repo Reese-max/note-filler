@@ -3,10 +3,6 @@
 > 任務：重新產出可機器檢查的設計驗收輸出，並確認工作樹乾淨、變更已落盤、
 > 每一項主張都能在檔案與輸出中逐一對應。
 
-## 追溯更新（2026-07-27）
-
-本文件已補上需求編號與驗收項目編號追溯，完整追溯索引見 `docs/specs/design-traceability-index.md`。
-
 ## 1. 主張 ↔ 可見產物
 
 | 主張 | 可見產物 |
@@ -41,11 +37,11 @@ acceptance_mode = per-claim-evidence
 
 ## 3. 本輪實測
 
-- generated_at: `2026-07-19T15:34:02+08:00`
-- HEAD（刷新前）: `16361a56a0b0f965bbab9ae976a65e950a955499`
+- generated_at: `2026-09-16T15:52:26+08:00`
+- HEAD（刷新前）: `b58d1324bac1276170d53342aafbc4158b285163`
 - working_tree_clean_before_refresh: `False`
 - acceptance_pass: **True**
-- unique offline test anchors: 8
+- unique offline test anchors: 11
 - failures: 0
 
 ### 逐項 claim
