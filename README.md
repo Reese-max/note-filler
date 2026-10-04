@@ -23,9 +23,11 @@
 |---|---|
 | 上傳的 `.txt`/`.docx` 筆記 | **權威輸入**——原稿，永不覆寫 |
 | `data/law_index.db` | **參考快照**——本地法條索引（Level A 來源）；仍須核對官方原文及現行版本 |
-| CLI `--outdir` 指定的資料夾（範例 `output/`） | **生成物**——訂正稿、binding report 與 manifest；未指定時寫在輸入檔旁。多檔 sidecar 以各輸入身份隔離，可重新產生 |
+| CLI `--outdir` 指定的資料夾（範例 `output/`） | **生成物**——訂正稿、binding report 與 manifest；未指定時寫在輸入檔旁，可重新產生 |
 | `metrics_output/` | **生成物**——聚合 KPI/品質報表 |
 | `app.state.results`（記憶體） | **暫存**——`/run` 產生的結果以不透明 `result_id` capability 綁定，TTL 預設 3600s（`NOTE_FILLER_RESULT_TTL_SECONDS`），上限 64 筆（`NOTE_FILLER_RESULT_MAX_ENTRIES`）；兩個設定都必須為正值，TTL 也必須為有限數；重啟即清空，過期一律 404 |
+
+目前主分支的 CLI 在同一輸出資料夾共用 `binding_report.json` 與 `delivery_manifest.json`，後一份筆記會取代前一份的 sidecar（Issue #12 的修正候選尚未合併）。需要逐筆可稽核的產出時，先每次處理一份筆記並指定不同 `--outdir`，不要將共用目錄最後一份 sidecar 當作全部筆記的證明。
 
 ## 追溯欄位：怎麼看一段補充的證據
 
