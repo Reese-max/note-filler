@@ -13,14 +13,29 @@ The actual `LawLookup.search_articles`, `search_law_sources`, `is_stale`, `cross
 | Criminal Code Article 80 | No | False | verified |
 | Criminal Code Article 81 | Yes | False | verified |
 
-The source URLs, SHA-256 hashes of fetched HTML, extracted article text, baseline repository SHA, database blob/hash, and output Source fields are in the frozen fixture and receipt. Replay with:
+The source URLs, SHA-256 hashes of fetched HTML, extracted article text, baseline repository SHA, database blob/hash, and output Source fields are in the frozen fixture and receipt. The original receipt is immutable historical baseline evidence, not a promise that
+current repaired source still emits the defect. Replay current integrated source:
 
 ```bash
-python scripts/research_law_snapshot.py
+python scripts/research_law_snapshot.py --expect repaired
 ```
+
+To reproduce the original defect, explicitly pin the source checkout to the
+fixture's baseline `2b231b22b336497e04d89a60d175cbe60242ec90` and select it:
+
+```bash
+git worktree add --detach /tmp/note-law-baseline 2b231b22b336497e04d89a60d175cbe60242ec90
+NOTE_LAW_REPLAY_SOURCE_ROOT=/tmp/note-law-baseline python scripts/research_law_snapshot.py --expect baseline
+```
+
+Both modes read the same frozen comparison and database bytes; output includes
+actual source repository SHA and a typed baseline/repaired contract. The wrapper
+forwards actual lookup provenance on repaired source. No assertion demands old
+unsafe behavior from new source; mismatched expectation or unexpected semantics
+fails instead of silently claiming baseline replication.
 
 The replay makes no network requests or provider calls. The original two HTTPS reads contacted only public MOJ pages; no credentials, paid services, production writes, notes, or law corpus were changed. Later replay dates may change query-day fields; they do not change the frozen official comparison.
 
 The smallest next implementation should carry `source_kind=local_snapshot`, actual `snapshot/import/fetch` date when known, separate `queried_at`, and `currentness=unknown|verified|stale` through the existing Source/export/review path. Unknown corpus age must remain unknown rather than become today's fetch date; unknown/stale local authority must not automatically receive a current-law verified label. Add promulgation/effective-status fields only where verified source evidence supports them. A DB file mtime or commit date must not masquerade as official freshness.
 
-No new database, background sync, legal citator, service, or unrestricted online gate is needed to correct the demonstrated semantics. A documentation-only warning cannot prevent the observed `verified` result. This research branch records the decision; it does not implement the currentness correction, infer a specific amendment's effective date, or claim every stored law is outdated. Product repair remains a separate explicit implementation and regression task.
+No new database, background sync, legal citator, service, or unrestricted online gate is needed to correct the demonstrated semantics. A documentation-only warning cannot prevent the observed `verified` result. The separate repair PR #23 implements currentness gating. This research branch integrates that source to keep replay current while preserving the original baseline receipt; it does not itself update the legal corpus, infer a specific amendment's effective date, or claim every stored law is outdated. Product repair remains a separate explicit implementation and regression task.

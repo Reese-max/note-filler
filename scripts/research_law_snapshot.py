@@ -1,15 +1,19 @@
 """Replay #9's local law freshness experiment without provider or network calls."""
 from __future__ import annotations
 
+import argparse
 import hashlib
 import json
+import os
 import re
+import subprocess
 import sys
 from dataclasses import asdict
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT / "src"))
+SOURCE_ROOT = Path(os.environ.get("NOTE_LAW_REPLAY_SOURCE_ROOT", ROOT)).resolve()
+sys.path.insert(0, str(SOURCE_ROOT / "src"))
 
 from note_filler.correction import assemble_correction  # noqa: E402
 from note_filler.gap import Gap  # noqa: E402
@@ -43,7 +47,13 @@ class OneArticleCorpus:
         return [r for r in rows if r["pcode"] == "C0000001" and r["article_no"] == self.article_no]
 
 
-def replay() -> dict:
+    def source_provenance(self, rows: list[dict]) -> list[dict]:
+        if hasattr(self.lookup, "source_provenance"):
+            return self.lookup.source_provenance(rows)
+        return [{} for _ in rows]
+
+
+def replay(expected: str = "auto") -> dict:
     fixture = json.loads((ROOT / "tests/fixtures/law-currentness/official-comparison.json").read_text())
     db = ROOT / "data/law_index.db"
     assert hashlib.sha256(db.read_bytes()).hexdigest() == fixture["db_sha256"], "Database drift"
@@ -72,9 +82,20 @@ def replay() -> dict:
         })
     assert results[0]["text_matches_official"] is False
     assert results[1]["text_matches_official"] is True
-    assert all(r["is_stale_30_days"] is False and r["supplement_confidence"] == "verified" for r in results)
+    baseline = all(r["is_stale_30_days"] is False and r["supplement_confidence"] == "verified"
+                   and "currentness" not in r["local_source"] for r in results)
+    repaired = all(r["is_stale_30_days"] is True and r["supplement_confidence"] == "pending_evidence"
+                   and r["local_source"].get("fetched_date") is None
+                   and r["local_source"].get("currentness") == "unknown" for r in results)
+    assert baseline or repaired, "Unexpected source/grounding contract; investigate drift"
+    contract = "baseline" if baseline else "repaired"
+    assert expected == "auto" or expected == contract, f"Expected {expected}, got {contract}"
+    source_sha = subprocess.check_output(
+        ["git", "-C", str(SOURCE_ROOT), "rev-parse", "HEAD"], text=True,
+    ).strip()
     return {
-        "schema_version": 1, "decision": "BUILD", "baseline_repo_sha": fixture["repo_sha"],
+        "schema_version": 2, "decision": "BUILD", "baseline_repo_sha": fixture["repo_sha"],
+        "source_repo_sha": source_sha, "source_contract": contract,
         "db_blob": fixture["db_blob"], "db_sha256": fixture["db_sha256"],
         "last_db_commit_date": fixture["last_db_commit_date"],
         "method": "Actual local SQLite/source/staleness/correction paths; fixed keyword extractor; frozen official public snapshots",
@@ -83,4 +104,6 @@ def replay() -> dict:
 
 
 if __name__ == "__main__":
-    print(json.dumps(replay(), ensure_ascii=False, indent=2))
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--expect", choices=("auto", "baseline", "repaired"), default="auto")
+    print(json.dumps(replay(parser.parse_args().expect), ensure_ascii=False, indent=2))

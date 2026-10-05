@@ -1,24 +1,29 @@
 from __future__ import annotations
 
+import hashlib
 import logging
+import re
 import math
 import os
 import secrets
 import tempfile
 import time
 from contextvars import ContextVar
+from dataclasses import replace
 from pathlib import Path
+from uuid import uuid4
 
 from fastapi import FastAPI, File, Request, UploadFile
 from fastapi.responses import HTMLResponse, PlainTextResponse
 from fastapi.templating import Jinja2Templates
 from starlette.concurrency import run_in_threadpool
 
-from note_filler.export import to_markdown
+from note_filler.export import EXPORT_MODES, to_markdown
 from note_filler.audit import audit_event
 from note_filler.llm import GrokClient
 from note_filler.pipeline import run_pipeline
 from note_filler.knowledge.law_lookup import LawLookup
+from note_filler.review import REASON_CODES, REVIEWABLE_DECISIONS, ReviewLedger, doc_fingerprint
 from note_filler.retrieve.twinkle import TwinkleClient
 
 logger = logging.getLogger(__name__)
@@ -57,6 +62,13 @@ BASE_DIR = Path(__file__).resolve().parent
 TEMPLATES = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 DB_PATH = os.environ.get(
     "NOTE_FILLER_DB", str(BASE_DIR.parent / "data" / "law_index.db")
+)
+# 決策履歷預設落在 gitignore 的 .task_state/(與任務狀態同層),可用環境變數改
+LEDGER_PATH = Path(
+    os.environ.get(
+        "NOTE_FILLER_REVIEW_LEDGER",
+        str(BASE_DIR.parent / ".task_state" / "review_ledger.json"),
+    )
 )
 
 app = FastAPI(title="筆記補齊")
@@ -100,10 +112,16 @@ def _evict_expired_results() -> None:
         app.state.results.pop(rid, None)
 
 
-def _store_result(doc) -> str:
+def _store_result(doc, *, review_owner: str | None = None) -> str:
     _evict_expired_results()
     result_id = secrets.token_urlsafe(16)
-    app.state.results[result_id] = {"doc": doc, "created_at": time.monotonic()}
+    app.state.results[result_id] = {
+        "doc": doc,
+        "generated_doc": doc,
+        "created_at": time.monotonic(),
+        "document_instance": uuid4().hex,
+        "review_owner": review_owner or secrets.token_urlsafe(32),
+    }
     while len(app.state.results) > RESULT_MAX_ENTRIES:
         oldest = min(
             app.state.results,
@@ -131,6 +149,77 @@ def _build_clients() -> tuple[GrokClient, TwinkleClient, LawLookup]:
     return llm, twinkle, law
 
 
+REVIEW_OWNER_COOKIE = "note_filler_review_owner"
+
+
+def _review_owner_for(request: Request) -> str:
+    owner = request.cookies.get(REVIEW_OWNER_COOKIE, "")
+    if re.fullmatch(r"[A-Za-z0-9_-]{43}", owner):
+        return owner
+    return secrets.token_urlsafe(32)
+
+
+def _ledger_path_for(doc, result_id: str) -> Path:
+    """Persist per browser owner and document; capabilities keep result access isolated."""
+    owner = app.state.results[result_id]["review_owner"]
+    scope = hashlib.sha256(owner.encode()).hexdigest()[:32]
+    fingerprint = doc_fingerprint(doc)
+    return LEDGER_PATH.with_name(
+        f"{LEDGER_PATH.stem}.{scope}.{fingerprint[:16]}{LEDGER_PATH.suffix}"
+    )
+
+
+def _ledger_for(doc, result_id: str) -> ReviewLedger:
+    entry = app.state.results[result_id]
+    fingerprint = doc_fingerprint(doc)
+    ledger = entry.get("review_ledger")
+    path = _ledger_path_for(doc, result_id)
+    if path.exists() or ledger is None or ledger.doc_fingerprint != fingerprint:
+        ledger = ReviewLedger.load_for_document(path, doc)
+        entry["review_ledger"] = ledger
+    return ledger
+
+
+def _document_instance_for(result_id: str) -> str:
+    return app.state.results[result_id]["document_instance"]
+
+
+def _render_result(
+    request: Request,
+    doc,
+    *,
+    result_id: str | None = None,
+    status_filter: str | None = None,
+    error: str | None = None,
+    input_id=None,
+    status_code: int = 200,
+) -> HTMLResponse:
+    """共用渲染:訂正稿 + 審查佇列(計數/篩選/下一筆待審)。"""
+    context = {"doc": doc, "error": error, "input_id": input_id, "result_id": result_id}
+    if doc is not None:
+        ledger = _ledger_for(doc, result_id)
+        replay = ledger.apply_overlays(app.state.results[result_id]["generated_doc"])
+        app.state.results[result_id]["doc"] = replay
+        doc = replay
+        context["doc"] = doc
+        context["document_instance"] = _document_instance_for(result_id)
+        items = ledger.queue_items(doc)
+        if status_filter:
+            items = [i for i in items if i["state"] == status_filter]
+        context.update(
+            {
+                "queue_by_arg": {i["argument_id"]: i for i in items},
+                "review_summary": ledger.summary(doc),
+                "reason_codes": sorted(REASON_CODES),
+                "review_filter": status_filter or "",
+            }
+        )
+    return TEMPLATES.TemplateResponse(
+        request, "result.html", context, status_code=status_code,
+        headers={"Cache-Control": "no-store", "Referrer-Policy": "no-referrer", "X-Content-Type-Options": "nosniff"},
+    )
+
+
 @app.get("/", response_class=HTMLResponse)
 def index(request: Request) -> HTMLResponse:
     return TEMPLATES.TemplateResponse(request, "index.html")
@@ -152,10 +241,14 @@ async def run(request: Request, file: UploadFile = File(...)) -> HTMLResponse:
             doc = await run_in_threadpool(run_pipeline, tmp_path, llm, twinkle, law)
         finally:
             _redact_web_pipeline_logs.reset(log_token)
-        result_id = _store_result(doc)
-        return TEMPLATES.TemplateResponse(
-            request, "result.html", {"doc": doc, "result_id": result_id}
+        owner = _review_owner_for(request)
+        result_id = _store_result(doc, review_owner=owner)
+        response = _render_result(request, doc, result_id=result_id)
+        response.set_cookie(
+            REVIEW_OWNER_COOKIE, owner, httponly=True, samesite="strict",
+            secure=request.url.scheme == "https",
         )
+        return response
     except Exception as exc:
         if result_id is not None:
             app.state.results.pop(result_id, None)
@@ -188,6 +281,112 @@ async def run(request: Request, file: UploadFile = File(...)) -> HTMLResponse:
                 )
 
 
+@app.get("/result", response_class=HTMLResponse)
+def result_without_capability() -> HTMLResponse:
+    return PlainTextResponse("結果不存在或已過期,請重新上傳筆記。", status_code=404)
+
+
+@app.post("/review", response_class=HTMLResponse)
+def review_without_capability() -> HTMLResponse:
+    return PlainTextResponse("結果不存在或已過期,請重新上傳筆記。", status_code=404)
+
+
+@app.get("/result/{result_id}", response_class=HTMLResponse)
+async def result(request: Request, result_id: str, filter: str | None = None) -> HTMLResponse:
+    doc = _lookup_result(result_id)
+    if doc is None:
+        return PlainTextResponse("結果不存在或已過期,請重新上傳筆記。", status_code=404)
+    return _render_result(request, doc, result_id=result_id, status_filter=filter)
+
+
+@app.post("/review/{result_id}", response_class=HTMLResponse)
+async def review_decision(request: Request, result_id: str) -> HTMLResponse:
+    """Persist a revision only for the result capability and current form version."""
+    doc = _lookup_result(result_id)
+    if doc is None:
+        return PlainTextResponse("結果不存在或已過期,請重新上傳筆記。", status_code=404)
+    form = await request.form()
+    if doc is not _lookup_result(result_id):
+        return PlainTextResponse("訂正稿已變更,請重新載入後審查。", status_code=409)
+    argument_id = str(form.get("argument_id") or "")
+    decision = str(form.get("decision") or "")
+    reason_code = str(form.get("reason_code") or "")
+    note = str(form.get("note") or "")
+    reviewer = str(form.get("reviewer") or "local")
+    edited_text = str(form.get("edited_text") or "").strip()
+
+    seg = next(
+        (
+            s
+            for s in doc.segments
+            if s.type == "supplement" and s.argument_id == argument_id
+        ),
+        None,
+    )
+    if seg is None:
+        return PlainTextResponse(
+            f"找不到可審查的論點:{argument_id}", status_code=404
+        )
+
+    # 先建立候選修訂;寫檔失敗時不發布未持久化的主張或決策。
+    candidate = replace(seg)
+    # 先驗證再修改:edited_text 只能搭配核准類決策,避免把拒絕/退回誤存成已核准
+    if reason_code and reason_code not in REASON_CODES:
+        return PlainTextResponse(
+            f"審查決策不合法:reason_code {reason_code!r} 不在允許清單",
+            status_code=400,
+        )
+    if edited_text:
+        if decision not in ("accepted", "edited_accepted"):
+            return PlainTextResponse(
+                "審查決策不合法:帶修訂文字時 decision 只能是 accepted/edited_accepted",
+                status_code=400,
+            )
+        if edited_text != seg.text:
+            # 手動修改 claim 後不可沿用舊 ACCEPTED:建立 EDITED_ACCEPTED 新決策
+            candidate.text = edited_text
+            decision = "edited_accepted"
+    elif decision == "edited_accepted":
+        return PlainTextResponse(
+            "審查決策不合法:edited_accepted 需附 edited_text", status_code=400
+        )
+
+    ledger = _ledger_for(doc, result_id)
+    if decision not in {value.value for value in REVIEWABLE_DECISIONS}:
+        return PlainTextResponse("審查決策不合法:未知 decision", status_code=400)
+    expected_tokens = {
+        **ledger.revision_tokens(doc, seg),
+        "document_instance": _document_instance_for(result_id),
+    }
+    if any(str(form.get(key) or "") != value for key, value in expected_tokens.items()):
+        return PlainTextResponse("訂正稿或審查版本已變更,請重新載入後審查。", status_code=409)
+    ledger = ReviewLedger(ledger.doc_fingerprint, ledger.records)
+    try:
+        record = ledger.record(
+            candidate,
+            decision,
+            reason_code=reason_code,
+            note=note,
+            reviewer=reviewer,
+            base_segment=seg if candidate.text != seg.text else None,
+        )
+    except ValueError as exc:
+        return PlainTextResponse(f"審查決策不合法:{exc}", status_code=400)
+    ledger.save(_ledger_path_for(doc, result_id))
+    doc = replace(doc, segments=[candidate if s is seg else s for s in doc.segments])
+    app.state.results[result_id]["doc"] = doc
+    app.state.results[result_id]["review_ledger"] = ledger
+    audit_event(
+        logger,
+        "claim_review_decision_persisted",
+        argument_id,
+        level=logging.INFO,
+        decision=record.decision.value,
+        reason_code=record.reason_code,
+    )
+    return _render_result(request, doc, result_id=result_id)
+
+
 @app.get("/export")
 def export() -> PlainTextResponse:
     return PlainTextResponse(
@@ -196,16 +395,22 @@ def export() -> PlainTextResponse:
 
 
 @app.get("/export/{result_id}")
-async def export_result(result_id: str) -> PlainTextResponse:
+async def export_result(result_id: str, mode: str = "review-draft") -> PlainTextResponse:
     doc = _lookup_result(result_id)
     if doc is None:
         return PlainTextResponse(
             "結果不存在或已過期,請重新上傳筆記。", status_code=404
         )
+    if mode not in EXPORT_MODES:
+        return PlainTextResponse(
+            f"未知匯出模式:{mode}(允許: {', '.join(EXPORT_MODES)})", status_code=400,
+        )
     try:
         log_token = _redact_web_pipeline_logs.set(True)
         try:
-            md = to_markdown(doc)
+            ledger = _ledger_for(doc, result_id)
+            generated = app.state.results[result_id]["generated_doc"]
+            md = to_markdown(generated, export_mode=mode, ledger=ledger)
         finally:
             _redact_web_pipeline_logs.reset(log_token)
     except Exception as exc:

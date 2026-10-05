@@ -300,6 +300,44 @@ def test_main_keeps_artifact_and_delivers_full_content_to_stdout(tmp_path, monke
     assert expected_ds.items() <= receipt["delivery_status"].items()
 
 
+def test_main_preserves_review_gate_and_output_owned_receipt(tmp_path, monkeypatch, capsys):
+    from note_filler.parse import Document, Paragraph
+
+    note = tmp_path / "review.txt"
+    note.write_text("原稿", encoding="utf-8")
+    out = tmp_path / "out"
+    ledger_path = tmp_path / "review-ledger.json"
+    export_calls = []
+    doc = _Doc()
+    doc.original = Document(
+        source_path=str(note), full_text="原稿", paragraphs=(Paragraph(idx=0, text="原稿"),),
+    )
+
+    def export(doc, **kwargs):
+        export_calls.append(kwargs)
+        return "經人工審查的訂正稿"
+
+    monkeypatch.setattr(cli, "run_pipeline", lambda *a, **k: doc)
+    monkeypatch.setattr(cli, "to_markdown", export)
+    monkeypatch.setattr(cli, "GrokClient", lambda: None)
+    monkeypatch.setattr(cli, "TwinkleClient", lambda token="": None)
+    monkeypatch.setattr(cli, "LawLookup", lambda path: None)
+    monkeypatch.setattr(cli, "TASK_STATE_DIR", tmp_path / "state")
+
+    assert cli.main([
+        str(note), "-o", str(out), "--export-mode", "accepted-only",
+        "--review-ledger", str(ledger_path), "--db", str(tmp_path / "law.db"),
+    ]) == 0
+    output = out / "review.訂正稿.md"
+    assert output.read_text(encoding="utf-8") == "經人工審查的訂正稿"
+    assert export_calls[0]["export_mode"] == "accepted-only"
+    assert export_calls[0]["ledger"] is not None
+    receipt = json.loads(cli.delivery_manifest_path(output).read_text(encoding="utf-8"))
+    assert receipt["output_path"] == str(output)
+    assert receipt["delivery_status"]["user_channel_sent"] is True
+    assert capsys.readouterr().out == "經人工審查的訂正稿\n"
+
+
 def test_main_stdout_delivery_failure_is_not_counted_as_success(tmp_path, monkeypatch, capsys):
     note = tmp_path / "note.txt"
     note.write_text("一、標題\n內容", encoding="utf-8")
