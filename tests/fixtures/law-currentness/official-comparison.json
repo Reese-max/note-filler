@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "repo_sha": "2b231b22b336497e04d89a60d175cbe60242ec90",
+  "db_blob": "b159496cbda071967521f4ccf14dd38da7122031",
+  "db_sha256": "ff7d674708ebaf5b9059322ffdc1580015bd8b7b50a00097867cc7ecbada9d6c",
+  "last_db_commit": "2e3e4f5c2c6377f3b380adfda8bcfab77264c774",
+  "last_db_commit_date": "2026-07-15T14:14:40+08:00",
+  "cases": [
+    {
+      "pcode": "C0000001",
+      "law_name": "中華民國刑法",
+      "article_no": "80",
+      "official_url": "https://law.moj.gov.tw/LawClass/LawSingle.aspx?pcode=C0000001&flno=80",
+      "retrieved_at": "2026-10-05T02:42:08.559615+00:00",
+      "official_html_sha256": "614c6bec6ed625f23e9f1b2b4a54db77d5a0e658178daee3052f0360e5159692",
+      "official_text": "追訴權，因下列期間內未起訴而消滅：\n一、犯最重本刑為死刑、無期徒刑或十年以上有期徒刑之罪者，三十年。但發生死亡結果者，不在此限。\n二、犯最重本刑為三年以上十年未滿有期徒刑之罪者，二十年。\n三、犯最重本刑為一年以上三年未滿有期徒刑之罪者，十年。\n四、犯最重本刑為一年未滿有期徒刑、拘役或罰金之罪者，五年。\n前項期間自犯罪成立之日起算。但犯罪行為有繼續之狀態者，自行為終了之日起算。\n犯第二百二十一條至第二百二十七條、第二百二十八條、第二百二十九條、第三百三十二條第二項第二款、第三百三十四條第二項第二款或第三百四十八條第二項第一款之罪者，於被害人滿二十歲前，不計入第一項期間。"
+    },
+    {
+      "pcode": "C0000001",
+      "law_name": "中華民國刑法",
+      "article_no": "81",
+      "official_url": "https://law.moj.gov.tw/LawClass/LawSingle.aspx?pcode=C0000001&flno=81",
+      "retrieved_at": "2026-10-05T02:46:55.799256+00:00",
+      "official_html_sha256": "deffd137a005b855d67b2de4ef02a8c27be6f0ddd653815f5f54722dbb27182a",
+      "official_text": "（刪除）"
+    }
+  ]
+}
