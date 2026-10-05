@@ -143,6 +143,15 @@ def claim_revision_hash(segment: "Segment") -> str:
     )
 
 
+def _snapshot_evidence(source) -> dict:
+    """Changing currentness proof invalidates prior human evidence approval."""
+    if not hasattr(source, "currentness"):
+        return {}
+    return {key: getattr(source, key, None) for key in (
+        "snapshot_sha256", "currentness", "verified_at", "official_text_sha256",
+    )}
+
+
 def evidence_bundle_hash(segment: "Segment") -> str:
     """證據束指紋:引用來源 id/內容/層級/日期/URL、來源缺失、驗證契約皆納入。"""
     sources = list(getattr(segment, "sources", []) or [])
@@ -165,6 +174,7 @@ def evidence_bundle_hash(segment: "Segment") -> str:
                 "level": getattr(src, "level", ""),
                 "doc_date": getattr(src, "doc_date", None),
                 "fetched_date": getattr(src, "fetched_date", "") or "",
+                **_snapshot_evidence(src),
             }
         )
     return _sha(
@@ -255,6 +265,7 @@ def source_stances(segment: "Segment") -> list[dict]:
                 "level": getattr(src, "level", ""),
                 "doc_date": getattr(src, "doc_date", None),
                 "fetched_date": getattr(src, "fetched_date", "") or "",
+                **_snapshot_evidence(src),
                 "stance": stance,
                 "missing": not bool(content),
             }
@@ -588,6 +599,7 @@ class ReviewLedger:
                             "level": getattr(s, "level", ""),
                             "doc_date": getattr(s, "doc_date", None),
                             "fetched_date": getattr(s, "fetched_date", "") or "",
+                            **_snapshot_evidence(s),
                         }
                         for s in getattr(seg, "sources", []) or []
                     ],
