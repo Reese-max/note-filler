@@ -271,8 +271,8 @@ def write_manifest_and_latest(manifest_path: Path, data: dict) -> None:
     # Only a real note-owned receipt is authoritative; an archive or any other
     # non-receipt file keeps exactly the scope it was written with, and only
     # the shared directory-level name acts as a "latest" copy.
-    authoritative = is_receipt_file_name(name)
     is_latest_copy = name == DELIVERY_MANIFEST_NAME
+    authoritative = is_receipt_file_name(name) and not is_latest_copy
     data = dict(data)
     if authoritative:
         data.update({"authoritative": True, "sidecar_scope": "output"})

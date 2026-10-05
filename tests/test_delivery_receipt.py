@@ -1619,6 +1619,18 @@ def test_archived_receipt_write_is_not_authoritative(tmp_path):
     assert not owned_receipt_path(output).exists()
 
 
+def test_legacy_latest_without_output_identity_stays_non_authoritative(tmp_path):
+    """An incomplete legacy retry receipt is never promoted to note evidence."""
+    from note_filler.sidecars import write_manifest_and_latest
+
+    latest = tmp_path / "delivery_manifest.json"
+    write_manifest_and_latest(latest, {"status": "retryable"})
+
+    stored = json.loads(latest.read_text(encoding="utf-8"))
+    assert stored["authoritative"] is False
+    assert stored["sidecar_scope"] == "directory_latest"
+
+
 def test_non_receipt_name_is_not_authoritative(tmp_path):
     """A broad-pattern match such as ``mydelivery_manifest.json`` proves nothing."""
     from note_filler.sidecars import write_manifest_and_latest
