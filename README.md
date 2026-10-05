@@ -27,7 +27,7 @@
 | `metrics_output/` | **生成物**——聚合 KPI/品質報表 |
 | `app.state.results`（記憶體） | **暫存**——`/run` 產生的結果以不透明 `result_id` capability 綁定，TTL 預設 3600s（`NOTE_FILLER_RESULT_TTL_SECONDS`），上限 64 筆（`NOTE_FILLER_RESULT_MAX_ENTRIES`）；兩個設定都必須為正值，TTL 也必須為有限數；重啟即清空，過期一律 404 |
 
-目前主分支的 CLI 在同一輸出資料夾共用 `binding_report.json` 與 `delivery_manifest.json`，後一份筆記會取代前一份的 sidecar（Issue #12 的修正候選尚未合併）。需要逐筆可稽核的產出時，先每次處理一份筆記並指定不同 `--outdir`，不要將共用目錄最後一份 sidecar 當作全部筆記的證明。
+CLI 為每份訂正稿保留自己的 `<成品檔名>.binding_report.json` 與 `<成品檔名>.delivery_manifest.json`；同一 `--outdir` 可容納多份筆記而不取代前一份的證據。同名輸入會使用來源路徑的穩定後綴，既有無法歸屬的成品會保留。目錄級 `binding_report.json` 與 `delivery_manifest.json` 只是最新一份的相容副本，不是整批筆記的證明；metrics 與 recovery 優先使用逐份回執。完整遷移、失敗重跑與去重規則見 [batch sidecars](docs/batch-sidecars.md)。
 
 ## 追溯欄位：怎麼看一段補充的證據
 
