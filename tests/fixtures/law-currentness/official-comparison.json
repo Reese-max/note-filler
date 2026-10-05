@@ -13,7 +13,14 @@
       "official_url": "https://law.moj.gov.tw/LawClass/LawSingle.aspx?pcode=C0000001&flno=80",
       "retrieved_at": "2026-10-05T02:42:08.559615+00:00",
       "official_html_sha256": "614c6bec6ed625f23e9f1b2b4a54db77d5a0e658178daee3052f0360e5159692",
-      "official_text": "追訴權，因下列期間內未起訴而消滅：\n一、犯最重本刑為死刑、無期徒刑或十年以上有期徒刑之罪者，三十年。但發生死亡結果者，不在此限。\n二、犯最重本刑為三年以上十年未滿有期徒刑之罪者，二十年。\n三、犯最重本刑為一年以上三年未滿有期徒刑之罪者，十年。\n四、犯最重本刑為一年未滿有期徒刑、拘役或罰金之罪者，五年。\n前項期間自犯罪成立之日起算。但犯罪行為有繼續之狀態者，自行為終了之日起算。\n犯第二百二十一條至第二百二十七條、第二百二十八條、第二百二十九條、第三百三十二條第二項第二款、第三百三十四條第二項第二款或第三百四十八條第二項第一款之罪者，於被害人滿二十歲前，不計入第一項期間。"
+      "official_text": "追訴權，因下列期間內未起訴而消滅：\n一、犯最重本刑為死刑、無期徒刑或十年以上有期徒刑之罪者，三十年。但發生死亡結果者，不在此限。\n二、犯最重本刑為三年以上十年未滿有期徒刑之罪者，二十年。\n三、犯最重本刑為一年以上三年未滿有期徒刑之罪者，十年。\n四、犯最重本刑為一年未滿有期徒刑、拘役或罰金之罪者，五年。\n前項期間自犯罪成立之日起算。但犯罪行為有繼續之狀態者，自行為終了之日起算。\n犯第二百二十一條至第二百二十七條、第二百二十八條、第二百二十九條、第三百三十二條第二項第二款、第三百三十四條第二項第二款或第三百四十八條第二項第一款之罪者，於被害人滿二十歲前，不計入第一項期間。",
+      "law_temporal_evidence": {
+        "promulgation_date": "2026-07-22",
+        "revision_source_url": "https://law.moj.gov.tw/News/NewsDetail.aspx?msgid=198983",
+        "effective_date": null,
+        "effective_status": "UNKNOWN",
+        "legal_applicability": "UNKNOWN"
+      }
     },
     {
       "pcode": "C0000001",
@@ -22,7 +29,31 @@
       "official_url": "https://law.moj.gov.tw/LawClass/LawSingle.aspx?pcode=C0000001&flno=81",
       "retrieved_at": "2026-10-05T02:46:55.799256+00:00",
       "official_html_sha256": "deffd137a005b855d67b2de4ef02a8c27be6f0ddd653815f5f54722dbb27182a",
-      "official_text": "（刪除）"
+      "official_text": "（刪除）",
+      "law_temporal_evidence": {
+        "promulgation_date": null,
+        "revision_source_url": "https://law.moj.gov.tw/LawClass/LawSingle.aspx?pcode=C0000001&flno=81",
+        "effective_date": null,
+        "effective_status": "UNKNOWN",
+        "legal_applicability": "UNKNOWN"
+      }
     }
-  ]
+  ],
+  "official_amendment_notice": {
+    "official_url": "https://law.moj.gov.tw/News/NewsDetail.aspx?msgid=198983",
+    "retrieved_at": "2026-10-05T04:14:25.132196+00:00",
+    "official_html_sha256": "7b74ac500044857e15b3b69c42218c7f9115623961d830fd46b4f17f32d2ef96",
+    "title": "修正中華民國刑法條文",
+    "observed_date_label": "公(發)布日期：",
+    "observed_date": "115-07-22",
+    "promulgation_date": "2026-07-22",
+    "date_conversion": "ROC115 +1911 = Gregorian2026; mechanical date conversion only",
+    "promulgation_statement": "中華民國一百十五年七月二十二日總統華總一義字第 11500067801號令修正公布第 80 條條文",
+    "observed_compilation_cutoff": "法規整編資料截止日：民國 115 年 09 月 24 日",
+    "compilation_cutoff_date": "2026-09-24",
+    "effective_date": null,
+    "effective_status": "UNKNOWN",
+    "legal_applicability": "UNKNOWN",
+    "boundary": "Notice publication/promulgation and site compilation cutoff do not establish amendment effective date or applicability to any case."
+  }
 }

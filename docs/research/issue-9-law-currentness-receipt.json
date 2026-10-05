@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "decision": "BUILD",
+  "baseline_repo_sha": "2b231b22b336497e04d89a60d175cbe60242ec90",
+  "db_blob": "b159496cbda071967521f4ccf14dd38da7122031",
+  "db_sha256": "ff7d674708ebaf5b9059322ffdc1580015bd8b7b50a00097867cc7ecbada9d6c",
+  "last_db_commit_date": "2026-07-15T14:14:40+08:00",
+  "method": "Actual local SQLite/source/staleness/correction paths; fixed keyword extractor; frozen official public snapshots",
+  "provider_calls": 0,
+  "replay_network_requests": 0,
+  "results": [
+    {
+      "article_no": "80",
+      "official_url": "https://law.moj.gov.tw/LawClass/LawSingle.aspx?pcode=C0000001&flno=80",
+      "official_html_sha256": "614c6bec6ed625f23e9f1b2b4a54db77d5a0e658178daee3052f0360e5159692",
+      "text_matches_official": false,
+      "local_source": {
+        "id": "law:C0000001:80",
+        "title": "《中華民國刑法》第80條",
+        "url": "https://law.moj.gov.tw/LawClass/LawAll.aspx?pcode=C0000001",
+        "level": "A",
+        "content": "追訴權，因下列期間內未起訴而消滅：\n\n一、犯最重本刑為死刑、無期徒刑或十年以上有期徒刑之罪者，三十年。但發生死亡結果者，不在此限。\n\n二、犯最重本刑為三年以上十年未滿有期徒刑之罪者，二十年。\n\n三、犯最重本刑為一年以上三年未滿有期徒刑之罪者，十年。\n\n四、犯最重本刑為一年未滿有期徒刑、拘役或罰金之罪者，五年。\n\n前項期間自犯罪成立之日起算。但犯罪行為有繼續之狀態者，自行為終了之日起算。",
+        "fetched_date": "2026-10-05",
+        "doc_date": null,
+        "distance": 0.1
+      },
+      "is_stale_30_days": false,
+      "supplement_confidence": "verified",
+      "original_preserved": true
+    },
+    {
+      "article_no": "81",
+      "official_url": "https://law.moj.gov.tw/LawClass/LawSingle.aspx?pcode=C0000001&flno=81",
+      "official_html_sha256": "deffd137a005b855d67b2de4ef02a8c27be6f0ddd653815f5f54722dbb27182a",
+      "text_matches_official": true,
+      "local_source": {
+        "id": "law:C0000001:81",
+        "title": "《中華民國刑法》第81條",
+        "url": "https://law.moj.gov.tw/LawClass/LawAll.aspx?pcode=C0000001",
+        "level": "A",
+        "content": "（刪除）",
+        "fetched_date": "2026-10-05",
+        "doc_date": null,
+        "distance": 0.1
+      },
+      "is_stale_30_days": false,
+      "supplement_confidence": "verified",
+      "original_preserved": true
+    }
+  ]
+}
