@@ -76,7 +76,10 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument(
         "--manifest",
         default=None,
-        help="rerun 指令：指定 delivery_manifest.json 路徑"
+        help=(
+            "rerun 指令：指定 delivery_manifest.json 路徑；"
+            "目錄級路徑會轉到該筆記自己的權威回執（見 docs/batch-sidecars.md）"
+        )
     )
     ap.add_argument(
         "--artifacts-dir",
