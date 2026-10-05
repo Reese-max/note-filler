@@ -75,6 +75,7 @@ def replay(expected: str = "auto") -> dict:
         results.append({
             "article_no": article, "official_url": case["official_url"],
             "official_html_sha256": case["official_html_sha256"],
+            "law_temporal_evidence": case.get("law_temporal_evidence", {}),
             "text_matches_official": normalize(source.content) == normalize(case["official_text"]),
             "local_source": asdict(source), "is_stale_30_days": is_stale(source.fetched_date, 30),
             "supplement_confidence": result.segments[1].confidence,
@@ -98,6 +99,7 @@ def replay(expected: str = "auto") -> dict:
         "source_repo_sha": source_sha, "source_contract": contract,
         "db_blob": fixture["db_blob"], "db_sha256": fixture["db_sha256"],
         "last_db_commit_date": fixture["last_db_commit_date"],
+        "official_amendment_notice": fixture.get("official_amendment_notice"),
         "method": "Actual local SQLite/source/staleness/correction paths; fixed keyword extractor; frozen official public snapshots",
         "provider_calls": 0, "replay_network_requests": 0, "results": results,
     }

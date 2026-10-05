@@ -36,3 +36,20 @@ def test_historical_baseline_receipt_remains_explicitly_historical():
     assert historical["baseline_repo_sha"] == fixture["repo_sha"]
     assert all(r["supplement_confidence"] == "verified" and not r["is_stale_30_days"]
                for r in historical["results"])
+
+
+def test_observed_official_notice_is_post_snapshot_without_invented_effectiveness():
+    from datetime import date, datetime
+
+    fixture = json.loads((ROOT / "tests/fixtures/law-currentness/official-comparison.json").read_text())
+    notice = fixture["official_amendment_notice"]
+    assert notice["observed_date_label"] == "公(發)布日期："
+    assert notice["observed_date"] == "115-07-22"
+    assert date.fromisoformat(notice["promulgation_date"]) > datetime.fromisoformat(fixture["last_db_commit_date"]).date()
+    assert "11500067801" in notice["promulgation_statement"]
+    assert notice["effective_date"] is None
+    assert notice["effective_status"] == notice["legal_applicability"] == "UNKNOWN"
+    assert all(c["law_temporal_evidence"]["effective_date"] is None
+               and c["law_temporal_evidence"]["effective_status"] == "UNKNOWN"
+               and c["law_temporal_evidence"]["legal_applicability"] == "UNKNOWN"
+               for c in fixture["cases"])

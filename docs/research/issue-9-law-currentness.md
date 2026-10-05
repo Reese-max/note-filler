@@ -4,6 +4,23 @@ Decision: **BUILD**, confined to source provenance and currentness semantics.
 
 On 2026-10-05, two public Ministry of Justice article pages were retrieved over HTTPS. Criminal Code Article 80 differs from the checked-in SQLite corpus: the official page contains an additional paragraph excluding time before the victim turns twenty for its enumerated offenses. The local row ends at the preceding paragraph. Article 81, the unchanged control, matches the official deleted-article text after whitespace normalization. This is a textual comparison, not an independent legal interpretation or advice about applicability.
 
+An additional actual HTTPS read of [MOJ amendment notice198983](https://law.moj.gov.tw/News/NewsDetail.aspx?msgid=198983)
+observed **公(發)布日期：115-07-22** and the statement **中華民國一百十五年七月二十二日總統華總一義字第11500067801號令修正公布第80條條文**.
+Mechanical ROC/Gregorian conversion yields **2026-07-22**, after the recorded
+2026-07-15 database custody commit. The notice reproduces the additional paragraph.
+Its HTML SHA-256 is `7b74ac500044857e15b3b69c42218c7f9115623961d830fd46b4f17f32d2ef96`;
+retrieval time, literal date label/value, announcement statement and URL are frozen
+in the fixture. The same page separately states **法規整編資料截止日：民國115年09月24日**
+(2026-09-24), a site compilation cutoff, not an Article80 effective date or a database
+acquisition date. Article81 has no separately verified amendment date in this study.
+
+**Effective date, effective status and legal applicability remain UNKNOWN** for
+both cases. Promulgation/news dates and a textual current-page match cannot settle
+when an amendment applies to a particular offense or pending case. Neither the
+research nor LevelA currentness proof asserts that interpretation. The fixture and
+replay keep these unknown fields separate from custody, retrieval, promulgation,
+and compilation dates.
+
 The DB blob was last committed on 2026-07-15. That is repository custody evidence, **not proof of the corpus's fetch/import date**. Neither the DB schema nor the retrieved Source carries a snapshot, revision, effective-date, or authority-currentness field.
 
 The actual `LawLookup.search_articles`, `search_law_sources`, `is_stale`, `cross_validate`, and `assemble_correction` paths were replayed with this real DB. A fixed keyword extractor and article filter replaced provider-dependent query selection; they do not simulate current authoritative text. Both rows received query-day `fetched_date=2026-10-05`, `doc_date=null`, `is_stale(...,30)=false`, and supplement `confidence=verified`. The original synthetic note remained unchanged. Article 80 therefore demonstrates a product effect beyond a misleading label: demonstrably older text can receive fresh-looking Level-A grounding.
