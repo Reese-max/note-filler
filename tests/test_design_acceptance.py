@@ -190,8 +190,9 @@ def test_design_acceptance_rejects_claim_without_artifact() -> None:
 
 
 def test_design_package_head_matches_repo_and_claim_map_printable() -> None:
-    """Package HEAD must be a real git object; claim map must be 1:1 printable."""
+    """Package HEAD must be reachable from HEAD; claim map must be 1:1 printable."""
     package = _load_json(_PACKAGE)
+    package_head = package["git"]["head"]
     head = subprocess.run(
         ["git", "rev-parse", "HEAD"],
         cwd=_REPO,
@@ -200,17 +201,36 @@ def test_design_package_head_matches_repo_and_claim_map_printable() -> None:
         check=True,
         encoding="utf-8",
     ).stdout.strip()
-    # Package may have been generated before this commit; still must be valid object
+    # Package may have been generated before this commit; it must still name a
+    # commit reachable from it, so single-branch clones and merged-branch
+    # deletion cannot turn the default branch red.
     show = subprocess.run(
-        ["git", "cat-file", "-t", package["git"]["head"]],
+        ["git", "cat-file", "-t", package_head],
         cwd=_REPO,
         text=True,
         capture_output=True,
         encoding="utf-8",
         check=False,
     )
-    assert show.returncode == 0, package["git"]["head"]
+    assert show.returncode == 0, (
+        f"package git.head {package_head} is not present in this clone "
+        f"(git cat-file -t exited {show.returncode}: {show.stderr.strip()}); "
+        "regenerate the design-acceptance package on the default branch"
+    )
     assert show.stdout.strip() == "commit"
+    reachable = subprocess.run(
+        ["git", "merge-base", "--is-ancestor", package_head, "HEAD"],
+        cwd=_REPO,
+        text=True,
+        capture_output=True,
+        encoding="utf-8",
+        check=False,
+    )
+    assert reachable.returncode == 0, (
+        f"package git.head {package_head} is not an ancestor of HEAD {head}; "
+        "the package must record a commit reachable from the default branch "
+        "so single-branch clones and merged-branch deletion stay green"
+    )
     assert head  # current HEAD exists
 
     print("\n===== DESIGN_ACCEPTANCE_BEGIN =====")
