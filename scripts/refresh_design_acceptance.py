@@ -303,6 +303,10 @@ def build_package() -> dict:
         "source_claims": str(CLAIMS_PATH.relative_to(ROOT)).replace("\\", "/"),
         "git": {
             "head": head,
+            "validation_baseline": {
+                "commit": head,
+                "source": "observed HEAD before refresh",
+            },
             "working_tree_clean_before_refresh": tree_clean_before,
             "status_porcelain_before_refresh": porcelain,
         },
@@ -324,6 +328,22 @@ def build_package() -> dict:
     return package
 
 
+def _validation_baseline_lines(package: dict) -> list[str]:
+    baseline = package["git"]["validation_baseline"]
+    return [
+        "### Git 驗證基準（非歷史實測 HEAD）",
+        "",
+        f"- validation_baseline.commit：`{baseline['commit']}`",
+        f"- 來源：{baseline['source']}",
+        "- `git.head` 與 generated_at、工作樹狀態、測試結果保留歷史實測觀測；"
+        "驗證基準只供 Git 可達性檢查，不表示曾在該基準執行測試或兩個工作樹相同。",
+        "- 完整 single-branch clone 必須確認基準為 HEAD 的祖先；"
+        "shallow clone 若歷史截斷，明示 ancestry 未驗證，仍檢查套件與目前檔案錨點。"
+        "完整可達性驗收須用完整歷史，測試不自動 fetch。",
+        "",
+    ]
+
+
 def render_package_md(package: dict) -> str:
     lines = [
         "# 設計驗收套件（Design Acceptance Package）",
@@ -340,6 +360,7 @@ def render_package_md(package: dict) -> str:
         f"- working_tree_clean_before_refresh：`{package['git']['working_tree_clean_before_refresh']}`",
         f"- status_porcelain_before_refresh：`{package['git']['status_porcelain_before_refresh'] or '(empty)'}`",
         "",
+        *_validation_baseline_lines(package),
         "## 主張 ↔ 產物對照",
         "",
         "| ID | 標題 | 規格檔 | 實作檔數 | 測試數 | OK |",
@@ -464,6 +485,7 @@ def render_report(package: dict) -> str:
         "claim_to_artifact_map[]",
         "failures[]",
         "git.head / working_tree_clean_before_refresh",
+        "git.validation_baseline{commit, source} (reachability reference only)",
         "acceptance_mode = per-claim-evidence",
         "```",
         "",
@@ -478,6 +500,7 @@ def render_report(package: dict) -> str:
         f"- unique offline test anchors: {len(package['unique_test_anchors'])}",
         f"- failures: {len(package['failures'])}",
         "",
+        *_validation_baseline_lines(package),
         "### 逐項 claim",
         "",
         "| ID | OK | 規格 | 測試全部 PASSED |",
@@ -568,6 +591,7 @@ def main() -> int:
     print(f"ACCEPTANCE_PASS={package['acceptance_pass']}")
     print(f"FAILURES={len(package['failures'])}")
     print(f"HEAD={package['git']['head']}")
+    print(f"VALIDATION_BASELINE={package['git']['validation_baseline']['commit']}")
     print(
         "WORKING_TREE_CLEAN_BEFORE_REFRESH="
         f"{package['git']['working_tree_clean_before_refresh']}"
