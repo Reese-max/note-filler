@@ -30,6 +30,7 @@ per_claim[].confirmation_record{event_id, confirmed_by, confirmed_at, method, re
 claim_to_artifact_map[]
 failures[]
 git.head / working_tree_clean_before_refresh
+git.validation_baseline{commit, source} (reachability reference only)
 acceptance_mode = per-claim-evidence
 ```
 
@@ -38,11 +39,18 @@ acceptance_mode = per-claim-evidence
 ## 3. 本輪實測
 
 - generated_at: `2026-09-16T15:52:26+08:00`
-- HEAD（刷新前）: `1df674dd32d64c68f4e8a9bfa433665c042d0c61`
+- HEAD（刷新前）: `b58d1324bac1276170d53342aafbc4158b285163`
 - working_tree_clean_before_refresh: `False`
 - acceptance_pass: **True**
 - unique offline test anchors: 11
 - failures: 0
+
+### Git 驗證基準（非歷史實測 HEAD）
+
+- validation_baseline.commit：`1df674dd32d64c68f4e8a9bfa433665c042d0c61`
+- 來源：PR #8 squash commit on main; reachability reference only
+- `git.head` 與 generated_at、工作樹狀態、測試結果保留歷史實測觀測；驗證基準只供 Git 可達性檢查，不表示曾在該基準執行測試或兩個工作樹相同。
+- 完整 single-branch clone 必須確認基準為 HEAD 的祖先；shallow clone 若歷史截斷，明示 ancestry 未驗證，仍檢查套件與目前檔案錨點。完整可達性驗收須用完整歷史，測試不自動 fetch。
 
 ### 逐項 claim
 

@@ -8,7 +8,7 @@
 
 ## Git / 落盤狀態（刷新前）
 
-- HEAD：`1df674dd32d64c68f4e8a9bfa433665c042d0c61`
+- HEAD：`b58d1324bac1276170d53342aafbc4158b285163`
 - working_tree_clean_before_refresh：`False`
 - status_porcelain_before_refresh：`M README.md
  M app/server.py
@@ -26,6 +26,13 @@
  M tests/test_fault_injection.py
 ?? tests/fixtures/metrics_history.jsonl
 ?? tests/metrics_history.jsonl`
+
+### Git 驗證基準（非歷史實測 HEAD）
+
+- validation_baseline.commit：`1df674dd32d64c68f4e8a9bfa433665c042d0c61`
+- 來源：PR #8 squash commit on main; reachability reference only
+- `git.head` 與 generated_at、工作樹狀態、測試結果保留歷史實測觀測；驗證基準只供 Git 可達性檢查，不表示曾在該基準執行測試或兩個工作樹相同。
+- 完整 single-branch clone 必須確認基準為 HEAD 的祖先；shallow clone 若歷史截斷，明示 ancestry 未驗證，仍檢查套件與目前檔案錨點。完整可達性驗收須用完整歷史，測試不自動 fetch。
 
 ## 主張 ↔ 產物對照
 
