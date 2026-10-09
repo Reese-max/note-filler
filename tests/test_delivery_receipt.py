@@ -569,6 +569,7 @@ def test_stale_latest_copy_cannot_revert_authoritative_recovery_state(tmp_path, 
     owned = delivery_manifest_path(output)
     latest = out / cli.MANIFEST_NAME
     pre_recovery_copy = latest.read_text(encoding="utf-8")
+    pre_recovery_output = output.read_bytes()
 
     output.unlink()
     assert recover_delivery(owned).status == "retryable"
@@ -587,7 +588,7 @@ def test_stale_latest_copy_cannot_revert_authoritative_recovery_state(tmp_path, 
     assert len(after_rerun["recovery_attempts"]) == 1
     assert after_rerun["recovery_attempts"][0] == recovered["recovery_attempts"][0]
 
-    output.write_text("# 訂正稿\n完整內容。", encoding="utf-8")
+    output.write_bytes(pre_recovery_output)
     verdict = recover_delivery(latest)
     assert verdict.verified is True
     # Verified artifacts never become a delivered receipt: the recorded
@@ -661,10 +662,15 @@ def test_bare_legacy_copy_is_not_overwritten_by_another_note(tmp_path, monkeypat
     from note_filler.sidecars import same_recorded_path
 
     # Only identical strings, or two absolute paths, are the same identity.
-    assert same_recorded_path("note.txt", "/tmp/out/note.txt") is False
-    assert same_recorded_path("a/note.txt", "/tmp/out/note.txt") is False
+    absolute_note = str(tmp_path / "out" / "note.txt")
+    equivalent_note = str(tmp_path / "out") + "/./note.txt"
+    assert Path(absolute_note).is_absolute()
+    assert Path(equivalent_note).is_absolute()
+    assert absolute_note != equivalent_note
+    assert same_recorded_path("note.txt", absolute_note) is False
+    assert same_recorded_path("a/note.txt", absolute_note) is False
     assert same_recorded_path("note.txt", "note.txt") is True
-    assert same_recorded_path("/tmp/out/note.txt", "/tmp/out/./note.txt") is True
+    assert same_recorded_path(absolute_note, equivalent_note) is True
     assert same_recorded_path(None, "note.txt") is False
 
     first = tmp_path / "first.txt"
