@@ -23,7 +23,10 @@ from note_filler.audit import audit_event
 from note_filler.llm import GrokClient
 from note_filler.pipeline import run_pipeline
 from note_filler.knowledge.law_lookup import LawLookup
-from note_filler.review import REASON_CODES, REVIEWABLE_DECISIONS, ReviewLedger, doc_fingerprint
+from note_filler.review import (
+    REASON_CODES, REVIEWABLE_DECISIONS, ReviewLedger,
+    ReviewLedgerWriteConflict, doc_fingerprint,
+)
 from note_filler.retrieve.twinkle import TwinkleClient
 
 logger = logging.getLogger(__name__)
@@ -372,7 +375,14 @@ async def review_decision(request: Request, result_id: str) -> HTMLResponse:
         )
     except ValueError as exc:
         return PlainTextResponse(f"審查決策不合法:{exc}", status_code=400)
-    ledger.save(_ledger_path_for(doc, result_id))
+    try:
+        ledger.save(_ledger_path_for(doc, result_id))
+    except ReviewLedgerWriteConflict:
+        return PlainTextResponse(
+            "既有審查履歷無法讀取,已保留原檔。請先備份並修復履歷後重試。",
+            status_code=409,
+            headers={"Cache-Control": "no-store", "X-Content-Type-Options": "nosniff"},
+        )
     doc = replace(doc, segments=[candidate if s is seg else s for s in doc.segments])
     app.state.results[result_id]["doc"] = doc
     app.state.results[result_id]["review_ledger"] = ledger
