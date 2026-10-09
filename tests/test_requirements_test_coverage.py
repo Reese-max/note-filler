@@ -10,6 +10,9 @@ from pathlib import Path
 
 
 _REPO = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(_REPO / "scripts"))
+from validate_deselection_ci import _parse_node_ids  # noqa: E402
+
 _MATRIX = _REPO / "docs" / "pytest-audit" / "requirements-test-coverage-2026-07-19.json"
 _PATH_AUDIT = (
     _REPO
@@ -18,7 +21,6 @@ _PATH_AUDIT = (
     / "deselected-correctness-path-equivalence-2026-07-21.json"
 )
 _ALLOWLIST = _REPO / "tests" / "deselected_allowlist.json"
-_NODE_ID_RE = re.compile(r"^tests/[^:]+::\S+$")
 _SUPPLEMENTAL_INTEGRATION_IDS = {
     "tests/test_domain.py::test_detect_domain_real_grok_representative_domains",
     "tests/test_export.py::test_conflicting_arguments_final_product_reading_links_are_open",
@@ -42,6 +44,7 @@ def _default_collected_ids() -> set[str]:
             "--collect-only",
             "-q",
             "--color=no",
+            "--collection-record-json",
         ],
         cwd=_REPO,
         capture_output=True,
@@ -52,11 +55,7 @@ def _default_collected_ids() -> set[str]:
         check=False,
     )
     assert result.returncode == 0, result.stdout + result.stderr
-    return {
-        line.strip().replace("\\", "/")
-        for line in result.stdout.splitlines()
-        if _NODE_ID_RE.fullmatch(line.strip().replace("\\", "/"))
-    }
+    return set(_parse_node_ids(result.stdout))
 
 
 def test_coverage_matrix_classifies_all_eight_and_has_no_missing_requirement() -> None:
