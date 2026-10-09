@@ -8,6 +8,7 @@
     任一改變 → 舊決策失效,狀態轉 STALE_REVIEW(fail closed,不靜默沿用)。
   - ReviewDecision ledger 可序列化/載入,以 doc_fingerprint 重播同一文件的審查狀態;
     檔案不存在、毀損或文件指紋不符 → 回傳全新 ledger(全部 UNREVIEWED,匯出安全)。
+    無法辨識的既有履歷仍保留原檔,保存決策前須先修復或另存。
   - 來源立場(supports/conflicts/context_only/unresolved)只用 deterministic
     lexical overlap 與既有 cross_validate 衝突極性判定,不採用 LLM 自評。
 """
@@ -34,6 +35,10 @@ logger = logging.getLogger(__name__)
 
 REVIEW_LEDGER_SCHEMA = "note_filler.review_ledger.v2"
 LEGACY_REVIEW_LEDGER_SCHEMA = "note_filler.review_ledger.v1"
+
+
+class ReviewLedgerWriteConflict(ValueError):
+    """An existing ledger cannot be safely recognized and replaced."""
 
 
 class ReviewState(str, Enum):
@@ -658,6 +663,10 @@ class ReviewLedger:
     def save(self, path: Path | str) -> Path:
         """原子寫入(tmp + replace),避免半寫入的履歷檔。"""
         path = Path(path)
+        # Reading an unknown ledger may safely reset review/export state, but
+        # that fallback must not authorize destroying its existing history.
+        if (path.exists() or path.is_symlink()) and self.load(path) is None:
+            raise ReviewLedgerWriteConflict("無法辨識既有審查履歷,已保留原檔")
         path.parent.mkdir(parents=True, exist_ok=True)
         tmp = path.with_name(path.name + ".tmp")
         tmp.write_text(
