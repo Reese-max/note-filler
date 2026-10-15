@@ -13,6 +13,7 @@ from .write import (                                            # Q3
     citation_span_issues,
     write_supplement,
 )
+from .decision import decide_review
 from .verify import cross_validate            # T10
 from .knowledge.law_citation_check import check_law_citations   # T8
 from .correction import assemble_correction       # T12
@@ -179,6 +180,7 @@ def run_pipeline(path, llm, twinkle, law):
     retrieved: dict[str, list] = {}
     written: dict = {}
     validations: dict = {}
+    review_decisions: dict = {}
     for gap in gaps:                                       # 只對 partial/missing gap(T5 已過濾)
         sources = retrieve_for_gap(gap, domain, twinkle, law, llm)  # T9(law+llm 啟用 Level A)
         retrieved[gap.question] = sources
@@ -213,6 +215,7 @@ def run_pipeline(path, llm, twinkle, law):
                 w.omitted_source_ids = list(omitted_ids)
         written[gap.question] = w
         validations[gap.question] = cross_validate(gap.question, used)  # T10(只驗 used)
+        review_decisions[gap.question] = decide_review(validations[gap.question])  # D1: claim-level review decision
 
     correction = assemble_correction(doc, gaps, retrieved, written, validations)  # T12
 
