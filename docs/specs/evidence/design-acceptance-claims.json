@@ -31,7 +31,12 @@
     "A-05": "test_run_pipeline_invariant",
     "A-06": "test_e2e_minimal_quality_gates_offline_regression",
     "A-07": "test_e2e_structural_invariants",
-    "A-08": "test_retrieved_five_but_only_two_cited"
+    "A-08": "test_retrieved_five_but_only_two_cited",
+    "A-09": "test_export_b_cannot_receive_a_result",
+    "A-10": "test_export_two_clients_each_receive_own_result",
+    "A-11": "test_export_interleaved_runs_no_last_writer_mixup",
+    "A-12": "test_export_expired_result_returns_404",
+    "A-13": "test_failed_run_creates_no_export_capability"
   },
   "claims": [
     {
@@ -52,7 +57,8 @@
             "@app.get(\"/\", response_class=HTMLResponse)",
             "@app.post(\"/run\", response_class=HTMLResponse)",
             "@app.get(\"/export\")",
-            "last_doc",
+            "@app.get(\"/export/{result_id}\")",
+            "app.state.results",
             "run_pipeline"
           ]
         },
@@ -74,7 +80,7 @@
             "class=\"supplement\"",
             "class=\"pending\"",
             "details class=\"sources\"",
-            "href=\"/export\""
+            "href=\"/export/{{ result_id }}\""
           ]
         }
       ],
@@ -82,7 +88,8 @@
         "tests/test_server.py::test_index_returns_upload_form",
         "tests/test_server.py::test_run_renders_two_columns",
         "tests/test_server.py::test_export_returns_markdown_attachment",
-        "tests/test_server.py::test_export_without_run_returns_404"
+        "tests/test_server.py::test_export_without_run_returns_404",
+        "tests/test_server.py::test_export_b_cannot_receive_a_result"
       ],
       "confirmation_record": {
         "event_id": "DAC-20260719-D01",
@@ -96,7 +103,7 @@
     },
     {
       "id": "D-02",
-      "title": "UI／資料狀態轉移（last_doc／confidence）",
+      "title": "UI／資料狀態轉移（results capability／confidence）",
       "spec_file": "docs/specs/note-filler-state-machine.md",
       "manifest_ref": "docs/specs/evidence/note-filler-design-evidence-manifest.md",
       "gap_map_ref": "docs/design-evidence-gap-map-2026-07-19.md",
@@ -109,7 +116,7 @@
         {
           "path": "app/server.py",
           "must_contain": [
-            "app.state.last_doc",
+            "app.state.results",
             "if doc is None",
             "status_code=404"
           ]
@@ -132,6 +139,8 @@
       "test_anchors": [
         "tests/test_server.py::test_export_without_run_returns_404",
         "tests/test_server.py::test_export_returns_markdown_attachment",
+        "tests/test_server.py::test_export_two_clients_each_receive_own_result",
+        "tests/test_server.py::test_export_expired_result_returns_404",
         "tests/test_pipeline.py::test_run_pipeline_invariant",
         "tests/test_e2e_acceptance.py::test_e2e_minimal_quality_gates_offline_regression"
       ],
@@ -215,7 +224,9 @@
           "path": "app/server.py",
           "must_contain": [
             "FastAPI",
-            "last_doc"
+            "app.state.results",
+            "_store_result",
+            "secrets.token_urlsafe"
           ]
         },
         {

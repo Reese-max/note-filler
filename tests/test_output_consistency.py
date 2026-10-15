@@ -16,7 +16,7 @@ from note_filler.pipeline import run_pipeline
 from note_filler.export import to_json, to_markdown, to_docx
 from note_filler.llm import FakeLLM
 from note_filler.retrieve.models import Source
-from tests.test_pipeline import FakeTwinkle, FakeLaw
+from test_pipeline import FakeTwinkle, FakeLaw
 
 
 def _note_fixture(tmp_path: Path, content: str) -> str:
@@ -423,6 +423,11 @@ class TestOutputConsistency:
             if stripped.startswith("> **【待補來源】**"):
                 continue
             if stripped.startswith("> - ["):
+                continue
+            # Skip review-mode lines (issue #3 匯出閘/審查狀態標記)
+            if stripped.startswith("> **匯出模式**"):
+                continue
+            if stripped.startswith("> **審查狀態**"):
                 continue
             md_originals.append(stripped)
 

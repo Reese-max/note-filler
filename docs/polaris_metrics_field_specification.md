@@ -278,7 +278,7 @@
 
 ### 4.4 Delivery Manifest
 
-- **檔案位置**: `{output_dir}/delivery_manifest.json`
+- **檔案位置**: `{output_dir}/{output}.delivery_manifest.json`（成品專屬權威回執）；`{output_dir}/delivery_manifest.json` 僅為最新一筆的相容副本，欄位相同但標記 `"authoritative": false`，不得當作整批證據
 - **輸出函數**: `__main__.write_delivery_receipt()`
 - **北極星指標位置**: `polaris_metrics` 欄位
 - **結構**:
@@ -489,7 +489,7 @@
       "metrics_location": "end_paragraph"
     },
     "delivery_manifest": {
-      "file_name": "delivery_manifest.json",
+      "file_name": "{output}.delivery_manifest.json",
       "output_function": "__main__.write_delivery_receipt",
       "metrics_location": "polaris_metrics"
     }

@@ -1,0 +1,18 @@
+{
+  "pr": 14,
+  "head": "7b06c03471eafd4f44a3709a4bf25c3dca04eb1b",
+  "findings": [
+    {"severity": "high", "file": "src/note_filler/review.py", "line": 437, "issue": "Fixed: re-accepting a claim with missing sources, missing citation-span targets or empty source fragments restored accepted state and allowed evidence-unavailable accepted-only exports."},
+    {"severity": "med", "file": "src/note_filler/review.py", "line": 230, "issue": "Fixed: source stances treated negative wording as conflicts and positive wording as supports regardless of the claim, reversing support for a negative claim."},
+    {"severity": "high", "file": "app/server.py", "line": 198, "issue": "Fixed: claim text and the shared ledger were mutated before save succeeded; an I/O failure returned 500 while the unsaved approval/edit remained exportable. Staged publication now also rejects an interleaved document replacement while reading the form."},
+    {"severity": "high", "file": "src/note_filler/export.py", "line": 634, "issue": "Fixed: public Markdown, JSON and DOCX exporters trusted a supplied ledger without checking its document fingerprint, replaying approval into another document with a matching supplement."},
+    {"severity": "med", "file": "src/note_filler/export.py", "line": 802, "issue": "Fixed: DOCX review drafts included rejected supplements without an export-mode or human-review-state label, unlike Markdown and JSON."},
+    {"severity": "med", "file": "src/note_filler/export.py", "line": 455, "issue": "Fixed: accepted-only output filtered the body but calculated quality, traceability and CLI delivery counts from every claim. All formats and receipts now use the exported subset and retain the existing quality gates."},
+    {"severity": "low", "file": "app/templates/result.html", "line": 49, "issue": "Fixed: edited_accepted had no review-queue filter link and disappeared from the accepted filter."},
+    {"severity": "low", "file": "app/templates/result.html", "line": 52, "issue": "Fixed: next-pending linked to a local anchor hidden by the active filter, so navigation did nothing from the accepted/rejected views."},
+    {"severity": "high", "file": "app/server.py", "line": 161, "issue": "needs-human: POST /review only receives argument_id and silently approves the current document/revision from an old browser tab. Requiring document, claim, evidence and decision version tokens changes the HTTP contract; the in-request identity guard does not solve old rendered forms."},
+    {"severity": "med", "file": "app/server.py", "line": 198, "issue": "needs-human: successful edited_accepted saves only claim/evidence hashes, not the revised text. Rebuilding the same document loses the manual edit and replays stale_review; defining a durable revision overlay/replay contract requires a persistence-schema decision."}
+  ],
+  "fixed": true,
+  "summary": "Fixed eight review findings covering missing evidence, claim-relative source stances, durable publication, document-bound exports, DOCX review labels, exported-subset metrics and queue navigation; each defect has a reproduced failing regression before its fix. Git Bash verification passed: 946 tests passed, 1 skipped, 12 integration tests deselected, and the deselection/substitute-coverage gate passed. needs-human: stale browser forms need a document/revision-bound POST contract, and manual edits need a durable overlay/replay contract."
+}

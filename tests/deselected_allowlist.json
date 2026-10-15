@@ -23,7 +23,7 @@
     "gap_mitigation_evidence": [
       {
         "process": "CI workflow_dispatch 觸發 test-integration job 執行整合測試",
-        "source": ".github/workflows/ci.yml:76",
+        "source": ".github/workflows/ci.yml:80",
         "anchor": "workflow_dispatch",
         "scope": "8 個整合測試的真實 Grok Proxy 連線驗證；模型回應格式、PONG 契約與端到端 pipeline 穩定性",
         "limitation": "僅在有 grok proxy (:8318) 的環境可執行；CI 不預設啟用"
@@ -75,7 +75,7 @@
     "gap_mitigation_evidence": [
       {
         "process": "CI workflow_dispatch 觸發 test-integration job，備齊 grok proxy + TWINKLE_HUB_TOKEN + law_index.db 後執行端到端驗收",
-        "source": ".github/workflows/ci.yml:76",
+        "source": ".github/workflows/ci.yml:80",
         "anchor": "workflow_dispatch",
         "scope": "真實 Grok + 真實 Twinkle Hub 組合下 gap 偵測、補充寫作品質 (_assert_supplement_quality) 與 Level A 路由穩定性",
         "limitation": "需同時備齊 grok proxy、Twinkle Hub token 與 law_index.db"
@@ -113,7 +113,7 @@
     "gap_mitigation_evidence": [
       {
         "process": "CI workflow_dispatch 觸發 test-integration job 執行整合測試",
-        "source": ".github/workflows/ci.yml:76",
+        "source": ".github/workflows/ci.yml:80",
         "anchor": "workflow_dispatch",
         "scope": "8 個整合測試的真實 Grok Proxy 連線驗證；模型回應格式與語意判斷",
         "limitation": "僅在有 grok proxy (:8318) 的環境可執行；CI 不預設啟用"
@@ -151,7 +151,7 @@
     "gap_mitigation_evidence": [
       {
         "process": "CI workflow_dispatch 觸發 test-integration job 執行整合測試",
-        "source": ".github/workflows/ci.yml:76",
+        "source": ".github/workflows/ci.yml:80",
         "anchor": "workflow_dispatch",
         "scope": "8 個整合測試的真實 Grok Proxy 連線驗證；PONG 契約與 proxy 回應格式相容性",
         "limitation": "僅在有 grok proxy (:8318) 的環境可執行；CI 不預設啟用"
@@ -197,7 +197,7 @@
     "gap_mitigation_evidence": [
       {
         "process": "CI workflow_dispatch 觸發 test-integration job 執行整合測試",
-        "source": ".github/workflows/ci.yml:76",
+        "source": ".github/workflows/ci.yml:80",
         "anchor": "workflow_dispatch",
         "scope": "8 個整合測試包含 pipeline 在真 Grok 模型輸出下的 domain/questions/gaps 正確性與端到端穩定性",
         "limitation": "僅在有 grok proxy (:8318) 的環境可執行；CI 不預設啟用"
@@ -239,7 +239,7 @@
     "gap_mitigation_evidence": [
       {
         "process": "CI workflow_dispatch 觸發 test-integration job 執行整合測試",
-        "source": ".github/workflows/ci.yml:76",
+        "source": ".github/workflows/ci.yml:80",
         "anchor": "workflow_dispatch",
         "scope": "8 個整合測試包含問題生成在真 Grok 模型下的品質驗證",
         "limitation": "僅在有 grok proxy (:8318) 的環境可執行；CI 不預設啟用"
@@ -296,7 +296,7 @@
     "gap_mitigation_evidence": [
       {
         "process": "CI workflow_dispatch 觸發 test-integration job，備齊 TWINKLE_HUB_TOKEN + GOV_AI_ENABLE_TWINKLE_MCP=1 後執行",
-        "source": ".github/workflows/ci.yml:76",
+        "source": ".github/workflows/ci.yml:80",
         "anchor": "workflow_dispatch",
         "scope": "真實 Twinkle Hub MCP 連線、Session 相容性、Source 解析與 Grok 關鍵字抽取",
         "limitation": "需外部 Twinkle Hub 服務可用且 token 有效"
@@ -341,7 +341,7 @@
     "gap_mitigation_evidence": [
       {
         "process": "CI workflow_dispatch 觸發 test-integration job，需備齊 TWINKLE_HUB_TOKEN",
-        "source": ".github/workflows/ci.yml:76",
+        "source": ".github/workflows/ci.yml:80",
         "anchor": "workflow_dispatch",
         "scope": "真實 Twinkle Hub MCP 服務可用性、Session 相容性與網路逾時行為",
         "limitation": "需外部 Twinkle Hub 服務可用且 token 有效"
@@ -383,7 +383,7 @@
     "gap_mitigation_evidence": [
       {
         "process": "CI workflow_dispatch 觸發 test-integration job 執行四類代表文本",
-        "source": ".github/workflows/ci.yml:76",
+        "source": ".github/workflows/ci.yml:80",
         "anchor": "workflow_dispatch",
         "scope": "真實 Grok 對 law/admin/exam/other 代表文本的語意分類",
         "limitation": "需 grok proxy (:8318) 可用"
@@ -414,7 +414,7 @@
     "gap_mitigation_evidence": [
       {
         "process": "CI workflow_dispatch 觸發 test-integration job 執行 covered/missing 語意矩陣",
-        "source": ".github/workflows/ci.yml:76",
+        "source": ".github/workflows/ci.yml:80",
         "anchor": "workflow_dispatch",
         "scope": "真實 Grok 對明顯 covered 與 missing 問題的相反判定",
         "limitation": "需 grok proxy (:8318) 可用"
@@ -445,7 +445,7 @@
     "gap_mitigation_evidence": [
       {
         "process": "CI workflow_dispatch 觸發 test-integration job 單跑固定來源 writer",
-        "source": ".github/workflows/ci.yml:76",
+        "source": ".github/workflows/ci.yml:80",
         "anchor": "workflow_dispatch",
         "scope": "真實 Grok grounded 寫作、有效註腳與 used_source_ids",
         "limitation": "需 grok proxy (:8318) 可用"

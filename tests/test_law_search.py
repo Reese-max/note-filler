@@ -43,9 +43,10 @@ def test_search_law_sources_returns_level_A_law_articles():
     assert all(s.id.startswith("law:") and s.id.count(":") == 2 for s in out)
     # distance 依序 0.1/0.2/...
     assert [round(s.distance, 1) for s in out] == [round(0.1 * (i + 1), 1) for i in range(len(out))]
-    # fetched_date = 今天 ISO;doc_date=None
+    # Legacy corpus has no known fetch date; query time is separate
     today = datetime.date.today().isoformat()
-    assert all(s.fetched_date == today and s.doc_date is None for s in out)
+    assert all(s.fetched_date is None and s.doc_date is None for s in out)
+    assert all(s.queried_at == today and s.currentness == "unknown" for s in out)
     # 至少命中第93條(附款主條)
     assert any(s.title == "《行政程序法》第93條" for s in out)
 

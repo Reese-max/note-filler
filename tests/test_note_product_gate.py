@@ -24,7 +24,7 @@ from note_filler.llm import FakeLLM
 from note_filler.parse import Document, Paragraph
 from note_filler.pipeline import require_non_empty_note_product, run_pipeline
 from note_filler.retrieve.models import Source
-from tests.test_pipeline import FakeLaw, FakeTwinkle
+from test_pipeline import FakeLaw, FakeTwinkle
 
 
 def _txt(tmp_path: Path, name: str, text: str) -> Path:

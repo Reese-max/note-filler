@@ -10,9 +10,18 @@
 
 - **設計編號**: D-01
 - **需求編號**: R-01（目標與一句話定義）, R-02（範圍 - MVP）, R-08（LLM 接法）, R-09（UI MVP）
-- **驗收編號**: A-01（test_index_returns_upload_form）, A-02（test_run_renders_two_columns）, A-03（test_export_returns_markdown_attachment）, A-04（test_export_without_run_returns_404）
+- **驗收編號**: A-01（test_index_returns_upload_form）, A-02（test_run_renders_two_columns）, A-03（test_export_returns_markdown_attachment）, A-04（test_export_without_run_returns_404）, A-09（test_export_b_cannot_receive_a_result）, A-10（test_export_two_clients_each_receive_own_result）, A-11（test_export_interleaved_runs_no_last_writer_mixup）, A-12（test_export_expired_result_returns_404）, A-13（test_failed_run_creates_no_export_capability）
 - **追溯狀態**: 完整
 - **追溯索引**: `docs/specs/design-traceability-index.md`
+
+## 部署模型（Issue #4）
+
+- **支援範圍**：單機 loopback、單一 Worker 程序的單人工具；不在多使用者共享 endpoint 的授權模型內。
+- **隔離機制**：匯出以 `secrets.token_urlsafe(16)` 產生的不透明 result capability 綁定結果，不再是 process-global 最新文件；即使同程序被多個瀏覽器/分頁共用，未持有 capability 的一方也拿不到他人結果。
+- **非認證聲明**：result ID 是能力令牌而非登入驗證；若未來部署為共享/遠端服務，仍需另行加入呼叫者認證與結果擁有者授權。
+- **狀態生命週期**：結果只存於記憶體（`app.state.results`），TTL = `NOTE_FILLER_RESULT_TTL_SECONDS`（預設 3600s，必須為有限正數），容量上限 = `NOTE_FILLER_RESULT_MAX_ENTRIES`（預設 64，必須為正整數；超出**全域**逐出最舊——共享情境下他人可間接逐出你的結果，這是單機範圍內可接受的行為）；重啟或過期一律 404，永遠不落回「最新一份文件」。
+- **並發模型**：`app.state.results` 的所有讀寫都在事件迴圈執行緒（`/export/{result_id}` 為 `async def`）；`run_pipeline` 在 threadpool 執行不阻塞迴圈，且不觸碰結果容器。
+- **匯出標頭**：`Cache-Control: no-store`＋`X-Content-Type-Options: nosniff`——client/proxy 快取不得超過伺服器端 TTL 生命週期。
 
 ## 1) 路由介面契約
 
@@ -33,22 +42,31 @@
   - 以暫存檔寫入上傳內容（保留副檔名）；
   - 組建 LLM/Twinkle/Law clients；
   - 呼叫 `run_pipeline(...)` 取得訂正稿；
-  - 將訂正稿存到 `app.state.last_doc`；
-  - 回傳 `result.html`（雙欄檢視）。
+  - 以 `secrets.token_urlsafe(16)` 產生 `result_id`，將訂正稿存入 `app.state.results[result_id]`；
+  - 回傳 `result.html`（雙欄檢視，下載連結含 `result_id`）。
 - **實作錨點**：`app/server.py` `run()`
 - **驗證證據**：
   - `tests/test_server.py::test_run_renders_two_columns`
   - `tests/test_server.py::_fixed_doc`（測試 fixture 驗證補充/原稿路徑）
 
-### `GET /export`（下載訂正稿）
+### `GET /export`（相容端點）
+
+- **方法 / 行為**：一律回傳 `404`，訊息「尚無可匯出的訂正稿,請先上傳筆記。」；不再代表任何文件。
+
+### `GET /export/{result_id}`（下載訂正稿）
 
 - **方法 / 行為**：
-  - 若 `app.state.last_doc is None`：回傳 `404`，訊息「尚無可匯出的訂正稿,請先上傳筆記。」
-  - 若存在 last_doc：用 `to_markdown(doc)` 產生純文字，回傳 `text/markdown; charset=utf-8`，含 `Content-Disposition: attachment; filename="correction.md"`。
-- **實作錨點**：`app/server.py` `export()`
+  - `result_id` 不存在或已過 TTL：回傳 `404`，訊息「結果不存在或已過期,請重新上傳筆記。」
+  - 命中有效 capability：用 `to_markdown(doc)` 產生純文字，回傳 `text/markdown; charset=utf-8`，含 `Content-Disposition: attachment; filename="correction.md"`。
+- **實作錨點**：`app/server.py` `export_result()`
 - **驗證證據**：
   - `tests/test_server.py::test_export_returns_markdown_attachment`
   - `tests/test_server.py::test_export_without_run_returns_404`
+  - `tests/test_server.py::test_export_b_cannot_receive_a_result`
+  - `tests/test_server.py::test_export_two_clients_each_receive_own_result`
+  - `tests/test_server.py::test_export_interleaved_runs_no_last_writer_mixup`
+  - `tests/test_server.py::test_export_expired_result_returns_404`
+  - `tests/test_server.py::test_failed_run_creates_no_export_capability`
 
 ## 2) 視覺元件契約（薄弱但可核實）
 
@@ -60,7 +78,7 @@
 ### `result.html`
 
 - 頁首：`訂正結果`
-- 下載連結：`/export`。
+- 下載連結：`/export/{result_id}`。
 - 雙欄容器：`.cols`
 - 原稿欄位：`.col#original`、標題 `原稿(不可變)`。
 - 訂正欄位：`.col#correction`、標題 `訂正稿`。
@@ -71,13 +89,13 @@
 
 ## 3) 資料契約（欄位層）
 
-### `app.state.last_doc`
+### `app.state.results`
 
-- 型別：`CorrectionDoc`
-- 使用範圍：僅在 `/run` 成功後設值、`/export` 讀取並判斷是否可匯出。
-- 目前行為：未提供分頁、快取過期機制；為跨請求快取使用此欄位，重啟服務即清空。
+- 型別：`dict[result_id, {doc: CorrectionDoc, created_at: float}]`
+- 使用範圍：僅在 `/run` 成功後寫入新 `result_id`、`/export/{result_id}` 讀取並判斷是否可匯出。
+- 目前行為：in-memory only；TTL 與容量上限見「部署模型」；失敗的 `/run` 不產生任何 capability。
 - **實作錨點**：`app/server.py`
-- **驗證證據**：`tests/test_server.py::test_export_without_run_returns_404`
+- **驗證證據**：`tests/test_server.py::test_export_without_run_returns_404`、`test_export_expired_result_returns_404`、`test_failed_run_creates_no_export_capability`
 
 ### `Segment` / `CorrectionDoc`
 
@@ -98,4 +116,3 @@
 | 上傳 + 跑 pipeline + 雙欄回傳 | `note-filler-user-flow.md`（流程） | `app/server.py`, `app/templates/index.html`, `app/templates/result.html` |
 | 匯出 200 / 404 | `note-filler-interface-contract.md`（路由） | `app/server.py`, `tests/test_server.py` |
 | 補充段落高亮與來源展開 | `note-filler-component-responsibilities.md`（UI 元件） | `app/templates/result.html` |
-

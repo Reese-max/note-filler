@@ -23,8 +23,8 @@ from datetime import datetime
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-NODE_ID_RE = re.compile(r"^tests/[^:]+::\S+$")
-DETAILS_RE = re.compile(r"^(tests/[^:|]+::\S+)\s+\| reason: (.*)$")
+COLLECTION_RECORD_PREFIX = "NOTE_FILLER_COLLECTION_JSON_V1="
+COLLECTION_RECORD_SCHEMA = "note-filler.pytest-collection/v1"
 AUTHORIZED_REASON = "deselected by -m 'not integration'"
 DEFAULT_WORKFLOW = ROOT / ".github" / "workflows" / "ci.yml"
 REQUIRED_COVERAGE_JOBS = ("test-pinned", "test-latest")
@@ -40,6 +40,7 @@ def _run_collect(*args: str) -> str:
         "--collect-only",
         "-q",
         "--color=no",
+        "--collection-record-json",
         *args,
     ]
     result = subprocess.run(
@@ -66,22 +67,68 @@ def _run_collect(*args: str) -> str:
     return output
 
 
+def _strict_object(pairs: list[tuple[str, object]]) -> dict:
+    result: dict = {}
+    for key, value in pairs:
+        if key in result:
+            raise RuntimeError(f"collection JSON 重複欄位：{key}")
+        result[key] = value
+    return result
+
+
+def _reject_json_constant(value: str) -> None:
+    raise RuntimeError(f"collection JSON 非法常數：{value}")
+
+
+def _is_node_id(value: object) -> bool:
+    if not isinstance(value, str):
+        return False
+    path, separator, label = value.partition("::")
+    return bool(separator and label and (path.startswith("tests/") or path.startswith("tests\\")))
+
+
+def _parse_collection_record(text: str) -> dict:
+    records = [line[len(COLLECTION_RECORD_PREFIX):] for line in text.splitlines()
+               if line.startswith(COLLECTION_RECORD_PREFIX)]
+    if len(records) != 1:
+        raise RuntimeError(f"collection JSON 記錄數異常：{len(records)}（預期 1）")
+    try:
+        record = json.loads(records[0], object_pairs_hook=_strict_object,
+                            parse_constant=_reject_json_constant)
+    except (ValueError, TypeError) as exc:
+        raise RuntimeError("collection JSON 解析失敗") from exc
+    if not isinstance(record, dict) or set(record) != {"schema", "selected", "deselected"}:
+        raise RuntimeError("collection JSON 欄位錯誤")
+    if record["schema"] != COLLECTION_RECORD_SCHEMA:
+        raise RuntimeError("collection JSON schema 錯誤")
+    selected = record["selected"]
+    deselected = record["deselected"]
+    if not isinstance(selected, list) or not all(_is_node_id(node) for node in selected):
+        raise RuntimeError("collection JSON selected 格式錯誤")
+    if len(set(selected)) != len(selected):
+        raise RuntimeError("collection JSON selected 重複 node ID")
+    if not isinstance(deselected, list):
+        raise RuntimeError("collection JSON deselected 格式錯誤")
+    seen: set[str] = set()
+    for row in deselected:
+        if (not isinstance(row, dict) or set(row) != {"node_id", "reason"}
+                or not _is_node_id(row["node_id"])
+                or not isinstance(row["reason"], str) or not row["reason"].strip()):
+            raise RuntimeError("collection JSON deselected row 格式錯誤")
+        if row["node_id"] in seen or row["node_id"] in selected:
+            raise RuntimeError("collection JSON deselected 重複或 selected 交集")
+        seen.add(row["node_id"])
+    return record
+
+
 def _parse_node_ids(text: str) -> list[str]:
-    return [
-        line.strip().replace("\\", "/")
-        for line in text.splitlines()
-        if NODE_ID_RE.fullmatch(line.strip())
-    ]
+    # Pytest nodeid strings are authoritative; parameter whitespace/backslashes stay exact.
+    return _parse_collection_record(text)["selected"]
 
 
 def _parse_deselected_details(text: str) -> dict[str, str]:
-    details = {}
-    for line in text.splitlines():
-        match = DETAILS_RE.match(line.strip())
-        if match:
-            test_id = match.group(1).replace("\\", "/")
-            details[test_id] = match.group(2).strip()
-    return details
+    return {row["node_id"]: row["reason"]
+            for row in _parse_collection_record(text)["deselected"]}
 
 
 def _load_json(path: Path, *, label: str) -> dict | list:

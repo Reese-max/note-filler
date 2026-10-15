@@ -17,7 +17,7 @@ from note_filler.llm import FakeLLM
 from note_filler.parse import parse_note
 from note_filler.pipeline import run_pipeline
 from note_filler.retrieve.models import Source
-from tests.test_pipeline import FakeTwinkle, FakeLaw
+from test_pipeline import FakeTwinkle, FakeLaw
 
 
 def _note_fixture(tmp_path: Path, content: str) -> str:

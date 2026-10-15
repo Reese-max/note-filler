@@ -212,7 +212,7 @@ parse_note (T2)
    - scan_dirs: 掃描目錄列表
    - output_dir: 輸出目錄
    - recursive: 是否遞迴掃描
-   - file_pattern: 檔案模式（預設 delivery_manifest.json）
+   - file_pattern: 檔案模式（預設 `*delivery_manifest.json`，同時涵蓋 note-owned `<output>.delivery_manifest.json` 與相容的目錄級 `delivery_manifest.json`；重複的目錄級複本會依輸出身分去重，只計一次）
    - alert_thresholds: 告警門檻
 
 2. **MetricsRecord** - 單筆指標記錄
