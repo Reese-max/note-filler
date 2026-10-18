@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import json
+
 import pytest
 
 from note_filler.decision import ReviewDecision, decide_review, DecisionRecord, _generate_decision_id
@@ -78,3 +80,37 @@ def test_generate_decision_id()-> None:
     assert id1 == id2  # deterministic
     assert id1 != id3  # different content yields different ID
     assert len(id1) == 12  # truncated to 12 chars
+
+
+def test_decision_record_json_round_trip_preserves_evidence() -> None:
+    sources = [
+        _ms("s1", "來源甲", "https://a.example/1", "A", content="得"),
+        _ms("s2", "來源乙", None, "B", content="不得"),
+    ]
+    validation = _make_validation(
+        "test claim", sources, verified=True, conflict=True, conflict_note="衝突標記"
+    )
+    record = DecisionRecord(
+        claim="test claim", decision=ReviewDecision.VERIFY, validation=validation,
+        reason="check sources", decided_at="2026-07-15", decision_id="review1",
+    )
+
+    loaded = DecisionRecord.from_dict(json.loads(json.dumps(record.to_dict())))
+
+    assert loaded.validation == validation
+    assert loaded.validation.sources[0] is not sources[0]
+
+
+@pytest.mark.parametrize("field", ["verified", "conflict"])
+@pytest.mark.parametrize("value", ["false", 0])
+def test_decision_record_rejects_non_boolean_validation_flags(field, value) -> None:
+    validation = _make_validation("test claim", [], verified=False, conflict=False)
+    record = DecisionRecord(
+        claim="test claim", decision=ReviewDecision.REJECT, validation=validation,
+        reason="no evidence", decided_at="2026-07-15", decision_id="review2",
+    )
+    data = record.to_dict()
+    data["validation"][field] = value
+
+    with pytest.raises(ValueError, match="must be booleans"):
+        DecisionRecord.from_dict(data)

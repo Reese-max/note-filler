@@ -1,0 +1,12 @@
+{
+  "repo": "Reese-max/note-filler",
+  "issue": 10,
+  "base_sha": "2c2ce7b0b211d09704c45440387f3e582f152251",
+  "red_proof": "Before changing src/note_filler/decision.py, Git Bash command `python -m pytest tests/test_decision.py -q` exited 1: 5 failed, 5 passed in 0.44s. test_decision_record_json_round_trip_preserves_evidence failed at assert loaded.validation == validation: Differing attributes: ['sources']; sources: [] != [Source(...), Source(...)]. All four test_decision_record_rejects_non_boolean_validation_flags cases (false/0 x verified/conflict) failed with Failed: DID NOT RAISE ValueError. The original five tests were not changed or weakened.",
+  "test_command": "python -X utf8 -m pytest tests/test_decision.py tests/test_verify.py -q",
+  "test_exit": 0,
+  "tests_passed": 23,
+  "tests_failed": 0,
+  "summary": "Fixed two independent review defects: DecisionRecord JSON reload now restores complete Source snapshots instead of silently discarding evidence, and from_dict rejects non-boolean validation flags instead of accepting truthy strings. Five new regression cases failed before implementation; the decision and verification suites now pass all 23 tests, including a Git Bash login-shell rerun (exit 0). The isolated Python 3.11 full default suite also exited 0: 911 passed, 1 skipped, 12 deselected in 457.45s; the skipped negative test had no pending_evidence argument to exercise. The CI deselection gate passed with 12 approved exclusions and 38/38 substitute tests selected. This receipt covers these bounded fixes, not acceptance of issue #3's full workflow.",
+  "not_done": "needs-human: no changes to the automated ACCEPT behavior, human review states/API, queue UI, persisted ledger, argument/revision identities and hashes, stale invalidation or accepted-only export contracts. Legacy records without source snapshots cannot recover previously omitted evidence and still require the missing stale/fail-closed policy. Real-service and real web-flow acceptance for issue #3 and the 12 excluded integration tests are unverified. The global Python environment has a conflicting installed tests package; an isolated Python 3.13 full-suite attempt exposed the existing metrics.py:1059 datetime.utcnow() DeprecationWarning under warnings-as-errors and was interrupted. No push or branch changes. The task-created, ignored Python 3.13 .venv remains because automatic approval review rejected its optional cleanup with blocked by policy."
+}

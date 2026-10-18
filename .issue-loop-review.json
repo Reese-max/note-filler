@@ -1,0 +1,38 @@
+{
+  "pr": 10,
+  "head": "2c2ce7b0b211d09704c45440387f3e582f152251",
+  "findings": [
+    {
+      "severity": "high",
+      "file": "src/note_filler/decision.py",
+      "line": 87,
+      "issue": "needs-human: decide_review automatically returns ACCEPT from system verified=True/conflict=False without an operator action. Issue #3 explicitly separates system confidence from human approval; the three-value enum also cannot represent UNREVIEWED, NEEDS_MORE_EVIDENCE, EDITED_ACCEPTED or STALE_REVIEW. Correcting this requires an explicit human-review API/state contract."
+    },
+    {
+      "severity": "high",
+      "file": "src/note_filler/pipeline.py",
+      "line": 218,
+      "issue": "needs-human: review_decisions is a local dictionary that is neither returned, attached to CorrectionDoc, persisted nor audited. The unchanged result UI has no decision controls or reloadable ledger, and /export/to_markdown still export every supplement without an accepted-only gate. Issue #3's usable workflow is absent; integration requires new web, persistence and export contracts."
+    },
+    {
+      "severity": "high",
+      "file": "src/note_filler/decision.py",
+      "line": 35,
+      "issue": "needs-human: DecisionRecord has no stable argument_id, claim/evidence/source hashes, citation-span or validation-contract revision, reviewer or previous-decision pointer. Loading ACCEPT performs no current-evidence comparison, and _generate_decision_id hashes only the claim, reusing identity for subsequent decisions with different evidence. Claim edits, source drift/removal and re-review cannot invalidate or replay approvals safely; the ledger/revision contract needs design."
+    },
+    {
+      "severity": "high",
+      "file": "src/note_filler/decision.py",
+      "line": 64,
+      "issue": "Fixed: to_dict omitted validation.sources and from_dict always set sources=[], silently losing every evidence snapshot while preserving ACCEPT/verified. JSON serialization now preserves all Source fields and reconstructs Source objects; a full-Validation round-trip regression failed before the fix."
+    },
+    {
+      "severity": "med",
+      "file": "src/note_filler/decision.py",
+      "line": 65,
+      "issue": "Fixed: from_dict accepted non-boolean verified/conflict values such as the string false, which is truthy and can become ACCEPT when passed to decide_review. It now rejects invalid flag types with ValueError; four regression cases covering both fields and string/integer values failed before the fix."
+    }
+  ],
+  "fixed": false,
+  "summary": "Fixed evidence loss during decision JSON reload and rejected non-boolean validation flags, with five regression cases proven red before the fixes. needs-human: PR #10 still lacks issue #3's independent human state, usable/persisted review workflow, revision/stale invalidation and accepted-only export; these API and behavior contracts were left unchanged. The PR is not ready for acceptance despite the isolated Python 3.11 default suite passing with 911 passed, 1 skipped and 12 deselected; fixed=false reflects the remaining findings."
+}

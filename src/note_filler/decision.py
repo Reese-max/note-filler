@@ -12,11 +12,12 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 from enum import Enum
 from typing import Optional
 
+from note_filler.retrieve.models import Source
 from note_filler.verify import Validation
 
 
@@ -43,12 +44,7 @@ class DecisionRecord:
         return {
             "claim": self.claim,
             "decision": self.decision.value,
-            "validation": {
-                "claim": self.validation.claim,
-                "verified": self.validation.verified,
-                "conflict": self.validation.conflict,
-                "conflict_note": self.validation.conflict_note,
-            },
+            "validation": asdict(self.validation),
             "reason": self.reason,
             "decided_at": self.decided_at,
             "decision_id": self.decision_id,
@@ -56,15 +52,19 @@ class DecisionRecord:
 
     @classmethod
     def from_dict(cls, data: dict) -> DecisionRecord:
+        """Restore evidence snapshots; reject non-boolean validation flags."""
+        validation = data["validation"]
+        if any(type(validation[key]) is not bool for key in ("verified", "conflict")):
+            raise ValueError("validation verified and conflict must be booleans")
         return cls(
             claim=data["claim"],
             decision=ReviewDecision(data["decision"]),
             validation=Validation(
-                claim=data["validation"]["claim"],
-                sources=[],  # source list not stored in proto dict
-                verified=data["validation"]["verified"],
-                conflict=data["validation"]["conflict"],
-                conflict_note=data["validation"].get("conflict_note"),
+                claim=validation["claim"],
+                sources=[Source(**source) for source in validation.get("sources", [])],
+                verified=validation["verified"],
+                conflict=validation["conflict"],
+                conflict_note=validation.get("conflict_note"),
             ),
             reason=data["reason"],
             decided_at=data["decided_at"],
