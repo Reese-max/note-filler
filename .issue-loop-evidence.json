@@ -1,0 +1,15 @@
+{
+  "repo": "Reese-max/note-filler",
+  "issue": 16,
+  "base_sha": "64bdb455b829447429d437c0f10736e179083eb0",
+  "red_proof": "With only the regression tests added, before README corrections, the Git Bash command python -m pytest tests/test_readme_contract.py -q exited 1: 12 failed, 9 passed. Failures covered eight runtime-limit documentation cases, the non-executable script invocation, the missing runnable offline walkthrough, and both explicit recovery examples (intact/tampered artifact). After README corrections, python -X utf8 -m pytest tests/test_readme_contract.py -q exited 0: 21 passed.",
+  "test_command": "python -X utf8 -m pytest -q",
+  "test_exit": 0,
+  "tests_passed": 928,
+  "tests_failed": 0,
+  "summary": "Reviewed the full PR diff against issue #1 and surrounding CLI/pipeline/recovery code. Corrected nine documentation/test findings and documented one remaining needs-human overwrite defect. Full non-integration suite: 928 passed, 1 skipped, 12 deselected; python -X utf8 scripts/validate_deselection_ci.py exited 0 (38/38 substitute tests selected, zero missing). All five README Bash examples passed bash -n. No runtime APIs changed.",
+  "not_done": [
+    "needs-human: batch DOCX output can overwrite another selected input and still exit 0, reproduced using isolated temporary DOCX files with mocked providers. The README now documents isolation with working copies; runtime overwrite policy and collision protection remain unchanged.",
+    "Twelve provider-backed integration tests were deselected and one existing test was skipped. Real Grok/Twinkle acceptance was not run."
+  ]
+}

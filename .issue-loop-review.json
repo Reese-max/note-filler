@@ -1,0 +1,18 @@
+{
+  "pr": 16,
+  "head": "64bdb455b829447429d437c0f10736e179083eb0",
+  "findings": [
+    {"severity": "med", "file": "README.md", "line": 4, "issue": "The output is described as verbatim, but TXT parsing strips paragraph boundary whitespace and DOCX parsing omits tables and formatting. Document the extraction limits."},
+    {"severity": "high", "file": "README.md", "line": 8, "issue": "The immutable-original contract is not enforced for fixed-name output collisions: a directory batch containing note.docx and note.訂正稿.docx overwrites the later input and returns exit 0 (reproduced with temporary DOCX files and mocked providers). Documentation now describes safe isolation, but runtime collision prevention remains needs-human because it changes existing overwrite behavior."},
+    {"severity": "med", "file": "README.md", "line": 14, "issue": "Automatic law-citation downgrade is overstated: only the law domain is checked, and laws absent from the index are skipped. admin/exam and unknown laws do not receive the promised protection."},
+    {"severity": "med", "file": "README.md", "line": 44, "issue": "delivery_manifest.json and binding_report.json retain only the latest note in a shared output directory. A delivered receipt cannot establish delivery or provenance for every note in a batch."},
+    {"severity": "med", "file": "README.md", "line": 83, "issue": "-o does not isolate all writes: metrics_history.jsonl is appended beside the input, and task state defaults to the current working directory. Deleting the correction and manifest does not restore the entire prior state."},
+    {"severity": "med", "file": "README.md", "line": 88, "issue": "CLI reruns neither invoke recover_delivery nor enforce exhausted as a generation gate. The documented automatic recovery/hash-check and retry-cap guarantees are not wired into the CLI; provide an explicit recovery API example."},
+    {"severity": "low", "file": "README.md", "line": 115, "issue": "The documented ./scripts/run_tests.sh commands fail on POSIX checkouts because the script is tracked as mode 100644. Invoke it through bash."},
+    {"severity": "med", "file": "README.md", "line": 133, "issue": "A missing law database does not reliably degrade to empty results: sqlite can create an empty file and SELECT then raises OperationalError for missing law_articles. Document the valid-index requirement and failure behavior."},
+    {"severity": "med", "file": "README.md", "line": 174, "issue": "delivered and a successful structural binding summary can coexist with pending_evidence. They establish technical delivery, not human acceptance or factual verification; the end-to-end example needs a separate manual acceptance step."},
+    {"severity": "med", "file": "tests/test_readme_contract.py", "line": 125, "issue": "The read-only regression merely searches for the word 唯讀 and accepts a README with no runnable read-only path. Add an executable offline walkthrough and verify it leaves note files unchanged without contacting services."}
+  ],
+  "fixed": false,
+  "summary": "Corrected nine README/test defects and added executable offline/recovery checks (12 red failures, then 21 focused passes; full suite: 928 passed, CI deselection gate passed). needs-human: batch DOCX output can still overwrite another selected input and return success; isolation is documented, but runtime overwrite behavior is unchanged, so fixed=false."
+}

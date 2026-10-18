@@ -8,8 +8,14 @@ Grok/provider 邊界，以及最小端到端範例。
 """
 from __future__ import annotations
 
+import json
 import re
+import shutil
+import subprocess
+import sys
 from pathlib import Path
+
+import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 README_PATH = REPO_ROOT / "README.md"
@@ -132,3 +138,81 @@ def test_readme_describes_read_only_path_and_content_classes():
     # 成品中可辨識的內容分類標記
     for marker in ("【補充】", "verified", "pending_evidence"):
         assert marker in text, f"README 未提及內容分類標記 {marker}"
+
+
+def _section(title: str) -> str:
+    heading = f"## {title}\n"
+    assert heading in _readme(), f"README 缺少 {title}"
+    return _readme().split(heading, 1)[1].split("\n## ", 1)[0]
+
+
+@pytest.mark.parametrize(("section", "required"), [
+    ("安全合約（先讀這段）", ("TXT", "DOCX", "表格", "首尾空白")),
+    ("安全合約（先讀這段）", ("工作副本", "覆寫", "所有輸入")),
+    ("安全合約（先讀這段）", ("law", "admin", "exam", "未收錄")),
+    ("目錄與產物權威性", ("最後一份", "每份筆記", "輸出目錄")),
+    ("原稿保護與回復", ("metrics_history.jsonl", "NOTE_FILLER_TASK_STATE")),
+    ("原稿保護與回復", ("不會自動", "recover_delivery", "exhausted", "手動")),
+    ("Provider 邊界（無機密）", ("law_articles", "OperationalError")),
+    ("內容分類速查", ("技術送達", "人工接受", "pending_evidence")),
+])
+def test_readme_documents_runtime_limits(section, required):
+    text = _section(section)
+    assert all(token in text for token in required), required
+
+
+def test_readme_test_script_commands_respect_tracked_executable_mode():
+    mode = subprocess.check_output(
+        ["git", "ls-files", "--stage", "scripts/run_tests.sh"],
+        cwd=REPO_ROOT, text=True,
+    ).split()[0]
+    if mode == "100644":
+        assert not re.search(r"^\./scripts/run_tests\.sh", _readme(), re.MULTILINE)
+        assert "bash scripts/run_tests.sh" in _readme()
+
+
+def test_readme_offline_walkthrough_is_read_only(tmp_path, monkeypatch, capsys):
+    section = _section("離線唯讀導覽")
+    snippet = re.search(r"python -X utf8 -B - <<'PY'\n(.*?)\nPY\n", section, re.DOTALL)
+    assert snippet, "README 必須提供可執行的離線唯讀導覽"
+    for name in ("real_note.txt", "final_output/sufficient_sources.md",
+                 "final_output/insufficient_sources.md"):
+        target = tmp_path / "tests/fixtures" / name
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(REPO_ROOT / "tests/fixtures" / name, target)
+    before = {p.relative_to(tmp_path): p.read_bytes()
+              for p in tmp_path.rglob("*") if p.is_file()}
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr("socket.create_connection", lambda *a, **k:
+                        pytest.fail("離線導覽不得連線外部服務"))
+    exec(compile(snippet.group(1), "README.md:offline", "exec"), {})
+    output = capsys.readouterr().out
+    for marker in ("原稿擷取文字", "[Level A]", "【補充】", "待補證", "非本次研究"):
+        assert marker in output
+    assert before == {p.relative_to(tmp_path): p.read_bytes()
+                      for p in tmp_path.rglob("*") if p.is_file()}
+
+
+@pytest.mark.parametrize("tamper", [False, True])
+def test_readme_explicit_recovery_checks_artifacts(tmp_path, monkeypatch, capsys, tamper):
+    from note_filler.__main__ import write_delivery_receipt
+
+    snippet = re.search(r"python -X utf8 - \S+ <<'PY'\n(.*?)\nPY\n",
+                        _section("原稿保護與回復"), re.DOTALL)
+    assert snippet, "README 必須示範手動呼叫 recover_delivery"
+    source = tmp_path / "note.txt"
+    product = tmp_path / "correction.md"
+    source.write_text("original", encoding="utf-8")
+    product.write_text("product", encoding="utf-8")
+    manifest = write_delivery_receipt(product, source, content="product")
+    if tamper:
+        product.write_text("changed", encoding="utf-8")
+    monkeypatch.setattr(sys, "argv", ["-", str(manifest)])
+    exec(compile(snippet.group(1), "README.md:recovery", "exec"), {})
+    verdict = json.loads(capsys.readouterr().out)
+    assert verdict["verified"] is not tamper
+    assert verdict["status"] == ("retryable" if tamper else "verified")
+    assert source.read_text(encoding="utf-8") == "original"
+    assert json.loads(manifest.read_text(encoding="utf-8"))["status"] == (
+        "retryable" if tamper else "delivered"
+    )
