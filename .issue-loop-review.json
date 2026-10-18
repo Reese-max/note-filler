@@ -1,0 +1,19 @@
+{
+  "pr": 17,
+  "head": "1e57cb3551fb9467df1d463ae57902a9d825e0d4",
+  "findings": [
+    {"severity": "med", "file": "README.md", "line": 14, "issue": "待補證判讀與實作不符：無引用來源的 JSON text 不保證有【待補證】前綴；來源不足或衝突的 pending_evidence 段仍保留 sources 與來源追溯，註腳不能代表 verified。"},
+    {"severity": "med", "file": "README.md", "line": 75, "issue": "混淆訂正稿 JSON segments[] 與 binding_report arguments[] 的 schema；後者使用 source_ids、source_fragments、trace_source_ids、source_id_field，沒有完整 sources[] 或 traceability[]。"},
+    {"severity": "med", "file": "README.md", "line": 68, "issue": "推薦的歷史樣本實際 SHA-256 前 16 碼為 8ed28f3fdb7dd05f，manifest 記錄 0e9064575b8c872e，verification.json 仍宣稱 hash_match=true；不能作為已驗證交付證據。"},
+    {"severity": "med", "file": "README.md", "line": 21, "issue": "每次交付都有 manifest 與 binding report 的承諾未限定 CLI；網頁入口只回傳 Markdown，不寫這些交付回執。"},
+    {"severity": "med", "file": "README.md", "line": 3, "issue": "原文完整保留的承諾超出解析能力：TXT 段落首尾空白會被移除，DOCX 只讀頂層段落，表格及頁首頁尾等內容不會進入訂正稿。"},
+    {"severity": "high", "file": "README.md", "line": 106, "issue": "絕不覆寫輸入檔與原稿永遠可回滾的保證不成立：CLI 使用固定輸出名稱，會覆寫既有成品及同目錄回執，且批次 DOCX 輸出可能碰撞另一份輸入；應要求位於輸入集合之外、每份輸入各自獨立的空輸出目錄。"},
+    {"severity": "med", "file": "README.md", "line": 141, "issue": "整合測試並非全由 grok 可達性決定 skip：Twinkle 測試依 token 執行外部請求，公開來源連結測試直接連網並可能失敗。"},
+    {"severity": "med", "file": "README.md", "line": 119, "issue": "恢復歷程並非記錄所有嘗試：成功驗證及無法解析 manifest 時不追加，重複失敗特徵會去重；recover_delivery 是驗證入口，不會重新生成遺失成品。"},
+    {"severity": "med", "file": "README.md", "line": 149, "issue": "NOTE_FILLER_DB 僅供網頁介面使用，CLI 忽略此環境變數，必須使用 --db；目前說明會使 CLI 使用者誤查預設法條快照。"},
+    {"severity": "med", "file": "README.md", "line": 94, "issue": "證據檢視範例 open() 未指定 UTF-8，在預設 cp950 的繁體中文 Windows 會拋出 UnicodeDecodeError。"},
+    {"severity": "med", "file": "README.md", "line": 135, "issue": "scripts/run_tests.sh 的 Git mode 為 100644，README 直接以 ./scripts/run_tests.sh 執行會在乾淨 POSIX checkout 遇到 Permission denied；應透過 bash 呼叫。"}
+  ],
+  "fixed": true,
+  "summary": "已以 11 個先失敗後通過的迴歸案例修正 11 項 README 缺陷，涵蓋原稿與輸出隔離、待補證判讀、溯源 schema、歷史證據失配及可執行命令。完整套件 926 passed、1 skipped、12 deselected，CI 防漏跑檢查通過，結束碼皆為 0。既有產品限制已明列，歷史回執未改寫；修正僅本機提交，未推送。"
+}

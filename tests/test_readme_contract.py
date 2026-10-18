@@ -11,7 +11,12 @@ provider 邊界（不含 secrets），以及一條最小端到端範例。
 """
 from __future__ import annotations
 
+import hashlib
+import json
 import re
+import shlex
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -137,3 +142,66 @@ def test_readme_contains_no_secret_shaped_strings(readme_text):
     for pattern in SECRET_PATTERNS:
         match = pattern.search(readme_text)
         assert match is None, f"README 含疑似 secret：{match.group(0)!r}"
+
+
+@pytest.mark.parametrize(
+    "required,forbidden",
+    [
+        pytest.param(("表格", "頁首頁尾", "首尾空白"), (), id="parsing-limits"),
+        pytest.param(("僅 CLI", "網頁介面不寫"), (), id="receipt-scope"),
+        pytest.param(
+            ("覆寫既有成品", "輸入集合之外", "每份輸入各用一個", "metrics_history.jsonl"),
+            ("絕不覆寫輸入檔",), id="output-collisions",
+        ),
+        pytest.param(
+            ("segments[]", "arguments[]", "source_fragments", "trace_source_ids", "source_id_field"),
+            (), id="artifact-schemas",
+        ),
+        pytest.param(("公開網址", "外部服務失敗", "不保證 skip"), (), id="integration-requirements"),
+        pytest.param(
+            ("相同失敗特徵會去重", "成功驗證不追加", "不會重新生成"),
+            (), id="recovery-history",
+        ),
+        pytest.param(("僅網頁介面", "CLI 請用 `--db`"), (), id="db-override"),
+        pytest.param(("bash scripts/run_tests.sh",), ("./scripts/run_tests.sh",), id="bash-invocation"),
+    ],
+)
+def test_readme_discloses_runtime_limits(readme_text, required, forbidden):
+    """文件須揭露既有入口及資料保護限制，不能把理想契約當成實作。"""
+    for token in required:
+        assert token in readme_text, f"README 未揭露：{token}"
+    for token in forbidden:
+        assert token not in readme_text, f"README 仍含不成立的保證／命令：{token}"
+
+
+def test_readme_pending_state_does_not_require_empty_sources_or_text_prefix(readme_text):
+    pending_row = next(line for line in readme_text.splitlines() if line.startswith("| pending review"))
+    assert "來源清單可能非空" in pending_row
+    assert "confidence" in pending_row
+    assert "JSON 的 `text` 不保證" in readme_text
+    assert "原文段的 `verified` 不代表內容已查證" in readme_text
+    assert "內容以 `【待補證】` 開頭標示" not in readme_text
+
+
+def test_readme_does_not_certify_mismatched_historical_receipt(readme_text):
+    sample = ROOT / "output/main-flow-2026-07-24T061023Z"
+    receipt = json.loads((sample / "delivery_manifest.json").read_text(encoding="utf-8"))
+    actual = hashlib.sha256((sample / "real_note.訂正稿.md").read_bytes()).hexdigest()
+    expected = receipt.get("output_content_hash") or receipt["content_hash"]
+    if actual[:len(expected)] != expected:
+        assert "歷史樣本的雜湊與回執不一致" in readme_text
+        assert "不能作為已驗證交付" in readme_text
+
+
+def test_readme_evidence_command_has_explicit_file_encoding(readme_text):
+    """實際執行唯讀範例；未指定編碼在任何平台都視為錯誤。"""
+    command = next(
+        line for line in readme_text.splitlines()
+        if line.startswith("python3 -c ") and "binding_report.json" in line
+    )
+    result = subprocess.run(
+        [sys.executable, "-X", "warn_default_encoding", "-W", "error::EncodingWarning",
+         *shlex.split(command)[1:]],
+        cwd=ROOT, capture_output=True, text=True, encoding="utf-8",
+    )
+    assert result.returncode == 0, result.stderr

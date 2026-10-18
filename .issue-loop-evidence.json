@@ -1,0 +1,12 @@
+{
+  "repo": "Reese-max/note-filler",
+  "issue": 17,
+  "base_sha": "1e57cb3551fb9467df1d463ae57902a9d825e0d4",
+  "red_proof": "Before changing README.md: python -X utf8 -m pytest tests/test_readme_contract.py -q --tb=short (exit 1). Output: ........FFFFFFFFFFF [100%]\nFAILED tests/test_readme_contract.py::test_readme_discloses_runtime_limits[parsing-limits]\nFAILED tests/test_readme_contract.py::test_readme_discloses_runtime_limits[receipt-scope]\nFAILED tests/test_readme_contract.py::test_readme_discloses_runtime_limits[output-collisions]\nFAILED tests/test_readme_contract.py::test_readme_discloses_runtime_limits[artifact-schemas]\nFAILED tests/test_readme_contract.py::test_readme_discloses_runtime_limits[integration-requirements]\nFAILED tests/test_readme_contract.py::test_readme_discloses_runtime_limits[recovery-history]\nFAILED tests/test_readme_contract.py::test_readme_discloses_runtime_limits[db-override]\nFAILED tests/test_readme_contract.py::test_readme_discloses_runtime_limits[bash-invocation]\nFAILED tests/test_readme_contract.py::test_readme_pending_state_does_not_require_empty_sources_or_text_prefix\nFAILED tests/test_readme_contract.py::test_readme_does_not_certify_mismatched_historical_receipt\nFAILED tests/test_readme_contract.py::test_readme_evidence_command_has_explicit_file_encoding\nEncodingWarning: 'encoding' argument not specified\n11 failed, 8 passed in 0.59s. A supplemental original-segment confidence assertion also failed before its documentation correction (1 failed, exit 1). After corrections, the unchanged regression assertions passed: 19 passed, exit 0.",
+  "test_command": "python -X utf8 -m pytest -q",
+  "test_exit": 0,
+  "tests_passed": 926,
+  "tests_failed": 0,
+  "summary": "修正 issue #1 README 的 11 項實作落差，補上解析及覆寫限制、CLI 回執適用範圍、正確的狀態與溯源 schema、歷史樣本失配、恢復歷程語意及跨平台命令。新增 11 個迴歸案例，先取得 11 failed / 8 passed 的紅燈，再達到 19 個契約測試通過；Git Bash 執行完整套件為 926 passed、1 skipped、12 deselected，CI 防漏跑檢查亦為 PASS（exit 0）。",
+  "not_done": "未推送、未修改其他分支，未執行 12 項真實整合測試或遠端 CI。本次僅修正文案與驗收；既有解析／覆寫限制及歷史產物未變更。"
+}
