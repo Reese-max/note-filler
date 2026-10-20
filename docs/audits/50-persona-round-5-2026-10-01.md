@@ -1,8 +1,22 @@
 # 50-Persona Audit — Round 5 (2026-10-01)
 
+## Current-source correction (2026-10-21)
+
+The Round 5 run and observations below are a historical snapshot of `main@e8057ad` on 2026-10-01; they are not a current-source recheck. `main` has since advanced to `390184ae3168bce393c56363a5e8183c450e5550` (the parent of the merge that brought `main` into this worktree). A static source review at that baseline corrects the current-state interpretation:
+
+| Personas whose historical observation used this fingerprint | Current source at `390184a` | Corrected current interpretation |
+|---|---|---|
+| A01, A02, B01, E04, F05, H05 (`#1`) | Root `README.md` now documents the product contract, safety boundaries and quick start. | The missing-README finding is not present at this baseline. |
+| A03, A05, B03, B04, C01, C04, D01, D02, D05, F04, I02, I05, J01, J05 (`#12`) | `src/note_filler/sidecars.py` writes output-specific receipts/reports; `docs/batch-sidecars.md` documents them. Directory-level files remain latest-output compatibility copies. | The fixed-name collision finding is not present at this baseline. |
+| B04, C01, C02, C05, D03, D05, H04, I01, J02, J04 (`#4`) | `app/server.py` stores results by opaque `result_id`, uses `run_in_threadpool`, and returns 404 for unknown/expired IDs. | This prevents accidental result mixing when clients retain their own IDs; it is bearer-capability access, not caller authentication or per-user authorization. Anyone holding a valid ID can use it. The app does not support shared deployment. |
+
+These corrections are source-level only; they do not claim that the 50 persona scenarios were rerun or that shared deployment, accessibility, provider, or other runtime scenarios were exercised. `tests/test_server.py` checks unknown IDs and that two clients can retrieve their own results, but does not check that a client presenting the other client's valid ID is denied. The historical matrix below remains the recorded 2026-10-01 output; the table above supersedes its findings as claims about the `390184a` source baseline.
+
+The current source review does not qualify as a new audit round. The historical Round 5 verdict remains `NOT CLEAN` for its inspected baseline; current CLEAN status is still `0/2` qualifying rounds because no subsequent qualifying round with required runtime evidence is recorded. Issue #9 remains `RESEARCH / NOT_ESTABLISHED`.
+
 Run: `2026-10-01T05:16:37Z`
 
-## Contract / inspected state
+## Historical contract / inspected state (2026-10-01)
 
 - Fixed-persona protocol blob: `6e3499d6ef5be7e123050e1526946f6a40f99263` (`Reese-max/autodev-ng/docs/portfolio-audit/2026-09-06-50-persona-audit.md`, unchanged since Round 4).
 - Issue Quality v2 blob: `8167e10798071d2276addaff6b201c6b0e904a2a` (unchanged since Round 4).
@@ -12,7 +26,7 @@ Run: `2026-10-01T05:16:37Z`
 - Umbrella: #11. Its body still names `9b579ad…` as the inspected HEAD; the actual current default tip is `e8057ad…`, so the umbrella text lags one round. This report does not edit the issue body.
 - Existing actionable findings remain open on default: P2 #1, P1 #4, P2 #12. #3 is opportunity/workflow work and #9 remains RESEARCH / NOT_ESTABLISHED.
 
-## Change / issue / PR precheck
+## Historical change / issue / PR precheck (2026-10-01)
 
 Current default still contains all three previously confirmed fingerprints:
 
@@ -36,7 +50,7 @@ Default-branch push Actions run `35466539176` for inspected SHA `e8057ad815fc18d
 
 No live Grok/Twinkle provider call, browser accessibility session, shared multi-user deployment, mobile/narrow-screen session, provider timeout/429/5xx injection, or two-note batch execution was performed in this audit. Those paths stay `NEEDS_RUNTIME_VERIFICATION` where applicable.
 
-## Fixed 50-persona matrix
+## Historical fixed 50-persona matrix (2026-10-01)
 
 | Persona | Goal / input / steps | Expected → observed | Evidence | Grade / finding |
 |---|---|---|---|---|
@@ -91,7 +105,7 @@ No live Grok/Twinkle provider call, browser accessibility session, shared multi-
 | J04 | Privacy-sensitive user | one caller cannot fetch another note | no owner/result identity on current `/export` | SOURCE_CONFIRMED | P1 #4 |
 | J05 | Expert automation/batch | artifacts machine-addressable per note | directory sidecars are not per-output | SOURCE_CONFIRMED | P2 #12 |
 
-## Ten-dimension coverage
+## Historical ten-dimension coverage (2026-10-01)
 
 | Dimension | Round 5 result |
 |---|---|
@@ -106,7 +120,7 @@ No live Grok/Twinkle provider call, browser accessibility session, shared multi-
 | Failure injection | Source has error paths; timeout/429/5xx and two-note batch execution still need controlled runtime fixtures. |
 | Trust | #4 export isolation, #12 per-note evidence binding, and #9 law-currentness research remain distinct. |
 
-## Issue mapping / decisions
+## Historical issue mapping / decisions (2026-10-01)
 
 - #11 — umbrella tracker; this report is Round 5 under the same fixed protocol.
 - #4 — existing P1 BUG, still source-reproducible on default; no duplicate because unmerged PRs #5/#8/#15 already own remediation.
@@ -119,6 +133,6 @@ No live Grok/Twinkle provider call, browser accessibility session, shared multi-
 
 ## CLEAN / continuation
 
-**NOT CLEAN; 0/2 qualifying clean rounds.** P1 #4, P2 #1 and P2 #12 remain open on default and required runtime evidence is incomplete; the streak has not started. Round 5 produced no new P0/P1/P2 finding, but CLEAN requires resolved findings plus two consecutive qualifying rounds — it does not begin while known P1/P2 defects remain open.
+**NOT CLEAN; 0/2 qualifying clean rounds recorded.** This is not a claim that #1, #4 or #12 remain open at `390184a`: the current-source correction above finds their recorded fingerprints are no longer present. The static correction is not a qualifying round, and required runtime evidence remains incomplete.
 
-Next safe verification remains non-destructive: a two-fixture local/CI test proving per-note sidecars and first-note metrics/recovery after processing a second note (#12), plus a two-client `/run`→`/export` isolation fixture for #4. No external provider is required for either.
+Next safe verification remains non-destructive: run the fixed A01–J05 protocol against a fresh default-branch baseline, record current CI evidence, and obtain the required runtime receipts. Any web-export check must describe opaque-ID capability behavior accurately and must not claim caller-identity authorization. No external provider is required to check per-note sidecars or capability behavior with local fixtures.
