@@ -86,7 +86,7 @@ python -m note_filler 筆記資料夾/ --format md
 # 測試（單元層，provider 全部 stub）
 python -m pytest tests/ -q
 # 整合測試（需真實 LLM/Twinkle 憑證）
-python -m pytest tests/test_integration_main.py -q -m integration
+python -m pytest tests/ -q -m integration
 ```
 
 離線測試預設排除 `integration` 標記；整合測試需明確選取，GitHub CI 的 provider 整合亦受手動觸發政策限制。一般 CLI 會執行研究並建立輸出，不提供 `--dry-run` 選項；首次使用先以 `--help` 與離線測試確認環境，再用不含私人資料的測試筆記和獨立輸出資料夾。
