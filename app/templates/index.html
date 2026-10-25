@@ -2,13 +2,15 @@
 <html lang="zh-Hant">
 <head>
   <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>筆記補齊</title>
 </head>
 <body>
   <h1>筆記補齊</h1>
-  <p>上傳筆記(.txt 或 .docx),系統將保留原稿、以差異方式補齊。</p>
+  <p id="upload-help">上傳筆記(.txt 或 .docx),系統將保留原稿、以差異方式補齊。</p>
   <form action="/run" method="post" enctype="multipart/form-data">
-    <input type="file" name="file" accept=".txt,.docx" required>
+    <label for="note-file">筆記檔案（.txt 或 .docx）</label>
+    <input id="note-file" type="file" name="file" accept=".txt,.docx" aria-describedby="upload-help" required>
     <button type="submit">開始補齊</button>
   </form>
 </body>

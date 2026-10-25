@@ -2,11 +2,12 @@
 <html lang="zh-Hant">
 <head>
   <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>訂正稿</title>
   <style>
     body { font-family: system-ui, "Microsoft JhengHei", sans-serif; }
     .cols { display: flex; gap: 1rem; align-items: flex-start; }
-    .col { flex: 1; border: 1px solid #ccc; padding: 1rem; border-radius: 6px; }
+    .col { flex: 1; min-width: 0; border: 1px solid #ccc; padding: 1rem; border-radius: 6px; overflow-wrap: anywhere; }
     .col h2 { margin-top: 0; }
     .seg { white-space: pre-wrap; margin: .4rem 0; }
     .supplement {
@@ -28,9 +29,13 @@
     .review-card { border-top: 1px dashed #bbb; margin-top: .5rem; padding-top: .4rem; font-size: .92em; }
     .review-state { margin: .2rem 0; }
     .review-form { margin: .3rem 0; display: flex; flex-wrap: wrap; gap: .3rem; }
-    .review-form input, .review-form select { font-size: .9em; }
+    .review-form label { min-width: 0; }
+    .review-form input, .review-form select { font-size: .9em; max-width: 100%; min-width: 0; box-sizing: border-box; }
     .source-stances { margin: .25rem 0; padding-left: 1.2rem; }
     .decision-history { margin-top: .3rem; font-size: .9em; }
+    @media (max-width: 760px) {
+      .cols { flex-direction: column; align-items: stretch; }
+    }
   </style>
 </head>
 <body>
@@ -169,10 +174,12 @@
               {% for key, value in item.revision_tokens.items() %}
               <input type="hidden" name="{{ key }}" value="{{ value }}">
               {% endfor %}
+              <label>審查理由
               <select name="reason_code">
                 <option value="">（無理由碼）</option>
                 {% for code in reason_codes %}<option value="{{ code }}">{{ code }}</option>{% endfor %}
               </select>
+              </label>
               <input type="text" name="note" placeholder="審查備註">
               <input type="text" name="reviewer" placeholder="審查者" value="local">
               <input type="text" name="edited_text" placeholder="（可選）修訂後主張文字 → EDITED_ACCEPTED" size="30">

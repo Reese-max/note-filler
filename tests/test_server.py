@@ -23,6 +23,10 @@ async def test_index_returns_upload_form(async_client):
     assert 'enctype="multipart/form-data"' in body
     assert 'type="file"' in body
     assert 'name="file"' in body
+    assert '<meta name="viewport" content="width=device-width, initial-scale=1">' in body
+    assert '<label for="note-file">筆記檔案（.txt 或 .docx）</label>' in body
+    assert 'id="note-file"' in body
+    assert 'aria-describedby="upload-help"' in body
 
 
 def _fixed_doc() -> CorrectionDoc:
@@ -129,6 +133,8 @@ async def test_run_renders_two_columns(async_client, monkeypatch):
     # 無來源 supplement 標 pending 警示
     assert 'class="pending"' in body
     assert "待補依據" in body
+    assert '<meta name="viewport" content="width=device-width, initial-scale=1">' in body
+    assert re.search(r'<label>審查理由\s*<select name="reason_code">', body)
     # 每個主要內容顯示可追溯識別碼
     assert 'class="traceability"' in body
     assert "/tmp/note.txt" in body
