@@ -35,7 +35,7 @@ from .sidecars import (
     migrate_legacy_sidecars,
     recorded_leaf_name,
 )
-from .task_state import TaskStage, TaskStateManager, build_task_key
+from .task_state import TaskStage, TaskState, TaskStateManager, build_task_key
 
 logger = logging.getLogger(__name__)
 
@@ -505,7 +505,7 @@ def _output_for_input(path: Path, dest_dir: Path, fmt: str) -> Path:
     return alternate
 
 
-def process_file(
+def _process_file_impl(
     path: Path,
     llm,
     twinkle,
@@ -517,6 +517,7 @@ def process_file(
     export_mode: str = "review-draft",
     ledger_path: Path | None = None,
     dest: Path | None = None,
+    _attempt: dict | None = None,
 ) -> dict:
     """跑單檔 pipeline、寫出輸出檔、寫 delivery receipt,回統計 dict。
 
@@ -531,7 +532,11 @@ def process_file(
     task_mgr = TaskStateManager(state_dir or TASK_STATE_DIR)
 
     # 記錄 generation 階段開始
-    task_mgr.start_task(task_key, stage=TaskStage.GENERATION, source_locator=str(path))
+    started = task_mgr.start_task(task_key, stage=TaskStage.GENERATION, source_locator=str(path))
+    if started.state == TaskState.EXHAUSTED:
+        raise RuntimeError("Task attempt limit reached; inspect preserved state before retry")
+    if _attempt is not None:
+        _attempt.update(index=len(started.attempts) - 1, timestamp=started.attempts[-1].timestamp, stage=TaskStage.GENERATION)
 
     try:
         doc = run_pipeline(str(path), llm, twinkle, law)
@@ -546,6 +551,8 @@ def process_file(
         )
         raise
 
+    if _attempt is not None:
+        _attempt["stage"] = TaskStage.TRANSMISSION
     # 防禦層：即使 pipeline 被 stub，交付前仍硬性要求非空實際筆記
     require_non_empty_note_product(doc, source=path)
 
@@ -680,6 +687,45 @@ def process_file(
         "verified": ver,
         "delivery_status": delivery_status,
     }
+
+
+def process_file(
+    path: Path,
+    llm,
+    twinkle,
+    law,
+    out_dir: Path | None,
+    fmt: str,
+    *,
+    state_dir: Path | None = None,
+    export_mode: str = "review-draft",
+    ledger_path: Path | None = None,
+    dest: Path | None = None,
+) -> dict:
+    """Run one note while retaining every unhandled post-generation failure.
+
+    Generation and file-write failures already carry their own precise stage.
+    Review/export/quality/receipt failures must also stop being RUNNING. Unknown
+    corrupt state and exhausted tasks remain untouched; never invent an attempt.
+    """
+    attempt: dict = {}
+    try:
+        return _process_file_impl(path, llm, twinkle, law, out_dir, fmt, state_dir=state_dir,
+                                  export_mode=export_mode, ledger_path=ledger_path, dest=dest, _attempt=attempt)
+    except Exception as error:
+        try:
+            manager = TaskStateManager(state_dir or TASK_STATE_DIR)
+            key = build_task_key(str(path))
+            record = manager.load(key)
+            if (attempt and record is not None and record.state == TaskState.RUNNING and record.attempts
+                    and record.attempts[-1].attempt_index == attempt["index"] and record.attempts[-1].timestamp == attempt["timestamp"]
+                    and not record.attempts[-1].error_type):
+                manager.fail(key, stage=attempt["stage"], error_type=type(error).__name__, error_message=str(error), recoverable=False)
+        except Exception:
+            # Preserve the original failed operation and explicitly report that
+            # its state could not be reconciled, without echoing note contents.
+            logger.error("task_state_failure_record_unavailable")
+        raise
 
 
 def main(argv: list[str] | None = None) -> int:

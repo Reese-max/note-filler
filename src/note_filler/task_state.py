@@ -20,6 +20,9 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
+import os
+import tempfile
+import errno
 from datetime import datetime, timezone
 from enum import Enum
 from pathlib import Path
@@ -180,6 +183,45 @@ def _hash_content(content: str) -> str:
     return hashlib.sha256(content.encode("utf-8")).hexdigest()[:16]
 
 
+class TaskStateCorruptionError(RuntimeError):
+    """Existing unknown history is never authority to start a fresh task."""
+
+
+def _read_record(path: Path) -> TaskRecord:
+    try:
+        if path.is_symlink() or not path.is_file():
+            raise ValueError("not a regular state file")
+        data = json.loads(path.read_text(encoding="utf-8"))
+        if not isinstance(data, dict) or not isinstance(data.get("task_key"), str) or not data["task_key"]:
+            raise ValueError("missing task identity")
+        if set(data) != set(TaskRecord.__slots__):
+            raise ValueError("unknown state schema")
+        attempts = data.get("attempts")
+        if not isinstance(attempts, list):
+            raise ValueError("invalid attempts")
+        for index, attempt in enumerate(attempts):
+            if not isinstance(attempt, dict) or type(attempt.get("attempt_index")) is not int or attempt["attempt_index"] != index:
+                raise ValueError("invalid attempt sequence")
+            if set(attempt) != set(AttemptRecord.__slots__):
+                raise ValueError("unknown attempt schema")
+            if not isinstance(attempt.get("timestamp"), str) or not attempt["timestamp"]:
+                raise ValueError("missing attempt provenance")
+            TaskStage(attempt["stage"])
+            for field in ("timestamp", "error_type", "error_message", "artifact_path"):
+                if field in attempt and not isinstance(attempt[field], str):
+                    raise ValueError("invalid attempt field")
+            if "recoverable" in attempt and type(attempt["recoverable"]) is not bool:
+                raise ValueError("invalid retry flag")
+        for field in ("created_at", "updated_at", "artifact_path", "source_locator", "content_hash"):
+            if field in data and not isinstance(data[field], str):
+                raise ValueError("invalid state field")
+        return TaskRecord.from_dict(data)
+    except (OSError, UnicodeError, ValueError, KeyError, TypeError):
+        # Never echo state/note fragments, JSON decoder messages or provider text.
+        logger.warning("task_state_corrupted")
+        raise TaskStateCorruptionError("Task state is unreadable or invalid; preserve it for manual recovery") from None
+
+
 class TaskStateManager:
     """管理所有任務狀態的持久化 Store。
 
@@ -191,28 +233,55 @@ class TaskStateManager:
         self.state_dir.mkdir(parents=True, exist_ok=True)
 
     def _state_path(self, task_key: str) -> Path:
+        # Separator replacement aliases a/b.txt with a_b.txt and can exceed the
+        # filesystem filename limit for an otherwise valid deep vault path.
+        identity = hashlib.sha256(task_key.encode("utf-8")).hexdigest()
+        return self.state_dir / f"{identity}.task_state.json"
+
+    def _legacy_path(self, task_key: str) -> Path | None:
         safe = task_key.replace("/", "_").replace("\\", "_").replace(":", "_")
-        return self.state_dir / f"{safe}.task_state.json"
+        path = self.state_dir / f"{safe}.task_state.json"
+        try:
+            return path if path.exists() or path.is_symlink() else None
+        except OSError as error:
+            if error.errno == errno.ENAMETOOLONG:
+                return None # Such a legacy filename could never have been written.
+            raise
 
     def load(self, task_key: str) -> TaskRecord | None:
         path = self._state_path(task_key)
-        if not path.exists():
+        if path.exists() or path.is_symlink():
+            record = _read_record(path)
+            if record.task_key != task_key:
+                raise TaskStateCorruptionError("Task state identity mismatch; preserve it for manual recovery")
+            return record
+        legacy = self._legacy_path(task_key)
+        if legacy is None:
             return None
-        try:
-            data = json.loads(path.read_text(encoding="utf-8"))
-            return TaskRecord.from_dict(data)
-        except (json.JSONDecodeError, KeyError):
-            logger.warning("task_state_corrupted path=%s", path)
-            return None
+        record = _read_record(legacy)
+        # A valid legacy file can belong to another colliding key. Preserve it;
+        # this distinct task starts under its own digest, never under that key.
+        return record if record.task_key == task_key else None
 
     def save(self, record: TaskRecord) -> None:
         record.updated_at = datetime.now(timezone.utc).isoformat()
         path = self._state_path(record.task_key)
-        path.write_text(
-            json.dumps(record.to_dict(), ensure_ascii=False, indent=2),
-            encoding="utf-8",
-            newline="\n",
-        )
+        if path.exists() or path.is_symlink():
+            current = _read_record(path)
+            if current.task_key != record.task_key:
+                raise TaskStateCorruptionError("Task state identity mismatch; preserve it for manual recovery")
+        temporary = None
+        try:
+            with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", newline="\n", dir=self.state_dir,
+                                             prefix=path.name + "-", suffix=".tmp", delete=False) as handle:
+                temporary = Path(handle.name)
+                json.dump(record.to_dict(), handle, ensure_ascii=False, indent=2)
+                handle.flush()
+                os.fsync(handle.fileno())
+            os.replace(temporary, path)
+        finally:
+            if temporary is not None:
+                temporary.unlink(missing_ok=True)
 
     def start_task(
         self,
@@ -228,7 +297,10 @@ class TaskStateManager:
         """
         existing = self.load(task_key)
         if existing is not None:
-            if existing.state == TaskState.EXHAUSTED:
+            if existing.state == TaskState.EXHAUSTED or len(existing.attempts) >= MAX_TASK_ATTEMPTS:
+                if existing.state != TaskState.EXHAUSTED:
+                    existing.state = TaskState.EXHAUSTED
+                    self.save(existing)
                 audit_event(
                     logger,
                     "task_state_rejected",
@@ -293,6 +365,7 @@ class TaskStateManager:
         # 更新最後一個 attempt（由 start_task 建立）的錯誤資訊
         if record.attempts:
             last_attempt = record.attempts[-1]
+            last_attempt.stage = stage
             last_attempt.error_type = error_type
             last_attempt.error_message = error_message
             last_attempt.recoverable = recoverable

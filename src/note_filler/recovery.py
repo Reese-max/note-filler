@@ -16,6 +16,7 @@ import hashlib
 import json
 import logging
 import os
+import re
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -371,7 +372,7 @@ def recover_delivery(
 
     try:
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-    except (json.JSONDecodeError, OSError) as exc:
+    except (json.JSONDecodeError, OSError, UnicodeError):
         return RecoveryVerdict(
             verified=False,
             status="failed",
@@ -379,7 +380,7 @@ def recover_delivery(
                 "kind": "delivery_manifest",
                 "path": str(manifest_path),
                 "code": ARTIFACT_INTEGRITY_MISMATCH,
-                "message": f"交付狀態檔損壞，無法驗證已持久化 artifact: {exc}",
+                "message": "交付狀態檔損壞，無法驗證已持久化 artifact；請保留原檔供人工檢查",
             }],
             probes=[],
             history_preserved=True,
@@ -399,11 +400,59 @@ def recover_delivery(
             history_preserved=True,
         )
 
+    # Unknown JSON objects or missing identity/hash evidence are not successful
+    # verification. Preserve incomplete receipts rather than blessing zero probes.
+    hash_fields = ("output_content_hash", "content_hash", "input_content_hash", "binding_report_content_hash", "transmission_confirmation_hash")
+    def valid_hash(value):
+        return isinstance(value, str) and re.fullmatch(r"(?:[a-f0-9]{16}|[a-f0-9]{64})", value) is not None
+    invalid_hash = any(manifest.get(key) is not None and (
+        not isinstance(manifest.get(key), str) or (manifest.get(key) and not valid_hash(manifest[key]))
+    ) for key in hash_fields)
+    status = manifest.get("delivery_status")
+    invalid_status = not isinstance(status, dict) or any(
+        type(status.get(key)) is not bool
+        for key in ("primary_note_ready", "user_channel_sent", "local_fallback_written")
+    )
+    selected_hashes = (manifest.get("output_content_hash") or manifest.get("content_hash"),
+                       manifest.get("input_content_hash"), manifest.get("transmission_confirmation_hash"))
+    # The explicitly supported pre-hash directory-level format can still record
+    # missing-artifact failures, but the later verification gate never accepts
+    # it as verified. Unknown/partial note-owned receipts are preserved instead.
+    legacy_without_hashes = manifest_path.name == DELIVERY_MANIFEST_NAME and not any(key in manifest for key in hash_fields)
+    report_path = manifest.get("binding_report_canonical_path") or manifest.get("binding_report_path")
+    report_declared = any(manifest.get(key) not in (None, "") for key in (
+        "binding_report_canonical_path", "binding_report_path", "binding_report_content_hash"))
+    incomplete = not receipt_output_identity(manifest) or not receipt_input_identity(manifest) or (not legacy_without_hashes and any(
+        not valid_hash(value)
+        for value in selected_hashes
+    )) or (report_declared and (not isinstance(report_path, str) or not report_path
+                                or not valid_hash(manifest.get("binding_report_content_hash"))))
+    if invalid_hash or invalid_status or incomplete:
+        return RecoveryVerdict(
+            verified=False, status="failed", errors=[{
+                "kind": "delivery_manifest", "path": str(manifest_path),
+                "code": ARTIFACT_INTEGRITY_MISMATCH,
+                "message": "交付回執缺少可驗證的來源、成品或傳輸身分／雜湊，請保留原檔供人工檢查",
+            }], probes=[], history_preserved=True,
+        )
     probes = verify_delivery_artifacts(manifest, manifest_path)
     errors = [_probe_error(probe) for probe in probes if probe.code]
     history_path = manifest_path.parent / RECOVERY_HISTORY_NAME
 
     if not errors:
+        kinds = {probe.kind for probe in probes}
+        required = {"generated", "source", "transmission_confirmation"}
+        if invalid_hash or invalid_status or not required.issubset(kinds) or any(
+            not isinstance(probe.expected_hash, str) or re.fullmatch(r"(?:[a-f0-9]{16}|[a-f0-9]{64})", probe.expected_hash) is None
+            for probe in probes
+        ):
+            return RecoveryVerdict(
+                verified=False, status="failed", errors=[{
+                    "kind": "delivery_manifest", "path": str(manifest_path),
+                    "code": ARTIFACT_INTEGRITY_MISMATCH,
+                    "message": "交付回執缺少可驗證的來源、成品或傳輸身分／雜湊，請保留原檔供人工檢查",
+                }], probes=probes, history_preserved=True,
+            )
         return RecoveryVerdict(
             verified=True,
             status="verified",
