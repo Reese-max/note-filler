@@ -20,6 +20,10 @@ import pytest
 
 _PYTHON = sys.executable
 _REPO_ROOT = Path(__file__).resolve().parent.parent
+# Shared machine-record parser; human reports remain evidence, not collection authority.
+sys.path.insert(0, str(_REPO_ROOT / "scripts"))
+from validate_deselection_ci import _parse_node_ids  # noqa: E402
+
 _AUDIT = json.loads(
     (_REPO_ROOT / "tests" / "deselected_allowlist.json").read_text(encoding="utf-8")
 )
@@ -28,7 +32,6 @@ _EXPECTED_DESELECTED_COUNT = len(ALLOWED_INTEGRATION_TESTS)
 MAPPED_NON_INTEGRATION_TESTS = sorted(
     {test_id for item in _AUDIT for test_id in item["substitute_tests"]}
 )
-_TEST_ID_RE = re.compile(r"^tests/[^:]+::\S+$")
 _SOURCE_REF_RE = re.compile(r"^(?P<path>[^:]+):(?P<line>[1-9]\d*)$")
 
 # 產品 correctness 失敗無法穩定重現時的追溯（非彙總數字）
@@ -213,14 +216,10 @@ def _run_captured(command: list[str], *, timeout: int = 120) -> subprocess.Compl
 
 def _collect_tests(*pytest_args: str) -> tuple[list[str], list[str], str]:
     """Collect test node ids; return (ids, command, stdout)."""
-    command = _pytest_cmd("--collect-only", "-q", "--color=no", *pytest_args)
+    command = _pytest_cmd("--collect-only", "-q", "--color=no", "--collection-record-json", *pytest_args)
     result = _run_captured(command)
     assert result.returncode == 0, result.stdout + result.stderr
-    ids = sorted(
-        line.strip()
-        for line in result.stdout.splitlines()
-        if _TEST_ID_RE.match(line.strip())
-    )
+    ids = sorted(_parse_node_ids(result.stdout))
     return ids, command, result.stdout
 
 

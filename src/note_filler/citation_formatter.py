@@ -14,7 +14,7 @@ def build_reference_lines(sources: list) -> str:
 
     - i 依 sources 順序從 1 起算
     - url 為 None 時省略 " | URL: ..." 區段
-    - Date 取 doc_date,否則 fetched_date(必存在,url 為 None 時仍保留)
+    - Date 取 doc_date,否則 fetched_date,未知則 UNKNOWN(url 為 None 時仍保留)
     - Hash 為 content 的 sha1 前 8 碼(utf-8 編碼)
     - Evidence 取 content 前 100 字,換行壓成空白後 strip
     多行以 "\\n" 串接;空清單回傳空字串。
@@ -25,10 +25,13 @@ def build_reference_lines(sources: list) -> str:
         content_hash = hashlib.sha1(content.encode("utf-8")).hexdigest()[:8]
         evidence = content[:100].replace("\n", " ").strip()
         url_part = f" | URL: {src.url}" if src.url else ""
-        date = src.doc_date or src.fetched_date
+        date = src.doc_date or src.fetched_date or "UNKNOWN"
+        status = (f" | Currentness: {src.currentness}"
+                  f" | Official checked: {src.verified_at or 'UNKNOWN'}"
+                  if hasattr(src, "currentness") else "")
         lines.append(
             f"[^{i}]: [Level {src.level}] {src.title}"
-            f"{url_part} | Date: {date} | Hash: {content_hash} | Evidence: {evidence}"
+            f"{url_part} | Date: {date}{status} | Hash: {content_hash} | Evidence: {evidence}"
         )
     return "\n".join(lines)
 

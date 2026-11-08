@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from note_filler.retrieve.models import Source
+from note_filler.retrieve.models import Source, usable_authority
 
 
 @dataclass
@@ -30,7 +30,7 @@ def _independent_ab(sources: list[Source]) -> list[Source]:
     """回傳彼此相異的 A/B 來源子集(僅計 level A/B)。
     C5 排序:Level A 先於 B、distance 小者先;再貪婪挑選互相相異者。
     """
-    ab = [s for s in sources if s.level in ("A", "B")]
+    ab = [s for s in sources if s.level in ("A", "B") and usable_authority(s)]
     ab.sort(key=lambda s: (0 if s.level == "A" else 1, s.distance))
     kept: list[Source] = []
     for s in ab:
@@ -81,9 +81,10 @@ def cross_validate(claim: str, sources: list) -> Validation:
     (3) 含 >=2 個相異來源(相異以 id 或 title 判,level 不限 A/B/C/D)。
     衝突僅標記不選邊(見 _detect_conflict)。
     """
-    has_a = any(s.level == "A" for s in sources)
-    has_c = any(s.level == "C" for s in sources)
-    verified = has_a or has_c or len(_distinct(sources)) >= 2
+    authoritative = [s for s in sources if usable_authority(s)]
+    has_a = any(s.level == "A" for s in authoritative)
+    has_c = any(s.level == "C" for s in authoritative)
+    verified = has_a or has_c or len(_distinct(authoritative)) >= 2
     conflict, note = _detect_conflict(sources)
     return Validation(
         claim=claim,

@@ -15,6 +15,7 @@ from note_filler.angle_coverage import (
 )
 from note_filler.audit import audit_event
 from note_filler.verify import cross_validate
+from note_filler.retrieve.models import usable_authority
 
 if TYPE_CHECKING:                      # 僅型別提示,執行期零硬耦合(結構化 attr 讀取)
     from note_filler.parse import Document
@@ -237,6 +238,7 @@ def _grounded(sources) -> bool:
     (2) 引用來源含 >=1 個 level C(官方/標準組織一手,如 owasp.org/NIST/CVE);或
     (3) 含 >=2 個相異來源(相異以 id 或 title 判,level 不限 A/B/C/D)。
     """
+    sources = [s for s in sources if usable_authority(s)]
     if any(s.level == "A" for s in sources):
         return True
     if any(s.level == "C" for s in sources):

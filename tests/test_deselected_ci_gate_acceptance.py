@@ -13,6 +13,8 @@ from __future__ import annotations
 import json
 import subprocess
 import sys
+
+import pytest
 from pathlib import Path
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -24,6 +26,9 @@ _WORKFLOW = _REPO_ROOT / ".github" / "workflows" / "ci.yml"
 # Import pure evaluators for unit-level failure semantics without re-collecting.
 sys.path.insert(0, str(_REPO_ROOT / "scripts"))
 from validate_deselection_ci import (  # noqa: E402
+    _parse_node_ids,
+    _parse_deselected_details,
+    _run_collect,
     evaluate_deselection_policy,
     validate_workflow_coverage_jobs,
 )
@@ -364,3 +369,122 @@ def test_live_gate_with_skip_workflow_still_enforces_allowlist(tmp_path: Path) -
     combined = result.stdout + result.stderr
     assert result.returncode != 0
     assert "未核准 deselected" in combined or "數量異常" in combined
+
+
+# Additive JSON collection controls; original gate/policy controls above are retained.
+_CURRENT_WHITESPACE_IDS = [
+    "tests/test_metrics_pipeline.py::TestRerunNote::test_rerun_non_object_manifest_returns_alert_without_rewriting[delivery_manifest.json-not an object]",
+    "tests/test_metrics_pipeline.py::TestRerunNote::test_rerun_non_object_manifest_returns_alert_without_rewriting[note.md.delivery_manifest.json-not an object]",
+    r"tests/test_traceability.py::test_traceability_gate_rejects_missing_wrong_or_shifted_span[<lambda>-citation_spans \u907a\u6f0f\u4f86\u6e90]",
+    r"tests/test_traceability.py::test_traceability_gate_rejects_missing_wrong_or_shifted_span[<lambda>-\u7bc4\u570d\u8207 marker_text \u4e0d\u4e00\u81f4]",
+]
+
+
+def _machine_record(selected: list[str], details: dict[str, str] | None = None) -> str:
+    return "NOTE_FILLER_COLLECTION_JSON_V1=" + json.dumps({
+        "schema": "note-filler.pytest-collection/v1",
+        "selected": selected,
+        "deselected": [{"node_id": node, "reason": reason}
+                       for node, reason in (details or {}).items()],
+    }) + "\n"
+
+
+def test_collection_record_preserves_actual_whitespace_and_arbitrary_labels() -> None:
+    ids = [*_CURRENT_WHITESPACE_IDS,
+           "tests/test_owned.py::test_label[a\tb]",
+           "tests/test_owned.py::test_label[a | reason: b]",
+           r"tests\test_owned.py::test_label[C:\owned\new\file]"]
+    assert _parse_node_ids(_machine_record(ids)) == ids
+
+
+def test_actual_collection_machine_record_captures_all_four_current_ids() -> None:
+    text = _run_collect("-o", "addopts=", *_CURRENT_WHITESPACE_IDS)
+    assert _parse_node_ids(text) == _CURRENT_WHITESPACE_IDS
+    assert _parse_deselected_details(text) == {}
+
+
+def test_collection_record_ignores_human_details_footer_and_warning_rows() -> None:
+    actual = "tests/test_owned.py::test_selected[has spaces]"
+    text = ("tests/test_owned.py::test_human_only\n"
+            + _machine_record([actual])
+            + "=== deselected details ===\n"
+            + "tests/test_owned.py::test_other[x y] | reason: deselected by -m 'not integration'\n"
+            + "tests/test_owned.py::test_warning_only\n"
+            + "1 test collected in 0.1s\n")
+    assert _parse_node_ids(text) == [actual]
+    assert _parse_deselected_details(text) == {}
+
+
+@pytest.mark.parametrize("bad_text", [
+    "tests/test_owned.py::test_human_only\n",
+    _machine_record([]) + _machine_record([]),
+    "NOTE_FILLER_COLLECTION_JSON_V1={\n",
+    'NOTE_FILLER_COLLECTION_JSON_V1={"schema":"wrong","selected":[],"deselected":[]}\n',
+    'NOTE_FILLER_COLLECTION_JSON_V1={"schema":"note-filler.pytest-collection/v1","selected":[],"selected":[],"deselected":[]}\n',
+    'NOTE_FILLER_COLLECTION_JSON_V1={"schema":"note-filler.pytest-collection/v1","selected":[1],"deselected":[]}\n',
+    'NOTE_FILLER_COLLECTION_JSON_V1={"schema":"note-filler.pytest-collection/v1","selected":[],"deselected":[],"extra":true}\n',
+    _machine_record(["tests/test_owned.py::test_same", "tests/test_owned.py::test_same"]),
+    _machine_record(["tests/test_owned.py::test_same"], {"tests/test_owned.py::test_same": "reason"}),
+])
+def test_collection_record_fails_closed_on_missing_duplicate_or_malformed_record(bad_text: str) -> None:
+    with pytest.raises(RuntimeError):
+        _parse_node_ids(bad_text)
+    with pytest.raises(RuntimeError):
+        _parse_deselected_details(bad_text)
+
+
+def test_policy_rejects_unapproved_whitespace_exclusion_after_machine_parse() -> None:
+    allowlist = _load_allowlist()
+    all_ids, selected, details = _base_ids_from_allowlist(allowlist)
+    rogue = "tests/test_owned.py::test_unapproved[has spaces]"
+    all_ids.append(rogue)
+    details[rogue] = "deselected by -m 'not integration'"
+    failures = evaluate_deselection_policy(
+        all_ids=_parse_node_ids(_machine_record(all_ids)),
+        selected_ids=_parse_node_ids(_machine_record(selected, details)),
+        details=_parse_deselected_details(_machine_record(selected, details)),
+        allowlist=allowlist, matrix={"tests": []}, critical_risks=set(),
+    )
+    assert any("未核准 deselected" in item and rogue in item for item in failures)
+
+
+def test_policy_rejects_missing_whitespace_allowlisted_reason_after_machine_parse() -> None:
+    allowlist = [dict(row) for row in _load_allowlist()]
+    missing = "tests/test_owned.py::test_allowlisted[has spaces]"
+    allowlist[0]["test_id"] = missing
+    all_ids, selected, details = _base_ids_from_allowlist(allowlist)
+    details.pop(missing)
+    failures = evaluate_deselection_policy(
+        all_ids=_parse_node_ids(_machine_record(all_ids)),
+        selected_ids=_parse_node_ids(_machine_record(selected, details)),
+        details=_parse_deselected_details(_machine_record(selected, details)),
+        allowlist=allowlist, matrix={"tests": []}, critical_risks=set(),
+    )
+    assert f"缺少 deselected reason：{missing}" in failures
+
+
+@pytest.mark.parametrize("present_but_unselected", [False, True])
+def test_policy_rejects_missing_or_unselected_whitespace_substitute_after_machine_parse(present_but_unselected: bool) -> None:
+    allowlist = [dict(row) for row in _load_allowlist()]
+    all_ids, selected, details = _base_ids_from_allowlist(allowlist)
+    sub = "tests/test_owned.py::test_substitute[has spaces]"
+    allowlist[0]["substitute_tests"] = [sub]
+    if present_but_unselected:
+        all_ids.append(sub)
+        details[sub] = "deselected by -m 'not integration'"
+    failures = evaluate_deselection_policy(
+        all_ids=_parse_node_ids(_machine_record(all_ids)),
+        selected_ids=_parse_node_ids(_machine_record(selected, details)),
+        details=_parse_deselected_details(_machine_record(selected, details)),
+        allowlist=allowlist, matrix={"tests": []}, critical_risks=set(),
+    )
+    expected = "替代覆蓋測試未被預設 selected" if present_but_unselected else "替代覆蓋測試不存在"
+    assert any(expected in item and sub in item for item in failures)
+
+
+def test_collection_record_preserves_whitespace_reason_and_label_delimiter() -> None:
+    node = "tests/test_owned.py::test_deselected[a | reason: b]"
+    reason = "deselected by -k 'has spaces'"
+    text = _machine_record([], {node: reason})
+    assert _parse_node_ids(text) == []
+    assert _parse_deselected_details(text) == {node: reason}

@@ -154,6 +154,17 @@ class LawLookup:
         """設定 SQLite 索引檔路徑。"""
         self.db_path = Path(db_path)
 
+    def source_provenance(self, rows: list[dict]) -> list[dict]:
+        """Read an optional operator-supplied official comparison; never fetch a URL.
+
+        Missing, malformed, expired or differently bound proofs fail closed. The
+        immutable database hash is custody, not proof of a corpus acquisition date.
+        Each article needs its own dated official text hash, including controls.
+        """
+        from note_filler.retrieve.law_currentness import snapshot_provenance
+
+        return snapshot_provenance(self.db_path, rows)
+
     def lookup_article(self, law_name: str, article_no):
         """依法規名稱與條號精確查詢條文內容，查無則回傳 None。"""
         normalized_no = _normalize_article_no(article_no)

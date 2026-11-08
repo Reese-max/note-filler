@@ -32,7 +32,7 @@ from note_filler.pipeline import run_pipeline
 from note_filler.retrieve.models import Source
 from note_filler.verify import cross_validate
 from note_filler.write import WrittenSupplement
-from tests.test_pipeline import FakeLaw, FakeTwinkle
+from test_pipeline import FakeLaw, FakeTwinkle
 
 
 # ---------------------------------------------------------------------------

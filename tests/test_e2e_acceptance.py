@@ -95,11 +95,11 @@ def _assert_markdown_contract(doc) -> None:
             assert "> 【補充】" in md, "supplement 未依 C3 格式輸出"
             if seg.confidence == "pending_evidence":
                 assert "⚠待補證" in md, "pending_evidence 未標 ⚠待補證"
-    # C7:被引用來源的參考區塊須帶日期(doc_date 優先否則 fetched_date)
+    # C7: known source dates appear verbatim; missing corpus dates stay explicitly UNKNOWN
     cited = [s for seg in doc.segments for s in (seg.sources or [])]
     if cited:
-        assert any((s.doc_date or s.fetched_date) in md for s in cited), \
-            "參考區塊應含來源日期(doc_date 優先否則 fetched_date)"
+        assert all((s.doc_date or s.fetched_date or "UNKNOWN") in md for s in cited), \
+            "每個來源應列真實日期,未知版本不得用查詢日冒充"
     # to_json 亦須可序列化
     assert isinstance(to_json(doc), dict)
 

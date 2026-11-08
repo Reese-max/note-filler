@@ -15,12 +15,15 @@ def grade_twinkle() -> SourceLevel:
     return "B"
 
 
-def is_stale(fetched_date: str, max_age_days: int) -> bool:
+def is_stale(fetched_date: str | None, max_age_days: int) -> bool:
     """fetched_date(ISO)距今天數 > max_age_days 即視為過期。
 
-    MVP 不追文件本身 doc_date,以抓取當下 fetched_date 為準。
+    Unknown, malformed and future dates fail closed. Query time is not fetch time.
     邊界:剛好等於 max_age_days 不算 stale(用嚴格大於)。
     """
-    fetched = date.fromisoformat(fetched_date)
+    try:
+        fetched = date.fromisoformat(fetched_date)
+    except (TypeError, ValueError):
+        return True
     age_days = (date.today() - fetched).days
-    return age_days > max_age_days
+    return age_days < 0 or age_days > max_age_days

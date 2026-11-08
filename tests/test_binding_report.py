@@ -333,7 +333,8 @@ def test_assembled_arguments_include_nonempty_necessity_views():
 def test_roundtrip_json_still_parseable(tmp_path):
     product = _assemble_mixed()
     path = write_binding_report(tmp_path / "out.md", product)
-    assert path.name == BINDING_REPORT_NAME
+    assert path.name == "out.md." + BINDING_REPORT_NAME
+    assert (tmp_path / BINDING_REPORT_NAME).exists()  # legacy latest-only copy
     raw = json.loads(path.read_text(encoding="utf-8"))
     parsed = parse_binding_report(raw)
     assert parsed["argument_count"] == 2

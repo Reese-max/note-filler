@@ -31,7 +31,7 @@
 | 設計編號 | 設計標題 | 規格檔 |
 |----------|----------|--------|
 | D-01 | 介面規格（路由／表單／匯出契約） | `docs/specs/note-filler-interface-contract.md` |
-| D-02 | UI／資料狀態轉移（last_doc／confidence） | `docs/specs/note-filler-state-machine.md` |
+| D-02 | UI／資料狀態轉移（results capability／confidence） | `docs/specs/note-filler-state-machine.md` |
 | D-03 | 使用者與系統流程（上傳→pipeline→結果→匯出） | `docs/specs/note-filler-user-flow.md` |
 | D-04 | 元件責任清單（入口／管線／匯出） | `docs/specs/note-filler-component-responsibilities.md` |
 | D-05 | 可重現畫面佐證與索引 | `docs/specs/evidence/ui/index.md` |

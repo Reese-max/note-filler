@@ -81,7 +81,7 @@ def _grade(llm: "LLMClient", gap: "Gap", text: str) -> tuple[str, str | None]:
     try:
         data = json.loads(_strip_fence(raw))
     except (json.JSONDecodeError, ValueError) as exc:
-        logger.warning("grade JSON parse failed: %s | raw=%.200s", exc, raw)
+        logger.warning("grade JSON parse failed: %s", exc)
         return "drop", None
     level = str(data.get("level", "drop")).strip().upper()
     if level not in ("C", "D"):

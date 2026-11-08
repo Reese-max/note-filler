@@ -9,7 +9,7 @@ import logging
 from ..audit import audit_event
 from ..gap import Gap
 from ..llm import LLMClient
-from .models import Source
+from .models import LawSnapshotSource, Source
 
 logger = logging.getLogger(__name__)
 
@@ -103,16 +103,23 @@ def search_law_sources(gap: Gap, llm: LLMClient, law, limit: int = 25) -> list[S
     rows = rows[:20]  # ponytail: 上限 20 條夠 MVP;真爆量再分頁
 
     today = datetime.date.today().isoformat()
+    provenance = (law.source_provenance(rows) if hasattr(law, "source_provenance")
+                  else [{} for _ in rows])
     return [
-        Source(
+        LawSnapshotSource(
             id=f"law:{r['pcode']}:{r['article_no']}",
             title=f"《{r['law_name']}》第{r['article_no']}條",
             url=f"https://law.moj.gov.tw/LawClass/LawAll.aspx?pcode={r['pcode']}",
             level="A",
             content=r["article_text"],
-            fetched_date=today,
+            fetched_date=proof.get("fetched_date"),
             doc_date=None,
             distance=0.1 * (i + 1),
+            queried_at=today,
+            snapshot_sha256=proof.get("snapshot_sha256"),
+            currentness=proof.get("currentness", "unknown"),
+            verified_at=proof.get("verified_at"),
+            official_text_sha256=proof.get("official_text_sha256"),
         )
-        for i, r in enumerate(rows)
+        for i, (r, proof) in enumerate(zip(rows, provenance))
     ]
